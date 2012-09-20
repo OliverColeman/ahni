@@ -19,7 +19,7 @@
  */
 package com.anji.integration;
 
-import org.jgap.Chromosome;
+import org.jgapcusomised.Chromosome;
 
 import com.anji.hyperneat.GridNet;
 import com.anji.hyperneat.HyperNEATTranscriber;

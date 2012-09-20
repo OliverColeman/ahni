@@ -23,14 +23,14 @@ import java.io.IOException;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;
-import org.jgap.ChromosomeMaterial;
-import org.jgap.Configuration;
-import org.jgap.IdFactory;
-import org.jgap.InvalidConfigurationException;
-import org.jgap.NaturalSelector;
-import org.jgap.event.EventManager;
-import org.jgap.impl.CloneReproductionOperator;
-import org.jgap.impl.WeightedRouletteSelector;
+import org.jgapcusomised.ChromosomeMaterial;
+import org.jgapcusomised.Configuration;
+import org.jgapcusomised.IdFactory;
+import org.jgapcusomised.InvalidConfigurationException;
+import org.jgapcusomised.NaturalSelector;
+import org.jgapcustomised.event.EventManager;
+import org.jgapcustomised.impl.CloneReproductionOperator;
+import org.jgapcustomised.impl.WeightedRouletteSelector;
 
 import com.anji.hyperneat.HyperNEATTranscriber;
 import com.anji.integration.ActivatorTranscriber;

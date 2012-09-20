@@ -8,8 +8,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-import org.jgap.BulkFitnessFunction;
-import org.jgap.Chromosome;
+import org.jgapcusomised.BulkFitnessFunction;
+import org.jgapcusomised.Chromosome;
 
 /**
  * @author Philip Tucker
@@ -38,7 +38,7 @@ public class DummyBulkFitnessFunction implements BulkFitnessFunction {
 	}
 	
 	/**
-	 * @see org.jgap.BulkFitnessFunction#evaluate(java.util.List)
+	 * @see org.jgapcusomised.BulkFitnessFunction#evaluate(java.util.List)
 	 */
 	public void evaluate( List aSubjects ) {
 		Iterator it = aSubjects.iterator();
@@ -49,7 +49,7 @@ public class DummyBulkFitnessFunction implements BulkFitnessFunction {
 	}
 	
 	/**
-	 * @see org.jgap.BulkFitnessFunction#getMaxFitnessValue()
+	 * @see org.jgapcusomised.BulkFitnessFunction#getMaxFitnessValue()
 	 */
 	public int getMaxFitnessValue() {
 		return 100;

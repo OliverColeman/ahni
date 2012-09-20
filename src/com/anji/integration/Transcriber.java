@@ -22,7 +22,7 @@
  */
 package com.anji.integration;
 
-import org.jgap.Chromosome;
+import org.jgapcusomised.Chromosome;
 
 /**
  * To "transcribe" is to construct a phenotype from a genotype.

@@ -26,9 +26,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import org.jgap.ChromosomeMaterial;
-import org.jgap.Configuration;
-import org.jgap.MutationOperator;
+import org.jgapcusomised.ChromosomeMaterial;
+import org.jgapcusomised.Configuration;
+import org.jgapcusomised.MutationOperator;
 
 import com.anji.integration.AnjiRequiredException;
 import com.anji.util.Configurable;
@@ -187,7 +187,7 @@ public RemoveConnectionMutationOperator( float aMutationRate, float aMaxWeightRe
  * @param target chromosome material to mutate
  * @param allelesToAdd <code>Set</code> contains <code>Allele</code> objects
  * @param allelesToRemove <code>Set</code> contains <code>Allele</code> objects
- * @see org.jgap.MutationOperator#mutate(org.jgap.Configuration, org.jgap.ChromosomeMaterial,
+ * @see org.jgapcusomised.MutationOperator#mutate(org.jgapcusomised.Configuration, org.jgapcusomised.ChromosomeMaterial,
  * java.util.Set, java.util.Set)
  */
 protected void mutate( Configuration jgapConfig, final ChromosomeMaterial target,

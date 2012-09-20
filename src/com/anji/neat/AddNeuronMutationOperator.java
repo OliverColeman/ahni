@@ -25,9 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.jgap.ChromosomeMaterial;
-import org.jgap.Configuration;
-import org.jgap.MutationOperator;
+import org.jgapcusomised.ChromosomeMaterial;
+import org.jgapcusomised.Configuration;
+import org.jgapcusomised.MutationOperator;
 
 import com.anji.integration.AnjiRequiredException;
 import com.anji.util.Configurable;
@@ -82,8 +82,8 @@ public class AddNeuronMutationOperator extends MutationOperator implements Confi
 	 * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">NEAT
 	 * </a> add node mutation.
 	 * 
-	 * @see org.jgap.MutationOperator#mutate(org.jgap.Configuration,
-	 *      org.jgap.ChromosomeMaterial, java.util.Set, java.util.Set)
+	 * @see org.jgapcusomised.MutationOperator#mutate(org.jgapcusomised.Configuration,
+	 *      org.jgapcusomised.ChromosomeMaterial, java.util.Set, java.util.Set)
 	 */
 	protected void mutate(Configuration jgapConfig, final ChromosomeMaterial target, Set allelesToAdd, Set allelesToRemove) {
 		if ((jgapConfig instanceof NeatConfiguration) == false)

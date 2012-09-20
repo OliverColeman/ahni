@@ -2,7 +2,7 @@ package com.anji.hyperneat;
 
 import java.util.*;
 import org.apache.log4j.Logger;
-import org.jgap.*;
+import org.jgapcusomised.*;
 
 import com.anji.hyperneat.GridNet;
 import com.anji.hyperneat.HyperNEATTranscriber;

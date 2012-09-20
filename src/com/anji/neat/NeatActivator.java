@@ -28,8 +28,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
-import org.jgap.Chromosome;
-import org.jgap.Configuration;
+import org.jgapcusomised.Chromosome;
+import org.jgapcusomised.Configuration;
 
 import com.anji.Copyright;
 import com.anji.integration.Activator;

@@ -34,11 +34,11 @@ import java.util.Vector;
 
 
 import org.apache.log4j.Logger;
-import org.jgap.BulkFitnessFunction;
-import org.jgap.Chromosome;
-import org.jgap.Genotype;
-import org.jgap.Species;
-import org.jgap.event.GeneticEvent;
+import org.jgapcusomised.BulkFitnessFunction;
+import org.jgapcusomised.Chromosome;
+import org.jgapcusomised.Genotype;
+import org.jgapcusomised.Species;
+import org.jgapcustomised.event.GeneticEvent;
 
 import com.anji.integration.*;
 import com.anji.persistence.Persistence;

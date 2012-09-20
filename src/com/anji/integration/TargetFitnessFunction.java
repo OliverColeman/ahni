@@ -25,8 +25,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
-import org.jgap.BulkFitnessFunction;
-import org.jgap.Chromosome;
+import org.jgapcusomised.BulkFitnessFunction;
+import org.jgapcusomised.Chromosome;
 
 import com.anji.util.Configurable;
 import com.anji.util.Properties;

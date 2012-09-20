@@ -23,9 +23,9 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-import org.jgap.Genotype;
-import org.jgap.event.GeneticEvent;
-import org.jgap.event.GeneticEventListener;
+import org.jgapcusomised.Genotype;
+import org.jgapcustomised.event.GeneticEvent;
+import org.jgapcustomised.event.GeneticEventListener;
 
 import com.anji.integration.Generation;
 import com.anji.util.Configurable;
@@ -102,7 +102,7 @@ public String toString() {
 }
 
 /**
- * @see org.jgap.event.GeneticEventListener#geneticEventFired(org.jgap.event.GeneticEvent)
+ * @see org.jgapcustomised.event.GeneticEventListener#geneticEventFired(org.jgapcustomised.event.GeneticEvent)
  */
 public void geneticEventFired( GeneticEvent event ) {
 	Genotype genotype = (Genotype) event.getSource();

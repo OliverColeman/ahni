@@ -23,8 +23,8 @@ import java.io.File;
 import java.io.FileWriter;
 
 import org.apache.log4j.Logger;
-import org.jgap.event.GeneticEvent;
-import org.jgap.event.GeneticEventListener;
+import org.jgapcustomised.event.GeneticEvent;
+import org.jgapcustomised.event.GeneticEventListener;
 
 import com.anji.run.Run;
 import com.anji.util.Properties;

@@ -21,7 +21,7 @@ package com.anji.neat;
 
 import java.util.Random;
 
-import org.jgap.Allele;
+import org.jgapcusomised.Allele;
 
 import com.anji.nn.activationfunction.ActivationFunctionType;
 
@@ -53,7 +53,7 @@ public NeuronAllele( NeuronGene aNeuronGene ) {
 }
 
 /**
- * @see org.jgap.Allele#cloneAllele()
+ * @see org.jgapcusomised.Allele#cloneAllele()
  */
 public Allele cloneAllele() {
 	return new NeuronAllele( neuronGene );
@@ -69,7 +69,7 @@ public void setToRandomValue( Random a_numberGenerator ) {
 /**
  * @param aTarget should be <code>NeuronAllele</code> with same gene 
  * TODO - activation type and slope
- * @see org.jgap.Allele#distance(org.jgap.Allele)
+ * @see org.jgapcusomised.Allele#distance(org.jgapcusomised.Allele)
  */
 public float distance( Allele aTarget ) {
 	return 0;

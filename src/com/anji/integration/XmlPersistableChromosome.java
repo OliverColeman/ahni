@@ -21,8 +21,8 @@ package com.anji.integration;
 
 import java.util.Iterator;
 
-import org.jgap.Allele;
-import org.jgap.Chromosome;
+import org.jgapcusomised.Allele;
+import org.jgapcusomised.Chromosome;
 
 import com.anji.util.XmlPersistable;
 

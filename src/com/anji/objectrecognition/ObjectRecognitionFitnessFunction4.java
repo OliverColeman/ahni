@@ -12,7 +12,7 @@ import java.util.Vector;
 import javax.imageio.ImageIO;
 
 import org.apache.log4j.Logger;
-import org.jgap.*;
+import org.jgapcusomised.*;
 
 import com.anji.hyperneat.*;
 import com.anji.neat.Evolver;

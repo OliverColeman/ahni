@@ -32,7 +32,7 @@ import java.util.Set;
 import java.util.SortedMap;
 
 import org.apache.log4j.Logger;
-import org.jgap.Chromosome;
+import org.jgapcusomised.Chromosome;
 
 import com.anji.neat.ConnectionAllele;
 import com.anji.neat.NeatChromosomeUtility;

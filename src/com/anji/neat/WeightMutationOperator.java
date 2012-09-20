@@ -24,9 +24,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import org.jgap.ChromosomeMaterial;
-import org.jgap.Configuration;
-import org.jgap.MutationOperator;
+import org.jgapcusomised.ChromosomeMaterial;
+import org.jgapcusomised.Configuration;
+import org.jgapcusomised.MutationOperator;
 
 import com.anji.integration.AnjiRequiredException;
 import com.anji.util.Configurable;

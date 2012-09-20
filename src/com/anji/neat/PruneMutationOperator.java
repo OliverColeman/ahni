@@ -28,9 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.jgap.ChromosomeMaterial;
-import org.jgap.Configuration;
-import org.jgap.MutationOperator;
+import org.jgapcusomised.ChromosomeMaterial;
+import org.jgapcusomised.Configuration;
+import org.jgapcusomised.MutationOperator;
 
 import com.anji.util.Configurable;
 import com.anji.util.Properties;
@@ -93,7 +93,7 @@ public PruneMutationOperator( float newMutationRate ) {
  * @param target chromosome material to mutate
  * @param genesToAdd <code>Set</code> contains <code>Gene</code> objects
  * @param genesToRemove <code>Set</code> contains <code>Gene</code> objects
- * @see org.jgap.MutationOperator#mutate(org.jgap.Configuration, org.jgap.ChromosomeMaterial,
+ * @see org.jgapcusomised.MutationOperator#mutate(org.jgapcusomised.Configuration, org.jgapcusomised.ChromosomeMaterial,
  * java.util.Set, java.util.Set)
  */
 protected void mutate( Configuration config, ChromosomeMaterial target, Set genesToAdd,

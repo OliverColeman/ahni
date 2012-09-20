@@ -25,11 +25,11 @@ import java.util.Iterator;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;
-import org.jgap.Chromosome;
-import org.jgap.Genotype;
-import org.jgap.InvalidConfigurationException;
-import org.jgap.event.GeneticEvent;
-import org.jgap.event.GeneticEventListener;
+import org.jgapcusomised.Chromosome;
+import org.jgapcusomised.Genotype;
+import org.jgapcusomised.InvalidConfigurationException;
+import org.jgapcustomised.event.GeneticEvent;
+import org.jgapcustomised.event.GeneticEventListener;
 
 import com.anji.neat.NeatConfiguration;
 import com.anji.persistence.Persistence;

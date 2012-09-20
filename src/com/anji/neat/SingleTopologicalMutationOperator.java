@@ -27,9 +27,9 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 
-import org.jgap.ChromosomeMaterial;
-import org.jgap.Configuration;
-import org.jgap.MutationOperator;
+import org.jgapcusomised.ChromosomeMaterial;
+import org.jgapcusomised.Configuration;
+import org.jgapcusomised.MutationOperator;
 
 import com.anji.integration.AnjiRequiredException;
 import com.anji.nn.RecurrencyPolicy;
@@ -92,8 +92,8 @@ public class SingleTopologicalMutationOperator extends MutationOperator implemen
 	}
 
 	/**
-	 * @see org.jgap.MutationOperator#mutate(org.jgap.Configuration,
-	 *      org.jgap.ChromosomeMaterial, java.util.Set, java.util.Set)
+	 * @see org.jgapcusomised.MutationOperator#mutate(org.jgapcusomised.Configuration,
+	 *      org.jgapcusomised.ChromosomeMaterial, java.util.Set, java.util.Set)
 	 */
 	protected void mutate(Configuration jgapConfig, ChromosomeMaterial target, Set allelesToAdd, Set allelesToRemove) {
 		if ((jgapConfig instanceof NeatConfiguration) == false)

@@ -21,9 +21,9 @@ package com.anji.integration;
 
 import java.util.Iterator;
 
-import org.jgap.Chromosome;
-import org.jgap.Genotype;
-import org.jgap.Species;
+import org.jgapcusomised.Chromosome;
+import org.jgapcusomised.Genotype;
+import org.jgapcusomised.Species;
 
 import com.anji.util.XmlPersistable;
 

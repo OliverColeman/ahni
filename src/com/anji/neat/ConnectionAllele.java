@@ -21,7 +21,7 @@ package com.anji.neat;
 
 import java.util.Random;
 
-import org.jgap.Allele;
+import org.jgapcusomised.Allele;
 
 /**
  * Gene corresponding to NEAT connection gene according to <a
@@ -68,7 +68,7 @@ public ConnectionAllele( ConnectionGene aConnectionGene ) {
 }
 
 /**
- * @see org.jgap.Allele#cloneAllele()
+ * @see org.jgapcusomised.Allele#cloneAllele()
  */
 public Allele cloneAllele() {
 	ConnectionAllele allele = new ConnectionAllele( connectionGene );

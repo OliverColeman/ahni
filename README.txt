@@ -1,10 +1,7 @@
 Another HyperNEAT Implementation (AHNI)
 
-This software is licensed under the GPL v2. See the LICENSE.txt file in the 
-same directory as this file for more information. All files under the 
-AHNI_lib and lib directories are third party libraries and included for 
-convenience but may not be covered by the GPL (but which are nevertheless 
-freely available).
+This software is licensed under the GPL v3. See the LICENSE.txt file in the 
+same directory as this file for more information.
 
 To run: java -jar ahni.jar <properties file> [<results output file>]
 
@@ -23,7 +20,8 @@ Implementation). As well as adding code to implement the HyperCUBE encoding
 scheme and a layer/grid-type neural network simulator, the following changes 
 were made to ANJI:
 
-* Modified to allow using multiple types of activation functions.
+* Modified to allow using multiple types of activation functions (for 
+  HyperNEAT implementation).
 * Added more parameters to control speciation, including: minimum species size 
   to select elites1 from; minimum number of elites to select; and target number 
   of species (this is controlled by adjusting the compatibility threshold 
@@ -44,3 +42,8 @@ were made to ANJI:
   problems when determining the size and average or total fitness of a species.
 * There was a bug where elites could be removed from the population when the 
   population size was being adjusted. 
+
+
+  ANJI makes use of a customised version of the JGAP library. Unfortunately
+  this precludes an easy upgrade to more recent versions of JGAP, just in case
+  you were thinking about it.

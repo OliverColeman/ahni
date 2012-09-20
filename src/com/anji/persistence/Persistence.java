@@ -19,9 +19,9 @@
  */
 package com.anji.persistence;
 
-import org.jgap.Chromosome;
-import org.jgap.Configuration;
-import org.jgap.Genotype;
+import org.jgapcusomised.Chromosome;
+import org.jgapcusomised.Configuration;
+import org.jgapcusomised.Genotype;
 
 import com.anji.integration.Activator;
 import com.anji.run.Run;

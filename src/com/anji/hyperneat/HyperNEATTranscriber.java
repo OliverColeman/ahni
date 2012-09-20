@@ -4,7 +4,7 @@ import java.awt.Point;
 import java.awt.geom.Point2D;
 
 import org.apache.log4j.Logger;
-import org.jgap.*;
+import org.jgapcusomised.*;
 
 import com.anji.integration.ActivatorTranscriber;
 import com.anji.integration.AnjiActivator;

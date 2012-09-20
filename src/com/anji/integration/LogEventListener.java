@@ -23,11 +23,11 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
-import org.jgap.Chromosome;
-import org.jgap.Configuration;
-import org.jgap.Genotype;
-import org.jgap.event.GeneticEvent;
-import org.jgap.event.GeneticEventListener;
+import org.jgapcusomised.Chromosome;
+import org.jgapcusomised.Configuration;
+import org.jgapcusomised.Genotype;
+import org.jgapcustomised.event.GeneticEvent;
+import org.jgapcustomised.event.GeneticEventListener;
 
 import com.anji.util.Configurable;
 import com.anji.util.Properties;
