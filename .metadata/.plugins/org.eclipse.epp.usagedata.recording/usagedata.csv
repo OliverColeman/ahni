@@ -1,0 +1,17 @@
+what,kind,bundleId,bundleVersion,description,time
+stopped,bundle,org.eclipse.mylyn.tasks.ui,3.4.2.v20100902-0100-e3x,"org.eclipse.mylyn.tasks.ui",1291327413982
+stopped,bundle,org.eclipse.team.cvs.ui,3.3.301.R36x_v20100825-0800,"org.eclipse.team.cvs.ui",1291327413982
+stopped,bundle,org.eclipse.egit.ui,0.9.1,"org.eclipse.egit.ui",1291327413984
+stopped,bundle,org.eclipse.team.ui,3.5.101.R36x_v20100825-0800,"org.eclipse.team.ui",1291327413984
+stopped,bundle,net.sourceforge.phpeclipse.smarty.ui,1.2.3.200910091456PRD,"net.sourceforge.phpeclipse.smarty.ui",1291327413987
+stopped,bundle,net.sourceforge.phpeclipse.xml.ui,1.2.3.200910091456PRD,"net.sourceforge.phpeclipse.xml.ui",1291327414020
+stopped,bundle,org.eclipse.compare,3.5.100.I20100526-0800,"org.eclipse.compare",1291327414020
+stopped,bundle,net.sourceforge.phpeclipse.externaltools,1.2.3.200910091456PRD,"net.sourceforge.phpeclipse.externaltools",1291327414046
+stopped,bundle,org.eclipse.ui.externaltools,3.2.0.v20100427,"org.eclipse.ui.externaltools",1291327414060
+stopped,bundle,org.eclipse.wst.server.ui,1.1.205.v20100908,"org.eclipse.wst.server.ui",1291327414075
+stopped,bundle,org.eclipse.debug.ui,3.6.1.v20100901_r361,"org.eclipse.debug.ui",1291327414135
+stopped,bundle,org.eclipse.mylyn.wikitext.ui,1.3.0.v20100608-0100-e3x,"org.eclipse.mylyn.wikitext.ui",1291327414150
+stopped,bundle,org.eclipse.ui.console,3.5.0.v20100526,"org.eclipse.ui.console",1291327414150
+stopped,bundle,org.eclipse.mylyn.commons.ui,3.4.0.v20100608-0100-e3x,"org.eclipse.mylyn.commons.ui",1291327414150
+stopped,bundle,net.sourceforge.phpeclipse.ui,1.2.3.200910091456PRD,"net.sourceforge.phpeclipse.ui",1291327414179
+stopped,bundle,org.eclipse.ui.editors,3.6.1.r361_v20100825-0800,"org.eclipse.ui.editors",1291327414234

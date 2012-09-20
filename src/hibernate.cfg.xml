@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
+
+<hibernate-configuration>
+
+	<session-factory>
+		
+		<!-- Database connection settings -->
+		<!--
+		<property name="connection.driver_class">org.hsqldb.jdbcDriver</property>
+		<property name="connection.url">jdbc:hsqldb:data/tutorial</property>
+		<property name="connection.username">sa</property>
+		<property name="connection.password"></property>
+		<property name="dialect">org.hibernate.dialect.HSQLDialect</property>
+		-->
+		<property name="connection.driver_class">org.postgresql.Driver</property>
+		<property name="connection.url">
+			jdbc:postgresql://frink:5432/mytest</property>
+		<property name="connection.username">postgres</property>
+		<property name="connection.password">postgres</property>
+		<property name="dialect">
+			org.hibernate.dialect.PostgreSQLDialect</property>
+		
+		<!-- JDBC connection pool (use the built-in) -->
+		<property name="connection.pool_size">1</property>
+		
+		<!-- Echo all executed SQL to stdout -->
+		<property name="show_sql">true</property>
+		
+		<property name="hbm2ddl.auto">update</property>
+		
+		<mapping resource="Allele.hbm.xml"/>
+		<mapping resource="Gene.hbm.xml"/>
+	</session-factory>
+			
+</hibernate-configuration>

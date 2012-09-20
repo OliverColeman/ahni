@@ -1,0 +1,53 @@
+<project name="jgap" default="jar" basedir=".">
+  <property name="src" value="."/>
+
+  <target name="compile">
+    <javac srcdir="${src}"/>
+  </target>
+
+  <target name="compile-debug">
+    <javac debug="on" srcdir="${src}"/>
+  </target>
+
+  <target name="jar" depends="compile">
+    <jar jarfile="jgap.jar" basedir="${src}"> 
+       <include name="org/jgap/*.class"/>
+       <include name="org/jgap/impl/*.class"/>
+       <include name="org/jgap/event/*.class"/>
+       <include name="org/jgap/xml/*.class"/>
+    </jar>
+
+    <jar jarfile="jgap-examples.jar" basedir="${src}"
+         includes="examples/*.class"/>
+  </target>
+
+  <target name="jar-debug" depends="compile-debug">
+    <antcall target="jar"/>
+  </target>
+
+  <target name="debug" depends="jar-debug"/>
+
+  <target name="clean">
+    <delete>
+      <fileset dir="${src}">
+        <include name="jgap.jar"/>
+        <include name="jgap-examples.jar"/>
+        <include name="org/jgap/*.class"/>
+        <include name="org/jgap/impl/*.class"/>
+        <include name="org/jgap/event/*.class"/>
+        <include name="org/jgap/xml/*.class"/>
+        <include name="examples/*.class"/>
+      </fileset>
+    </delete>
+  </target>
+
+  <target name="javadoc">
+    <javadoc sourcepath="${src}"
+             destdir="javadocs/"
+             Public="true"
+             packagenames="org.jgap, org.jgap.impl, org.jgap.xml, org.jgap.event">
+    </javadoc>
+  </target>
+
+</project>
+
