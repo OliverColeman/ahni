@@ -32,7 +32,6 @@ import java.util.Iterator;
 import java.util.TreeMap;
 import java.util.Vector;
 
-import ojc.util.Misc;
 
 import org.apache.log4j.Logger;
 import org.jgap.BulkFitnessFunction;

@@ -6,10 +6,10 @@ import java.io.FileWriter;
 import java.text.*;
 import java.util.Random;
 
-import ojc.util.Misc;
 
 import org.apache.log4j.Logger;
 
+import com.anji.util.Misc;
 import com.anji.util.Properties;
 
 
