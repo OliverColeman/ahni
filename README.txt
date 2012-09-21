@@ -1,19 +1,26 @@
-Another HyperNEAT Implementation (AHNI)
+AHNI - Another HyperNEAT Implementation
 
 This software is licensed under the GPL v3. See the LICENSE.txt file in the 
 same directory as this file for more information.
 
-To run: java -jar ahni.jar <properties file> [<results output file>]
 
-eg: java -jar ahni.jar properties/or4.properties
-or: java -jar ahni.jar properties/rn2.properties
+The main class is com.anji.neat.Run. It expects a .properties file containing
+parameters for NEAT, HyperNEAT, and typically the specific experiment being
+run. See properties/* for examples. 
 
-The Robot Navigation (rn*.properties) make use of the Simbad robot simulator,
-which makes use of the Java3D API. To use the Java3D API it may be necessary
-to add the library file to the execution environment. On Linux this can be 
-done with something like:
-export LD_LIBRARY_PATH=lib/j3d/amd64
-You will need to use the right library for your system.
+
+The latest version is available at, and issues should be posted at,
+https://github.com/OliverColeman/ahni
+
+
+This software is being written as part of my PhD: "Evolving plastic neural 
+networks for online learning". For more details see http://ojcoleman.com.
+
+
+Getting started information coming eventually... 
+See com.anji.experiments.objectrecognition.* for examples of fitness 
+functions.
+
 
 AHNI was built on top of a modified version of ANJI (Another NEAT Java 
 Implementation). As well as adding code to implement the HyperCUBE encoding 
@@ -42,7 +49,6 @@ were made to ANJI:
   problems when determining the size and average or total fitness of a species.
 * There was a bug where elites could be removed from the population when the 
   population size was being adjusted. 
-
 
   ANJI makes use of a customised version of the JGAP library. Unfortunately
   this precludes an easy upgrade to more recent versions of JGAP, just in case
