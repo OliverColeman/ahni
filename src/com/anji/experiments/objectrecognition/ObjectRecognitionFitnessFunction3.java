@@ -1,4 +1,4 @@
-package com.anji.objectrecognition;
+package com.anji.experiments.objectrecognition;
 
 import java.awt.*;
 import java.awt.geom.*;
@@ -108,6 +108,7 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
     		//create unique directory for images for this run
     		//String imageDir = this.getClass().getName() + File.separatorChar + System.currentTimeMillis();
     		String imageDir = props.getProperty("output.dir");
+    		System.out.println("image dir: " + imageDir);
     		shapesImageDir = imageDir + File.separatorChar + "shapes";
     		trialsImageDir = imageDir + File.separatorChar + "trials";
     		champsImageDir = imageDir + File.separatorChar + "champs";

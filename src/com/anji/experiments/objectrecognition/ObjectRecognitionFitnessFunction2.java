@@ -1,4 +1,4 @@
-package com.anji.objectrecognition;
+package com.anji.experiments.objectrecognition;
 
 import java.util.*;
 import org.apache.log4j.Logger;

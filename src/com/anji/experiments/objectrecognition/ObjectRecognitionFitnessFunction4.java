@@ -1,4 +1,4 @@
-package com.anji.objectrecognition;
+package com.anji.experiments.objectrecognition;
 
 import java.awt.*;
 import java.awt.geom.*;
