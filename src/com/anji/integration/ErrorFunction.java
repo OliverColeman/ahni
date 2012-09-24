@@ -32,7 +32,7 @@ public class ErrorFunction {
 
 	private final static String TARGETS_RANGE_KEY = "targets.range";
 
-	private float targetRange = 0;
+	private double targetRange = 0;
 
 	private static ErrorFunction instance = null;
 	
@@ -63,8 +63,8 @@ public class ErrorFunction {
 	 * @param sumOfSquares
 	 * @return maximum error given the number and range of responses
 	 */
-	public float getMaxError( int responseCount, float minMaxRange, boolean sumOfSquares) {
-        float maxDiffPerResponse = minMaxRange - targetRange;
+	public double getMaxError( int responseCount, double minMaxRange, boolean sumOfSquares) {
+        double maxDiffPerResponse = minMaxRange - targetRange;
         if ( sumOfSquares )
 			maxDiffPerResponse *= maxDiffPerResponse;
 		return maxDiffPerResponse * responseCount;
@@ -78,17 +78,17 @@ public class ErrorFunction {
 	 * @param sumOfSquares if true, square each diff before summing
 	 * @return total sum of differences
 	 */
-	public float calculateError( float[][] targets, float[][] responses, boolean sumOfSquares ) {
-		float result = 0;
+	public double calculateError( double[][] targets, double[][] responses, boolean sumOfSquares ) {
+		double result = 0;
 		for ( int i = 0; i < targets.length; ++i ) {
-			float[] response = responses[ i ];
-			float[] target = targets[ i ];
+			double[] response = responses[ i ];
+			double[] target = targets[ i ];
 			if ( response.length != target.length )
 				throw new IllegalArgumentException( "for training set " + i
 						+ " dimensions do not match for response [" + response.length + "] and target ["
 						+ target.length + "]" );
 			for ( int j = 0; j < target.length; ++j ) {
-				float diff = 0;
+				double diff = 0;
 				if ( response[ j ] > ( target[ j ] + targetRange ) )
 					diff = ( response[ j ] - ( target[ j ] + targetRange ) );
 				else if ( response[ j ] < ( target[ j ] - targetRange ) )
@@ -112,18 +112,18 @@ public class ErrorFunction {
 	 * @param sumOfSquares if true, square each diff before summing
 	 * @return total sum of differences
 	 */
-	public float calculateError( float[][][] targets, float[][][] responses, boolean sumOfSquares ) {
-		float result = 0;
+	public double calculateError( double[][][] targets, double[][][] responses, boolean sumOfSquares ) {
+		double result = 0;
 		for ( int i = 0; i < targets.length; ++i ) {
-			float[][] response = responses[ i ];
-			float[][] target = targets[ i ];
+			double[][] response = responses[ i ];
+			double[][] target = targets[ i ];
 			if ( response.length != target.length )
 				throw new IllegalArgumentException( "for training set " + i
 						+ " dimensions do not match for response [" + response.length + "] and target ["
 						+ target.length + "]" );
 			for ( int j = 0; j < target.length; ++j ) {
                 for ( int k = 0; k < target[0].length; ++k ) {
-                    float diff = 0;
+                    double diff = 0;
                     if ( response[j][k] > ( target[j][k] + targetRange ) )
                         diff = ( response[j][k] - ( target[j][k] + targetRange ) );
                     else if ( response[j][k] < ( target[j][k] - targetRange ) )
@@ -142,7 +142,7 @@ public class ErrorFunction {
 	/**
 	 * @return if response is within this range of the target, error is 0
 	 */
-	protected float getTargetRange() {
+	protected double getTargetRange() {
 		return targetRange;
 	}
 }

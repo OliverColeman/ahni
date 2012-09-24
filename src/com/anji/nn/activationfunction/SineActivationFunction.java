@@ -49,23 +49,23 @@ public class SineActivationFunction implements ActivationFunction {
 	/**
 	 * Return <code>input</code> with no transformation.
 	 * 
-	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(float)
+	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public float apply( float input ) {
-		return (float) Math.sin(input);
+	public double apply( double input ) {
+		return (double) Math.sin(input);
 	}
 
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMaxValue()
 	 */
-	public float getMaxValue() {
+	public double getMaxValue() {
 		return 1;
 	}
 	
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */
-	public float getMinValue() {
+	public double getMinValue() {
 		return -1;
 	}
 

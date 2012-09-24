@@ -38,9 +38,9 @@ private int numCycles = 1;
 
 private int outputDimension;
 
-private float minResponseValue;
+private double minResponseValue;
 
-private float maxResponseValue;
+private double maxResponseValue;
 
 /**
  * @param aNet ANN
@@ -72,10 +72,10 @@ public AnjiActivator( AnjiNet aNet, int aNumCycles ) throws IllegalArgumentExcep
 
 /**
  * @return nextSequence output pattern
- * @see AnjiActivator#nextSequence(float[])
+ * @see AnjiActivator#nextSequence(double[])
  */
-public float[] next() {
-	return next( (float[]) null );
+public double[] next() {
+	return next( (double[]) null );
 }
 
 /**
@@ -83,7 +83,7 @@ public float[] next() {
  * previous values
  * @return result of activation
  */
-public float[] next( float[] newInputValues ) {
+public double[] next( double[] newInputValues ) {
 	if ( newInputValues != null )
 		inputPattern.setValues( newInputValues );
 
@@ -99,7 +99,7 @@ public float[] next( float[] newInputValues ) {
 
 	// last step, get results
 	net.step();
-	float[] result = new float[ outputDimension ];
+	double[] result = new double[ outputDimension ];
 	for ( int idx = 0; idx < outputDimension; ++idx ) {
 		Neuron n = net.getOutputNeuron( idx );
 		result[ idx ] = n.getValue();
@@ -112,10 +112,10 @@ public float[] next( float[] newInputValues ) {
 /**
  * @param newInputValues input pattern sequence
  * @return nextSequence output pattern sequence
- * @see AnjiActivator#nextSequence(float[])
+ * @see AnjiActivator#nextSequence(double[])
  */
-public float[][] nextSequence( float[][] newInputValues ) {
-	float[][] result = new float[ newInputValues.length ][];
+public double[][] nextSequence( double[][] newInputValues ) {
+	double[][] result = new double[ newInputValues.length ][];
 	for ( int i = 0; i < newInputValues.length; ++i ) {
 		result[ i ] = next( newInputValues[ i ] );
 	}
@@ -124,22 +124,22 @@ public float[][] nextSequence( float[][] newInputValues ) {
 
 /**
  * @param stimuli
- * @return float[][] output array given input <code>stimuli</code>.
+ * @return double[][] output array given input <code>stimuli</code>.
  */
-public float[][] next( float[][] stimuli ) {
+public double[][] next( double[][] stimuli ) {
     throw new IllegalArgumentException("AnjiActivator can only accept one dimensional input patterns");
 }
 
 /**
  * @param stimuli
- * @return float[][][] sequence of output arrays given input sequence <code>stimult</code>.
+ * @return double[][][] sequence of output arrays given input sequence <code>stimult</code>.
  */
-public float[][][] nextSequence( float[][][] stimuli ) {
+public double[][][] nextSequence( double[][][] stimuli ) {
     throw new IllegalArgumentException("AnjiActivator can only accept one dimensional input patterns");
 }
 
 /**
- * @param array glue between float arrays and neuron connections.
+ * @param array glue between double arrays and neuron connections.
  */
 public void setInputPattern( Pattern array ) {
 	inputPattern = array;
@@ -208,14 +208,14 @@ public boolean isRecurrent() {
 /**
  * @return min response
  */
-public float getMinResponse() {
+public double getMinResponse() {
 	return net.getOutputNeuron( 0 ).getFunc().getMinValue();
 }
 
 /**
  * @return max responses
  */
-public float getMaxResponse() {
+public double getMaxResponse() {
 	return net.getOutputNeuron( 0 ).getFunc().getMaxValue();
 }
 

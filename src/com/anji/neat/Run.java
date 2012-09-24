@@ -46,17 +46,17 @@ public class Run {
 			int numRuns = props.getIntProperty(NUM_RUNS_KEY);
             int numGens = props.getIntProperty(NUM_GENS_KEY);
             
-	        float[][] performance;
-	        float[][] fitness;
-	        float[][] percentCorrect;
+	        double[][] performance;
+	        double[][] fitness;
+	        double[][] percentCorrect;
 	        
-	        performance = new float[numRuns][];
-            fitness = new float[numRuns][];
-            percentCorrect = new float[numRuns][];
+	        performance = new double[numRuns][];
+            fitness = new double[numRuns][];
+            percentCorrect = new double[numRuns][];
             
-            //float[][] champFitnesses = new float[numRuns][];
+            //double[][] champFitnesses = new double[numRuns][];
             
-            //float cumulativeFinalChampPerf = 0;
+            //double cumulativeFinalChampPerf = 0;
             long start = System.currentTimeMillis();
             double avgRunTime = 0;
             for (int run = 0; run < numRuns; run++) {
@@ -82,7 +82,7 @@ public class Run {
                 //cumulativeFinalChampPerf += performance[pan][pac][run][numGens-1];
                 //System.out.println(", avg so far: " + (cumulativeFinalChampPerf / (run+1)));
                              
-                //float finalChampFitness = champFitnesses[run][champFitnesses[run].length-1];
+                //double finalChampFitness = champFitnesses[run][champFitnesses[run].length-1];
 
                 //bfmin = Math.min(bfmin, finalChampFitness);
                 //bfmax = Math.max(bfmax, finalChampFitness);
@@ -113,12 +113,12 @@ public class Run {
             BufferedWriter resultFilePerf = new BufferedWriter(new FileWriter(resultFileNameBase + "-avg_performance_in_each_gen_over_all_runs.txt"));
             BufferedWriter resultFileFit = new BufferedWriter(new FileWriter(resultFileNameBase + "-avg_fitness_in_each_gen_over_all_runs.txt"));
             BufferedWriter resultFilePC = new BufferedWriter(new FileWriter(resultFileNameBase + "-avg_percent_corrent_in_each_gen_over_all_runs.txt"));
-            //float[] minFitness = new float[numGens];
-            float[] avgPerf = new float[numGens];
-            float[] avgFit = new float[numGens];
-            float[] avgPC = new float[numGens];
-            //float[] maxFitness = new float[numGens];
-            float p, f, pc;
+            //double[] minFitness = new double[numGens];
+            double[] avgPerf = new double[numGens];
+            double[] avgFit = new double[numGens];
+            double[] avgPC = new double[numGens];
+            //double[] maxFitness = new double[numGens];
+            double p, f, pc;
             for (int gen = 0; gen < numGens; gen++) {
             	//minFitness[gen] = Double.MAX_VALUE;
             	//maxFitness[gen] = Double.MIN_VALUE;

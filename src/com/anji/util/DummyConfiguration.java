@@ -25,9 +25,9 @@ public class DummyConfiguration extends Configuration {
 
 private final static int DEFAULT_POPULATION_SIZE = 100;
 
-private final static float DEFAULT_SURVIVAL_RATE = 0.20f;
+private final static double DEFAULT_SURVIVAL_RATE = 0.20f;
 
-private final static float DEFAULT_REPRODUCTION_RATE = 0.80f;
+private final static double DEFAULT_REPRODUCTION_RATE = 0.80f;
 
 /**
  * ctor

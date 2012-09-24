@@ -59,8 +59,8 @@ public void reset() {
  * returns ratio of time remaining to total time
  * @see com.anji.nn.Connection#read()
  */
-public float read() {
-	return ( stepsRemaining <= 0 ) ? 0 : ( (float) stepsRemaining / maxSteps );
+public double read() {
+	return ( stepsRemaining <= 0 ) ? 0 : ( (double) stepsRemaining / maxSteps );
 }
 
 /**

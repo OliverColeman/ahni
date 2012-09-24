@@ -28,23 +28,23 @@ public class NegatedLinearActivationFunction implements ActivationFunction {
 	/**
 	 * Return <code>input</code> with opposite sign.
 	 * 
-	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(float)
+	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public float apply( float input ) {
+	public double apply( double input ) {
 		return -input;
 	}
 
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMaxValue()
 	 */
-	public float getMaxValue() {
+	public double getMaxValue() {
 		return Float.MAX_VALUE;
 	}
 	
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */
-	public float getMinValue() {
+	public double getMinValue() {
 		return -Float.MAX_VALUE;
 	}
 

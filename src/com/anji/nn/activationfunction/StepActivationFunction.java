@@ -47,23 +47,23 @@ public class StepActivationFunction implements ActivationFunction {
 
 	/**
 	 * @return 0 if <code>input</code>< 0, 1 otherwise
-	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(float)
+	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public float apply( float input ) {
+	public double apply( double input ) {
 		return ( input <= 0 ) ? 0 : 1;
 	}
 
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMaxValue()
 	 */
-	public float getMaxValue() {
+	public double getMaxValue() {
 		return 1;
 	}
 
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */
-	public float getMinValue() {
+	public double getMinValue() {
 		return 0;
 	}
 

@@ -41,14 +41,14 @@ import com.anji.util.Properties;
  */
 public class SingleTopologicalMutationOperator extends MutationOperator implements Configurable {
 
-	private final static float DEFAULT_MUTATION_RATE = calculateMutationRate(AddConnectionMutationOperator.DEFAULT_MUTATE_RATE,
+	private final static double DEFAULT_MUTATION_RATE = calculateMutationRate(AddConnectionMutationOperator.DEFAULT_MUTATE_RATE,
 	        AddNeuronMutationOperator.DEFAULT_MUTATE_RATE);
 
 	private AddConnectionMutationOperator addConnOp;
 
 	private AddNeuronMutationOperator addNeuronOp;
 
-	private float addConnRatio = calculateAddConnRatio(AddConnectionMutationOperator.DEFAULT_MUTATE_RATE, AddNeuronMutationOperator.DEFAULT_MUTATE_RATE);
+	private double addConnRatio = calculateAddConnRatio(AddConnectionMutationOperator.DEFAULT_MUTATE_RATE, AddNeuronMutationOperator.DEFAULT_MUTATE_RATE);
 
 	/**
 	 * @see com.anji.util.Configurable#init(com.anji.util.Properties)
@@ -56,17 +56,17 @@ public class SingleTopologicalMutationOperator extends MutationOperator implemen
 	public void init(Properties props) throws Exception {
 		addConnOp = (AddConnectionMutationOperator) props.singletonObjectProperty(AddConnectionMutationOperator.class);
 		addNeuronOp = (AddNeuronMutationOperator) props.singletonObjectProperty(AddNeuronMutationOperator.class);
-		float addConnRate = addConnOp.getMutationRate();
-		float addNeuronRate = addNeuronOp.getMutationRate();
+		double addConnRate = addConnOp.getMutationRate();
+		double addNeuronRate = addNeuronOp.getMutationRate();
 		addConnRatio = calculateAddConnRatio(addConnRate, addNeuronRate);
 		setMutationRate(calculateMutationRate(addConnRate, addNeuronRate));
 	}
 
-	private static float calculateAddConnRatio(float addConnMutationRate, float addNeuronMutationRate) {
+	private static double calculateAddConnRatio(double addConnMutationRate, double addNeuronMutationRate) {
 		return (addConnMutationRate - (addConnMutationRate * addNeuronMutationRate * 0.5f)) / (addConnMutationRate + addNeuronMutationRate);
 	}
 
-	private static float calculateMutationRate(float addConnMutationRate, float addNeuronMutationRate) {
+	private static double calculateMutationRate(double addConnMutationRate, double addNeuronMutationRate) {
 		return addConnMutationRate + addNeuronMutationRate - (addConnMutationRate * addNeuronMutationRate);
 	}
 	
@@ -84,7 +84,7 @@ public class SingleTopologicalMutationOperator extends MutationOperator implemen
 	 * @param addNeuronMutationRate
 	 * @param aPolicy
 	 */
-	public SingleTopologicalMutationOperator(float addConnMutationRate, float addNeuronMutationRate, RecurrencyPolicy aPolicy) {
+	public SingleTopologicalMutationOperator(double addConnMutationRate, double addNeuronMutationRate, RecurrencyPolicy aPolicy) {
 		super(calculateMutationRate(addConnMutationRate, addNeuronMutationRate));
 		addConnRatio = calculateAddConnRatio(addConnMutationRate, addNeuronMutationRate);
 		addConnOp = new AddConnectionMutationOperator(addConnMutationRate, aPolicy);

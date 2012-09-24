@@ -40,11 +40,11 @@ private long id = hashCode();
 
 private Neuron incomingNode = null;
 
-private float weight = 0;
+private double weight = 0;
 
 /**
  * @param anIncoming
- * @see NeuronConnection#NeuronConnection(Neuron, float)
+ * @see NeuronConnection#NeuronConnection(Neuron, double)
  */
 public NeuronConnection( Neuron anIncoming ) {
 	this( anIncoming, 0 );
@@ -55,7 +55,7 @@ public NeuronConnection( Neuron anIncoming ) {
  * @param anIncoming
  * @param aWeight
  */
-public NeuronConnection( Neuron anIncoming, float aWeight ) {
+public NeuronConnection( Neuron anIncoming, double aWeight ) {
 	super();
 	incomingNode = anIncoming;
 	weight = aWeight;
@@ -64,14 +64,14 @@ public NeuronConnection( Neuron anIncoming, float aWeight ) {
 /**
  * @param f new weight
  */
-public void setWeight( float f ) {
+public void setWeight( double f ) {
 	weight = f;
 }
 
 /**
- * @return float
+ * @return double
  */
-public float read() {
+public double read() {
 	return weight * incomingNode.getValue();
 }
 
@@ -118,9 +118,9 @@ protected Neuron getIncomingNode() {
 }
 
 /**
- * @return float connection weight
+ * @return double connection weight
  */
-protected float getWeight() {
+protected double getWeight() {
 	return weight;
 }
 

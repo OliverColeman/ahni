@@ -51,8 +51,8 @@ public class RandomFitnessFunction implements BulkFitnessFunction, Configurable 
 	}
 	
 
-	public float getPerformanceFromFitnessValue(int fitness) {
-		return (float) fitness / MAX_FITNESS;
+	public double getPerformanceFromFitnessValue(int fitness) {
+		return (double) fitness / MAX_FITNESS;
 	}
 
 	/**

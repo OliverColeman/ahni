@@ -62,26 +62,26 @@ private static final String PRUNE_MUTATE_RATE_KEY = "prune.mutation.rate";
 /**
  * default mutation rate
  */
-public final static float DEFAULT_MUTATE_RATE = 1.00f;
+public final static double DEFAULT_MUTATE_RATE = 1.00f;
 
 /**
  * @see com.anji.util.Configurable#init(com.anji.util.Properties)
  */
 public void init( Properties props ) throws Exception {
-	setMutationRate( props.getFloatProperty( PRUNE_MUTATE_RATE_KEY, DEFAULT_MUTATE_RATE ) );
+	setMutationRate( props.getDoubleProperty( PRUNE_MUTATE_RATE_KEY, DEFAULT_MUTATE_RATE ) );
 }
 
 /**
- * @see PruneMutationOperator#PruneMutationOperator(float)
+ * @see PruneMutationOperator#PruneMutationOperator(double)
  */
 public PruneMutationOperator() {
 	this( DEFAULT_MUTATE_RATE );
 }
 
 /**
- * @see MutationOperator#MutationOperator(float)
+ * @see MutationOperator#MutationOperator(double)
  */
-public PruneMutationOperator( float newMutationRate ) {
+public PruneMutationOperator( double newMutationRate ) {
 	super( newMutationRate );
 }
 

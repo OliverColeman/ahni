@@ -57,7 +57,7 @@ public class RandomConnection implements Connection {
 	/**
 	 * @see com.anji.nn.Connection#read()
 	 */
-	public float read() {
+	public double read() {
 		return rand.nextFloat();
 	}
 

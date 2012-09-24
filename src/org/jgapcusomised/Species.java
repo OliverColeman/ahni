@@ -279,11 +279,11 @@ public class Species {
 
 	/**
 	 * @param aChromosome
-	 * @return float adjusted fitness for aChromosome relative to this specie
+	 * @return double adjusted fitness for aChromosome relative to this specie
 	 * @throws IllegalArgumentException
 	 *             if chromosome is not a member if this specie
 	 */
-	public float getChromosomeFitnessValue(Chromosome aChromosome) {
+	public double getChromosomeFitnessValue(Chromosome aChromosome) {
 		if (aChromosome.getFitnessValue() < 0)
 			throw new IllegalArgumentException("chromosome's fitness has not been set: " + aChromosome.toString());
 		/*
@@ -291,14 +291,14 @@ public class Species {
 		 * == false) throw new IllegalArgumentException(
 		 * "chromosome not a member of this specie: " + aChromosome.toString());
 		 */
-		return ((float) aChromosome.getFitnessValue()) / chromosomes.size();
+		return ((double) aChromosome.getFitnessValue()) / chromosomes.size();
 	}
 
 	/**
 	 * @return average raw fitness (i.e., not adjusted for specie size) of all
 	 *         chromosomes in specie
 	 */
-	public float getFitnessValue() {
+	public double getFitnessValue() {
 		long totalRawFitness = 0;
 		Iterator<Chromosome> iter = chromosomes.iterator();
 		while (iter.hasNext()) {
@@ -308,7 +308,7 @@ public class Species {
 			totalRawFitness += aChromosome.getFitnessValue();
 		}
 
-		return (float) totalRawFitness / chromosomes.size();
+		return (double) totalRawFitness / chromosomes.size();
 	}
 
 	/**
@@ -344,7 +344,7 @@ public class Species {
 	 * @return top proportion (or minToSelect, which ever is greater) of fittest
 	 *         Chromosomes in this species.
 	 */
-	public List<Chromosome> getElite(float proportion, int minToSelect) {
+	public List<Chromosome> getElite(double proportion, int minToSelect) {
 		eliteCount = 0;
 
 		int numToSelect = Math.max(minToSelect, (int) Math.round(proportion * size()));

@@ -54,26 +54,26 @@ public class AddNeuronMutationOperator extends MutationOperator implements Confi
 	/**
 	 * default mutation rate
 	 */
-	public static final float DEFAULT_MUTATE_RATE = 0.01f;
+	public static final double DEFAULT_MUTATE_RATE = 0.01f;
 
 	/**
 	 * @see com.anji.util.Configurable#init(com.anji.util.Properties)
 	 */
 	public void init(Properties props) throws Exception {
-		setMutationRate(props.getFloatProperty(ADD_NEURON_MUTATE_RATE_KEY, DEFAULT_MUTATE_RATE));
+		setMutationRate(props.getDoubleProperty(ADD_NEURON_MUTATE_RATE_KEY, DEFAULT_MUTATE_RATE));
 	}
 
 	/**
-	 * @see AddNeuronMutationOperator#AddNeuronMutationOperator(float)
+	 * @see AddNeuronMutationOperator#AddNeuronMutationOperator(double)
 	 */
 	public AddNeuronMutationOperator() {
 		this(DEFAULT_MUTATE_RATE);
 	}
 
 	/**
-	 * @see MutationOperator#MutationOperator(float)
+	 * @see MutationOperator#MutationOperator(double)
 	 */
-	public AddNeuronMutationOperator(float newMutationRate) {
+	public AddNeuronMutationOperator(double newMutationRate) {
 		super(newMutationRate);
 	}
 

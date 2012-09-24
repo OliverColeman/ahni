@@ -66,24 +66,24 @@ public class NeatTargetFitnessFunction extends TargetFitnessFunction {
 	 * @param maxResponse
 	 * @return result of calculation
 	 */
-	protected int calculateErrorFitness( float[][] responses, float minResponse, float maxResponse ) {
-		float maxSumDiff = ErrorFunction.getInstance().getMaxError(
+	protected int calculateErrorFitness( double[][] responses, double minResponse, double maxResponse ) {
+		double maxSumDiff = ErrorFunction.getInstance().getMaxError(
 				getTargets().length * getTargets()[ 0 ].length,
 				( maxResponse - minResponse ), SUM_OF_SQUARES );
-		float maxRawFitnessValue = (float) Math.pow( maxSumDiff, 2 );
+		double maxRawFitnessValue = (double) Math.pow( maxSumDiff, 2 );
 
-		float sumDiff = ErrorFunction.getInstance().calculateError( getTargets(), responses, false );
+		double sumDiff = ErrorFunction.getInstance().calculateError( getTargets(), responses, false );
 		if ( sumDiff > maxSumDiff )
 			throw new IllegalStateException( "sum diff > max sum diff" );
-		float rawFitnessValue = (float) Math.pow( maxSumDiff - sumDiff, 2 );
-		float skewedFitness = ( rawFitnessValue / maxRawFitnessValue ) * MAX_FITNESS;
+		double rawFitnessValue = (double) Math.pow( maxSumDiff - sumDiff, 2 );
+		double skewedFitness = ( rawFitnessValue / maxRawFitnessValue ) * MAX_FITNESS;
 		int result = (int) skewedFitness;
 		return result;
 	}
 	
 
-	public float getPerformanceFromFitnessValue(int fitness) {
-		return (float) fitness / MAX_FITNESS;
+	public double getPerformanceFromFitnessValue(int fitness) {
+		return (double) fitness / MAX_FITNESS;
 	}
 
 	public boolean endRun() {

@@ -37,7 +37,7 @@ public class ExponentialTargetFitnessFunction extends TargetFitnessFunction {
 
 	private final static boolean SUM_OF_SQUARES = true;
 
-	private float[][] nullResponses;
+	private double[][] nullResponses;
 
 	private final static int MAX_FITNESS = Integer.MAX_VALUE;
 
@@ -54,7 +54,7 @@ public class ExponentialTargetFitnessFunction extends TargetFitnessFunction {
 			ErrorFunction errorFunction = ErrorFunction.getInstance();
 			errorFunction.init( newProps );
 
-			nullResponses = new float[ getTargets().length ][ getTargets()[ 0 ].length ];
+			nullResponses = new double[ getTargets().length ][ getTargets()[ 0 ].length ];
 			for ( int i = 0; i < nullResponses.length; ++i )
 				Arrays.fill( nullResponses[ i ], 0 );
 
@@ -72,9 +72,9 @@ public class ExponentialTargetFitnessFunction extends TargetFitnessFunction {
 	 * @param nullRawFitness
 	 * @return fitness skewed such that max is <code>Integer.MAX_VALUE</code>.
 	 */
-	private float calculateSkewedFitness( float rawFitness, float expFactor, float nullRawFitness ) {
-		float exponent = ( expFactor * rawFitness ) - ( nullRawFitness - (float) Math.E );
-		return (float) Math.exp( exponent );
+	private double calculateSkewedFitness( double rawFitness, double expFactor, double nullRawFitness ) {
+		double exponent = ( expFactor * rawFitness ) - ( nullRawFitness - (double) Math.E );
+		return (double) Math.exp( exponent );
 	}
 
 	/**
@@ -84,29 +84,29 @@ public class ExponentialTargetFitnessFunction extends TargetFitnessFunction {
 	 * @return int exponential fitness, calculated by squaring the error of each response, summing
 	 * those errors, and using that error as an exponent to <code>Math.E</code>.
 	 */
-	protected int calculateErrorFitness( float[][] responses, float minResponse, float maxResponse ) {
+	protected int calculateErrorFitness( double[][] responses, double minResponse, double maxResponse ) {
 		ErrorFunction errorFunction = ErrorFunction.getInstance();
-		float maxRawFitnessValue = errorFunction.getMaxError( getTargets().length
+		double maxRawFitnessValue = errorFunction.getMaxError( getTargets().length
 				* getTargets()[ 0 ].length, ( maxResponse - minResponse ), SUM_OF_SQUARES );
-		float nullRawFitness = maxRawFitnessValue
+		double nullRawFitness = maxRawFitnessValue
 				- errorFunction.calculateError( getTargets(), nullResponses, SUM_OF_SQUARES );
 
 		// set expFactor such that max skewed fitness is Integer.MAX_VALUE
-		float expFactor = (float) ( Math.log( MAX_FITNESS ) + ( nullRawFitness - Math.E ) )/ maxRawFitnessValue;
+		double expFactor = (double) ( Math.log( MAX_FITNESS ) + ( nullRawFitness - Math.E ) )/ maxRawFitnessValue;
 
-		float sumSqDiff = ErrorFunction.getInstance().calculateError( getTargets(), responses, true );
+		double sumSqDiff = ErrorFunction.getInstance().calculateError( getTargets(), responses, true );
 		if ( sumSqDiff > maxRawFitnessValue )
 			throw new IllegalStateException( "sum squared diff > max fitness value" );
-		float rawFitnessValue = maxRawFitnessValue - sumSqDiff;
-		float skewedFitness = calculateSkewedFitness( rawFitnessValue, expFactor, nullRawFitness );
+		double rawFitnessValue = maxRawFitnessValue - sumSqDiff;
+		double skewedFitness = calculateSkewedFitness( rawFitnessValue, expFactor, nullRawFitness );
 		int result = (int) skewedFitness;
 		return result;
 	}
 	
 	
 
-	public float getPerformanceFromFitnessValue(int fitness) {
-		return (float) fitness / MAX_FITNESS;
+	public double getPerformanceFromFitnessValue(int fitness) {
+		return (double) fitness / MAX_FITNESS;
 	}
 
 	public boolean endRun() {

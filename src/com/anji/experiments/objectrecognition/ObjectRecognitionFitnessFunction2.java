@@ -16,7 +16,7 @@ import com.anji.util.*;
  * @author Philip Tucker
  */
 public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction {
-    private float[][][] stimuli;
+    private double[][][] stimuli;
     private int[][] targetCoords;
     private int maxFitnessValue;
 
@@ -40,7 +40,7 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
     	int deltaAdjust = 1 + largeSquareSize / 2; //max delta (in x or y dimension) is width or height of the field -1 - min distance the centre of the large square can be from the edge of the board 
         int maxXDelta = width[0] - deltaAdjust;
         int maxYDelta = height[0] - deltaAdjust;
-    	float maxDistance = (float) Math.sqrt(maxXDelta*maxXDelta + maxYDelta*maxYDelta);
+    	double maxDistance = (double) Math.sqrt(maxXDelta*maxXDelta + maxYDelta*maxYDelta);
         maxFitnessValue = (int) Math.ceil(maxDistance * 1000); //fitness is given by maxFitnessValue - avg of distances * 1000
     }
 
@@ -59,11 +59,11 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
      * configuration.
      *
      * @param genotypes <code>List</code> contains <code>Chromosome</code> objects.
-     * @see TargetFitnessFunction#calculateErrorFitness(float[][], float, float)
+     * @see TargetFitnessFunction#calculateErrorFitness(double[][], double, double)
      */
     public void initialiseEvaluation() {
     	//generate trials
-        stimuli = new float[numTrials][height[0]][width[0]];
+        stimuli = new double[numTrials][height[0]][width[0]];
         targetCoords = new int[numTrials][2];
 
         for (int t = 0; t < numTrials; t++) {
@@ -95,10 +95,10 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
     protected int evaluate(Chromosome genotype, com.anji.hyperneat.GridNet substrate, int threadIndex) {
         //if (genotype.size() > 100)
         //    return 0;
-        float[][][] responses = substrate.nextSequence(stimuli);
+        double[][][] responses = substrate.nextSequence(stimuli);
         
         int totalSqrDists = 0;
-        float totalDists = 0;
+        double totalDists = 0;
         for (int t = 0; t < numTrials; t++) {
             //find output with highest response
             int xh = 0;
@@ -120,7 +120,7 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
         }
         
         genotype.setPerformanceValue(totalDists / numTrials);
-        return maxFitnessValue - (int) Math.round(((float) (totalDists/numTrials)) * 1000);
+        return maxFitnessValue - (int) Math.round(((double) (totalDists/numTrials)) * 1000);
     }
     
     protected void scale(int scaleCount, int scaleFactor) {

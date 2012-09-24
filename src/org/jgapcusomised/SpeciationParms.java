@@ -31,58 +31,58 @@ public SpeciationParms() {
 	// no-op
 }
 
-private final static float DEFAULT_COMPATIBILITY_EXCESS_COEFF = 1;
+private final static double DEFAULT_COMPATIBILITY_EXCESS_COEFF = 1;
 
-private final static float DEFAULT_COMPATIBILITY_DISJOINT_COEFF = 1;
+private final static double DEFAULT_COMPATIBILITY_DISJOINT_COEFF = 1;
 
-private final static float DEFAULT_COMPATIBILITY_COMMON_COEFF = 0.4f;
+private final static double DEFAULT_COMPATIBILITY_COMMON_COEFF = 0.4f;
 
 /**
  * default speciation threshold
  */
-public final static float DEFAULT_SPECIATION_THRESHOLD = 3;
+public final static double DEFAULT_SPECIATION_THRESHOLD = 3;
 
 public final static int DEFAULT_SPECIATION_TARGET = 0; //don't try to maintain a specific number of species
 
-public final static float DEFAULT_SPECIATION_THRESHOLD_CHANGE = 0.1f;
+public final static double DEFAULT_SPECIATION_THRESHOLD_CHANGE = 0.1f;
 
 
-private float compatExcessCoeff = DEFAULT_COMPATIBILITY_EXCESS_COEFF;
+private double compatExcessCoeff = DEFAULT_COMPATIBILITY_EXCESS_COEFF;
 
-private float compatDisjointCoeff = DEFAULT_COMPATIBILITY_DISJOINT_COEFF;
+private double compatDisjointCoeff = DEFAULT_COMPATIBILITY_DISJOINT_COEFF;
 
-private float compatCommonCoeff = DEFAULT_COMPATIBILITY_COMMON_COEFF;
+private double compatCommonCoeff = DEFAULT_COMPATIBILITY_COMMON_COEFF;
 
-private float speciationThreshold = DEFAULT_SPECIATION_THRESHOLD;
+private double speciationThreshold = DEFAULT_SPECIATION_THRESHOLD;
 
 private int speciationTarget = DEFAULT_SPECIATION_TARGET;
 
-private float speciationThresholdChange = DEFAULT_SPECIATION_THRESHOLD_CHANGE;
+private double speciationThresholdChange = DEFAULT_SPECIATION_THRESHOLD_CHANGE;
 
 /**
- * @return float coefficient for species compatibility based on common genes; see <a
+ * @return double coefficient for species compatibility based on common genes; see <a
  * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">section 3.3 of primary NEAT
  * paper </a> for details.
  */
-public float getSpecieCompatCommonCoeff() {
+public double getSpecieCompatCommonCoeff() {
 	return compatCommonCoeff;
 }
 
 /**
- * @return float coefficient for species compatibility based on disjoint genes; see <a
+ * @return double coefficient for species compatibility based on disjoint genes; see <a
  * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">section 3.3 of primary NEAT
  * paper </a> for details.
  */
-public float getSpecieCompatDisjointCoeff() {
+public double getSpecieCompatDisjointCoeff() {
 	return compatDisjointCoeff;
 }
 
 /**
- * @return float coefficient for species compatibility based on excess genes; see <a
+ * @return double coefficient for species compatibility based on excess genes; see <a
  * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">section 3.3 of primary NEAT
  * paper </a> for details.
  */
-public float getSpecieCompatExcessCoeff() {
+public double getSpecieCompatExcessCoeff() {
 	return compatExcessCoeff;
 }
 
@@ -91,7 +91,7 @@ public float getSpecieCompatExcessCoeff() {
  * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">section 3.3 of primary NEAT
  * paper </a> for details.
  */
-public void setSpecieCompatCommonCoeff( float d ) {
+public void setSpecieCompatCommonCoeff( double d ) {
 	compatCommonCoeff = d;
 }
 
@@ -100,7 +100,7 @@ public void setSpecieCompatCommonCoeff( float d ) {
  * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">section 3.3 of primary NEAT
  * paper </a> for details.
  */
-public void setSpecieCompatDisjointCoeff( float d ) {
+public void setSpecieCompatDisjointCoeff( double d ) {
 	compatDisjointCoeff = d;
 }
 
@@ -109,7 +109,7 @@ public void setSpecieCompatDisjointCoeff( float d ) {
  * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">section 3.3 of primary NEAT
  * paper </a> for details.
  */
-public void setSpecieCompatExcessCoeff( float d ) {
+public void setSpecieCompatExcessCoeff( double d ) {
 	compatExcessCoeff = d;
 }
 
@@ -118,7 +118,7 @@ public void setSpecieCompatExcessCoeff( float d ) {
  * same species; see <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">section
  * 3.3 of primary NEAT paper </a> for details.
  */
-public float getSpeciationThreshold() {
+public double getSpeciationThreshold() {
 	return speciationThreshold;
 }
 
@@ -127,7 +127,7 @@ public float getSpeciationThreshold() {
  * same species; see <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">section
  * 3.3 of primary NEAT paper </a> for details.
  */
-public void setSpeciationThreshold( float d ) {
+public void setSpeciationThreshold( double d ) {
 	speciationThreshold = d;
 }
 
@@ -149,14 +149,14 @@ public void setSpeciationTarget( int d ) {
 /**
  * @return amount to change speciation threshold to maintain speciation target.
  */
-public float getSpeciationThresholdChange() {
+public double getSpeciationThresholdChange() {
 	return speciationThresholdChange;
 }
 
 /**
  * @param d amount to change speciation threshold to maintain speciation target.
  */
-public void setSpeciationThresholdChange( float d ) {
+public void setSpeciationThresholdChange( double d ) {
 	speciationThresholdChange = d;
 }
 

@@ -54,7 +54,7 @@ private static class NeuronMetaData {
 
 private Neuron neuron;
 
-private float hintPosition;
+private double hintPosition;
 
 private int hintLayer;
 
@@ -75,9 +75,9 @@ public int getHintLayer() {
 }
 
 /**
- * @return float hint position in layer
+ * @return double hint position in layer
  */
-public float getHintPosition() {
+public double getHintPosition() {
 	return hintPosition;
 }
 
@@ -91,7 +91,7 @@ public void setHintLayer( int i ) {
 /**
  * @param f new hint position in layer
  */
-public void setHintPosition( float f ) {
+public void setHintPosition( double f ) {
 	hintPosition = f;
 }
 
@@ -131,9 +131,9 @@ public ActivationFunction getActivationFunction() {
 }
 
 /**
- * @return float activation value of neuron
+ * @return double activation value of neuron
  */
-public float getValue() {
+public double getValue() {
 	return neuron.getValue();
 }
 }
@@ -166,7 +166,7 @@ public static NeuronMetaDataPositionComparator getInstance() {
 public int compare( Object o1, Object o2 ) {
 	NeuronMetaData hc1 = (NeuronMetaData) o1;
 	NeuronMetaData hc2 = (NeuronMetaData) o2;
-	float result = hc1.getHintPosition() - hc2.getHintPosition();
+	double result = hc1.getHintPosition() - hc2.getHintPosition();
 	if ( result > 0 )
 		return 1;
 	else if ( result < 0 )
@@ -186,7 +186,7 @@ private long id = hashCode();
 /**
  * protected for <code>TestNeuron</code> only
  */
-protected float value;
+protected double value;
 
 private boolean dirty; // indicates value has not been updated for the current
 
@@ -230,13 +230,13 @@ public void step() {
 /**
  * only calculate value if dirty == false; otherwise, returned cached value
  * 
- * @return float activation value for current time step
+ * @return double activation value for current time step
  */
-public float getValue() {
+public double getValue() {
 	if ( dirty ) {
 		if (func instanceof ActivationFunctionNonIntegrating) {
 			ActivationFunctionNonIntegrating func2 = (ActivationFunctionNonIntegrating) func;
-			float[] input = new float[incomingConns.size()];
+			double[] input = new double[incomingConns.size()];
 			Iterator it = incomingConns.iterator();
 			int i = 0;
 			while (it.hasNext()) {
@@ -246,7 +246,7 @@ public float getValue() {
 			value = func2.apply(input);
 		}
 		else {
-			float sum = 0.0f;
+			double sum = 0.0f;
 			Iterator it = incomingConns.iterator();
 			while ( it.hasNext() ) {
 				Connection conn = (Connection) it.next();
@@ -431,7 +431,7 @@ private static NeuronMetaData createMetaData( Neuron neuron, Map allMetaData ) {
 		// recurse, calculate position of incoming neurons
 		int maxIncomingLayer = 0;
 		int numInputs = 0;
-		float totalInputPos = 0;
+		double totalInputPos = 0;
 		Iterator iter = neuron.incomingConns.iterator();
 		while ( iter.hasNext() ) {
 			Connection conn = (Connection) iter.next();

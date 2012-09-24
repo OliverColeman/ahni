@@ -26,7 +26,7 @@ package com.anji.nn.activationfunction;
  */
 public class GaussianActivationFunction implements ActivationFunction {
 
-	private final static float SLOPE = 4.924273f;
+	private final static double SLOPE = 4.924273f;
 
 	/**
 	 * identifying string
@@ -50,23 +50,23 @@ public class GaussianActivationFunction implements ActivationFunction {
 	/**
 	 * Return <code>input</code> with Gaussian function transformation.
 	 * 
-	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(float)
+	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public float apply( float input ) {
-		return (float) Math.exp(-(input * input * SLOPE));
+	public double apply( double input ) {
+		return (double) Math.exp(-(input * input * SLOPE));
 	}
 
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMaxValue()
 	 */
-	public float getMaxValue() {
+	public double getMaxValue() {
 		return 1;
 	}
 	
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */
-	public float getMinValue() {
+	public double getMinValue() {
 		return 0;
 	}
 

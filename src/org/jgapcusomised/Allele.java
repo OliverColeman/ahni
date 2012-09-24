@@ -59,7 +59,7 @@ protected Allele( Gene aGene ) {
  * speciation compatibility.
  * @see Chromosome#distance(Chromosome, SpeciationParms)
  */
-public abstract float distance( Allele target );
+public abstract double distance( Allele target );
 
 /**
  * Sets the value of this Gene to a random legal value for the implementation. This method

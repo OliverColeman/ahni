@@ -30,19 +30,19 @@ public interface ActivationFunction {
 /**
  * Apply activation function to input.
  * @param input
- * @return float result of applying activation function to <code>input</code>
+ * @return double result of applying activation function to <code>input</code>
  */
-public abstract float apply( float input );
+public abstract double apply( double input );
 
 /**
  * @return ceiling value for this function
  */
-public float getMaxValue();
+public double getMaxValue();
 
 /**
  * @return floor value for this function
  */
-public float getMinValue();
+public double getMinValue();
 
 /**
  * @return number corresponding to cost of activation in resources

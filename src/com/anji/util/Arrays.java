@@ -43,7 +43,7 @@ public static String toString( int[] a ) {
  * @param a
  * @return <code>String</code> representation of array, in brackets with comma separators
  */
-public static String toString( float[] a ) {
+public static String toString( double[] a ) {
 	StringBuffer result = new StringBuffer();
 	result.append( "[" );
 	if ( a.length > 0 )

@@ -119,14 +119,14 @@ private static final String REMOVE_CONN_MUTATE_RATE_KEY = "remove.connection.mut
 /**
  * default maximum weight a connection can have and still be removed
  */
-public final static float DEFAULT_MAX_WEIGHT_REMOVED = 0.10f;
+public final static double DEFAULT_MAX_WEIGHT_REMOVED = 0.10f;
 
 /**
  * default mutation rate
  */
-public final static float DEFAULT_MUTATE_RATE = 0.01f;
+public final static double DEFAULT_MUTATE_RATE = 0.01f;
 
-private float maxWeightRemoved = DEFAULT_MAX_WEIGHT_REMOVED;
+private double maxWeightRemoved = DEFAULT_MAX_WEIGHT_REMOVED;
 
 private Strategy strategy = Strategy.SKEWED;
 
@@ -134,33 +134,33 @@ private Strategy strategy = Strategy.SKEWED;
  * @see com.anji.util.Configurable#init(com.anji.util.Properties)
  */
 public void init( Properties props ) throws Exception {
-	setMutationRate( props.getFloatProperty( REMOVE_CONN_MUTATE_RATE_KEY,
+	setMutationRate( props.getDoubleProperty( REMOVE_CONN_MUTATE_RATE_KEY,
 			RemoveConnectionMutationOperator.DEFAULT_MUTATE_RATE ) );
-	maxWeightRemoved = props.getFloatProperty( REMOVE_CONN_MAX_WEIGHT_KEY,
+	maxWeightRemoved = props.getDoubleProperty( REMOVE_CONN_MAX_WEIGHT_KEY,
 			DEFAULT_MAX_WEIGHT_REMOVED );
 	strategy = Strategy.valueOf( props.getProperty( STRATEGY_KEY, Strategy.SKEWED.toString() ) );
 }
 
 /**
- * @see RemoveConnectionMutationOperator#RemoveConnectionMutationOperator(float)
+ * @see RemoveConnectionMutationOperator#RemoveConnectionMutationOperator(double)
  */
 public RemoveConnectionMutationOperator() {
 	this( DEFAULT_MUTATE_RATE );
 }
 
 /**
- * @see MutationOperator#MutationOperator(float)
+ * @see MutationOperator#MutationOperator(double)
  */
-public RemoveConnectionMutationOperator( float aMutationRate ) {
+public RemoveConnectionMutationOperator( double aMutationRate ) {
 	super( aMutationRate );
 }
 
 /**
  * @param aMutationRate
  * @param aMaxWeightRemoved weights larger than this can not be removed
- * @see MutationOperator#MutationOperator(float)
+ * @see MutationOperator#MutationOperator(double)
  */
-public RemoveConnectionMutationOperator( float aMutationRate, float aMaxWeightRemoved ) {
+public RemoveConnectionMutationOperator( double aMutationRate, double aMaxWeightRemoved ) {
 	super( aMutationRate );
 	maxWeightRemoved = aMaxWeightRemoved;
 }
@@ -169,9 +169,9 @@ public RemoveConnectionMutationOperator( float aMutationRate, float aMaxWeightRe
  * @param aMutationRate
  * @param aMaxWeightRemoved weights larger than this can not be removed
  * @param aStrategy
- * @see MutationOperator#MutationOperator(float)
+ * @see MutationOperator#MutationOperator(double)
  */
-public RemoveConnectionMutationOperator( float aMutationRate, float aMaxWeightRemoved,
+public RemoveConnectionMutationOperator( double aMutationRate, double aMaxWeightRemoved,
 		Strategy aStrategy ) {
 	super( aMutationRate );
 	maxWeightRemoved = aMaxWeightRemoved;
@@ -211,11 +211,11 @@ private void mutateSkewed( NeatConfiguration config, List allConns, Set allelesT
 	Iterator it = allConns.iterator();
 	while ( it.hasNext() ) {
 		ConnectionAllele connAllele = (ConnectionAllele) it.next();
-		float absWeight = (float) Math.abs( connAllele.getWeight() );
+		double absWeight = (double) Math.abs( connAllele.getWeight() );
 
 		// probability of connection being removed ranges from 0 (if weight magnitude >= max
 		// weight removed) to mutation rate (if weight is 0)
-		float smallWeightFactor = 0;
+		double smallWeightFactor = 0;
 		if ( absWeight < maxWeightRemoved )
 			smallWeightFactor = ( maxWeightRemoved - absWeight ) / maxWeightRemoved;
 		smallWeightFactor *= smallWeightFactor;
@@ -258,9 +258,9 @@ private void mutateSmall( NeatConfiguration config, List allConns, Set allelesTo
 }
 
 /**
- * @return float threshold above which no weight is removed
+ * @return double threshold above which no weight is removed
  */
-public float getMaxWeightRemoved() {
+public double getMaxWeightRemoved() {
 	return maxWeightRemoved;
 }
 

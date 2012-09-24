@@ -36,13 +36,13 @@ public class ConnectionAllele extends Allele {
 /**
  * default connection weight
  */
-public final static float DEFAULT_WEIGHT = 0;
+public final static double DEFAULT_WEIGHT = 0;
 
-private final static float MIN_INIT_WEIGHT = -0.5f;
+private final static double MIN_INIT_WEIGHT = -0.5f;
 
-private final static float MAX_INIT_WEIGHT = 0.5f;
+private final static double MAX_INIT_WEIGHT = 0.5f;
 
-private float weight = DEFAULT_WEIGHT;
+private double weight = DEFAULT_WEIGHT;
 
 
 /**
@@ -78,10 +78,10 @@ public Allele cloneAllele() {
 
 /**
  * @param target should be <code>ConnectionAllele</code> with same gene
- * @return <code>float</code> compatibility distance based on weight; always positive
+ * @return <code>double</code> compatibility distance based on weight; always positive
  * @see Allele#distance(Allele)
  */
-public float distance( Allele target ) {
+public double distance( Allele target ) {
 	// TODO - removed to help performance
 	//		if ( target.getInnovationId().equals( getInnovationId() ) == false )
 	//			throw new Exception( "should not compute distance for alleles of different gene" );
@@ -101,14 +101,14 @@ public void setToRandomValue( Random a_numberGenerator ) {
 /**
  * @return connection weight
  */
-public float getWeight() {
+public double getWeight() {
 	return weight;
 }
 
 /**
  * @param aWeight new connection weight
  */
-public void setWeight( float aWeight ) {
+public void setWeight( double aWeight ) {
 	weight = aWeight;
 }
 

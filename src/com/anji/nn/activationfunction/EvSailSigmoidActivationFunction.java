@@ -26,8 +26,8 @@ package com.anji.nn.activationfunction;
  */
 public class EvSailSigmoidActivationFunction implements ActivationFunction {
 
-	private final static float SEP = 0.3f;
-	private final static float DENOMINATOR = 2 * SEP * SEP;
+	private final static double SEP = 0.3f;
+	private final static double DENOMINATOR = 2 * SEP * SEP;
 
 	/**
 	 * identifying string
@@ -50,17 +50,17 @@ public class EvSailSigmoidActivationFunction implements ActivationFunction {
 
 	/**
 	 * Approximation of classic sigmoid.
-	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(float)
+	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public float apply( float input ) {
+	public double apply( double input ) {
 		if ( input <= -SEP )
 			return 0;
 		else if ( input <= 0 ) {
-			float tmp = input + SEP;
+			double tmp = input + SEP;
 			return ( tmp * tmp ) / DENOMINATOR;
 		}
 		else if ( input < SEP ) {
-			float tmp = input - SEP;
+			double tmp = input - SEP;
 			return 1 - ( ( tmp * tmp ) / DENOMINATOR );
 		}
 		else
@@ -70,14 +70,14 @@ public class EvSailSigmoidActivationFunction implements ActivationFunction {
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMaxValue()
 	 */
-	public float getMaxValue() {
+	public double getMaxValue() {
 		return 1;
 	}
 	
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */
-	public float getMinValue() {
+	public double getMinValue() {
 		return 0;
 	}
 

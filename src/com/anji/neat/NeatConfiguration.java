@@ -32,7 +32,7 @@ import org.jgapcustomised.event.EventManager;
 import org.jgapcustomised.impl.CloneReproductionOperator;
 import org.jgapcustomised.impl.WeightedRouletteSelector;
 
-import com.anji.hyperneat.HyperNEATTranscriber;
+import com.anji.hyperneat.HyperNEATTranscriberGridNet;
 import com.anji.integration.ActivatorTranscriber;
 import com.anji.integration.SimpleSelector;
 import com.anji.nn.activationfunction.ActivationFunctionType;
@@ -57,11 +57,11 @@ public class NeatConfiguration extends Configuration {
     /**
      * default survival rate
      */
-    public static final float DEFAULT_SURVIVAL_RATE = 0.20f;
+    public static final double DEFAULT_SURVIVAL_RATE = 0.20f;
     /**
      * default crossover proportion
      */
-    public static final float DEFAULT_CROSSOVER_PROPORTION = 0.5f;
+    public static final double DEFAULT_CROSSOVER_PROPORTION = 0.5f;
     /**
      * default population size
      */
@@ -166,8 +166,8 @@ public class NeatConfiguration extends Configuration {
     private Properties props;
     private CloneReproductionOperator cloneOper = null;
     private NeatCrossoverReproductionOperator crossoverOper = null;
-    private float maxConnectionWeight = Float.MAX_VALUE;
-    private float minConnectionWeight = -Float.MAX_VALUE;
+    private double maxConnectionWeight = Float.MAX_VALUE;
+    private double minConnectionWeight = -Float.MAX_VALUE;
     private ActivationFunctionType inputActivationType;
     private ActivationFunctionType outputActivationType;
     private ActivationFunctionType hiddenActivationType;
@@ -246,12 +246,12 @@ public class NeatConfiguration extends Configuration {
         }
 
         // make sure numbers add up
-        float survivalRate = props.getFloatProperty(SURVIVAL_RATE_KEY, DEFAULT_SURVIVAL_RATE);
-        //float crossoverSlice = 1.0f - ( 2.0f * survivalRate );
+        double survivalRate = props.getDoubleProperty(SURVIVAL_RATE_KEY, DEFAULT_SURVIVAL_RATE);
+        //double crossoverSlice = 1.0f - ( 2.0f * survivalRate );
         //if ( crossoverSlice < 0.0f )
         //	throw new InvalidConfigurationException( "survival rate too large: " + survivalRate );
         //logger.info( "Crossover proportion: " + crossoverSlice);
-        float crossoverProportion = props.getFloatProperty(CROSSOVER_PROPORTION_KEY, DEFAULT_CROSSOVER_PROPORTION);
+        double crossoverProportion = props.getDoubleProperty(CROSSOVER_PROPORTION_KEY, DEFAULT_CROSSOVER_PROPORTION);
 
 
         // selector
@@ -271,8 +271,8 @@ public class NeatConfiguration extends Configuration {
         setNaturalSelector(selector);
 
         // reproduction
-        //float reproductionSlice = 1 - survivalRate;  //if a certain percentage of pop survives next to generation.
-        float reproductionSlice = 1; //if only elites survive to next generation. exact number of elites changes so handle at reproduction time. 
+        //double reproductionSlice = 1 - survivalRate;  //if a certain percentage of pop survives next to generation.
+        double reproductionSlice = 1; //if only elites survive to next generation. exact number of elites changes so handle at reproduction time. 
         cloneOper = new CloneReproductionOperator();
         crossoverOper = new NeatCrossoverReproductionOperator();
         getCloneOperator().setSlice(reproductionSlice * (1 - crossoverProportion));
@@ -306,12 +306,12 @@ public class NeatConfiguration extends Configuration {
         short stimulusSize, responseSize;
 		//automatically determine input and output size for hyperneat CPPN
         if (type.equals(ActivatorTranscriber.HYPERNEAT_TYPE)) {
-        	boolean feedForward = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_FEED_FORWARD_KEY);
-            boolean enableBias = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_ENABLE_BIAS);
-            boolean includeDelta = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_INCLUDE_DELTA);
-            boolean includeAngle = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_INCLUDE_ANGLE);
-            boolean layerEncodingIsInput = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_LAYER_ENCODING);
-            short depth = props.getShortProperty(HyperNEATTranscriber.HYPERNEAT_DEPTH);
+        	boolean feedForward = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_FEED_FORWARD_KEY);
+            boolean enableBias = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_ENABLE_BIAS);
+            boolean includeDelta = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_INCLUDE_DELTA);
+            boolean includeAngle = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_INCLUDE_ANGLE);
+            boolean layerEncodingIsInput = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_LAYER_ENCODING);
+            short depth = props.getShortProperty(HyperNEATTranscriberGridNet.HYPERNEAT_DEPTH);
             
             //bias, sx, sy, tx, ty
         	stimulusSize = 5;
@@ -502,14 +502,14 @@ public class NeatConfiguration extends Configuration {
     /**
      * @return maximum conneciton weight
      */
-    public float getMaxConnectionWeight() {
+    public double getMaxConnectionWeight() {
         return maxConnectionWeight;
     }
 
     /**
      * @return minimum conneciton weight
      */
-    public float getMinConnectionWeight() {
+    public double getMinConnectionWeight() {
         return minConnectionWeight;
     }
 

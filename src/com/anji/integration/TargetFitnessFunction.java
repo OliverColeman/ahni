@@ -43,7 +43,7 @@ protected static Logger logger = Logger.getLogger( TargetFitnessFunction.class )
 
 private final static String ADJUST_FOR_NETWORK_SIZE_FACTOR_KEY = "fitness.function.adjust.for.network.size.factor";
 
-protected float adjustForNetworkSizeFactor = 0.0f;
+protected double adjustForNetworkSizeFactor = 0.0f;
 
 /**
  * properties key, file containing strimuli
@@ -60,14 +60,14 @@ private final static String TARGETS_RANGE_KEY = "targets.range";
 /**
  * dimension # training sets by dim stimuli
  */
-private float[][] stimuli;
+private double[][] stimuli;
 
 /**
  * dimension # training sets by dim response
  */
-private float[][] targets;
+private double[][] targets;
 
-private float targetRange = 0;
+private double targetRange = 0;
 
 private int maxFitnessValue;
 
@@ -122,7 +122,7 @@ protected void setMaxFitnessValue( int aMaxFitnessValue ) {
  * configuration.
  * 
  * @param genotypes <code>List</code> contains <code>Chromosome</code> objects.
- * @see TargetFitnessFunction#calculateErrorFitness(float[][], float, float)
+ * @see TargetFitnessFunction#calculateErrorFitness(double[][], double, double)
  */
 public void evaluate( List genotypes ) {
 	Iterator it = genotypes.iterator();
@@ -139,7 +139,7 @@ public void evaluate( List genotypes ) {
 
 			Iterator iter = idxs.iterator();
 
-			float[][] shuffledStimuli = new float[ stimuli.length ][ stimuli[ 0 ].length ];
+			double[][] shuffledStimuli = new double[ stimuli.length ][ stimuli[ 0 ].length ];
 
 			int k = 0;
 			while ( iter.hasNext() ) {
@@ -150,8 +150,8 @@ public void evaluate( List genotypes ) {
 				k++;
 			}
 
-			float[][] shuffledResponses = activator.nextSequence( shuffledStimuli );
-			float[][] responses = new float[ shuffledResponses.length ][ 1 ];
+			double[][] shuffledResponses = activator.nextSequence( shuffledStimuli );
+			double[][] responses = new double[ shuffledResponses.length ][ 1 ];
 
 			for ( int i = 0; i < responses.length; ++i ) {
 				Integer idx = (Integer) idxs.get( i );
@@ -176,27 +176,27 @@ public void evaluate( List genotypes ) {
  * @return fitness based on error.
  * @see TargetFitnessFunction#evaluate(List)
  */
-protected abstract int calculateErrorFitness( float[][] responses, float minResponse,
-		float maxResponse );
+protected abstract int calculateErrorFitness( double[][] responses, double minResponse,
+		double maxResponse );
 
 /**
  * @return if response is within this range of the target, error is 0
  */
-protected float getTargetRange() {
+protected double getTargetRange() {
 	return targetRange;
 }
 
 /**
  * @return sequence of stimuli activation patterns
  */
-protected float[][] getStimuli() {
+protected double[][] getStimuli() {
 	return stimuli;
 }
 
 /**
  * @return sequence of target values
  */
-protected float[][] getTargets() {
+protected double[][] getTargets() {
 	return targets;
 }
 

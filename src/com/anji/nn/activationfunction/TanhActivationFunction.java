@@ -49,23 +49,23 @@ public class TanhActivationFunction implements ActivationFunction {
 	/**
 	 * Hyperbolic tangent.
 	 * 
-	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(float)
+	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public float apply( float input ) {
-		return (-1 + ( 2 / ( 1 + (float) Math.exp( -2 * ( input ) ) ) ));
+	public double apply( double input ) {
+		return (-1 + ( 2 / ( 1 + (double) Math.exp( -2 * ( input ) ) ) ));
 	}
 
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMaxValue()
 	 */
-	public float getMaxValue() {
+	public double getMaxValue() {
 		return 1;
 	}
 	
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */
-	public float getMinValue() {
+	public double getMinValue() {
 		return -1;
 	}
 

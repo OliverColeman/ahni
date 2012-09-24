@@ -56,10 +56,10 @@ private Persistence db;
 private List idxs = new ArrayList();
 
 //	dimension # activation sets by dim stimuli
-private float[][] stimuli;
+private double[][] stimuli;
 
 //	dimension # activation sets by dim response
-private float[][] targets;
+private double[][] targets;
 
 private ActivatorTranscriber activatorFactory;
 
@@ -111,7 +111,7 @@ public void reset() {
  * Load chromosome from persistence and activate it.
  * 
  * @param chromId persistence ID of chromosome
- * @return SortedMap contains key Integer index, value float[] response
+ * @return SortedMap contains key Integer index, value double[] response
  * @throws Exception
  * @see NeatActivator#activate(Activator)
  */
@@ -128,13 +128,13 @@ public SortedMap activate( String chromId ) throws Exception {
  * Activate <code>activator</code> with stimuli, and return results
  * 
  * @param activator
- * @return SortedMap contains key Integer index, value float[] response
+ * @return SortedMap contains key Integer index, value double[] response
  * @throws Exception
  */
 public SortedMap activate( Activator activator ) throws Exception {
 	SortedMap result = new TreeMap();
 
-	float[][] response = activator.nextSequence( stimuli );
+	double[][] response = activator.nextSequence( stimuli );
 	Iterator it = idxs.iterator();
 	while ( it.hasNext() ) {
 		Integer idx = (Integer) it.next();
@@ -159,7 +159,7 @@ public String displayActivation( String chromId ) throws Exception {
 	while ( it.hasNext() ) {
 		Integer idx = (Integer) it.next();
 		int i = idx.intValue();
-		float[] response = (float[]) responses.get( idx );
+		double[] response = (double[]) responses.get( idx );
 
 		result.append( i ).append( ": IN (" ).append( stimuli[ i ][ 0 ] );
 		for ( int j = 1; j < stimuli[ i ].length; ++j )

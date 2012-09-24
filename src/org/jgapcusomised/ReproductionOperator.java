@@ -32,7 +32,7 @@ import java.util.List;
  * @author Philip Tucker
  */
 public abstract class ReproductionOperator {
-    private float slice = 0.0f;
+    private double slice = 0.0f;
 
     /**
      * The reproduce method will be invoked on each of the reproduction operators referenced by the current
@@ -105,16 +105,16 @@ public abstract class ReproductionOperator {
             throws InvalidConfigurationException;
 
     /**
-     * @return float slice of population this reproduction operator will fill with offspring
+     * @return double slice of population this reproduction operator will fill with offspring
      */
-    final public float getSlice() {
+    final public double getSlice() {
         return slice;
     }
 
     /**
      * @param aSlice slice of population this reproduction operator will fill with offspring
      */
-    final public void setSlice(float aSlice) {
+    final public void setSlice(double aSlice) {
         this.slice = aSlice;
     }
 }

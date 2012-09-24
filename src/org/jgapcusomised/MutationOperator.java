@@ -34,12 +34,12 @@ import java.util.Set;
  */
 public abstract class MutationOperator {
 
-private float mutationRate = 0.0f;
+private double mutationRate = 0.0f;
 
 /**
  * @param aMutationRate
  */
-public MutationOperator( float aMutationRate ) {
+public MutationOperator( double aMutationRate ) {
 	mutationRate = aMutationRate;
 }
 
@@ -117,14 +117,14 @@ protected boolean doesMutationOccur( Random rand ) {
  * @return <code>true</code> when mutation rate and random chance dictate a mutation should
  * occur
  */
-protected static boolean doesMutationOccur( Random rand, float mutationRate ) {
+protected static boolean doesMutationOccur( Random rand, double mutationRate ) {
 	return ( rand.nextDouble() < mutationRate );
 }
 
 /**
  * @return mutation rate
  */
-public float getMutationRate() {
+public double getMutationRate() {
 	return mutationRate;
 }
 
@@ -145,7 +145,7 @@ protected static void updateMaterial( ChromosomeMaterial material, Set allelesTo
 /**
  * @param aMutationRate
  */
-protected void setMutationRate( float aMutationRate ) {
+protected void setMutationRate( double aMutationRate ) {
 	mutationRate = aMutationRate;
 }
 

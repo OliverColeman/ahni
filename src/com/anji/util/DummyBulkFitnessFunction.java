@@ -56,8 +56,8 @@ public class DummyBulkFitnessFunction implements BulkFitnessFunction {
 	}
 	
 	
-	public float getPerformanceFromFitnessValue(int fitness) {
-		return (float) fitness / getMaxFitnessValue();
+	public double getPerformanceFromFitnessValue(int fitness) {
+		return (double) fitness / getMaxFitnessValue();
 	}
 	
 	public boolean endRun() {

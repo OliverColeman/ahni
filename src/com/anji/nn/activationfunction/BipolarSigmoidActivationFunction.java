@@ -28,7 +28,7 @@ package com.anji.nn.activationfunction;
  */
 public class BipolarSigmoidActivationFunction implements ActivationFunction {
 
-	private final static float SLOPE = 4.924273f;
+	private final static double SLOPE = 4.924273f;
 
 	/**
 	 * identifying string
@@ -52,23 +52,23 @@ public class BipolarSigmoidActivationFunction implements ActivationFunction {
 	/**
 	 * Modified classic sigmoid.
 	 * 
-	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(float)
+	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public float apply( float input ) {
-		return 2.0f / ( 1.0f + (float) Math.exp( -( input * SLOPE ) ) ) - 1;
+	public double apply( double input ) {
+		return 2.0f / ( 1.0f + (double) Math.exp( -( input * SLOPE ) ) ) - 1;
 	}
 
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMaxValue()
 	 */
-	public float getMaxValue() {
+	public double getMaxValue() {
 		return 1;
 	}
 	
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */
-	public float getMinValue() {
+	public double getMinValue() {
 		return -1;
 	}
 

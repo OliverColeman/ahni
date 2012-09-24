@@ -133,7 +133,7 @@ private void cacheXml() {
 	result.append( "<min>" ).append( minComplexity );
 	result.append( "</min>\n" );
 	result.append( "<avg>" );
-	result.append( (float) runningComplexityTotal / popSize );
+	result.append( (double) runningComplexityTotal / popSize );
 	result.append( "</avg>\n" );
 	result.append( "</complexity>\n" );
 

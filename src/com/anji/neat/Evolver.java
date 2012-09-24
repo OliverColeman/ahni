@@ -102,11 +102,11 @@ public class Evolver implements Configurable {
 
 	private int numEvolutions = 0;
 
-	//private float targetFitness = 0;
+	//private double targetFitness = 0;
 
-	//private float thresholdFitness = 0;
+	//private double thresholdFitness = 0;
 	
-	private float targetPerformance = 1;
+	private double targetPerformance = 1;
 
 	private int maxFitness = 0;
 
@@ -120,9 +120,9 @@ public class Evolver implements Configurable {
 	
 	private int logPerGenerations = 1;
 	
-	float[] bestPerformance;
-	float[] bestFitness;
-	float[] bestPC;
+	double[] bestPerformance;
+	double[] bestFitness;
+	double[] bestPC;
 
 	/**
 	 * ctor; must call <code>init()</code> before using this object
@@ -221,15 +221,15 @@ public class Evolver implements Configurable {
 	 * 
 	 * @throws Exception
 	 */
-	public float[] run() throws Exception {
+	public double[] run() throws Exception {
 
 		DecimalFormat nf4 = new DecimalFormat("0.0000");
 		DecimalFormat nf3 = new DecimalFormat("0.000");
 		DecimalFormat nf1 = new DecimalFormat("0.0");
 
-		bestPerformance = new float[numEvolutions];
-		bestFitness = new float[numEvolutions];
-		bestPC = new float[numEvolutions];
+		bestPerformance = new double[numEvolutions];
+		bestFitness = new double[numEvolutions];
+		bestPC = new double[numEvolutions];
 		
 		if (loadGenotypeFromDB) {
 			// load population, either from previous run or random
@@ -301,7 +301,7 @@ public class Evolver implements Configurable {
 			// champFitnesses[generation] = adjustedFitness;
 			
 			bestPerformance[generation] = bestPerforming.getPerformanceValue();
-			bestFitness[generation] = (float)fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue();
+			bestFitness[generation] = (double)fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue();
 			
 			int numSpecies = genotype.getSpecies().size();
 			int minSpeciesSize = Integer.MAX_VALUE;
@@ -352,7 +352,7 @@ public class Evolver implements Configurable {
 	        speciesInfoWriter.flush();
 			
 			if (generation % logPerGenerations == 0) {
-				float speciationCompatThreshold = genotype.getParameters().getSpeciationThreshold();
+				double speciationCompatThreshold = genotype.getParameters().getSpeciationThreshold();
 				
 				long memTotal = Math.round(runtime.totalMemory() / 1048576);
 				long memFree = Math.round(runtime.freeMemory() / 1048576);
@@ -366,13 +366,13 @@ public class Evolver implements Configurable {
 				int eta = (int) Math.round(avgGenTime * (numEvolutions - generation));
 				
 				// System.out.print(generation+"(" + (int)(adjustedFitness*100) + "," + genotype.getSpecies().size() + "), ");
-				//System.out.println(generation + "(" + nf.format((float)fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + ", " + nf.format(bestPerformance[generation]) + ", " + duration + "s, " + memUsed + "M), ");
+				//System.out.println(generation + "(" + nf.format((double)fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + ", " + nf.format(bestPerformance[generation]) + ", " + duration + "s, " + memUsed + "M), ");
 				// System.out.print((int)(adjustedFitness*100)+",");
 				// System.out.println(generation+"(" + (int)(adjustedFitness*100) + " : " + champ.getFitnessValue() + "), ");
 				
 				logger.info("Gen: " + generation + 
-						"  Fittest: " + fittest.getId() + "  (F: " + nf4.format((float)fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + "  P: " + nf4.format(fittest.getPerformanceValue()) + ")" + 
-						"  Best perf: " + bestPerforming.getId() + "  (F: " + nf4.format((float)bestPerforming.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + "  P: " + nf4.format(bestPerforming.getPerformanceValue()) + ")" + "  ABSF: " + nf4.format(avgBestSpeciesFitness) + 
+						"  Fittest: " + fittest.getId() + "  (F: " + nf4.format((double)fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + "  P: " + nf4.format(fittest.getPerformanceValue()) + ")" + 
+						"  Best perf: " + bestPerforming.getId() + "  (F: " + nf4.format((double)bestPerforming.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + "  P: " + nf4.format(bestPerforming.getPerformanceValue()) + ")" + "  ABSF: " + nf4.format(avgBestSpeciesFitness) + 
 						"  S: " + numSpecies + "  NS/ES: " + numNewSpecies + "/" + numExtinctSpecies + "  SCT: " + nf1.format(speciationCompatThreshold) + "  Min/Max SS: " + minSpeciesSize + "/" + maxSpeciesSize + "  Min/Max SA: " + minSpeciesAge + "/" + maxSpeciesAge + "  SNF: " + numSpeciesWithNewFittest + "  Time: " + duration + "s  ETA: " + Misc.formatTimeInterval(eta) + "  Mem: " + memUsed + "MB");
 				
 				
@@ -396,15 +396,15 @@ public class Evolver implements Configurable {
 		// performed (eg because solution was found sooner)
 		if (generation != numEvolutions) {
 			// fill in rest of array with last fitness and performance values (for stats generation later)
-			float lastPerf = bestPerformance[generation - 1];
+			double lastPerf = bestPerformance[generation - 1];
 			for (int i = generation; i < numEvolutions; i++)
 				bestPerformance[i] = lastPerf;
 			
-			float lastFitness = bestFitness[generation - 1];
+			double lastFitness = bestFitness[generation - 1];
 			for (int i = generation; i < numEvolutions; i++)
 				bestFitness[i] = lastFitness;
 			
-			float lastPC = bestPC[generation - 1];
+			double lastPC = bestPC[generation - 1];
 			for (int i = generation; i < numEvolutions; i++)
 				bestPC[i] = lastPC;
 			
@@ -422,7 +422,7 @@ public class Evolver implements Configurable {
 		System.out.println();
 		System.out.println();
 		System.out.println("Best performance for this run (average per 10 gens): ");
-		float v;
+		double v;
 		int i;
 		for (generation = 0; generation < numEvolutions;) {
 			v = 0;
@@ -447,15 +447,15 @@ public class Evolver implements Configurable {
 		return bestPerformance;
 	}
 	
-	public float[] getBestFitness() {
+	public double[] getBestFitness() {
 		return bestFitness;
 	}
 	
-	public float[] getBestPerformance() {
+	public double[] getBestPerformance() {
 		return bestPerformance;
 	}
 
-	public float[] getBestPC() {
+	public double[] getBestPC() {
 		return bestPC;
 	}
 
@@ -516,21 +516,21 @@ public class Evolver implements Configurable {
 	 * 
 	 * @return maximum fitness value
 	 */
-	public float getChampAdjustedFitness() {
-		return (fittest == null) ? 0 : (float) fittest.getFitnessValue() / config.getBulkFitnessFunction().getMaxFitnessValue();
+	public double getChampAdjustedFitness() {
+		return (fittest == null) ? 0 : (double) fittest.getFitnessValue() / config.getBulkFitnessFunction().getMaxFitnessValue();
 	}
 
 	/**
 	 * @return target fitness value, 0 ... 1
 	 */
-	public float getTargetPerformance() {
+	public double getTargetPerformance() {
 		return targetPerformance;
 	}
 
 	///**
 	// * @return threshold fitness value, 0 ... 1
 	// */
-	//public float getThresholdFitness() {
+	//public double getThresholdFitness() {
 	//	return thresholdFitness;
 	//}
 	

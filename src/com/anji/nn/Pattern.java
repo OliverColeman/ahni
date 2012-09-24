@@ -22,7 +22,7 @@ package com.anji.nn;
 import java.util.Arrays;
 
 /**
- * Converts float array stimuli to Connection objects.
+ * Converts double array stimuli to Connection objects.
  * 
  * @author Philip Tucker
  */
@@ -52,9 +52,9 @@ public PatternConnection( int anIdx ) {
 }
 
 /**
- * @return float stimulus value
+ * @return double stimulus value
  */
-public float read() {
+public double read() {
 	return values[ idx ];
 }
 
@@ -89,7 +89,7 @@ public long cost() {
  * <code>protected</code> visibility increases performance of
  * <code>PatternConnection.read()</code>
  */
-protected float[] values = null;
+protected double[] values = null;
 
 private PatternConnection[] conns = null;
 
@@ -104,7 +104,7 @@ public Pattern( int dimension ) throws IllegalArgumentException {
 	super();
 	if ( dimension <= 0 )
 		throw new IllegalArgumentException( "dimension must be > 0" );
-	init( new float[ dimension ] );
+	init( new double[ dimension ] );
 }
 
 /**
@@ -114,12 +114,12 @@ public Pattern( int dimension ) throws IllegalArgumentException {
  * @param aValues
  * @throws IllegalArgumentException
  */
-public Pattern( float[] aValues ) throws IllegalArgumentException {
+public Pattern( double[] aValues ) throws IllegalArgumentException {
 	super();
 	init( aValues );
 }
 
-private void init( float[] aValues ) {
+private void init( double[] aValues ) {
 	values = aValues;
 	conns = new PatternConnection[ aValues.length ];
 }
@@ -137,7 +137,7 @@ public void clear() {
  * @param someValues
  * @throws IllegalArgumentException
  */
-public void setValues( float[] someValues ) throws IllegalArgumentException {
+public void setValues( double[] someValues ) throws IllegalArgumentException {
 	if ( someValues.length != values.length )
 		throw new IllegalArgumentException( "can not change array dimension" );
 	values = someValues;
@@ -150,7 +150,7 @@ public void setValues( float[] someValues ) throws IllegalArgumentException {
  * @param value
  * @throws IllegalArgumentException
  */
-public void setValue( int idx, float value ) throws IllegalArgumentException {
+public void setValue( int idx, double value ) throws IllegalArgumentException {
 	try {
 		values[ idx ] = value;
 	}

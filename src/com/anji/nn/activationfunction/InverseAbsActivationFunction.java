@@ -25,7 +25,7 @@ package com.anji.nn.activationfunction;
  */
 public class InverseAbsActivationFunction implements ActivationFunction {
 
-	private final static float SLOPE = 0.3f;
+	private final static double SLOPE = 0.3f;
 	
 	/**
 	 * identifying string
@@ -48,23 +48,23 @@ public class InverseAbsActivationFunction implements ActivationFunction {
 
 	/**
 	 * Inverse absolute value.
-	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(float)
+	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public float apply( float input ) {
+	public double apply( double input ) {
 		return 1 / (SLOPE * Math.abs(input) + 1);
 	}
 
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMaxValue()
 	 */
-	public float getMaxValue() {
+	public double getMaxValue() {
 		return 1;
 	}
 	
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */
-	public float getMinValue() {
+	public double getMinValue() {
 		return 0;
 	}
 

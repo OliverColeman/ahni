@@ -464,8 +464,8 @@ public class Configuration implements java.io.Serializable {
 						"At least one reproduction operator must be specified in the " + "configuration." );
 		// added by Tucker and James
 		// make sure our slice of population add up to 1.0
-		//float totalSlices = getNaturalSelector().getSurvivalRate();
-		float totalSlices = 0; //only elite survive
+		//double totalSlices = getNaturalSelector().getSurvivalRate();
+		double totalSlices = 0; //only elite survive
 		Iterator it = getReproductionOperators().iterator();
 		while ( it.hasNext() ) {
 			ReproductionOperator oper = (ReproductionOperator) it.next();

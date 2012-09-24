@@ -46,7 +46,7 @@ public String toXml() {
  * @return compatibility distance based on intValue; always positive
  * @see Allele#distance(Allele)
  */
-public float distance( Allele target ) {
+public double distance( Allele target ) {
 	if ( target.getInnovationId().equals( getInnovationId() ) && ( target instanceof IntegerAllele ) )
 		return Math.abs( intValue() - ( (IntegerAllele) target ).intValue() );
 	return Float.MAX_VALUE;

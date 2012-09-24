@@ -47,9 +47,9 @@ public static ErrorRateCounter getInstance() {
 /**
  * @param targets
  * @param responses
- * @see ErrorRateCounter#countErrors(String, float[][], float[][])
+ * @see ErrorRateCounter#countErrors(String, double[][], double[][])
  */
-public void countErrors( float[][] targets, float[][] responses ) {
+public void countErrors( double[][] targets, double[][] responses ) {
 	countErrors( "", targets, responses );
 }
 
@@ -60,14 +60,14 @@ public void countErrors( float[][] targets, float[][] responses ) {
  * @param targets
  * @param responses values to compare to targets
  */
-public void countErrors( String logPrefix, float[][] targets, float[][] responses ) {
+public void countErrors( String logPrefix, double[][] targets, double[][] responses ) {
 	int truePositives = 0;
 	int falsePositives = 0;
 	int trueNegatives = 0;
 	int falseNegatives = 0;
 	for ( int i = 0; i < targets.length; ++i ) {
-		float[] response = responses[ i ];
-		float[] target = targets[ i ];
+		double[] response = responses[ i ];
+		double[] target = targets[ i ];
 		if ( response.length != target.length )
 			throw new IllegalArgumentException( logPrefix + ": for training set " + i
 					+ " dimensions do not match for response [" + response.length + "] and target ["

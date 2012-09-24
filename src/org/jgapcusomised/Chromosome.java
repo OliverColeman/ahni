@@ -62,7 +62,7 @@ protected boolean m_isSelectedForNextGeneration = false;
  */
 protected int m_fitnessValue = -1;
 
-protected float m_performanceValue = -1;
+protected double m_performanceValue = -1;
 
 private Species m_specie = null;
 
@@ -113,7 +113,7 @@ private void associateAllelesWithChromosome() {
  * @return distance between this object and <code>target</code>
  * @see ChromosomeMaterial#distance(ChromosomeMaterial, SpeciationParms)
  */
-public float distance( Chromosome target, SpeciationParms parms ) {
+public double distance( Chromosome target, SpeciationParms parms ) {
 	return m_material.distance( target.m_material, parms );
 }
 
@@ -209,11 +209,11 @@ public void setFitnessValue( int a_newFitnessValue ) {
 }
 
 
-public float getPerformanceValue() {
+public double getPerformanceValue() {
 	return m_performanceValue;
 }
 
-public void setPerformanceValue(float mPerformanceValue) {
+public void setPerformanceValue(double mPerformanceValue) {
 	m_performanceValue = mPerformanceValue;
 }
 

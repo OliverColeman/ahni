@@ -38,9 +38,9 @@ public class SignedClampedLinearActivationFunction implements ActivationFunction
 	}
 	
 	/**
-	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(float)
+	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public float apply( float input ) {
+	public double apply( double input ) {
 		if ( input <= -1.0d )
 			return -1;
 		else if ( input >= 1.0f )
@@ -52,14 +52,14 @@ public class SignedClampedLinearActivationFunction implements ActivationFunction
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMaxValue()
 	 */
-	public float getMaxValue() {
+	public double getMaxValue() {
 		return 1;
 	}
 
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */
-	public float getMinValue() {
+	public double getMinValue() {
 		return -1;
 	}
 

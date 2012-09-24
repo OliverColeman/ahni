@@ -349,7 +349,7 @@ public class ChromosomeMaterial implements Comparable, Serializable {
      * @return distance between this object and <code>target</code>
      * @see Allele#distance(Allele)
      */
-    public float distance(ChromosomeMaterial target, SpeciationParms speciationParms) {
+    public double distance(ChromosomeMaterial target, SpeciationParms speciationParms) {
         // get genes I have target does not
         List myUnmatchedAlleles = new ArrayList(m_alleles);
         myUnmatchedAlleles.removeAll(target.getAlleles());
@@ -380,10 +380,10 @@ public class ChromosomeMaterial implements Comparable, Serializable {
         }
 
         // calculate distance for common genes
-        float avgCommonDiff = 0;
+        double avgCommonDiff = 0;
         int numComparableCommonAlleles = 0;
         if (myCommonAlleles.size() > 0) {
-            float totalCommonDiff = 0;
+            double totalCommonDiff = 0;
             Iterator myIter = myCommonAlleles.iterator();
             Iterator targetIter = targetCommonAlleles.iterator();
             while (myIter.hasNext() && targetIter.hasNext() && totalCommonDiff < Double.MAX_VALUE) {
@@ -393,7 +393,7 @@ public class ChromosomeMaterial implements Comparable, Serializable {
                     throw new IllegalStateException("corresponding genes do not have same innovation ids");
                 }
                 try {
-                    float aDistance = myAllele.distance(targetAllele);
+                    double aDistance = myAllele.distance(targetAllele);
                     if (totalCommonDiff + aDistance > Float.MAX_VALUE) {
                         totalCommonDiff = Float.MAX_VALUE;
                     } else {
@@ -410,7 +410,7 @@ public class ChromosomeMaterial implements Comparable, Serializable {
         // formula from "Evolving Neural Networks Through Augmenting Topologies",
         // Stanley/Miikkulainen
         long maxChromSize = Math.max(this.getAlleles().size(), target.getAlleles().size());
-        float result = 0;
+        double result = 0;
         if (maxChromSize > 0) // should never be 0
         {
             result = ((speciationParms.getSpecieCompatExcessCoeff() * excessAlleles.size()) / maxChromSize)

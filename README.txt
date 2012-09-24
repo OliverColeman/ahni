@@ -1,5 +1,7 @@
 AHNI - Another HyperNEAT Implementation
 
+Copyright Oliver J. Coleman, 2012. oliver.coleman@gmail.com
+
 AHNI implements the HyperNEAT neuroevolution algorithm:
 Stanley, K.O., D’Ambrosio, D.B., Gauci, J.: A Hypercube-Based Indirect 
 Encoding for Evolving Large-Scale Neural Networks. Artificial Life. 15, 
@@ -7,7 +9,11 @@ Encoding for Evolving Large-Scale Neural Networks. Artificial Life. 15,
 
 AHNI was originally written for my Honours project:  
 Coleman, O.J.: Evolving neural networks for visual processing, 
-BS Thesis. University New South Wales (2010).
+BS Thesis. University of New South Wales (2010).
+The Object Recognition experiments in the package 
+com.anji.experiments.objectrecognition correspond to those described in this
+report (the robot navigation experiments have been removed, contact me to get
+the code for these).
  
 It is now being extended for my PhD: "Evolving plastic neural 
 networks for online learning". For more details see http://ojcoleman.com.

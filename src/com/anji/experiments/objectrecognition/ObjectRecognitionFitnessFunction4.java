@@ -40,14 +40,14 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 	private static int maxFitnessValue = 1000000;
     private static int numTrials = 200;
     
-    private float bestPerformanceSoFar = 0;
-	private float bestFitnessSoFar = 0;
-	public float bestPCSoFar = 0;
+    private double bestPerformanceSoFar = 0;
+	private double bestFitnessSoFar = 0;
+	public double bestPCSoFar = 0;
 	
-    private float fitnessWeightPC = 1;
-    private float fitnessWeightWSOSE = 1;
-    private float fitnessWeightDist = 0;
-    private float fitnessWeightInvDist = 0;
+    private double fitnessWeightPC = 1;
+    private double fitnessWeightWSOSE = 1;
+    private double fitnessWeightDist = 0;
+    private double fitnessWeightInvDist = 0;
     private String perfMetric = FITNESS_WEIGHT_PC_KEY;
     
     private int shapeSize = 5;
@@ -59,15 +59,15 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
     private boolean saveImages = false;
     private boolean printedFirst = false;
     
-    private float minScale = 0.5f;
+    private double minScale = 0.5f;
     private int maxRotate = 360;
     
-    private float[][][] stimuli;
+    private double[][][] stimuli;
     //private Point[] targetCoords;
     private boolean[] targetPresent;
     private BufferedImage[] stimuliImages;
     
-    private float maxDistance;
+    private double maxDistance;
     private Path2D.Float[] shapes;
     private Path2D.Float target;
     
@@ -76,8 +76,8 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 	int imageNegDotSize = 1; //size of black square/dot in middle of weight value square to indicate negative value
 	int imageSpacing = 5;
     
-    float connectionWeightMin;
-	float connectionWeightMax;
+    double connectionWeightMin;
+	double connectionWeightMax;
     
     
     public void init(com.anji.util.Properties props) {
@@ -90,7 +90,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
         saveImages = props.getBooleanProperty(SAVE_IMAGES_KEY, saveImages);
         numShapesInLib = props.getIntProperty(NUM_SHAPES_KEY, numShapesInLib);
         targetIndex = props.getIntProperty(TARGET_INDEX_KEY, targetIndex);
-        minScale = props.getFloatProperty(MIN_SCALE_KEY, minScale);
+        minScale = props.getDoubleProperty(MIN_SCALE_KEY, minScale);
         maxRotate = props.getIntProperty(MAX_ROTATE_KEY, maxRotate);
         
         if (shapeType.equals("simple"))
@@ -100,10 +100,10 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
         else if (shapeType.equals("cs"))
         	numShapesInLib = Math.min(numShapesInLib, 4); //only 4 C shapes available
         
-        fitnessWeightPC = props.getFloatProperty(FITNESS_WEIGHT_PC_KEY, fitnessWeightPC);
-        fitnessWeightWSOSE = props.getFloatProperty(FITNESS_WEIGHT_WSOSE_KEY, fitnessWeightWSOSE);
-        fitnessWeightDist = props.getFloatProperty(FITNESS_WEIGHT_DIST_KEY, fitnessWeightDist);
-        fitnessWeightInvDist = props.getFloatProperty(FITNESS_WEIGHT_INV_DIST_KEY, fitnessWeightInvDist);
+        fitnessWeightPC = props.getDoubleProperty(FITNESS_WEIGHT_PC_KEY, fitnessWeightPC);
+        fitnessWeightWSOSE = props.getDoubleProperty(FITNESS_WEIGHT_WSOSE_KEY, fitnessWeightWSOSE);
+        fitnessWeightDist = props.getDoubleProperty(FITNESS_WEIGHT_DIST_KEY, fitnessWeightDist);
+        fitnessWeightInvDist = props.getDoubleProperty(FITNESS_WEIGHT_INV_DIST_KEY, fitnessWeightInvDist);
         perfMetric = props.getProperty(PERFORMANCE_METRIC_KEY, perfMetric);
     	numTrials = props.getIntProperty(NUM_TRIALS_KEY, numTrials);
         
@@ -112,7 +112,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
     	int deltaAdjust = 1 + shapeSize / 2; //max delta (in x or y dimension) is width or height of the field -1 - min distance the centre of the target shape can be from the edge of the board 
     	int maxXDelta = width[0] - deltaAdjust;
         int maxYDelta = height[0] - deltaAdjust;
-    	maxDistance = (float) Math.sqrt(maxXDelta*maxXDelta + maxYDelta*maxYDelta);
+    	maxDistance = (double) Math.sqrt(maxXDelta*maxXDelta + maxYDelta*maxYDelta);
         
     	if (saveImages) {
     		//unique directory for images for this run
@@ -266,8 +266,8 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
         target = shapes[targetIndex];
         logger.info("target shape index is " + targetIndex);
 	    
-	    connectionWeightMin = props.getFloatProperty(HyperNEATTranscriber.HYPERNEAT_CONNECTION_WEIGHT_MIN);
-		connectionWeightMax = props.getFloatProperty(HyperNEATTranscriber.HYPERNEAT_CONNECTION_WEIGHT_MAX);
+	    connectionWeightMin = props.getFloatProperty(HyperNEATTranscriberGridNet.HYPERNEAT_CONNECTION_WEIGHT_MIN);
+		connectionWeightMax = props.getFloatProperty(HyperNEATTranscriberGridNet.HYPERNEAT_CONNECTION_WEIGHT_MAX);
     }
     
     
@@ -283,7 +283,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
      */
     public void initialiseEvaluation() {
     	//generate trials
-        stimuli = new float[numTrials][height[0]][width[0]];
+        stimuli = new double[numTrials][height[0]][width[0]];
         //targetCoords = new Point[numTrials];
         targetPresent = new boolean[numTrials];
         if (saveImages)
@@ -294,7 +294,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
         pos.y = height[0]/2;
         
         //logger.info("init eval");
-        float minDistFactor = (float) Math.sqrt(2) * 2; //no overlap for square shapes
+        double minDistFactor = (double) Math.sqrt(2) * 2; //no overlap for square shapes
         for (int t = 0; t < numTrials; t++) {
         	BufferedImage image = new BufferedImage(width[0], height[0], BufferedImage.TYPE_BYTE_GRAY);
             Graphics2D canvas = image.createGraphics();
@@ -346,8 +346,8 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
             	} while (shape == target);
             	targetPresent[t] = false;
             }
-            float scale = random.nextFloat() * (1-minScale) + minScale;
-            float rotate = random.nextFloat() * (float) Math.toRadians(maxRotate);
+            double scale = random.nextFloat() * (1-minScale) + minScale;
+            double rotate = random.nextFloat() * (double) Math.toRadians(maxRotate);
             AffineTransform transform = AffineTransform.getRotateInstance(rotate);
             transform.concatenate(AffineTransform.getScaleInstance(scale, scale));
             
@@ -379,15 +379,15 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
     }
     
     protected int evaluate(Chromosome genotype, com.anji.hyperneat.GridNet substrate, int threadIndex) {
-        float[][][] responses = substrate.nextSequence(stimuli);
+        double[][][] responses = substrate.nextSequence(stimuli);
         /*	
-        float avgDist = 0;
-        float avgInvDist = 0;
-        float percentCorrect = 0;
-        float wsose = 0;
+        double avgDist = 0;
+        double avgInvDist = 0;
+        double percentCorrect = 0;
+        double wsose = 0;
         for (int t = 0; t < numTrials; t++) {
-        	float targetOutputError = 0; //for wsoe
-	    	float nonTargetOutputError = 0; //for wsoe
+        	double targetOutputError = 0; //for wsoe
+	    	double nonTargetOutputError = 0; //for wsoe
 	    	
             Point highest = new Point(0, 0);
         	for (int y = 0; y < height[0]; y++) {
@@ -398,9 +398,9 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
                     
                     //calculate wsose error
                     if (y == targetCoords[t].y && x == targetCoords[t].x)
-                		targetOutputError = (float) Math.pow(1 - responses[t][y][x], 2);
+                		targetOutputError = (double) Math.pow(1 - responses[t][y][x], 2);
                 	else
-                		nonTargetOutputError += (float) Math.pow(responses[t][y][x], 2);
+                		nonTargetOutputError += (double) Math.pow(responses[t][y][x], 2);
                 }
         	}
                     
@@ -416,15 +416,15 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 		
         
         //calculate fitness according to fitness function type weightings
-        float fitness = fitnessWeightPC * percentCorrect + fitnessWeightWSOSE * (1 - wsose) + fitnessWeightDist * (1 - (avgDist / maxDistance)) + fitnessWeightInvDist * avgInvDist;
+        double fitness = fitnessWeightPC * percentCorrect + fitnessWeightWSOSE * (1 - wsose) + fitnessWeightDist * (1 - (avgDist / maxDistance)) + fitnessWeightInvDist * avgInvDist;
         fitness /= fitnessWeightPC + fitnessWeightWSOSE + fitnessWeightDist + fitnessWeightInvDist;
 	    */
         
-        float fitness = 0;
-        float percentCorrect = 0;
+        double fitness = 0;
+        double percentCorrect = 0;
         for (int t = 0; t < numTrials; t++) {
-            float target = targetPresent[t] ? 1 : 0;
-            float error = Math.abs(target - responses[t][0][0]);
+            double target = targetPresent[t] ? 1 : 0;
+            double error = Math.abs(target - responses[t][0][0]);
             fitness += Math.pow(1 - error, 2); //take square root of error
             
             if (error < 0.5) percentCorrect++;
@@ -432,7 +432,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
         fitness /= numTrials;
         percentCorrect /= numTrials;
         
-        float performance;
+        double performance;
         
         if (perfMetric.equals(FITNESS_WEIGHT_PC_KEY))
         	performance = percentCorrect;
@@ -447,8 +447,8 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
         
         genotype.setPerformanceValue(performance);
         
-        float nextNoteworthyFitnessFactor = 0.01f;
-      	float nextNoteworthyFitness = bestFitnessSoFar + (1-bestFitnessSoFar) * nextNoteworthyFitnessFactor;
+        double nextNoteworthyFitnessFactor = 0.01f;
+      	double nextNoteworthyFitness = bestFitnessSoFar + (1-bestFitnessSoFar) * nextNoteworthyFitnessFactor;
       	boolean saveImagesNow = saveImages && 
       		(
       			(
@@ -477,7 +477,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
     		
     		printedFirst = true;
     		
-    		float weightRange = connectionWeightMax - connectionWeightMin;
+    		double weightRange = connectionWeightMax - connectionWeightMin;
     		int connectionRange = getConnectionRange();
     		
     		//Generate image for weights
@@ -510,7 +510,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 			        	//calculate dimensions of this weight target matrix (bounded by grid edges)
 						int dy = Math.min(height[tz-1] - 1, ty + connectionRange) - Math.max(0, ty - connectionRange) + 1;
 						int dx = Math.min(width[tz-1] - 1, tx + connectionRange) - Math.max(0, tx - connectionRange) + 1;
-						float[][] w = substrate.getWeights()[tz-1][ty][tx][0];
+						double[][] w = substrate.getWeights()[tz-1][ty][tx][0];
 						
 						for (int wy = 0, sy = Math.max(0, ty - connectionRange); wy < dy; wy++, sy++) {
 							for (int wx = 0, sx = Math.max(0, tx - connectionRange); wx < dx; wx++, sx++) {
@@ -549,7 +549,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
     		for (int t = 0; t < 25; t++) {
     			//individually reapply stimuli so we can capture activation values for all layers 
     			substrate.next(stimuli[t]);
-    	        float[][][] activation = substrate.getActivation();
+    	        double[][][] activation = substrate.getActivation();
     			BufferedImage[] activationImage = new BufferedImage[depth];
     			int imageActivationLayerMaxWidth = 0;
     			int imageActivationLayerTotalHeight = 0;
@@ -599,11 +599,11 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
     
     protected void scale(int scaleCount, int scaleFactor) {
     	//get ratio of shape size to image size (this should be maintained during scale).
-    	float ratioW[] = new float[depth];
-    	float ratioH[] = new float[depth];
+    	double ratioW[] = new double[depth];
+    	double ratioH[] = new double[depth];
     	for (int l = 0; l < width.length-1; l++) {
-            ratioW[l] = (float) width[l] / shapeSize;
-            ratioH[l] = (float) height[l] / shapeSize;
+            ratioW[l] = (double) width[l] / shapeSize;
+            ratioH[l] = (double) height[l] / shapeSize;
     	}
     	
     	//System.out.println(ratioW + ", " + ratioH);
@@ -616,8 +616,8 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
     	
     	String layerSizeString = "";
     	for (int l = 0; l < depth; l++) {
-    		width[l] = Math.max(1, Math.round(shapeSize * ratioW[l]));
-    		height[l] = Math.max(1, Math.round(shapeSize * ratioH[l]));
+    		width[l] = (int) Math.max(1, Math.round(shapeSize * ratioW[l]));
+    		height[l] = (int) Math.max(1, Math.round(shapeSize * ratioH[l]));
     		
     		layerSizeString += width[l] + "x" + height[l] + ", ";
     	}

@@ -30,14 +30,14 @@ public class DivideActivationFunction implements ActivationFunction, ActivationF
 	/**
 	 * Not used, returns 0.
 	 */
-	public float apply( float input ) {
+	public double apply( double input ) {
 		return 0;
 	}
 	
 	/**
 	 * Return first input divided by second input (or just first input if no second input).
 	 */
-	public float apply(float[] input) {
+	public double apply(double[] input) {
 		if (input.length < 2)
 			return input[0];
 		if (input[1] == 0)
@@ -49,14 +49,14 @@ public class DivideActivationFunction implements ActivationFunction, ActivationF
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMaxValue()
 	 */
-	public float getMaxValue() {
+	public double getMaxValue() {
 		return Float.MAX_VALUE;
 	}
 	
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */
-	public float getMinValue() {
+	public double getMinValue() {
 		return 0;
 	}
 

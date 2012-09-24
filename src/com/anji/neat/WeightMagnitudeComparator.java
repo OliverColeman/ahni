@@ -51,7 +51,7 @@ public static WeightMagnitudeComparator getInstance() {
 public int compare( Object o1, Object o2 ) {
 	ConnectionAllele connAllele1 = (ConnectionAllele) o1;
 	ConnectionAllele connAllele2 = (ConnectionAllele) o2;
-	float result = Math.abs( connAllele1.getWeight() ) - Math.abs( connAllele2.getWeight() );
+	double result = Math.abs( connAllele1.getWeight() ) - Math.abs( connAllele2.getWeight() );
 	if ( result > 0 )
 		return 1;
 	else if ( result < 0 )

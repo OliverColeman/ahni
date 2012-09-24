@@ -71,7 +71,7 @@ public void setToRandomValue( Random a_numberGenerator ) {
  * TODO - activation type and slope
  * @see org.jgapcusomised.Allele#distance(org.jgapcusomised.Allele)
  */
-public float distance( Allele aTarget ) {
+public double distance( Allele aTarget ) {
 	return 0;
 }
 

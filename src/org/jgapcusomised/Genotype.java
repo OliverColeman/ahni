@@ -629,10 +629,10 @@ public class Genotype implements Serializable {
             
             long finish = System.currentTimeMillis();
             
-            float timeTotal = (finish - start) / 1000f;
-            float timeEval = (finishEval - startEval) / 1000f;
-            float timeSelect = (finishSelect - startSelect) / 1000f;
-            float timeReprod = (finishReprod - startReprod) / 1000f;
+            double timeTotal = (finish - start) / 1000f;
+            double timeEval = (finishEval - startEval) / 1000f;
+            double timeSelect = (finishSelect - startSelect) / 1000f;
+            double timeReprod = (finishReprod - startReprod) / 1000f;
     		
             //System.out.println("Time total: " + timeTotal + ", eval: " + timeEval + " (" + (timeEval/timeTotal) + "), select: " + timeSelect + "(" + (timeSelect/timeTotal) + "), reprod: " + timeReprod + "(" + (timeReprod/timeTotal) + ")"); 
         } catch (InvalidConfigurationException e) {
@@ -722,14 +722,14 @@ public class Genotype implements Serializable {
         return new Genotype(props, a_activeConfiguration, chroms);
     }
     
-    public float getAveragePopulationFitness() {
+    public double getAveragePopulationFitness() {
     	long fitness = 0;
     	Iterator<Chromosome> iter = m_chromosomes.iterator();
         while (iter.hasNext()) {
             Chromosome chrom = iter.next();
             fitness += chrom.getFitnessValue();
         }
-        return (float) ((double) fitness / ((long) m_activeConfiguration.getBulkFitnessFunction().getMaxFitnessValue() * (long) m_chromosomes.size()));
+        return (double) ((double) fitness / ((long) m_activeConfiguration.getBulkFitnessFunction().getMaxFitnessValue() * (long) m_chromosomes.size()));
     }
 
     /**

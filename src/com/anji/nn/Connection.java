@@ -32,9 +32,9 @@ public interface Connection {
 	public final static String XML_TAG = "connection";
 
 	/**
-	 * @return float value carried on this connection from incoming neuron
+	 * @return double value carried on this connection from incoming neuron
 	 */
-	public float read();
+	public double read();
 
 	/**
 	 * @return String representation of object

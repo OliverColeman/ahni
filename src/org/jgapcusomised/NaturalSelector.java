@@ -37,8 +37,8 @@ import java.util.List;
  */
 public abstract class NaturalSelector {
     private int numChromosomes;
-    private float survivalRate = 0;
-    private float elitismProportion = 0.1f;
+    private double survivalRate = 0;
+    private double elitismProportion = 0.1f;
     private int elitismMinToSelect = 1;
     private int elitismMinSpeciesSize = 5;
     private int maxStagnantGenerations = 0;
@@ -155,16 +155,16 @@ public abstract class NaturalSelector {
     protected abstract void emptyImpl();
 
     /**
-     * @return float survival rate
+     * @return double survival rate
      */
-    public float getSurvivalRate() {
+    public double getSurvivalRate() {
         return survivalRate;
     }
 
     /**
      * @param aSurvivalRate
      */
-    public void setSurvivalRate(float aSurvivalRate) {
+    public void setSurvivalRate(double aSurvivalRate) {
         if (aSurvivalRate < 0.0 || aSurvivalRate > 1.0) {
             throw new IllegalArgumentException("0.0 <= survivalRate <= 1.0");
         }
@@ -188,7 +188,7 @@ public abstract class NaturalSelector {
     /**
      * @param b true if elitisim is to be enabled
      */
-    public void setElitismProportion(float p) {
+    public void setElitismProportion(double p) {
         elitismProportion = p;
     }
 

@@ -47,7 +47,7 @@ public class BiasConnection implements Connection {
 	/**
 	 * @see com.anji.nn.Connection#read()
 	 */
-	public float read() {
+	public double read() {
 		return 1;
 	}
 

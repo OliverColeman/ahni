@@ -27,7 +27,7 @@ package com.anji.nn;
  */
 public class CacheNeuronConnection extends NeuronConnection {
 
-	private float value;
+	private double value;
 
 	/**
 	 * @see NeuronConnection#NeuronConnection(Neuron)
@@ -38,17 +38,17 @@ public class CacheNeuronConnection extends NeuronConnection {
 	}
 
 	/**
-	 * @see NeuronConnection#NeuronConnection(Neuron, float)
+	 * @see NeuronConnection#NeuronConnection(Neuron, double)
 	 */
-	public CacheNeuronConnection( Neuron anIncoming, float aWeight ) {
+	public CacheNeuronConnection( Neuron anIncoming, double aWeight ) {
 		super( anIncoming, aWeight );
 		reset();
 	}
 
 	/**
-	 * @return float cached value
+	 * @return double cached value
 	 */
-	public float read() {
+	public double read() {
 		return value;
 	}
 

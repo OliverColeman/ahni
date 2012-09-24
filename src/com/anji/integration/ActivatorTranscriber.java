@@ -22,7 +22,7 @@ package com.anji.integration;
 import org.jgapcusomised.Chromosome;
 
 import com.anji.hyperneat.GridNet;
-import com.anji.hyperneat.HyperNEATTranscriber;
+import com.anji.hyperneat.HyperNEATTranscriberGridNet;
 import com.anji.nn.AnjiNet;
 import com.anji.util.Configurable;
 import com.anji.util.Properties;
@@ -71,8 +71,7 @@ public class ActivatorTranscriber implements Configurable, Transcriber<Object> {
 	 * See <a href=" {@docRoot} /params.htm" target="anji_params">Parameter
 	 * Details </a> for specific property settings.
 	 * 
-	 * @param props
-	 *            configuration parameters
+	 * @param props configuration parameters
 	 * @throws TranscriberException
 	 */
 	public void init(Properties props) throws TranscriberException {
@@ -81,7 +80,7 @@ public class ActivatorTranscriber implements Configurable, Transcriber<Object> {
 		if (ANJI_TYPE.equals(type)) {
 			transcriber = (Transcriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
 		} else if (HYPERNEAT_TYPE.equals(type)) {
-			transcriber = (Transcriber) props.singletonObjectProperty(HyperNEATTranscriber.class);
+			transcriber = (Transcriber) props.singletonObjectProperty(HyperNEATTranscriberGridNet.class);
 		} else if (JOONE_TYPE.equals(type)) {
 			throw new TranscriberException("JOONE not implemented");
 		} else
@@ -94,8 +93,7 @@ public class ActivatorTranscriber implements Configurable, Transcriber<Object> {
 	 * genotype. The specific implementatrion of Activator is determined by
 	 * configuration parameters.
 	 * 
-	 * @param ch
-	 *            <code>Chromosome</code> from which activator will be built
+	 * @param ch <code>Chromosome</code> from which activator will be built
 	 * @return Activator phenotype built from <code>Chromosome</code> genotype
 	 * @throws TranscriberException
 	 */

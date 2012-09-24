@@ -523,7 +523,7 @@ public void cleanup()
 /**
  * @see org.jgapcusomised.Allele#distance(org.jgapcusomised.Allele)
  */
-public float distance( Allele target ) {
+public double distance( Allele target ) {
 	return 0;
 }
 

@@ -51,23 +51,23 @@ public class WeightMutationOperator extends MutationOperator implements Configur
     /**
      * default mutation rate
      */
-    public static final float DEFAULT_MUTATE_RATE = 0.10f;
+    public static final double DEFAULT_MUTATE_RATE = 0.10f;
     /**
      * default standard deviation for weight delta
      */
-    public final static float DEFAULT_STD_DEV = 1.0f;
-    private float stdDev = DEFAULT_STD_DEV;
+    public final static double DEFAULT_STD_DEV = 1.0f;
+    private double stdDev = DEFAULT_STD_DEV;
 
     /**
      * @see com.anji.util.Configurable#init(com.anji.util.Properties)
      */
     public void init(Properties props) throws Exception {
-        setMutationRate(props.getFloatProperty(WEIGHT_MUTATE_RATE_KEY, DEFAULT_MUTATE_RATE));
-        stdDev = props.getFloatProperty(WEIGHT_MUTATE_STD_DEV_KEY, DEFAULT_STD_DEV);
+        setMutationRate(props.getDoubleProperty(WEIGHT_MUTATE_RATE_KEY, DEFAULT_MUTATE_RATE));
+        stdDev = props.getDoubleProperty(WEIGHT_MUTATE_STD_DEV_KEY, DEFAULT_STD_DEV);
     }
 
     /**
-     * @see MutationOperator#MutationOperator(float)
+     * @see MutationOperator#MutationOperator(double)
      */
     public WeightMutationOperator() {
         super(DEFAULT_MUTATE_RATE);
@@ -75,18 +75,18 @@ public class WeightMutationOperator extends MutationOperator implements Configur
 
     /**
      * @param newMutationRate
-     * @see WeightMutationOperator#WeightMutationOperator(float, float)
+     * @see WeightMutationOperator#WeightMutationOperator(double, double)
      */
-    public WeightMutationOperator(float newMutationRate) {
+    public WeightMutationOperator(double newMutationRate) {
         this(newMutationRate, DEFAULT_STD_DEV);
     }
 
     /**
      * @param newMutationRate
      * @param newStdDev
-     * @see MutationOperator#MutationOperator(float)
+     * @see MutationOperator#MutationOperator(double)
      */
-    public WeightMutationOperator(float newMutationRate, float newStdDev) {
+    public WeightMutationOperator(double newMutationRate, double newStdDev) {
         super(newMutationRate);
         stdDev = newStdDev;
     }
@@ -116,8 +116,8 @@ public class WeightMutationOperator extends MutationOperator implements Configur
         while ((i++ < numMutations) && iter.hasNext()) {
             ConnectionAllele origAllele = (ConnectionAllele) iter.next();
             
-            float delta = (float) (config.getRandomGenerator().nextGaussian() * getStdDev());
-            float nextWeight = origAllele.getWeight() + delta;
+            double delta = (double) (config.getRandomGenerator().nextGaussian() * getStdDev());
+            double nextWeight = origAllele.getWeight() + delta;
                         
             if (nextWeight > config.getMaxConnectionWeight()) {
                 nextWeight = config.getMaxConnectionWeight();
@@ -136,7 +136,7 @@ public class WeightMutationOperator extends MutationOperator implements Configur
     /**
      * @return standard deviation for weight delta
      */
-    public float getStdDev() {
+    public double getStdDev() {
         return stdDev;
     }
 }

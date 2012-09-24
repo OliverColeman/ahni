@@ -65,10 +65,10 @@ public void geneticEventFired( GeneticEvent event ) {
 	if ( GeneticEvent.GENOTYPE_EVOLVED_EVENT.equals( event.getEventName() ) ) {
 		Genotype genotype = (Genotype) event.getSource();
 		Chromosome fittest = genotype.getFittestChromosome();
-		float maxFitnessValue = ( config.getBulkFitnessFunction() != null ) ? config
+		double maxFitnessValue = ( config.getBulkFitnessFunction() != null ) ? config
 				.getBulkFitnessFunction().getMaxFitnessValue() : config.getFitnessFunction()
 				.getMaxFitnessValue();
-		float fitness = ( maxFitnessValue == 0 ) ? fittest.getFitnessValue() : ( fittest
+		double fitness = ( maxFitnessValue == 0 ) ? fittest.getFitnessValue() : ( fittest
 				.getFitnessValue() / maxFitnessValue );
 		//logger.info( "species count: " + genotype.getSpecies().size() );
 		List chroms = genotype.getChromosomes();
