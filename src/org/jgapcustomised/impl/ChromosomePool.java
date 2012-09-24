@@ -18,7 +18,7 @@
  * 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 package org.jgapcustomised.impl;
-import org.jgapcusomised.Chromosome;
+import org.jgapcustomised.Chromosome;
 
 /**
  * Provides a pooling mechanism for Chromosome instances so that

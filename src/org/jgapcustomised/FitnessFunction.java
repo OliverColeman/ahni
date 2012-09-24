@@ -17,7 +17,7 @@
  * along with JGAP; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-package org.jgapcusomised;
+package org.jgapcustomised;
 
 import java.util.Properties;
 
@@ -38,7 +38,7 @@ import java.util.Properties;
  * Note: Two Chromosomes with equivalent sets of genes should always be
  * assigned the same fitness value by any implementation of this interface.
  * @deprecated use <code>BulkFitnessFunction</code> instead
- * @see org.jgapcusomised.BulkFitnessFunction
+ * @see org.jgapcustomised.BulkFitnessFunction
  */
 public abstract class FitnessFunction implements java.io.Serializable
 {

@@ -17,12 +17,12 @@
  *
  * created by Philip Tucker
  */
-package com.anji.hyperneat;
+package ojc.ahni.hyperneat;
 
 import java.util.*;
 
 import org.apache.log4j.Logger;
-import org.jgapcusomised.*;
+import org.jgapcustomised.*;
 
 import com.anji.integration.*;
 import com.anji.util.*;

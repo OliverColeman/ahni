@@ -25,9 +25,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.SortedMap;
 
-import org.jgapcusomised.ChromosomeMaterial;
-import org.jgapcusomised.Configuration;
-import org.jgapcusomised.MutationOperator;
+import org.jgapcustomised.ChromosomeMaterial;
+import org.jgapcustomised.Configuration;
+import org.jgapcustomised.MutationOperator;
 
 import com.anji.integration.AnjiRequiredException;
 import com.anji.nn.RecurrencyPolicy;
@@ -115,7 +115,7 @@ public AddConnectionMutationOperator( double aMutationRate, RecurrencyPolicy aPo
  * @param target chromosome material to mutate
  * @param allelesToAdd <code>Set</code> contains <code>Allele</code> objects
  * @param allelesToRemove <code>Set</code> contains <code>Allele</code> objects
- * @see org.jgapcusomised.MutationOperator#mutate(org.jgapcusomised.Configuration, org.jgapcusomised.ChromosomeMaterial,
+ * @see org.jgapcustomised.MutationOperator#mutate(org.jgapcustomised.Configuration, org.jgapcustomised.ChromosomeMaterial,
  * java.util.Set, java.util.Set)
  */
 protected void mutate( Configuration jgapConfig, final ChromosomeMaterial target,

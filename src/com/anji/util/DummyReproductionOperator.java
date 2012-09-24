@@ -6,9 +6,9 @@ package com.anji.util;
 
 import java.util.List;
 
-import org.jgapcusomised.Chromosome;
-import org.jgapcusomised.Configuration;
-import org.jgapcusomised.ReproductionOperator;
+import org.jgapcustomised.Chromosome;
+import org.jgapcustomised.Configuration;
+import org.jgapcustomised.ReproductionOperator;
 
 /**
  * @author Philip Tucker
@@ -16,7 +16,7 @@ import org.jgapcusomised.ReproductionOperator;
 public class DummyReproductionOperator extends ReproductionOperator {
 
 /**
- * @see org.jgapcusomised.ReproductionOperator#reproduce(org.jgapcusomised.Configuration, java.util.List, int,
+ * @see org.jgapcustomised.ReproductionOperator#reproduce(org.jgapcustomised.Configuration, java.util.List, int,
  * java.util.List)
  */
 public void reproduce( final Configuration config, final List parentChroms, int numOffspring,

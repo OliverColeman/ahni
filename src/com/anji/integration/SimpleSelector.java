@@ -26,10 +26,10 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import org.jgapcusomised.Chromosome;
-import org.jgapcusomised.ChromosomeFitnessComparator;
-import org.jgapcusomised.Configuration;
-import org.jgapcusomised.NaturalSelector;
+import org.jgapcustomised.Chromosome;
+import org.jgapcustomised.ChromosomeFitnessComparator;
+import org.jgapcustomised.Configuration;
+import org.jgapcustomised.NaturalSelector;
 
 /**
  * Selects chromosomes based directly on fitness value, as opposed to a statistical probability.

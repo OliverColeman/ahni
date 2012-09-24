@@ -19,13 +19,13 @@
  * 
  * Created on Feb 3, 2003 by Philip Tucker
  */
-package org.jgapcusomised;
+package org.jgapcustomised;
 
 /**
  * Similar to <code>InvalidConfigurationException</code>, but in runtime form so it can be thrown from
  * methods that do not throw exceptions.
  * @author Philip Tucker
- * @see org.jgapcusomised.InvalidConfigurationException
+ * @see org.jgapcustomised.InvalidConfigurationException
  */
 public class InvalidConfigurationRuntimeException extends RuntimeException {
 

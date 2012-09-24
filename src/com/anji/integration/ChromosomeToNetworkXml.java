@@ -20,7 +20,7 @@
 package com.anji.integration;
 
 import org.apache.log4j.Logger;
-import org.jgapcusomised.Chromosome;
+import org.jgapcustomised.Chromosome;
 
 import com.anji.Copyright;
 import com.anji.persistence.FilePersistence;

@@ -19,7 +19,7 @@
  */
 package com.anji.integration;
 
-import org.jgapcusomised.Allele;
+import org.jgapcustomised.Allele;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 

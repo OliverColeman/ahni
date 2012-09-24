@@ -1,7 +1,7 @@
-package com.anji.hyperneat;
+package ojc.ahni.hyperneat;
 
 import org.apache.log4j.Logger;
-import org.jgapcusomised.*;
+import org.jgapcustomised.*;
 
 import com.anji.integration.ActivatorTranscriber;
 import com.anji.integration.AnjiActivator;
@@ -16,7 +16,7 @@ import com.anji.util.*;
 import com.javamex.classmexer.MemoryUtil;
 
 /**
- * Constructs a {@link com.anji.hyperneat.GridNet} neural network from a chromosome using the hypercube (from HyperNEAT) encoding scheme. An
+ * Constructs a {@link ojc.ahni.hyperneat.GridNet} neural network from a chromosome using the hypercube (from HyperNEAT) encoding scheme. An
  * {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this class. {@link
  * com.anji.integration.ActivatorTranscriber.getNet()} or {@link com.anji.integration.ActivatorTranscriber.getPhenotype()} is then used to get the resulting
  * network.

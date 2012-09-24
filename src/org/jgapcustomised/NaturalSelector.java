@@ -20,7 +20,7 @@
  * 
  * Modified on Feb 3, 2003 by Philip Tucker
  */
-package org.jgapcusomised;
+package org.jgapcustomised;
 
 import java.util.ArrayList;
 import java.util.Collections;

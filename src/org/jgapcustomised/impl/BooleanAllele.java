@@ -13,10 +13,10 @@ package org.jgapcustomised.impl;
 
 import java.util.Random;
 
-import org.jgapcusomised.Allele;
-import org.jgapcusomised.Configuration;
-import org.jgapcusomised.Gene;
-import org.jgapcusomised.UnsupportedRepresentationException;
+import org.jgapcustomised.Allele;
+import org.jgapcustomised.Configuration;
+import org.jgapcustomised.Gene;
+import org.jgapcustomised.UnsupportedRepresentationException;
 
 /**
  * A Gene implementation that supports two possible values (alleles) for each gene: true and
@@ -521,7 +521,7 @@ public void cleanup()
 }
 
 /**
- * @see org.jgapcusomised.Allele#distance(org.jgapcusomised.Allele)
+ * @see org.jgapcustomised.Allele#distance(org.jgapcustomised.Allele)
  */
 public double distance( Allele target ) {
 	return 0;

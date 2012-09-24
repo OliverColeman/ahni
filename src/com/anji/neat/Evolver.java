@@ -34,10 +34,10 @@ import java.util.Vector;
 
 
 import org.apache.log4j.Logger;
-import org.jgapcusomised.BulkFitnessFunction;
-import org.jgapcusomised.Chromosome;
-import org.jgapcusomised.Genotype;
-import org.jgapcusomised.Species;
+import org.jgapcustomised.BulkFitnessFunction;
+import org.jgapcustomised.Chromosome;
+import org.jgapcustomised.Genotype;
+import org.jgapcustomised.Species;
 import org.jgapcustomised.event.GeneticEvent;
 
 import com.anji.integration.*;

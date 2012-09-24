@@ -25,9 +25,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import org.apache.log4j.Logger;
-import org.jgapcusomised.Chromosome;
-import org.jgapcusomised.Configuration;
-import org.jgapcusomised.Genotype;
+import org.jgapcustomised.Chromosome;
+import org.jgapcustomised.Configuration;
+import org.jgapcustomised.Genotype;
 
 import com.anji.integration.Activator;
 import com.anji.run.Run;
@@ -84,7 +84,7 @@ public void reset() {
 }
 
 /**
- * @see com.anji.persistence.Persistence#store(org.jgapcusomised.Chromosome)
+ * @see com.anji.persistence.Persistence#store(org.jgapcustomised.Chromosome)
  */
 public void store( Chromosome c ) throws Exception {
 }
@@ -103,7 +103,7 @@ public void store( Run r ) throws Exception {
 
 /**
  * @see com.anji.persistence.Persistence#loadChromosome(java.lang.String,
- * org.jgapcusomised.Configuration)
+ * org.jgapcustomised.Configuration)
  */
 public Chromosome loadChromosome( String id, Configuration config ) {
 	return null;
@@ -116,7 +116,7 @@ public void deleteChromosome( String id ) throws Exception {
 }
 
 /**
- * @see com.anji.persistence.Persistence#loadGenotype(org.jgapcusomised.Configuration)
+ * @see com.anji.persistence.Persistence#loadGenotype(org.jgapcustomised.Configuration)
  */
 public Genotype loadGenotype( Configuration aConfig ) {
 	return null;

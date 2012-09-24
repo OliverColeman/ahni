@@ -24,9 +24,9 @@ package org.jgapcustomised.impl;
 
 import java.util.List;
 
-import org.jgapcusomised.Chromosome;
-import org.jgapcusomised.Configuration;
-import org.jgapcusomised.ReproductionOperator;
+import org.jgapcustomised.Chromosome;
+import org.jgapcustomised.Configuration;
+import org.jgapcustomised.ReproductionOperator;
 
 
 /**
@@ -41,7 +41,7 @@ public class CloneReproductionOperator extends ReproductionOperator {
  * @param parents <code>List</code> contains Chromosome objects
  * @param numOffspring
  * @param offspring <code>List</code> contains ChromosomeMaterial objects
- * @see org.jgapcusomised.ReproductionOperator#reproduce(Configuration, List, int, List)
+ * @see org.jgapcustomised.ReproductionOperator#reproduce(Configuration, List, int, List)
  */
 protected void reproduce( Configuration config, List parents, int numOffspring, 
 		List offspring ) 

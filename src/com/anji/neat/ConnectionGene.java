@@ -19,7 +19,7 @@
  */
 package com.anji.neat;
 
-import org.jgapcusomised.Gene;
+import org.jgapcustomised.Gene;
 
 /**
  * Gene corresponding to NEAT connection gene according to <a

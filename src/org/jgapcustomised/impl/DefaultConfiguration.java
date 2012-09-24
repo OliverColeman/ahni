@@ -21,8 +21,8 @@ package org.jgapcustomised.impl;
 
 import java.util.Random;
 
-import org.jgapcusomised.Configuration;
-import org.jgapcusomised.InvalidConfigurationException;
+import org.jgapcustomised.Configuration;
+import org.jgapcustomised.InvalidConfigurationException;
 import org.jgapcustomised.event.EventManager;
 
 

@@ -23,9 +23,9 @@ package com.anji.integration;
 
 import java.io.PrintStream;
 
-import org.jgapcusomised.Chromosome;
-import org.jgapcusomised.Configuration;
-import org.jgapcusomised.Genotype;
+import org.jgapcustomised.Chromosome;
+import org.jgapcustomised.Configuration;
+import org.jgapcustomised.Genotype;
 import org.jgapcustomised.event.GeneticEvent;
 import org.jgapcustomised.event.GeneticEventListener;
 

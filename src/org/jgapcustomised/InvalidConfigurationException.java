@@ -17,7 +17,7 @@
  * along with JGAP; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-package org.jgapcusomised;
+package org.jgapcustomised;
 
 
 /**
@@ -26,7 +26,7 @@ package org.jgapcusomised;
  * object before all required settings have been provided, or an attempt is
  * made to alter a setting in a Configuration object after it has been
  * successfully locked.
- * @see org.jgapcusomised.InvalidConfigurationRuntimeException
+ * @see org.jgapcustomised.InvalidConfigurationRuntimeException
  */
 public class InvalidConfigurationException extends Exception
 {

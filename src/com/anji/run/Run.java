@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-import org.jgapcusomised.Genotype;
+import org.jgapcustomised.Genotype;
 import org.jgapcustomised.event.GeneticEvent;
 import org.jgapcustomised.event.GeneticEventListener;
 

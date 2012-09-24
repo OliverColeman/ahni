@@ -1,10 +1,13 @@
-package com.anji.experiments.objectrecognition;
+package ojc.ahni.experiments.objectrecognition;
 
 import java.util.*;
-import org.apache.log4j.Logger;
-import org.jgapcusomised.*;
 
-import com.anji.hyperneat.*;
+import ojc.ahni.*;
+import ojc.ahni.hyperneat.HyperNEATFitnessFunction;
+
+import org.apache.log4j.Logger;
+import org.jgapcustomised.*;
+
 import com.anji.integration.*;
 import com.anji.nn.*;
 import com.anji.util.*;
@@ -92,7 +95,7 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
         }
     }
     
-    protected int evaluate(Chromosome genotype, com.anji.hyperneat.GridNet substrate, int threadIndex) {
+    protected int evaluate(Chromosome genotype, ojc.ahni.hyperneat.GridNet substrate, int threadIndex) {
         //if (genotype.size() > 100)
         //    return 0;
         double[][][] responses = substrate.nextSequence(stimuli);

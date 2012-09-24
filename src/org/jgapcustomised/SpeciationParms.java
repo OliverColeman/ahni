@@ -17,7 +17,7 @@
  * 
  * Created on Mar 27, 2005 by Philip Tucker
  */
-package org.jgapcusomised;
+package org.jgapcustomised;
 
 /**
  * @author Philip Tucker

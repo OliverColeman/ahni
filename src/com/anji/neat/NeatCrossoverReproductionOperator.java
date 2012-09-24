@@ -21,11 +21,11 @@ package com.anji.neat;
 
 import java.util.Iterator;
 
-import org.jgapcusomised.Allele;
-import org.jgapcusomised.Chromosome;
-import org.jgapcusomised.ChromosomeMaterial;
-import org.jgapcusomised.Configuration;
-import org.jgapcusomised.CrossoverReproductionOperator;
+import org.jgapcustomised.Allele;
+import org.jgapcustomised.Chromosome;
+import org.jgapcustomised.ChromosomeMaterial;
+import org.jgapcustomised.Configuration;
+import org.jgapcustomised.CrossoverReproductionOperator;
 
 /**
  * Implements NEAT crossover reproduction according to <a

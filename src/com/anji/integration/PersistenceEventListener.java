@@ -25,9 +25,9 @@ import java.util.Iterator;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;
-import org.jgapcusomised.Chromosome;
-import org.jgapcusomised.Genotype;
-import org.jgapcusomised.InvalidConfigurationException;
+import org.jgapcustomised.Chromosome;
+import org.jgapcustomised.Genotype;
+import org.jgapcustomised.InvalidConfigurationException;
 import org.jgapcustomised.event.GeneticEvent;
 import org.jgapcustomised.event.GeneticEventListener;
 

@@ -21,18 +21,19 @@ package com.anji.neat;
 
 import java.io.IOException;
 
+import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
+
 import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;
-import org.jgapcusomised.ChromosomeMaterial;
-import org.jgapcusomised.Configuration;
-import org.jgapcusomised.IdFactory;
-import org.jgapcusomised.InvalidConfigurationException;
-import org.jgapcusomised.NaturalSelector;
+import org.jgapcustomised.ChromosomeMaterial;
+import org.jgapcustomised.Configuration;
+import org.jgapcustomised.IdFactory;
+import org.jgapcustomised.InvalidConfigurationException;
+import org.jgapcustomised.NaturalSelector;
 import org.jgapcustomised.event.EventManager;
 import org.jgapcustomised.impl.CloneReproductionOperator;
 import org.jgapcustomised.impl.WeightedRouletteSelector;
 
-import com.anji.hyperneat.HyperNEATTranscriberGridNet;
 import com.anji.integration.ActivatorTranscriber;
 import com.anji.integration.SimpleSelector;
 import com.anji.nn.activationfunction.ActivationFunctionType;

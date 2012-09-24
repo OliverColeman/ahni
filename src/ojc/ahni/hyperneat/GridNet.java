@@ -14,7 +14,7 @@
  * @author oliver
  */
 
-package com.anji.hyperneat;
+package ojc.ahni.hyperneat;
 
 import com.anji.integration.Activator;
 import com.anji.nn.activationfunction.ActivationFunction;

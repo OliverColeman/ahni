@@ -20,10 +20,10 @@ package org.jgapcustomised.impl;
 import java.util.Random;
 import java.util.StringTokenizer;
 
-import org.jgapcusomised.Allele;
-import org.jgapcusomised.Configuration;
-import org.jgapcusomised.Gene;
-import org.jgapcusomised.UnsupportedRepresentationException;
+import org.jgapcustomised.Allele;
+import org.jgapcustomised.Configuration;
+import org.jgapcustomised.Gene;
+import org.jgapcustomised.UnsupportedRepresentationException;
 
 /**
  * A Gene implementation that supports a integer values for its allele. Upper and lower bounds

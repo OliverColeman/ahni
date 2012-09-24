@@ -1,11 +1,13 @@
-package com.anji.hyperneat;
+package ojc.ahni.hyperneat;
 
 import java.util.*;
-import org.apache.log4j.Logger;
-import org.jgapcusomised.*;
 
-import com.anji.hyperneat.GridNet;
-import com.anji.hyperneat.HyperNEATTranscriberGridNet;
+import ojc.ahni.hyperneat.GridNet;
+import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
+
+import org.apache.log4j.Logger;
+import org.jgapcustomised.*;
+
 import com.anji.integration.*;
 import com.anji.util.*;
 import com.anji.util.Properties;

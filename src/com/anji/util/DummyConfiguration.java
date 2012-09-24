@@ -8,12 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import org.jgapcusomised.ChromosomeMaterial;
-import org.jgapcusomised.Configuration;
-import org.jgapcusomised.InvalidConfigurationException;
-import org.jgapcusomised.InvalidConfigurationRuntimeException;
-import org.jgapcusomised.NaturalSelector;
-import org.jgapcusomised.ReproductionOperator;
+import org.jgapcustomised.ChromosomeMaterial;
+import org.jgapcustomised.Configuration;
+import org.jgapcustomised.InvalidConfigurationException;
+import org.jgapcustomised.InvalidConfigurationRuntimeException;
+import org.jgapcustomised.NaturalSelector;
+import org.jgapcustomised.ReproductionOperator;
 import org.jgapcustomised.event.EventManager;
 import org.jgapcustomised.impl.IntegerAllele;
 import org.jgapcustomised.impl.WeightedRouletteSelector;

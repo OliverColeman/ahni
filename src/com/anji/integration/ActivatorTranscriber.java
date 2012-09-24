@@ -19,10 +19,11 @@
  */
 package com.anji.integration;
 
-import org.jgapcusomised.Chromosome;
+import ojc.ahni.hyperneat.GridNet;
+import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
 
-import com.anji.hyperneat.GridNet;
-import com.anji.hyperneat.HyperNEATTranscriberGridNet;
+import org.jgapcustomised.Chromosome;
+
 import com.anji.nn.AnjiNet;
 import com.anji.util.Configurable;
 import com.anji.util.Properties;

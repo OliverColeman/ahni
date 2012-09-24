@@ -17,7 +17,7 @@
  * 
  * Created on Feb 3, 2003 by Philip Tucker
  */
-package org.jgapcusomised;
+package org.jgapcustomised;
 
 import java.io.Serializable;
 import java.util.ArrayList;

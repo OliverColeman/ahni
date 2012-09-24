@@ -30,8 +30,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
-import org.jgapcusomised.Allele;
-import org.jgapcusomised.ChromosomeMaterial;
+import org.jgapcustomised.Allele;
+import org.jgapcustomised.ChromosomeMaterial;
 
 /**
  * Utility class capturing functionality pertaining to NEAT neuron and connection genes.

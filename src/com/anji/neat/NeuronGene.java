@@ -19,7 +19,7 @@
  */
 package com.anji.neat;
 
-import org.jgapcusomised.Gene;
+import org.jgapcustomised.Gene;
 
 import com.anji.nn.activationfunction.ActivationFunctionType;
 

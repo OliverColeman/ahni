@@ -19,7 +19,7 @@
  *
  * Created on Feb 25, 2004 by Philip Tucker
  */
-package org.jgapcusomised;
+package org.jgapcustomised;
 
 import java.io.File;
 import java.io.FileInputStream;

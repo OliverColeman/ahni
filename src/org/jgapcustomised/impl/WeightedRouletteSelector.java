@@ -27,9 +27,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import org.jgapcusomised.Chromosome;
-import org.jgapcusomised.Configuration;
-import org.jgapcusomised.NaturalSelector;
+import org.jgapcustomised.Chromosome;
+import org.jgapcustomised.Configuration;
+import org.jgapcustomised.NaturalSelector;
 
 /**
  * A basic implementation of NaturalSelector that models a roulette wheel. When a Chromosome is

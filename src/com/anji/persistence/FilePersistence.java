@@ -35,11 +35,11 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;
-import org.jgapcusomised.Chromosome;
-import org.jgapcusomised.ChromosomeMaterial;
-import org.jgapcusomised.Configuration;
-import org.jgapcusomised.Genotype;
-import org.jgapcusomised.Species;
+import org.jgapcustomised.Chromosome;
+import org.jgapcustomised.ChromosomeMaterial;
+import org.jgapcustomised.Configuration;
+import org.jgapcustomised.Genotype;
+import org.jgapcustomised.Species;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -172,7 +172,7 @@ private void deleteXml( String type, String key ) throws Exception {
 }
 
 /**
- * @see com.anji.persistence.Persistence#store(org.jgapcusomised.Chromosome)
+ * @see com.anji.persistence.Persistence#store(org.jgapcustomised.Chromosome)
  */
 public void store( Chromosome c ) throws Exception {
 	storeXml( new XmlPersistableChromosome( c ) );
@@ -263,7 +263,7 @@ public static Chromosome chromosomeFromXml( Configuration config, Node chromNode
 
 /**
  * @see com.anji.persistence.Persistence#loadChromosome(java.lang.String,
- * org.jgapcusomised.Configuration)
+ * org.jgapcustomised.Configuration)
  */
 public Chromosome loadChromosome( String id, Configuration config ) {
 	try {
@@ -290,7 +290,7 @@ public void deleteChromosome( String id ) throws Exception {
 }
 
 /**
- * @see com.anji.persistence.Persistence#loadGenotype(org.jgapcusomised.Configuration)
+ * @see com.anji.persistence.Persistence#loadGenotype(org.jgapcustomised.Configuration)
  */
 public Genotype loadGenotype( Configuration config ) {
 	try {

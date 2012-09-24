@@ -23,8 +23,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-import org.jgapcusomised.BulkFitnessFunction;
-import org.jgapcusomised.Chromosome;
+import org.jgapcustomised.BulkFitnessFunction;
+import org.jgapcustomised.Chromosome;
 
 import com.anji.util.Configurable;
 import com.anji.util.Properties;

@@ -1,27 +1,26 @@
-package com.anji.experiments.objectrecognition;
+package ojc.ahni.experiments.objectrecognition;
 
 import java.awt.*;
 import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
 import java.awt.RenderingHints;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Vector;
 
 import javax.imageio.ImageIO;
 
+import ojc.ahni.*;
+import ojc.ahni.hyperneat.HyperNEATFitnessFunction;
+import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
+
 import org.apache.log4j.Logger;
-import org.jgapcusomised.*;
+import org.jgapcustomised.*;
 
-import com.anji.hyperneat.*;
-import com.anji.integration.AnjiNetTranscriber;
-import com.anji.integration.TranscriberException;
 import com.anji.neat.Evolver;
-import com.anji.nn.AnjiNet;
 
-public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction {
+public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction {
 	public static final String SHAPE_SIZE_KEY = "or.shapesize";
 	public static final String SHAPE_TYPE_KEY = "or.shapetype";
 	public static final String NUM_EDGES_KEY = "or.numedgesinshape";
@@ -35,21 +34,24 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
 	public static final String FITNESS_WEIGHT_INV_DIST_KEY = "or.fitness.weight.distance.inverse";
 	public static final String PERFORMANCE_METRIC_KEY = "or.performance.metric";
 	public static final String NUM_TRIALS_KEY = "or.numtrials";
+	public static final String MIN_SCALE_KEY = "or.minscale";
+	public static final String MAX_ROTATE_KEY = "or.maxrotate";
 	
-	private String shapesImageDir;
-	private String trialsImageDir;
-	private String champsImageDir;
-	private String compositesImageDir;
+	//unique directory for images for this run
+	String imageDir;
 	
 	private static int maxFitnessValue = 1000000;
     private static int numTrials = 200;
     
-    
+    private double bestPerformanceSoFar = 0;
+	private double bestFitnessSoFar = 0;
+	public double bestPCSoFar = 0;
+	
     private double fitnessWeightPC = 1;
     private double fitnessWeightWSOSE = 1;
     private double fitnessWeightDist = 0;
     private double fitnessWeightInvDist = 0;
-    private String perfMetric = FITNESS_WEIGHT_DIST_KEY;
+    private String perfMetric = FITNESS_WEIGHT_PC_KEY;
     
     private int shapeSize = 5;
     private String shapeType = "simple";
@@ -58,15 +60,24 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
     private int numNonTargetShapesShown = 1;
     private int targetIndex = -1;
     private boolean saveImages = false;
+    private boolean printedFirst = false;
     
+    private double minScale = 0.5f;
+    private int maxRotate = 360;
     
     private double[][][] stimuli;
-    private Point[] targetCoords;
+    //private Point[] targetCoords;
+    private boolean[] targetPresent;
     private BufferedImage[] stimuliImages;
     
     private double maxDistance;
     private Path2D.Float[] shapes;
     private Path2D.Float target;
+    
+    int[] imageScaleActivation = {6, 6, 24}; //size (in pixels) of a square representing the activation of a neuron (per layer)
+	int[] imageScaleWeights = {3, 12}; //size (in pixels) of a square representing the value of a weight
+	int imageNegDotSize = 1; //size of black square/dot in middle of weight value square to indicate negative value
+	int imageSpacing = 5;
     
     double connectionWeightMin;
 	double connectionWeightMax;
@@ -82,6 +93,8 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
         saveImages = props.getBooleanProperty(SAVE_IMAGES_KEY, saveImages);
         numShapesInLib = props.getIntProperty(NUM_SHAPES_KEY, numShapesInLib);
         targetIndex = props.getIntProperty(TARGET_INDEX_KEY, targetIndex);
+        minScale = props.getDoubleProperty(MIN_SCALE_KEY, minScale);
+        maxRotate = props.getIntProperty(MAX_ROTATE_KEY, maxRotate);
         
         if (shapeType.equals("simple"))
         	numShapesInLib = Math.min(numShapesInLib, 4); //only 4 simple shapes available
@@ -105,20 +118,15 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
     	maxDistance = (double) Math.sqrt(maxXDelta*maxXDelta + maxYDelta*maxYDelta);
         
     	if (saveImages) {
-    		//create unique directory for images for this run
-    		//String imageDir = this.getClass().getName() + File.separatorChar + System.currentTimeMillis();
-    		String imageDir = props.getProperty("output.dir");
-    		System.out.println("image dir: " + imageDir);
-    		shapesImageDir = imageDir + File.separatorChar + "shapes";
-    		trialsImageDir = imageDir + File.separatorChar + "trials";
-    		champsImageDir = imageDir + File.separatorChar + "champs";
-    		compositesImageDir = imageDir + File.separatorChar + "composites";
+    		//unique directory for images for this run
+    		imageDir = props.getProperty("output.dir");
     	}
     	
         //generate random shapes
         shapes = new Path2D.Float[numShapesInLib];
         Line2D.Float line;
         Point P1 = new Point(), P2 = new Point();
+        AffineTransform centreTransform = AffineTransform.getTranslateInstance(- (double) shapeSize / 2, - (double) shapeSize / 2);
         for (int s = 0; s < numShapesInLib; s++) {
         	shapes[s] = new Path2D.Float();
         	
@@ -246,8 +254,10 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
 	            Graphics2D canvas = image.createGraphics();
 	            //canvas.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 	            canvas.draw(shapes[s]);
-	            writeImage(image, shapesImageDir, "shape-" + s);
-        	}	
+	            writeImage(image, imageDir + "shapes", "shape-" + s);
+        	}
+        	
+        	shapes[s].transform(centreTransform);
         }
         
         //if we should choose the target randomly
@@ -277,11 +287,14 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
     public void initialiseEvaluation() {
     	//generate trials
         stimuli = new double[numTrials][height[0]][width[0]];
-        targetCoords = new Point[numTrials];
+        //targetCoords = new Point[numTrials];
+        targetPresent = new boolean[numTrials];
         if (saveImages)
         	stimuliImages = new BufferedImage[numTrials];
         
         Point pos = new Point();
+        pos.x = width[0]/2;
+        pos.y = height[0]/2;
         
         //logger.info("init eval");
         double minDistFactor = (double) Math.sqrt(2) * 2; //no overlap for square shapes
@@ -289,7 +302,7 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
         	BufferedImage image = new BufferedImage(width[0], height[0], BufferedImage.TYPE_BYTE_GRAY);
             Graphics2D canvas = image.createGraphics();
             //canvas.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            
+            /*
         	//randomly place target
         	pos.x = random.nextInt(width[0]-shapeSize+1);
         	pos.y = random.nextInt(height[0]-shapeSize+1);
@@ -326,7 +339,25 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
             	
             	drawShape(canvas, pos, shape);
             }
+            */
             
+            Path2D.Float shape = target;
+            targetPresent[t] = true;
+            if (random.nextBoolean()) {
+            	do {
+            		shape = shapes[random.nextInt(numShapesInLib)];
+            	} while (shape == target);
+            	targetPresent[t] = false;
+            }
+            double scale = random.nextFloat() * (1-minScale) + minScale;
+            double rotate = random.nextFloat() * (double) Math.toRadians(maxRotate);
+            AffineTransform transform = AffineTransform.getRotateInstance(rotate);
+            transform.concatenate(AffineTransform.getScaleInstance(scale, scale));
+            
+            //pos.x = Math.round((1-scale)*shapeSize/2);
+            //pos.y = Math.round((1-scale)*shapeSize/2);
+    		drawShape(canvas, pos, (Path2D.Float) shape.createTransformedShape(transform));
+        	
             //draw image on NN input
             Raster raster = image.getData();
             for (int yi = 0; yi < height[0]; yi++) {
@@ -350,9 +381,9 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
     	canvas.draw(s);
     }
     
-    protected int evaluate(Chromosome genotype, com.anji.hyperneat.GridNet substrate, int threadIndex) {
+    protected int evaluate(Chromosome genotype, ojc.ahni.hyperneat.GridNet substrate, int threadIndex) {
         double[][][] responses = substrate.nextSequence(stimuli);
-        	
+        /*	
         double avgDist = 0;
         double avgInvDist = 0;
         double percentCorrect = 0;
@@ -385,116 +416,200 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
         avgInvDist /= numTrials;
         percentCorrect /= numTrials;
         wsose /= numTrials;
-
+		
         
         //calculate fitness according to fitness function type weightings
         double fitness = fitnessWeightPC * percentCorrect + fitnessWeightWSOSE * (1 - wsose) + fitnessWeightDist * (1 - (avgDist / maxDistance)) + fitnessWeightInvDist * avgInvDist;
         fitness /= fitnessWeightPC + fitnessWeightWSOSE + fitnessWeightDist + fitnessWeightInvDist;
-	    
-        if (perfMetric.equals(FITNESS_WEIGHT_PC_KEY))
-        	genotype.setPerformanceValue(percentCorrect);
-        else if (perfMetric.equals(FITNESS_WEIGHT_WSOSE_KEY))
-        	genotype.setPerformanceValue(wsose);
-        else if (perfMetric.equals(FITNESS_WEIGHT_DIST_KEY))
-        	genotype.setPerformanceValue(avgDist);
-        else if (perfMetric.equals(FITNESS_WEIGHT_INV_DIST_KEY))
-        	genotype.setPerformanceValue(avgInvDist);
-        else 
-        	genotype.setPerformanceValue(fitness);
+	    */
         
-        // if performance has increased significantly then save some images of the weights and activation patterns for some trials
-    	//if ((fitness >= scalePerformance || (lastBestChrom == genotype && lastBestPerformance >= scalePerformance)) && saveImages) {
-    	if ((genotype.getPerformanceValue() >= scalePerformance || (lastBestChrom == genotype && lastBestPerformance >= scalePerformance)) && saveImages) {
-    		//int imageScale = (int) Math.ceil(100/width); //make images at least 100 pixels in size
-    		int imageScale = 4;
-    		int imageSize = imageScale * width[0]; //assumes square layers
-    		int negDotSize = imageScale/4;
+        double fitness = 0;
+        double percentCorrect = 0;
+        for (int t = 0; t < numTrials; t++) {
+            double target = targetPresent[t] ? 1 : 0;
+            double error = Math.abs(target - responses[t][0][0]);
+            fitness += Math.pow(1 - error, 2); //take square root of error
+            
+            if (error < 0.5) percentCorrect++;
+        }
+        fitness /= numTrials;
+        percentCorrect /= numTrials;
+        
+        double performance;
+        
+        if (perfMetric.equals(FITNESS_WEIGHT_PC_KEY))
+        	performance = percentCorrect;
+        //else if (perfMetric.equals(FITNESS_WEIGHT_WSOSE_KEY))
+        //	genotype.setPerformanceValue(wsose);
+        //else if (perfMetric.equals(FITNESS_WEIGHT_DIST_KEY))
+        //	genotype.setPerformanceValue(avgDist);
+        //else if (perfMetric.equals(FITNESS_WEIGHT_INV_DIST_KEY))
+        //	genotype.setPerformanceValue(avgInvDist);
+        else 
+        	performance = fitness;
+        
+        genotype.setPerformanceValue(performance);
+        
+        double nextNoteworthyFitnessFactor = 0.01f;
+      	double nextNoteworthyFitness = bestFitnessSoFar + (1-bestFitnessSoFar) * nextNoteworthyFitnessFactor;
+      	boolean saveImagesNow = saveImages && 
+      		(
+      			(
+      				((targetPerformanceType == 1 && performance >= bestPerformanceSoFar + 0.01f) || (targetPerformanceType == 0 && performance <= bestPerformanceSoFar - 0.01f))
+      				|| fitness >= nextNoteworthyFitness
+      			) || 
+      			(
+      				lastBestChrom == genotype && 
+      					((targetPerformanceType == 1 && lastBestPerformance >= scalePerformance) || (targetPerformanceType == 0 && lastBestPerformance <= scalePerformance)) 
+      			) || 
+      			!printedFirst
+      		);
+	    
+      	if ((targetPerformanceType == 1 && performance >= bestPerformanceSoFar + 0.01f) || (targetPerformanceType == 0 && performance <= bestPerformanceSoFar - 0.01f))
+			bestPerformanceSoFar = performance;
+      	if (fitness >= nextNoteworthyFitness) {
+      		bestFitnessSoFar = fitness;
+      		System.out.println("next noteworthy fitness: " + (bestFitnessSoFar + (1-bestFitnessSoFar) * nextNoteworthyFitnessFactor));
+      	}
+      	if (percentCorrect > bestPCSoFar)
+      		bestPCSoFar = percentCorrect;
+      	
+      	
+    	if (saveImagesNow) {
+    		System.out.println("saving images for " + genotype.getId() + ", performance: " + performance + ", fitness: " + fitness);
+    		
+    		printedFirst = true;
+    		
     		double weightRange = connectionWeightMax - connectionWeightMin;
     		int connectionRange = getConnectionRange();
-    		AffineTransform scaleTransform = AffineTransform.getScaleInstance(imageScale, imageScale);
     		
-    		for (int t = 0; t < numTrials; t++) {
-	        	//save trial images
-            	//writeImage(stimuliImages[t], trialsImageDir, "trial-" + t);
-            
-    			BufferedImage image = new BufferedImage(imageSize*3+2, imageSize, BufferedImage.TYPE_BYTE_GRAY);
-    			Graphics2D canvas = image.createGraphics();
-    			//draw alternating horizontal lines for background, only 1 pixel 
-    			//wide gaps should be visible once target, weights and outputs are drawn 
-    			canvas.setColor(new Color(255, 255, 255));
-    			for (int y = 0; y < imageSize; y+= 2)
-	            	canvas.draw(new Line2D.Float(0, y, imageSize*3+2-1, y));
-	            
-    			canvas.drawImage(stimuliImages[t], scaleTransform, null);
-    			
-            	int tx = targetCoords[t].x;
-	        	int ty = targetCoords[t].y;
-	        	
-	        	//generate image for weight matrix
-	        	//BufferedImage image = new BufferedImage(imageSize, imageSize, BufferedImage.TYPE_BYTE_GRAY);
-	        	//Graphics2D canvas = image.createGraphics();
-	            canvas.setColor(new Color(127, 127, 127));
-	            int offset = imageSize + 1;
-	            //initialise to 0 weight value color for case where layers are not fully connected
-	            canvas.fill(new Rectangle(offset, 0, imageSize, imageSize));
-	            
-	        	// calculate dimensions of this weight target matrix (bounded by grid edges)
-				int dy = Math.min(height[0] - 1, ty + connectionRange) - Math.max(0, ty - connectionRange) + 1;
-				int dx = Math.min(width[0] - 1, tx + connectionRange) - Math.max(0, tx - connectionRange) + 1;
-				double[][] w = substrate.getWeights()[0][ty][tx][0];
-	    		
-				for (int wy = 0, sy = Math.max(0, ty - connectionRange); wy < dy; wy++, sy++) {
-					for (int wx = 0, sx = Math.max(0, tx - connectionRange); wx < dx; wx++, sx++) {
-						int color = (int) (((w[wy][wx] - connectionWeightMin) / weightRange) * 255);
-						canvas.setColor(new Color(color, color, color));
-						canvas.fill(new Rectangle(offset + sx * imageScale, sy * imageScale, imageScale, imageScale));
-						if (w[wy][wx] < 0) {
-							canvas.setColor(Color.black);
-							canvas.fill(new Rectangle(offset + sx * imageScale + imageScale/2 - negDotSize/2, sy * imageScale + imageScale/2 - negDotSize/2, negDotSize, negDotSize));
-						}
+    		//Generate image for weights
+    		BufferedImage[] weightImage = new BufferedImage[depth-1];
+			int xOffset = 0, yOffset = 0;
+			int imageWeightLayerMaxWidth = 0;
+			int imageWeightLayerTotalHeight = 0;
+			for (int tz = 1; tz < depth; tz++) { //tz-1 is source layer
+				int imageWidth = width[tz] * (width[tz-1] * imageScaleWeights[tz-1] + imageSpacing/2) - imageSpacing/2;
+				int imageHeight = height[tz] * (height[tz-1] * imageScaleWeights[tz-1] + imageSpacing/2) - imageSpacing/2;
+				
+				imageWeightLayerMaxWidth = Math.max(imageWeightLayerMaxWidth, imageWidth);
+				imageWeightLayerTotalHeight += imageHeight + imageSpacing;
+				
+				weightImage[tz-1] = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_RGB);
+				Graphics2D g = weightImage[tz-1].createGraphics();
+				
+				g.setColor(new Color(0, 0, 127));
+				g.fillRect(0, 0, imageWidth, imageHeight);
+				
+				for (int ty = 0; ty < height[tz]; ty++) {
+					for (int tx = 0; tx < width[tz]; tx++) {
+						xOffset = tx * (width[tz-1] * imageScaleWeights[tz-1] + imageSpacing/2);
+						yOffset = ty * (height[tz-1] * imageScaleWeights[tz-1] + imageSpacing/2);
+						
+						//initialise to 0 weight value color for case where layers are not fully connected
+			            //g.setColor(new Color(127, 127, 127));
+			            //g.fill(new Rectangle(xOffset, yOffset, width[tz-1] * imageScaleWeights[tz-1], height[tz-1] * imageScaleWeights[tz-1]));
+			            
+			        	//calculate dimensions of this weight target matrix (bounded by grid edges)
+						int dy = Math.min(height[tz-1] - 1, ty + connectionRange) - Math.max(0, ty - connectionRange) + 1;
+						int dx = Math.min(width[tz-1] - 1, tx + connectionRange) - Math.max(0, tx - connectionRange) + 1;
+						double[][] w = substrate.getWeights()[tz-1][ty][tx][0];
+						
+						for (int wy = 0, sy = Math.max(0, ty - connectionRange); wy < dy; wy++, sy++) {
+							for (int wx = 0, sx = Math.max(0, tx - connectionRange); wx < dx; wx++, sx++) {
+								int color = (int) (((w[wy][wx] - connectionWeightMin) / weightRange) * 255);
+								g.setColor(new Color(color, color, color));
+								g.fillRect(xOffset + sx * imageScaleWeights[tz-1], yOffset + sy * imageScaleWeights[tz-1], imageScaleWeights[tz-1], imageScaleWeights[tz-1]);
+								//if weight value is negative indicate with a black dot
+								if (w[wy][wx] < 0) {
+									g.setColor(Color.black);
+									g.fillRect(xOffset + sx * imageScaleWeights[tz-1] + imageScaleWeights[tz-1]/2 - imageNegDotSize/2, yOffset + sy * imageScaleWeights[tz-1] + imageScaleWeights[tz-1]/2 - imageNegDotSize/2, imageNegDotSize, imageNegDotSize);
+								}
+							}
+			        	}
 					}
-	        	}
-	    		//writeImage(image, champsImageDir + File.separatorChar + genotype.getId() + "-weights", "weights-" + t + "-" + tx + "," + ty);
-	            
-	            //generate image of output values
-				offset = imageSize*2 + 2;
-	        	//image = new BufferedImage(imageSize, imageSize, BufferedImage.TYPE_BYTE_GRAY);
-	        	//canvas = image.createGraphics();
-	            canvas.setColor(new Color(127, 127, 127));
-	            for (int y = 0; y < height[0]; y++) {
-	                for (int x = 0; x < width[0]; x++) {
-	                	int color = (int) (responses[t][y][x] * 255); //assumes output range is [0, 1]
-						canvas.setColor(new Color(color, color, color));
-						canvas.fill(new Rectangle(offset + x * imageScale, y * imageScale, imageScale, imageScale));
-	                }
 				}
-	            //writeImage(image, champsImageDir + File.separatorChar + genotype.getId() + "-outputs", "outputs-" + t + "-" + tx + "," + ty);
-	            
-	            writeImage(image, compositesImageDir + File.separatorChar + scaleCount + "-" + genotype.getId(), t + "-" + tx + "," + ty);
+			}
+			imageWeightLayerTotalHeight -= imageSpacing;
+			
+			int imageWidth = imageWeightLayerMaxWidth + imageSpacing*2; //add border
+			int imageHeight = imageWeightLayerTotalHeight + imageSpacing*2;
+			
+			BufferedImage output = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_RGB);
+			Graphics2D g = output.createGraphics();
+			g.setColor(new Color(0, 0, 127));
+			g.fillRect(0, 0, imageWidth, imageHeight);
+			
+			yOffset = imageSpacing;
+			for (int layer = 0; layer < depth-1; layer++) {
+				g.drawImage(weightImage[layer], imageSpacing, yOffset, null);
+				yOffset += weightImage[layer].getHeight() + imageSpacing;
+			}
+			
+			writeImage(output, imageDir + "networks" + File.separatorChar + generation + "-" + scaleCount + "-" + genotype.getId() + "-" + percentCorrect, "weights");
+        		
+			//Generate image for activation levels for some trials
+    		for (int t = 0; t < 25; t++) {
+    			//individually reapply stimuli so we can capture activation values for all layers 
+    			substrate.next(stimuli[t]);
+    	        double[][][] activation = substrate.getActivation();
+    			BufferedImage[] activationImage = new BufferedImage[depth];
+    			int imageActivationLayerMaxWidth = 0;
+    			int imageActivationLayerTotalHeight = 0;
+    			for (int layer = 0; layer < depth; layer++) {
+    				imageWidth = width[layer] * imageScaleActivation[layer];
+    				imageHeight = height[layer] * imageScaleActivation[layer];
+    				
+    				imageActivationLayerMaxWidth = Math.max(imageActivationLayerMaxWidth, imageWidth);
+    				imageActivationLayerTotalHeight += imageHeight + imageSpacing;
+    				
+    				activationImage[layer] = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_BYTE_GRAY);
+    				Graphics2D canvas = activationImage[layer].createGraphics();
+    				
+    				for (int y = 0; y < height[layer]; y++) {
+    	                for (int x = 0; x < width[layer]; x++) {
+    	                	int color = (int) (activation[layer][y][x] * 255); //assumes output range is [0, 1]
+    						canvas.setColor(new Color(color, color, color));
+    						canvas.fillRect(x * imageScaleActivation[layer], y * imageScaleActivation[layer], imageScaleActivation[layer], imageScaleActivation[layer]);
+    	                }
+    				}
+    			}
+    			imageActivationLayerTotalHeight -= imageSpacing;
+    			
+    			imageWidth = imageActivationLayerMaxWidth + imageSpacing*2; //add border
+    			imageHeight = imageActivationLayerTotalHeight + imageSpacing*2;
+    			
+    			output = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_RGB);
+    			g = output.createGraphics();
+    			g.setColor(new Color(0, 0, 127));
+    			g.fillRect(0, 0, imageWidth, imageHeight);
+    			
+    			yOffset = imageSpacing;
+    			//add activation images
+    			for (int layer = 0; layer < depth; layer++) {
+    				g.drawImage(activationImage[layer], imageSpacing, yOffset, null);
+    				yOffset += activationImage[layer].getHeight() + imageSpacing;
+    			}
+    			
+    			writeImage(output, imageDir + "networks" + File.separatorChar + generation + "-" + scaleCount + "-" + genotype.getId() + "-" + percentCorrect, "activation-" + t);
             }
-    		
-    		//spit out CPPN
-    		try {
-	    		AnjiNetTranscriber cppnTranscriber = (AnjiNetTranscriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
-	    		AnjiNet cppn = cppnTranscriber.transcribe(genotype);
-	    		BufferedWriter cppnFile = new BufferedWriter(new FileWriter(compositesImageDir + File.separatorChar + scaleCount + "-" + genotype.getId() + File.separatorChar + "cppn.xml"));
-	    		cppnFile.write(cppn.toXml());
-	    		cppnFile.close();
-    		}
-    		catch (Exception e) {
-    			System.err.println("Error transcribing CPPN for display:\n" + e.getStackTrace());
-    		}
-    		
     	}
-
+    	
+                
         return (int) Math.round(fitness * maxFitnessValue);
     }
     
     
     protected void scale(int scaleCount, int scaleFactor) {
     	//get ratio of shape size to image size (this should be maintained during scale).
-    	double ratioW = (double) width[0] / shapeSize;
-    	double ratioH = (double) height[0] / shapeSize;
+    	double ratioW[] = new double[depth];
+    	double ratioH[] = new double[depth];
+    	for (int l = 0; l < width.length-1; l++) {
+            ratioW[l] = (double) width[l] / shapeSize;
+            ratioH[l] = (double) height[l] / shapeSize;
+    	}
+    	
+    	//System.out.println(ratioW + ", " + ratioH);
     	
     	//adjust shape size
     	if (scaleFactor % 2 == 0 && shapeSize % 2 == 1) //if scaleFactor is even but shapeSize is odd
@@ -502,17 +617,22 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
     	else
     		shapeSize *= scaleFactor;
     	
-    	for (int l = 0; l < width.length; l++) {
-    		width[l] = (int) Math.round(shapeSize * ratioW);
-    		height[l] = (int) Math.round(shapeSize * ratioH);
+    	String layerSizeString = "";
+    	for (int l = 0; l < depth; l++) {
+    		width[l] = (int) Math.max(1, Math.round(shapeSize * ratioW[l]));
+    		height[l] = (int) Math.max(1, Math.round(shapeSize * ratioH[l]));
+    		
+    		layerSizeString += width[l] + "x" + height[l] + ", ";
     	}
-    	connectionRange = shapeSize/2;
+    	//connectionRange = shapeSize/2;
+		connectionRange = shapeSize;
     	
     	AffineTransform scaleTransform = AffineTransform.getScaleInstance(scaleFactor, scaleFactor);
 		for (int s = 0; s < numShapesInLib; s++)
         	shapes[s].transform(scaleTransform);
 		
-		logger.info("Scale performed: image size: " + width[0] + "x" + height[0] + ", shape size: " + shapeSize + ", conn range: " + connectionRange);
+			
+		logger.info("Scale performed: layer sizes: " + layerSizeString + "shape size: " + shapeSize + ", conn range: " + connectionRange);
     }
     
     
