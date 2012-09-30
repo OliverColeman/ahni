@@ -13,8 +13,6 @@ import com.anji.nn.activationfunction.ActivationFunction;
 import com.anji.nn.activationfunction.ActivationFunctionFactory;
 import com.anji.util.*;
 
-import com.javamex.classmexer.MemoryUtil;
-
 /**
  * Constructs a {@link ojc.ahni.hyperneat.GridNet} neural network from a chromosome using the hypercube (from HyperNEAT) encoding scheme. An
  * {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this class. {@link
@@ -358,12 +356,6 @@ public class HyperNEATTranscriberGridNet implements Transcriber<GridNet>, Config
 			if (createNewPhenotype) {
 				phenotype = new GridNet(connectionMaxRanges, layerDimensions, weights, bias, activationFunction, 1, "network " + genotype.getId());
 				logger.info("Substrate has " + phenotype.getConnectionCount(true) + " connections.");
-
-				try {
-					logger.info("Substrate memory size: " + (int) Math.round(MemoryUtil.deepMemoryUsageOf(phenotype) / 1024.0) + "Kb.");
-				} catch (IllegalStateException e) {
-				}
-				;
 			} else {
 				phenotype.setName("network " + genotype.getId());
 			}

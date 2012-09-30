@@ -13,8 +13,6 @@ import com.anji.nn.activationfunction.ActivationFunction;
 import com.anji.nn.activationfunction.ActivationFunctionFactory;
 import com.anji.util.*;
 
-import com.javamex.classmexer.MemoryUtil;
-
 /**
  * TODO this is currently not much more than a placeholder, it's copied from HyperNEATTranscriberGridNet.
  * 
@@ -360,12 +358,6 @@ public class HyperNEATTranscriberBain implements Transcriber<GridNet>, Configura
 			if (createNewPhenotype) {
 				phenotype = new GridNet(connectionMaxRanges, layerDimensions, weights, bias, activationFunction, 1, "network " + genotype.getId());
 				logger.info("Substrate has " + phenotype.getConnectionCount(true) + " connections.");
-
-				try {
-					logger.info("Substrate memory size: " + (int) Math.round(MemoryUtil.deepMemoryUsageOf(phenotype) / 1024.0) + "Kb.");
-				} catch (IllegalStateException e) {
-				}
-				;
 			} else {
 				phenotype.setName("network " + genotype.getId());
 			}

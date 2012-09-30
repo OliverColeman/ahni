@@ -58,6 +58,10 @@ following changes were made to ANJI:
 ANJI makes use of a customised version of the JGAP library. Unfortunately
 this precludes an easy upgrade to more recent versions of JGAP, just in case
 you were thinking about it.
+
+No, the package names don't follow the Java conventions of reversed URLs, it
+didn't make much sense for someone like me as there aren't any domains that I
+want to attach the project to.
   
 AHNI is licensed under the GNU General Public License v3. A copy of the license
 is included in the distribution. Please note that Bain is distributed WITHOUT 
