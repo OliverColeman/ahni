@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?eclipse.ant.import?>
 <project default="create_run_jar" name="Create Runnable Jar for Project ahni">
-    <!--this file was created by Eclipse Runnable JAR Export Wizard-->
     <!--ANT 1.7 is required                                        -->
     <target name="create_run_jar">
-        <jar destfile="/home/data/ai/PhD/software/ahni.jar" filesetmanifest="mergewithoutmain">
+        <jar destfile="ahni.jar" filesetmanifest="mergewithoutmain">
             <manifest>
                 <attribute name="Main-Class" value="ojc.ahni.hyperneat.Run"/>
                 <attribute name="Class-Path" value="."/>
             </manifest>
-            <fileset dir="/home/data/Dropbox/ai/PhD/software/ahni/bin"/>
-            <fileset dir="/home/data/Dropbox/ai/PhD/software/ahni/properties"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/data/Dropbox/ai/PhD/software/ahni/lib/jakarta-regexp-1.3.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/data/Dropbox/ai/PhD/software/ahni/lib/log4j.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/data/Dropbox/ai/PhD/software/ahni/lib/bain.jar"/>
+            <fileset dir="bin"/>
+            <fileset dir="properties"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/jakarta-regexp-1.3.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/log4j.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="lib/bain.jar"/>
         </jar>
     </target>
 </project>
