@@ -56,11 +56,19 @@ import com.anji.util.Properties;
  * @see com.anji.nn.AnjiNet
  * @author Philip Tucker
  */
-public class AnjiNetTranscriber implements Transcriber<AnjiNet>, Configurable {
+public class AnjiNetTranscriber implements Transcriber<AnjiActivator> {
+	/**
+	 * # recurrent cycles properties key
+	 */
+	public final static String RECURRENT_CYCLES_KEY = "recurrent.cycles";
 
-private final static Logger logger = Logger.getLogger( AnjiNetTranscriber.class );
+	private int recurrentCycles;
 
-private RecurrencyPolicy recurrencyPolicy = RecurrencyPolicy.BEST_GUESS;
+	private final static Logger logger = Logger.getLogger( AnjiNetTranscriber.class );
+
+	private RecurrencyPolicy recurrencyPolicy = RecurrencyPolicy.BEST_GUESS;
+
+
 
 /**
  * ctor
@@ -82,13 +90,14 @@ public AnjiNetTranscriber( RecurrencyPolicy aPolicy ) {
  */
 public void init( Properties props ) {
 	recurrencyPolicy = RecurrencyPolicy.load( props );
+	recurrentCycles = props.getIntProperty(RECURRENT_CYCLES_KEY, 1);
 }
 
 /**
  * @see Transcriber#transcribe(Chromosome)
  */
-public AnjiNet transcribe(Chromosome genotype) throws TranscriberException {
-	return newAnjiNet( genotype );
+public AnjiActivator transcribe(Chromosome genotype) throws TranscriberException {
+	return new AnjiActivator(newAnjiNet(genotype), recurrentCycles);
 }
 
 /**
@@ -96,8 +105,8 @@ public AnjiNet transcribe(Chromosome genotype) throws TranscriberException {
  * Note: this method has been added to conform with the Transcriber interface, 
  * but does not use the substrate argument for performance gains.
  */
-public AnjiNet transcribe(Chromosome genotype, AnjiNet substrate) throws TranscriberException {
-    return newAnjiNet( genotype );
+public AnjiActivator transcribe(Chromosome genotype, AnjiActivator substrate) throws TranscriberException {
+	return new AnjiActivator(newAnjiNet(genotype), recurrentCycles);
 }
 
 

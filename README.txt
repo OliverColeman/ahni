@@ -11,7 +11,7 @@ AHNI was originally written for my Honours project:
 Coleman, O.J.: Evolving neural networks for visual processing, 
 BS Thesis. University of New South Wales (2010).
 The Object Recognition experiments in the package 
-com.anji.experiments.objectrecognition correspond to those described in this
+ojc.ahni.experiments.objectrecognition correspond to those described in this
 report (the robot navigation experiments have been removed, contact me to get
 the code for these).
  
@@ -22,15 +22,15 @@ The latest version is available at, and issues should be posted at,
 https://github.com/OliverColeman/ahni
 
 Decent getting started information coming eventually... 
-The main class is com.anji.neat.Run. It expects a .properties file containing
-parameters for NEAT, HyperNEAT, and typically the specific experiment being
-run. See properties/* for examples. 
-See com.anji.experiments.objectrecognition.* for examples of fitness 
+The main class is ojc.ahni.hyperneat.Run. It expects a .properties file containing
+parameters for NEAT, HyperNEAT, typically the specific experiment being run, 
+and a few other things. See properties/* for examples. 
+See ojc.ahni.experiments.objectrecognition.* for examples of fitness 
 functions.
 
 AHNI was built on top of a modified version of ANJI (Another NEAT Java 
 Implementation) by Derek James and Philip Tucker. 
-As well as adding code to implement the HyperCUBE encoding scheme the 
+As well as adding code to implement the Hypercube encoding scheme the 
 following changes were made to ANJI:
 * Modified to allow using multiple types of activation functions (for 
   HyperNEAT implementation).

@@ -24,12 +24,14 @@ package com.anji.integration;
 
 import org.jgapcustomised.Chromosome;
 
+import com.anji.util.Configurable;
+
 /**
  * To "transcribe" is to construct a phenotype from a genotype.
  * 
  * @author Philip Tucker
  */
-public interface Transcriber<T> {
+public interface Transcriber<T extends Activator> extends Configurable {
 
 /**
  * Sub-classes must implement this method to convert the genotype to a phenotype.

@@ -1,4 +1,4 @@
-package com.anji.neat;
+package ojc.ahni.hyperneat;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -9,7 +9,7 @@ import java.util.Random;
 
 import org.apache.log4j.Logger;
 
-import com.anji.neat.Evolver;
+import ojc.ahni.hyperneat.HyperNEATEvolver;
 import com.anji.util.Misc;
 import com.anji.util.Properties;
 
@@ -69,7 +69,7 @@ public class Run {
                 
             	//System.out.print("run: " + run + "\t");
             	logger.info("\n\n--- START RUN: " + (run + 1) + " of " + numRuns + " (" + ((run*100)/(numRuns)) + "%) ---------------------------------------\n\n");
-            	Evolver evolver = new Evolver();
+            	HyperNEATEvolver evolver = new HyperNEATEvolver();
                 evolver.init( props );
                 //champFitnesses[run] = evolver.run();
                 evolver.run();

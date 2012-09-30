@@ -47,13 +47,13 @@ import com.anji.util.Randomizer;
  */
 public class NeatConfiguration extends Configuration {
     private static final Logger logger = Logger.getLogger(NeatConfiguration.class);
-    private static final String PERSIST_ENABLE_KEY = "persist.enable";
+    protected static final String PERSIST_ENABLE_KEY = "persist.enable";
     /**
      * properties key, file in which unique ID sequence number is stored
      */
     public static final String ID_FACTORY_KEY = "id.file";
     private static final short DEFAULT_STIMULUS_SIZE = 3;
-    private static final short DEFAULT_INITIAL_HIDDEN_SIZE = 0;
+    protected static final short DEFAULT_INITIAL_HIDDEN_SIZE = 0;
     private static final short DEFAULT_RESPONSE_SIZE = 3;
     /**
      * default survival rate
@@ -165,13 +165,13 @@ public class NeatConfiguration extends Configuration {
      */
     public final static String INITIAL_TOPOLOGY_ACTIVATION_OUTPUT_KEY = "initial.topology.activation.output";
     private Properties props;
-    private CloneReproductionOperator cloneOper = null;
-    private NeatCrossoverReproductionOperator crossoverOper = null;
-    private double maxConnectionWeight = Float.MAX_VALUE;
-    private double minConnectionWeight = -Float.MAX_VALUE;
-    private ActivationFunctionType inputActivationType;
-    private ActivationFunctionType outputActivationType;
-    private ActivationFunctionType hiddenActivationType;
+    protected CloneReproductionOperator cloneOper = null;
+    protected NeatCrossoverReproductionOperator crossoverOper = null;
+    protected double maxConnectionWeight = Float.MAX_VALUE;
+    protected double minConnectionWeight = -Float.MAX_VALUE;
+    protected ActivationFunctionType inputActivationType;
+    protected ActivationFunctionType outputActivationType;
+    protected ActivationFunctionType hiddenActivationType;
     private NeatIdMap neatIdMap;
 
     /**
@@ -179,7 +179,7 @@ public class NeatConfiguration extends Configuration {
      *
      * @throws InvalidConfigurationException
      */
-    private void initMutation() throws InvalidConfigurationException {
+    protected void initMutation() throws InvalidConfigurationException {
         // remove connection
         RemoveConnectionMutationOperator removeOperator = (RemoveConnectionMutationOperator) props.singletonObjectProperty(RemoveConnectionMutationOperator.class);
         if ((removeOperator.getMutationRate() > 0.0f) && (removeOperator.getMaxWeightRemoved() > 0.0f)) {
@@ -227,7 +227,7 @@ public class NeatConfiguration extends Configuration {
      * @param newProps configuration parameters; newProps[SURVIVAL_RATE_KEY] should be < 0.50f
      * @throws InvalidConfigurationException
      */
-    private void init(Properties newProps) throws InvalidConfigurationException {
+    public void init(Properties newProps) throws InvalidConfigurationException {
         props = newProps;
 
         Randomizer r = (Randomizer) props.singletonObjectProperty(Randomizer.class);
@@ -303,60 +303,14 @@ public class NeatConfiguration extends Configuration {
 
         load();
         
-        String type = props.getProperty(ActivatorTranscriber.TYPE_KEY, ActivatorTranscriber.ANJI_TYPE);
-        short stimulusSize, responseSize;
-		//automatically determine input and output size for hyperneat CPPN
-        if (type.equals(ActivatorTranscriber.HYPERNEAT_TYPE)) {
-        	boolean feedForward = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_FEED_FORWARD_KEY);
-            boolean enableBias = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_ENABLE_BIAS);
-            boolean includeDelta = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_INCLUDE_DELTA);
-            boolean includeAngle = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_INCLUDE_ANGLE);
-            boolean layerEncodingIsInput = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_LAYER_ENCODING);
-            short depth = props.getShortProperty(HyperNEATTranscriberGridNet.HYPERNEAT_DEPTH);
-            
-            //bias, sx, sy, tx, ty
-        	stimulusSize = 5;
-        	if (includeDelta)
-        		stimulusSize += 2; //x and y delta    	
-        	if (depth > 2 && layerEncodingIsInput) { //if depth == 2 network necessarily feed forward, and only one layer of connections can exist
-        		stimulusSize++; //target layer (tz)
-        		if (!feedForward) {
-        			stimulusSize++; //source layer (sz) (could be any layer, not just previous layer)
-        			if (includeDelta) //delta only when not feed forward (z delta always 1 for FF network)
-                		stimulusSize++; //z delta
-        		}
-        	}
-        	if (includeAngle)
-        		stimulusSize++; //angle between source and target using only x,y coords of source and target  
-    		
-        	if (layerEncodingIsInput) {
-	        	responseSize = 1; //weight value output
-	        	if (enableBias)
-	        		responseSize++; //bias value output
-        	}
-        	else {
-        		responseSize = (short)(depth-1); //weight value output
-	        	if (enableBias)
-	        		responseSize += (short)(depth-1); //bias value output
-        	}
-        	
-        	logger.info("CPPN: input size: " + stimulusSize + "  output size: " + responseSize);
-        }
-        else {
-        	stimulusSize = props.getShortProperty(STIMULUS_SIZE_KEY, DEFAULT_STIMULUS_SIZE);
-        	responseSize = props.getShortProperty(RESPONSE_SIZE_KEY, DEFAULT_RESPONSE_SIZE);
-        }
-        
         ChromosomeMaterial sample = NeatChromosomeUtility.newSampleChromosomeMaterial(
-        		stimulusSize,
+        		props.getShortProperty(STIMULUS_SIZE_KEY, DEFAULT_STIMULUS_SIZE),
                 props.getShortProperty(INITIAL_TOPOLOGY_NUM_HIDDEN_NEURONS_KEY, DEFAULT_INITIAL_HIDDEN_SIZE),
-                responseSize,
+                props.getShortProperty(RESPONSE_SIZE_KEY, DEFAULT_RESPONSE_SIZE),
                 this,
                 props.getBooleanProperty(INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, true));
         setSampleChromosomeMaterial(sample);
         
-        
-
         if (props.getBooleanProperty(PERSIST_ENABLE_KEY, false)) {
             store();
         }
@@ -382,7 +336,7 @@ public class NeatConfiguration extends Configuration {
         init(newProps);
     }
 
-    private void initSpeciationParms() {
+    protected void initSpeciationParms() {
         try {
             getSpeciationParms().setSpecieCompatExcessCoeff(
                     props.getFloatProperty(CHROM_COMPAT_EXCESS_COEFF_KEY));

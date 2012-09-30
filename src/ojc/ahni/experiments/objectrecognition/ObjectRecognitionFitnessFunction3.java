@@ -19,6 +19,7 @@ import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
+import com.anji.integration.AnjiActivator;
 import com.anji.integration.AnjiNetTranscriber;
 import com.anji.integration.TranscriberException;
 import com.anji.neat.Evolver;
@@ -479,7 +480,7 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
     		//spit out CPPN
     		try {
 	    		AnjiNetTranscriber cppnTranscriber = (AnjiNetTranscriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
-	    		AnjiNet cppn = cppnTranscriber.transcribe(genotype);
+	    		AnjiNet cppn = ((AnjiActivator) cppnTranscriber.transcribe(genotype)).getAnjiNet();
 	    		BufferedWriter cppnFile = new BufferedWriter(new FileWriter(compositesImageDir + File.separatorChar + scaleCount + "-" + genotype.getId() + File.separatorChar + "cppn.xml"));
 	    		cppnFile.write(cppn.toXml());
 	    		cppnFile.close();

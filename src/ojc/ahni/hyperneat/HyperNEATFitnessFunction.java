@@ -74,41 +74,36 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 	 * @param props configuration parameters
 	 */
 	public void init(Properties props) {
-		try {
-			this.props = props;
+		this.props = props;
+		random = ((Randomizer) props.singletonObjectProperty(Randomizer.class)).getRand();
+		transcriber = new HyperNEATTranscriberGridNet(props);
+		depth = transcriber.getDepth();
+		height = transcriber.getHeight();
+		width = transcriber.getWidth();
+		connectionRange = transcriber.getConnectionRange();
 
-			random = ((Randomizer) props.singletonObjectProperty(Randomizer.class)).getRand();
-			transcriber = new HyperNEATTranscriberGridNet(props);
-			depth = transcriber.getDepth();
-			height = transcriber.getHeight();
-			width = transcriber.getWidth();
-			connectionRange = transcriber.getConnectionRange();
+		targetPerformance = props.getFloatProperty(Evolver.PERFORMANCE_TARGET_KEY, 1);
+		targetPerformanceType = props.getProperty(Evolver.PERFORMANCE_TARGET_TYPE_KEY, "higher").equals("higher") ? 1 : 0;
+		scalePerformance = props.getDoubleProperty(SCALE_PERFORMANCE_KEY, scalePerformance);
+		scaleTimes = props.getIntProperty(SCALE_TIMES_KEY, scaleTimes);
+		scaleRecordIntermediatePerf = props.getBooleanProperty(SCALE_RIP_KEY, scaleRecordIntermediatePerf);
 
-			targetPerformance = props.getFloatProperty(Evolver.PERFORMANCE_TARGET_KEY, 1);
-			targetPerformanceType = props.getProperty(Evolver.PERFORMANCE_TARGET_TYPE_KEY, "higher").equals("higher") ? 1 : 0;
-			scalePerformance = props.getDoubleProperty(SCALE_PERFORMANCE_KEY, scalePerformance);
-			scaleTimes = props.getIntProperty(SCALE_TIMES_KEY, scaleTimes);
-			scaleRecordIntermediatePerf = props.getBooleanProperty(SCALE_RIP_KEY, scaleRecordIntermediatePerf);
+		numThreads = Runtime.getRuntime().availableProcessors();
+		int minThreads = props.getIntProperty(MIN_THREADS_KEY, 0);
+		int maxThreads = props.getIntProperty(MAX_THREADS_KEY, 0);
+		if (numThreads < minThreads)
+			numThreads = minThreads;
+		if (maxThreads > 0 && numThreads > maxThreads)
+			numThreads = maxThreads;
 
-			numThreads = Runtime.getRuntime().availableProcessors();
-			int minThreads = props.getIntProperty(MIN_THREADS_KEY, 0);
-			int maxThreads = props.getIntProperty(MAX_THREADS_KEY, 0);
-			if (numThreads < minThreads)
-				numThreads = minThreads;
-			if (maxThreads > 0 && numThreads > maxThreads)
-				numThreads = maxThreads;
-
-			logger.info("Using " + numThreads + " threads for transcription and evaluation.");
-			evaluators = new Evaluator[numThreads];
-			for (int i = 0; i < numThreads; i++) {
-				evaluators[i] = new Evaluator(i);
-				evaluators[i].start();
-			}
-
-			generation = 0;
-		} catch (Exception e) {
-			throw new IllegalArgumentException("invalid properties: " + e.getClass().toString() + ", message: " + e.getMessage());
+		logger.info("Using " + numThreads + " threads for transcription and evaluation.");
+		evaluators = new Evaluator[numThreads];
+		for (int i = 0; i < numThreads; i++) {
+			evaluators[i] = new Evaluator(i);
+			evaluators[i].start();
 		}
+
+		generation = 0;
 	}
 
 	/**

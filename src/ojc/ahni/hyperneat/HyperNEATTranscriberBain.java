@@ -16,8 +16,10 @@ import com.anji.util.*;
 import com.javamex.classmexer.MemoryUtil;
 
 /**
- * Constructs a {@link ojc.ahni.hyperneat.GridNet} neural network from a chromosome using the hypercube (from HyperNEAT) encoding scheme. An
- * {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this class. {@link
+ * TODO this is currently not much more than a placeholder, it's copied from HyperNEATTranscriberGridNet.
+ * 
+ * Constructs a <a href="https://github.com/OliverColeman/bain">Bain</a> neural network from a chromosome using the hypercube (from HyperNEAT) encoding scheme.
+ * An {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this class. {@link
  * com.anji.integration.ActivatorTranscriber.getNet()} or {@link com.anji.integration.ActivatorTranscriber.getPhenotype()} is then used to get the resulting
  * network.
  * 
@@ -26,7 +28,7 @@ import com.javamex.classmexer.MemoryUtil;
  * 
  * @author Oliver Coleman
  */
-public class HyperNEATTranscriberGridNet implements Transcriber<GridNet>, Configurable {
+public class HyperNEATTranscriberBain implements Transcriber<GridNet>, Configurable {
 	public static final String HYPERNEAT_ACTIVATION_FUNCTION_KEY = "ann.hyperneat.activation.function";
 	public static final String HYPERNEAT_FEED_FORWARD_KEY = "ann.hyperneat.feedforward";
 	public static final String HYPERNEAT_ENABLE_BIAS = "ann.hyperneat.enablebias";
@@ -42,7 +44,7 @@ public class HyperNEATTranscriberGridNet implements Transcriber<GridNet>, Config
 	public static final String HYPERNEAT_HEIGHT = "ann.hyperneat.height";
 	public static final String HYPERNEAT_WIDTH = "ann.hyperneat.width";
 
-	private final static Logger logger = Logger.getLogger(HyperNEATTranscriberGridNet.class);
+	private final static Logger logger = Logger.getLogger(HyperNEATTranscriberBain.class);
 
 	private AnjiNetTranscriber cppnTranscriber; // creates AnjiNets from
 												// chromosomes
@@ -61,10 +63,10 @@ public class HyperNEATTranscriberGridNet implements Transcriber<GridNet>, Config
 	private boolean layerEncodingIsInput = false;
 	private int[] height, width;
 
-	public HyperNEATTranscriberGridNet() {
+	public HyperNEATTranscriberBain() {
 	}
 
-	public HyperNEATTranscriberGridNet(Properties props) {
+	public HyperNEATTranscriberBain(Properties props) {
 		init(props);
 	}
 
@@ -127,7 +129,7 @@ public class HyperNEATTranscriberGridNet implements Transcriber<GridNet>, Config
 	public GridNet newGridNet(Chromosome genotype, GridNet phenotype) throws TranscriberException {
 		AnjiActivator cppnActivator = cppnTranscriber.transcribe(genotype);
 		AnjiNet cppn = cppnActivator.getAnjiNet();
-		
+
 		// determine cppn input mapping
 		// target and source coordinates
 		int cppnIdxTX = -1, cppnIdxTY = -1, cppnIdxTZ = -1, cppnIdxSX = -1, cppnIdxSY = -1;

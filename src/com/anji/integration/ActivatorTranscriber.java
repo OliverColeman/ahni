@@ -22,6 +22,7 @@ package com.anji.integration;
 import ojc.ahni.hyperneat.GridNet;
 import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
 
+import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.Chromosome;
 
 import com.anji.nn.AnjiNet;
@@ -35,37 +36,13 @@ import com.anji.util.Properties;
  * 
  * @author Philip Tucker
  */
-public class ActivatorTranscriber implements Configurable, Transcriber<Object> {
-
+public class ActivatorTranscriber implements Configurable {
 	/**
 	 * neural network type properties key
 	 */
-	public final static String TYPE_KEY = "ann.type";
+	public final static String TRANSCRIBER_KEY = "ann.transcriber";
 
-	/**
-	 * # recurrent cycles properties key
-	 */
-	public final static String RECURRENT_CYCLES_KEY = "recurrent.cycles";
-
-	/**
-	 * enumerated type constant for ANJI ANN
-	 */
-	public final static String ANJI_TYPE = "anji";
-
-	/**
-	 * enumerated type constant for HyperNEAT ANJI ANN
-	 */
-	public final static String HYPERNEAT_TYPE = "hyperneat";
-
-	/**
-	 * enumerated type constant for JOONE ANN
-	 */
-	public final static String JOONE_TYPE = "joone";
-
-	private String type = ANJI_TYPE;
-
-	private int recurrentCycles;
-
+	private Properties props;
 	private Transcriber transcriber;
 
 	/**
@@ -76,17 +53,8 @@ public class ActivatorTranscriber implements Configurable, Transcriber<Object> {
 	 * @throws TranscriberException
 	 */
 	public void init(Properties props) throws TranscriberException {
-		type = props.getProperty(TYPE_KEY, ANJI_TYPE);
-		recurrentCycles = props.getIntProperty(RECURRENT_CYCLES_KEY, 1);
-		if (ANJI_TYPE.equals(type)) {
-			transcriber = (Transcriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
-		} else if (HYPERNEAT_TYPE.equals(type)) {
-			transcriber = (Transcriber) props.singletonObjectProperty(HyperNEATTranscriberGridNet.class);
-		} else if (JOONE_TYPE.equals(type)) {
-			throw new TranscriberException("JOONE not implemented");
-		} else
-			throw new IllegalStateException("invalid type: " + type);
-
+		this.props = props;
+		transcriber = (Transcriber) props.singletonObjectProperty(TRANSCRIBER_KEY);
 	}
 
 	/**
@@ -99,17 +67,7 @@ public class ActivatorTranscriber implements Configurable, Transcriber<Object> {
 	 * @throws TranscriberException
 	 */
 	public Activator newActivator(Chromosome ch) throws TranscriberException {
-		Activator result = null;
-		if (ANJI_TYPE.equals(type)) {
-			result = new AnjiActivator((AnjiNet) transcriber.transcribe(ch), recurrentCycles);
-		} else if (HYPERNEAT_TYPE.equals(type)) {
-			result = (GridNet) transcriber.transcribe(ch);
-		} else if (JOONE_TYPE.equals(type)) {
-			throw new TranscriberException("JOONE not implemented");
-		} else
-			throw new IllegalStateException("invalid type: " + type);
-
-		return result;
+		return transcriber.transcribe(ch);
 	}
 
 	/**
@@ -117,19 +75,5 @@ public class ActivatorTranscriber implements Configurable, Transcriber<Object> {
 	 */
 	public Class getPhenotypeClass() {
 		return transcriber.getPhenotypeClass();
-	}
-
-	/**
-	 * @see Transcriber#transcribe(Chromosome)
-	 */
-	public Object transcribe(Chromosome c) throws TranscriberException {
-		return newActivator(c);
-	}
-
-	/**
-	 * @see Transcriber#transcribe(Chromosome, Object)
-	 */
-	public Object transcribe(Chromosome c, Object s) throws TranscriberException {
-		return newActivator(c);
 	}
 }

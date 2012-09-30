@@ -233,4 +233,11 @@ public String getXmld() {
 	return net.getName();
 }
 
+/**
+ * Return the underlying AnjiNet.
+ */
+public AnjiNet getAnjiNet() {
+	return net;
+}
+
 }
