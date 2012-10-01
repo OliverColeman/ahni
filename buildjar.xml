@@ -2,7 +2,7 @@
 <?eclipse.ant.import?>
 <project default="create_run_jar" name="Create Runnable Jar for Project ahni">
     <!--ANT 1.7 is required                                        -->
-    <target name="create_run_jar">
+    <target depends="build" name="build-jar">
         <jar destfile="ahni.jar" filesetmanifest="mergewithoutmain">
             <manifest>
                 <attribute name="Main-Class" value="ojc.ahni.hyperneat.Run"/>
