@@ -9,7 +9,7 @@ import ojc.bain.NeuralNetwork;
  */
 public class BainNN implements Activator {
 	private NeuralNetwork nn;
-	private double[] inputs; /// We keep a local reference to this so the Bain neural network doesn't go unnecessarily fetching input values from a GPU.
+	private double[] inputs; // We keep a local reference to this so the Bain neural network doesn't go unnecessarily fetching input values from a GPU.
 	private int stepsPerStep;
 	private String name;
 	
@@ -35,6 +35,14 @@ public class BainNN implements Activator {
 		this.stepsPerStep = stepsPerStep;
 		this.name = name;
 		inputs = nn.getNeurons().getInputs();
+	}
+	
+	
+	/**
+	 * Returns the underlying Bain neural network.
+	 */
+	public NeuralNetwork getNeuralNetwork() {
+		return nn;
 	}
 
 	
@@ -86,6 +94,10 @@ public class BainNN implements Activator {
 	@Override
 	public String getName() {
 		return name;
+	}
+	
+	public void setName(String newName) {
+		name = newName;
 	}
 
 	@Override

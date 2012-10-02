@@ -2,9 +2,6 @@ package ojc.ahni.hyperneat;
 
 import java.util.*;
 
-import ojc.ahni.hyperneat.GridNet;
-import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
-
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
@@ -14,8 +11,10 @@ import com.anji.util.Properties;
 import com.anji.neat.Evolver;
 
 /**
- * Determines fitness based on how close <code>Activator</code> output is to a target.
- * 
+ * Provides a base for fitness functions for use with HyperNEAT. Provides a multi-threaded framework for performing evaluations on multiple genomes.
+ * The methods {@link #getMaxFitnessValue()} and {@link #evaluate(Chromosome, Activator, int)} must be implemented in subclasses.
+ * Subclasses may also need to override the methods {@link #init(Properties)}, {@link #initialiseEvaluation()}, {@link #scale(int, int)} and {@link #dispose()}. 
+ * See {@link ojc.ahni.experiments.TestTargetFitnessFunction} and {@link ojc.ahni.experiments.objectrecognition.ObjectRecognitionFitnessFunction3} for examples.
  * @author Oliver Coleman
  */
 public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, Configurable {
@@ -67,11 +66,8 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 	protected double targetPerformance; // may be used by sub-classes
 
 	/**
-	 * See <a href=" {@docRoot} /params.htm" target="anji_params">Parameter Details </a> for specific property settings.
-	 * 
-	 * IF YOU OVERRIDE THIS METHOD make sure to call super.init(props) in the over-riding method.
-	 * 
-	 * @param props configuration parameters
+	 * Subclasses may override this method to perform initialise tasks. <strong>Make sure to call this method from the overriding method.</strong>
+	 * @param props Configuration parameters, typically read from the/a properties file.
 	 */
 	public void init(Properties props) {
 		this.props = props;
@@ -112,8 +108,8 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 	abstract public int getMaxFitnessValue();
 
 	/**
-	 * If required, initialise data for the current evaluation run. This method is called at the beginning of evaluate(List genotypes). It should be over-ridden
-	 * if data (eg input and/or output patterns) needs to be set-up before every evaluation run.
+	 * If required, initialise data for the current evaluation run. This method is called at the beginning of {@link #evaluate(List)}. It should be overridden
+	 * if data (eg input and/or output patterns) need to be set-up before every evaluation run.
 	 * */
 	public void initialiseEvaluation() {
 	}
@@ -169,13 +165,14 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 	}
 
 	/**
-	 * Evaluate an individual genotype. This method is called while running evaluate(List&lt;Chromosome&gt; genotypes), and must be ovver-ridden in order to
+	 * Evaluate an individual genotype. This method is called from {@link #evaluate(List<Chromosome>}}, and must be overridden in order to
 	 * evaluate the genotypes.
 	 * 
-	 * @param genotype the genotype being evaluated (not necessarily used)
-	 * @param substrate the phenotypic substrate of the genotype being evaluated
+	 * @param genotype the genotype being evaluated. This is not usually required but may be useful in some cases.
+	 * @param substrate the phenotypic substrate of the genotype being evaluated.
+	 * @param evalThreadIndex The index of the evaluator thread. This is not usually required but may be useful in some cases.
 	 */
-	protected abstract int evaluate(Chromosome genotype, GridNet substrate, int evalThreadIndex);
+	protected abstract int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex);
 
 	/**
 	 * Allow sub-class to make necessary changes when a substrate scale occurs. When this method is called the substrate will already have been scaled, so the
@@ -184,7 +181,9 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 	 * @param scaleCount A count of how many times a scale has previously occurred. In the first call this has value 0.
 	 * @param scaleFactor The amount the substrate is being scaled by.
 	 */
-	protected abstract void scale(int scaleCount, int scaleFactor);
+	protected void scale(int scaleCount, int scaleFactor) {
+		
+	}
 
 	public int getConnectionRange() {
 		return transcriber.getConnectionRange();
@@ -235,6 +234,9 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 							substrate = transcriber.transcribe(chrom, substrate);
 							int fitness = evaluate(chrom, substrate, id);
 							chrom.setFitnessValue(fitness);
+							if (chrom.getPerformanceValue() == -1) {
+								chrom.setPerformanceValue((double)fitness / getMaxFitnessValue());
+							}
 							synchronized (this) {
 								if ((targetPerformanceType == 1 && chrom.getPerformanceValue() > bestPerformance) || (targetPerformanceType == 0 && chrom.getPerformanceValue() < bestPerformance)) {
 									bestPerformance = chrom.getPerformanceValue();

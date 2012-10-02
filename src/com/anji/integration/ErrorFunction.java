@@ -107,16 +107,16 @@ public class ErrorFunction {
     /**
 	 * Calculate the sum of differences between <code>responses</code> and target values.
 	 *
-	 * @param targets
+	 * @param targetOutputPatterns
 	 * @param responses values to compare to target.
 	 * @param sumOfSquares if true, square each diff before summing
 	 * @return total sum of differences
 	 */
-	public double calculateError( double[][][] targets, double[][][] responses, boolean sumOfSquares ) {
+	public double calculateError( double[][][] targetOutputPatterns, double[][][] responses, boolean sumOfSquares ) {
 		double result = 0;
-		for ( int i = 0; i < targets.length; ++i ) {
+		for ( int i = 0; i < targetOutputPatterns.length; ++i ) {
 			double[][] response = responses[ i ];
-			double[][] target = targets[ i ];
+			double[][] target = targetOutputPatterns[ i ];
 			if ( response.length != target.length )
 				throw new IllegalArgumentException( "for training set " + i
 						+ " dimensions do not match for response [" + response.length + "] and target ["

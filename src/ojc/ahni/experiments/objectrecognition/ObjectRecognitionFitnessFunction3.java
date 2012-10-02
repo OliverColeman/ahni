@@ -13,12 +13,14 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 
 import ojc.ahni.*;
+import ojc.ahni.hyperneat.GridNet;
 import ojc.ahni.hyperneat.HyperNEATFitnessFunction;
 import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
+import com.anji.integration.Activator;
 import com.anji.integration.AnjiActivator;
 import com.anji.integration.AnjiNetTranscriber;
 import com.anji.integration.TranscriberException;
@@ -354,7 +356,8 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
     	canvas.draw(s);
     }
     
-    protected int evaluate(Chromosome genotype, ojc.ahni.hyperneat.GridNet substrate, int threadIndex) {
+    protected int evaluate(Chromosome genotype, Activator activator, int threadIndex) {
+    	GridNet substrate = (GridNet) activator;
         double[][][] responses = substrate.nextSequence(stimuli);
         	
         double avgDist = 0;

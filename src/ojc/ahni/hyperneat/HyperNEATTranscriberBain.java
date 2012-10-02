@@ -1,16 +1,19 @@
 package ojc.ahni.hyperneat;
 
+import ojc.bain.NeuralNetwork;
+import ojc.bain.base.ComponentCollection;
+import ojc.bain.base.NeuronCollection;
+import ojc.bain.base.SynapseCollection;
+
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
-import com.anji.integration.ActivatorTranscriber;
+import com.amd.aparapi.Kernel;
 import com.anji.integration.AnjiActivator;
 import com.anji.integration.AnjiNetTranscriber;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
 import com.anji.nn.*;
-import com.anji.nn.activationfunction.ActivationFunction;
-import com.anji.nn.activationfunction.ActivationFunctionFactory;
 import com.anji.util.*;
 
 /**
@@ -26,40 +29,41 @@ import com.anji.util.*;
  * 
  * @author Oliver Coleman
  */
-public class HyperNEATTranscriberBain implements Transcriber<GridNet>, Configurable {
-	public static final String HYPERNEAT_ACTIVATION_FUNCTION_KEY = "ann.hyperneat.activation.function";
-	public static final String HYPERNEAT_FEED_FORWARD_KEY = "ann.hyperneat.feedforward";
+public class HyperNEATTranscriberBain implements Transcriber<BainNN>, Configurable {
+	public static final String HYPERNEAT_FEED_FORWARD = "ann.hyperneat.feedforward";
 	public static final String HYPERNEAT_ENABLE_BIAS = "ann.hyperneat.enablebias";
 	public static final String HYPERNEAT_INCLUDE_DELTA = "ann.hyperneat.includedelta";
 	public static final String HYPERNEAT_INCLUDE_ANGLE = "ann.hyperneat.includeangle";
 	public static final String HYPERNEAT_LAYER_ENCODING = "ann.hyperneat.useinputlayerencoding";
-	public static final String HYPERNEAT_CYCLES_PER_STEP = "ann.hyperneat.cyclesperstep";
-	public static final String HYPERNEAT_CONNECTION_RANGE = "ann.hyperneat.connection.range";
 	public static final String HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD = "ann.hyperneat.connection.expression.threshold";
 	public static final String HYPERNEAT_CONNECTION_WEIGHT_MIN = "ann.hyperneat.connection.weight.min";
 	public static final String HYPERNEAT_CONNECTION_WEIGHT_MAX = "ann.hyperneat.connection.weight.max";
-	public static final String HYPERNEAT_DEPTH = "ann.hyperneat.depth";
-	public static final String HYPERNEAT_HEIGHT = "ann.hyperneat.height";
-	public static final String HYPERNEAT_WIDTH = "ann.hyperneat.width";
+	
+	public static final String SUBSTRATE_SIMULATION_RESOLUTION = "ann.hyperneat.bain.resolution";
+	public static final String SUBSTRATE_EXECUTION_MODE = "ann.hyperneat.bain.executionmode";
+	public static final String SUBSTRATE_NEURON_MODEL = "ann.hyperneat.bain.neuron.model";
+	public static final String SUBSTRATE_SYNAPSE_MODEL = "ann.hyperneat.bain.synapse.model";
+	public static final String SUBSTRATE_STEPS_PER_STEP = "ann.hyperneat.stepsperstep";
+	public static final String SUBSTRATE_DEPTH = "ann.hyperneat.depth";
+	public static final String SUBSTRATE_HEIGHT = "ann.hyperneat.height";
+	public static final String SUBSTRATE_WIDTH = "ann.hyperneat.width";
+	
 
 	private final static Logger logger = Logger.getLogger(HyperNEATTranscriberBain.class);
 
-	private AnjiNetTranscriber cppnTranscriber; // creates AnjiNets from
-												// chromosomes
-
-	private ActivationFunction activationFunction;
+	private Properties properties;
+	private AnjiNetTranscriber cppnTranscriber; // Creates AnjiNets, for use as a CPPN, from chromosomes.
 	private boolean feedForward;
-	private int cyclesPerStep;
 	private boolean enableBias;
 	private boolean includeDelta;
 	private boolean includeAngle;
-	private int connectionRange;
+	private double connectionExprThresh;
 	private double connectionWeightMin;
 	private double connectionWeightMax;
-	private double connectionExprThresh;
 	private int depth;
 	private boolean layerEncodingIsInput = false;
-	private int[] height, width;
+	private int[] height, width, neuronLayerSize, bainIndexForNeuronLayer, ffSynapseLayerSize, bainIndexForFFSynapseLayer; //ff=feed forward
+	private int neuronCount, synapseCount;
 
 	public HyperNEATTranscriberBain() {
 	}
@@ -72,32 +76,42 @@ public class HyperNEATTranscriberBain implements Transcriber<GridNet>, Configura
 	 * @see Configurable#init(Properties)
 	 */
 	public void init(Properties props) {
-		activationFunction = ActivationFunctionFactory.getInstance().get(props.getProperty(HYPERNEAT_ACTIVATION_FUNCTION_KEY));
-
-		feedForward = props.getBooleanProperty(HYPERNEAT_FEED_FORWARD_KEY);
-		if (!feedForward)
-			cyclesPerStep = props.getIntProperty(HYPERNEAT_CYCLES_PER_STEP);
-
+		this.properties = props;
+		
+		feedForward = props.getBooleanProperty(HYPERNEAT_FEED_FORWARD);
 		enableBias = props.getBooleanProperty(HYPERNEAT_ENABLE_BIAS);
-
 		includeDelta = props.getBooleanProperty(HYPERNEAT_INCLUDE_DELTA);
 		includeAngle = props.getBooleanProperty(HYPERNEAT_INCLUDE_ANGLE);
-
 		layerEncodingIsInput = props.getBooleanProperty(HYPERNEAT_LAYER_ENCODING, layerEncodingIsInput);
-
-		connectionRange = props.getIntProperty(HYPERNEAT_CONNECTION_RANGE);
 		connectionExprThresh = props.getFloatProperty(HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD);
 		connectionWeightMin = props.getFloatProperty(HYPERNEAT_CONNECTION_WEIGHT_MIN);
 		connectionWeightMax = props.getFloatProperty(HYPERNEAT_CONNECTION_WEIGHT_MAX);
 
-		depth = props.getIntProperty(HYPERNEAT_DEPTH);
-		String[] heightStr = props.getProperty(HYPERNEAT_HEIGHT).split(",");
-		String[] widthStr = props.getProperty(HYPERNEAT_WIDTH).split(",");
+		depth = props.getIntProperty(SUBSTRATE_DEPTH);
+		String[] heightStr = props.getProperty(SUBSTRATE_HEIGHT).split(",");
+		String[] widthStr = props.getProperty(SUBSTRATE_WIDTH).split(",");
 		height = new int[depth];
 		width = new int[depth];
+		neuronLayerSize = new int[depth];
+		bainIndexForNeuronLayer = new int[depth];
+		ffSynapseLayerSize = new int[depth-1];
+		bainIndexForFFSynapseLayer = new int[depth-1];
+		neuronCount = 0;
+		synapseCount = 0;
 		for (int l = 0; l < depth; l++) {
 			height[l] = Integer.parseInt(heightStr[l]);
 			width[l] = Integer.parseInt(widthStr[l]);
+			neuronLayerSize[l] = height[l] * width[l];
+			bainIndexForNeuronLayer[l] = neuronCount;
+			neuronCount += neuronLayerSize[l];
+			if (l > 0 && feedForward) {
+				ffSynapseLayerSize[l-1] = neuronLayerSize[l-1] * neuronLayerSize[l];
+				bainIndexForFFSynapseLayer[l-1] = synapseCount;
+				synapseCount += ffSynapseLayerSize[l-1];
+			}
+		}
+		if (!feedForward) {
+			synapseCount = neuronCount * neuronCount;
 		}
 
 		cppnTranscriber = (AnjiNetTranscriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
@@ -106,15 +120,15 @@ public class HyperNEATTranscriberBain implements Transcriber<GridNet>, Configura
 	/**
 	 * @see Transcriber#transcribe(Chromosome)
 	 */
-	public GridNet transcribe(Chromosome genotype) throws TranscriberException {
-		return newGridNet(genotype, null);
+	public BainNN transcribe(Chromosome genotype) throws TranscriberException {
+		return newBainNN(genotype, null);
 	}
 
 	/**
 	 * @see Transcriber#transcribe(Chromosome, T substrate)
 	 */
-	public GridNet transcribe(Chromosome genotype, GridNet substrate) throws TranscriberException {
-		return newGridNet(genotype, substrate);
+	public BainNN transcribe(Chromosome genotype, BainNN substrate) throws TranscriberException {
+		return newBainNN(genotype, substrate);
 	}
 
 	/**
@@ -124,7 +138,7 @@ public class HyperNEATTranscriberBain implements Transcriber<GridNet>, Configura
 	 * @return phenotype If given this will be updated and returned, if NULL then a new network will be created.
 	 * @throws TranscriberException
 	 */
-	public GridNet newGridNet(Chromosome genotype, GridNet phenotype) throws TranscriberException {
+	public BainNN newBainNN(Chromosome genotype, BainNN phenotype) throws TranscriberException {
 		AnjiActivator cppnActivator = cppnTranscriber.transcribe(genotype);
 		AnjiNet cppn = cppnActivator.getAnjiNet();
 
@@ -180,34 +194,40 @@ public class HyperNEATTranscriberBain implements Transcriber<GridNet>, Configura
 		}
 
 		// System.out.println("ii: " + cppnInputIdx + "   oi: " + cppnOutputIdx);
-
-		double[][][][][][] weights;
-		double[][][] bias;
+		
 		boolean createNewPhenotype = (phenotype == null);
-
+		NeuronCollection neurons = null;
+		SynapseCollection synapses = null;
 		if (createNewPhenotype) {
-			bias = new double[depth - 1][][];
-			for (int l = 1; l < depth; l++)
-				bias[l - 1] = new double[height[l]][width[l]];
-			// logger.info("Creating new substrate.");
-		} else {
-			bias = phenotype.getBias();
+			String neuronModelClass = properties.getProperty(SUBSTRATE_NEURON_MODEL, "ojc.bain.neuron.rate.SigmoidNeuronCollection");
+			String synapseModelClass = properties.getProperty(SUBSTRATE_SYNAPSE_MODEL, "ojc.bain.synapse.FixedSynapseCollection");
+			try {
+				neurons = (NeuronCollection) ComponentCollection.createCollection(neuronModelClass, neuronCount);
+			} catch (Exception e) {
+				System.err.println("Error creating neurons for Bain neural network. Have you specified the name of the neuron collection class correctly, including the containing packages?");
+				e.printStackTrace();
+			}
+			try {
+				synapses = (SynapseCollection) ComponentCollection.createCollection(synapseModelClass, synapseCount);
+			} catch (Exception e) {
+				System.err.println("Error creating synapses for Bain neural network. Have you specified the name of the synapse collection class correctly, including the containing packages?");
+				e.printStackTrace();
+			}
 		}
-
+		else {
+			neurons = phenotype.getNeuralNetwork().getNeurons();
+			synapses = phenotype.getNeuralNetwork().getSynapses();
+		}
+		double[] synapseWeights = synapses.getEfficacies();
+		
 		double[] cppnInput = new double[cppn.getInputDimension()];
-		cppnInput[0] = 1; // bias
-
-		double cppnTZ, cppnTY, cppnTX, cppnSZ, cppnSY, cppnSX;
+		cppnInput[0] = 1; // Bias for the CPPN. 
+		
+		// Current values for inputs to CPPN. T=target, S=source.
+		double cppnTZ, cppnTY, cppnTX, cppnSY, cppnSX;
+		int synapseIndex = 0;
 
 		if (feedForward) {
-			if (createNewPhenotype) {
-				weights = new double[depth - 1][][][][][];
-				for (int l = 1; l < depth; l++)
-					weights[l - 1] = new double[height[l]][width[l]][1][][];
-			} else {
-				weights = phenotype.getWeights();
-			}
-
 			// query CPPN for substrate connection weights
 			for (int tz = 1; tz < depth; tz++) {
 				if (depth > 2 && layerEncodingIsInput) {
@@ -232,45 +252,27 @@ public class HyperNEATTranscriberBain implements Transcriber<GridNet>, Configura
 							cppnTX = 0.5f;
 						cppnInput[cppnIdxTX] = cppnTX;
 
-						// calculate dimensions of this weight target matrix
-						// (bounded by grid edges)
-						int dy = Math.min(height[tz - 1] - 1, ty + connectionRange) - Math.max(0, ty - connectionRange) + 1;
-						int dx = Math.min(width[tz - 1] - 1, tx + connectionRange) - Math.max(0, tx - connectionRange) + 1;
-
 						// if (createNewPhenotype)
 						// System.out.println(tz + "," + ty + "," + tx + "  dy = " + dy + "  dx = " + dx);
 
-						if (createNewPhenotype)
-							weights[tz - 1][ty][tx][0] = new double[dy][dx];
-						double[][] w = weights[tz - 1][ty][tx][0];
-
-						// System.out.println("\tsy0 = " + Math.max(0,
-						// ty-connectionRange) + ", sx0 = " + Math.max(0,
-						// tx-connectionRange));
-
-						// for each connection to zyx
-						// w{y,x} is index into weight matrix
-						// s{y,x} is index of source neuron
-						for (int wy = 0, sy = Math.max(0, ty - connectionRange); wy < dy; wy++, sy++) {
-							// double cppnSY = ((double) sy * 2) / (height-1) - 1;
-							if (height[tz - 1] > 1)
-								cppnSY = ((double) sy) / (height[tz - 1] - 1);
+						// for each connection to target neuron at ZYX from source neurons in the preceding layer.
+						for (int sy = 0; sy < height[tz-1]; sy++) {
+							// double cppnTY =((double) ty*2) / (height-1) - 1;
+							if (height[tz-1] > 1)
+								cppnSY = ((double) sy) / (height[tz-1] - 1);
 							else
 								cppnSY = 0.5f;
-
 							cppnInput[cppnIdxSY] = cppnSY;
 
-							for (int wx = 0, sx = Math.max(0, tx - connectionRange); wx < dx; wx++, sx++) {
-								// double cppnSX = ((double) sx * 2) / (width-1) - 1;
-								if (width[tz - 1] > 1)
-									cppnSX = ((double) sx) / (width[tz - 1] - 1);
+							for (int sx = 0; sx < width[tz-1]; sx++) {
+								// double cppnTX = ((double) tx*2) / (width-1) - 1;
+								if (width[tz-1] > 1)
+									cppnSX = ((double) sx) / (width[tz-1] - 1);
 								else
 									cppnSX = 0.5f;
-
 								cppnInput[cppnIdxSX] = cppnSX;
 
-								// System.out.println(tx + "," + ty + " - " + sx + "," + sy + "  (" + cppnTX + "," + cppnTY + " - " + cppnSX + "," + cppnSY +
-								// ")");
+								// System.out.println(tx + "," + ty + " - " + sx + "," + sy + "  (" + cppnTX + "," + cppnTY + " - " + cppnSX + "," + cppnSY + ")");
 
 								// delta
 								if (includeDelta) {
@@ -288,8 +290,10 @@ public class HyperNEATTranscriberBain implements Transcriber<GridNet>, Configura
 
 								cppnActivator.reset();
 								double[] cppnOutput = cppnActivator.next(cppnInput);
+								
+								synapses.setPreAndPostNeurons(synapseIndex, getBainNeuronIndex(sx, sy, tz-1), getBainNeuronIndex(tx, ty, tz)); 
 
-								// weights
+								// Determine weight for synapse from source at (sx, sy, tz-1) to target at (tx, ty, tz)
 								double weightVal;
 								if (layerEncodingIsInput)
 									weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppnOutput[cppnIdxW[0]]));
@@ -301,11 +305,15 @@ public class HyperNEATTranscriberBain implements Transcriber<GridNet>, Configura
 									else
 										weightVal = (weightVal + connectionExprThresh) * (connectionWeightMin / (connectionWeightMin + connectionExprThresh));
 
-									w[wy][wx] = weightVal;
+									synapseWeights[synapseIndex] = weightVal;
 								} else {
-									w[wy][wx] = 0;
+									synapseWeights[synapseIndex] = 0;
 								}
-
+								
+								assert synapseIndex == getBainSynapseIndex(tx, ty, tz, sx, sy);
+								
+								synapseIndex++;
+/*
 								// bias
 								if (enableBias && sy == ty && sx == tx) {
 									double biasVal;
@@ -324,7 +332,7 @@ public class HyperNEATTranscriberBain implements Transcriber<GridNet>, Configura
 										bias[tz - 1][ty][tx] = 0;
 									}
 								}
-
+*/
 								// w[wy][wx] = (ty==sy && tx==sx ? 1 : 0);
 
 								// System.out.print("\t" + w[wy][wx]);
@@ -340,28 +348,20 @@ public class HyperNEATTranscriberBain implements Transcriber<GridNet>, Configura
 			// System.out.println();
 			// System.out.println();
 
-			int[][][] connectionMaxRanges = new int[depth - 1][3][2];
-			for (int l = 0; l < depth - 1; l++) {
-				connectionMaxRanges[l][0][0] = -1; // no connections to previous or own layer
-				connectionMaxRanges[l][0][1] = 1;
-				connectionMaxRanges[l][1][0] = connectionRange;
-				connectionMaxRanges[l][1][1] = connectionRange;
-				connectionMaxRanges[l][2][0] = connectionRange;
-				connectionMaxRanges[l][2][1] = connectionRange;
-			}
-			int[][] layerDimensions = new int[2][depth];
-			for (int l = 0; l < depth; l++) {
-				layerDimensions[0][l] = width[l];
-				layerDimensions[1][l] = height[l];
-			}
 
 			if (createNewPhenotype) {
-				phenotype = new GridNet(connectionMaxRanges, layerDimensions, weights, bias, activationFunction, 1, "network " + genotype.getId());
-				logger.info("Substrate has " + phenotype.getConnectionCount(true) + " connections.");
+				int simRes = properties.getIntProperty(SUBSTRATE_SIMULATION_RESOLUTION, 1000);
+				int stepsPerStep = properties.getIntProperty(SUBSTRATE_STEPS_PER_STEP, 1);
+				String execModeName = properties.getProperty(SUBSTRATE_EXECUTION_MODE, null);
+				Kernel.EXECUTION_MODE execMode = execModeName == null ? null : Kernel.EXECUTION_MODE.valueOf(execModeName);
+				NeuralNetwork nn = new NeuralNetwork(simRes, neurons, synapses, execMode);
+				phenotype = new BainNN(nn, stepsPerStep, "network " + genotype.getId());
+				logger.info("Substrate has " + neuronCount  + " neurons and " + synapseCount + " synapses.");
 			} else {
 				phenotype.setName("network " + genotype.getId());
 			}
 		} else { // RECURRENT
+			/*
 			if (createNewPhenotype) {
 				weights = new double[depth - 1][][][][][];
 				for (int l = 1; l < depth; l++)
@@ -475,26 +475,25 @@ public class HyperNEATTranscriberBain implements Transcriber<GridNet>, Configura
 					layerDimensions[1][l] = height[l];
 				}
 
-				phenotype = new GridNet(connectionRange, layerDimensions, weights, bias, activationFunction, cyclesPerStep, "network " + genotype.getId());
+				phenotype = new GridNet(connectionRange, layerDimensions, weights, bias, activationFunction, stepsPerStep, "network " + genotype.getId());
 				logger.info("Substrate has " + phenotype.getConnectionCount(true) + " connections.");
 			} else {
 				phenotype.setName("network " + genotype.getId());
 			}
+			*/
 		}
+		
+		synapses.setEfficaciesModified();
 
 		return phenotype;
 	}
 
-	public void resize(int[] width, int[] height, int connectionRange) {
+	public void resize(int[] width, int[] height) {
 		this.width = width;
 		this.height = height;
-		this.connectionRange = connectionRange;
 	}
 
-	public int getConnectionRange() {
-		return connectionRange;
-	}
-
+	
 	/**
 	 * @see com.anji.integration.Transcriber#getPhenotypeClass()
 	 */
@@ -513,14 +512,27 @@ public class HyperNEATTranscriberBain implements Transcriber<GridNet>, Configura
 	public int[] getHeight() {
 		return height;
 	}
-
-	/*
-	 * public static void main(String[] args) { Point2D.Double p1 = new Point2D.Double(1, 1); Point2D.Double p2 = new Point2D.Double(1, 2); for (double a = 0; a
-	 * < Math.PI*2; a += Math.PI * 0.1) { p2.x = p1.x + Math.cos(a); p2.y = p1.y + Math.sin(a);
-	 * 
-	 * double angle = Math.atan2(p2.y-p1.y, p2.x-p1.x); if (angle < 0) angle += 2*Math.PI;
-	 * 
-	 * System.out.println(p1.x + "," + p1.y + " - " + (double)p2.x + "," + (double)p2.y + " - " + (double) Math.toDegrees(a) + " - " + (double)
-	 * Math.toDegrees(angle) + " - " + (double) (angle / (2*Math.PI))); } }
+	
+	/**
+	 * Get the index of the neuron in the Bain networks NeuronCollection for the neuron at the given location.
+	 * @param x The location of the neuron on the x axis.
+	 * @param y The location of the neuron on the y axis.
+	 * @param z The location of the neuron on the z axis, or layer it is in.
+	 */ 
+	public int getBainNeuronIndex(int x, int y, int z) {
+		return bainIndexForNeuronLayer[z] + y * width[z] + x;
+	}
+	
+	/**
+	 * For feed forward networks, get the index of the synapse in the Bain networks SynapseCollection connecting the neurons at the given location.
+	 * The layer the source neuron is in is given by tz-1 and so need not be specified.
+	 * @param tx The location of the target neuron on the x axis.
+	 * @param ty The location of the target neuron on the y axis.
+	 * @param tz The location of the target neuron on the z axis, or layer it is in.
+	 * @param sx The location of the source neuron on the x axis.
+	 * @param sy The location of the source neuron on the y axis.
 	 */
+	public int getBainSynapseIndex(int tx, int ty, int tz, int sx, int sy) {
+		return bainIndexForFFSynapseLayer[tz-1] + width[tz-1] * (height[tz-1] * (width[tz] * ty + tx) + sy) + sx;
+	}
 }

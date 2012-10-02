@@ -3,6 +3,7 @@ package ojc.ahni.experiments.objectrecognition;
 import java.util.*;
 
 import ojc.ahni.*;
+import ojc.ahni.hyperneat.GridNet;
 import ojc.ahni.hyperneat.HyperNEATFitnessFunction;
 
 import org.apache.log4j.Logger;
@@ -95,7 +96,8 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
         }
     }
     
-    protected int evaluate(Chromosome genotype, ojc.ahni.hyperneat.GridNet substrate, int threadIndex) {
+    protected int evaluate(Chromosome genotype, Activator activator, int threadIndex) {
+    	GridNet substrate = (GridNet) activator;
         //if (genotype.size() > 100)
         //    return 0;
         double[][][] responses = substrate.nextSequence(stimuli);

@@ -114,8 +114,10 @@ public class Species {
 	 */
 	public Long getRepresentativeId() {
 		//return representative.getId();
-		if (getFittest() == null)
-			System.out.println("species empty");
+		if (getFittest() == null) {
+			System.out.println("species empty!");
+			return -1l;
+		}
 		return getFittest().getId();
 	}
 

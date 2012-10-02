@@ -5,7 +5,11 @@
 	<classpathentry kind="lib" path="properties"/>
 	<classpathentry kind="lib" path="lib/jakarta-regexp-1.3.jar"/>
 	<classpathentry kind="lib" path="lib/log4j.jar"/>
-	<classpathentry kind="lib" path="lib/bain.jar"/>
-	<classpathentry kind="lib" path="lib/aparapi.jar"/>
+	<classpathentry kind="lib" path="lib/bain.jar" sourcepath="/home/data/ai/PhD/software/bain/src">
+		<attributes>
+			<attribute name="javadoc_location" value="file:/home/data/ai/PhD/software/baindoc/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/aparapi.jar" sourcepath="/home/data/ai/PhD/software/aparapi-trunk"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
