@@ -1,8 +1,9 @@
-*AHNI - Another HyperNEAT Implementation*
+AHNI - Another HyperNEAT Implementation
+
 Copyright Oliver J. Coleman, 2012. oliver.coleman@gmail.com
 
 
-*ABOUT*
+ABOUT
 
 AHNI implements the HyperNEAT neuroevolution algorithm:
 Stanley, K.O., D’Ambrosio, D.B., Gauci, J.: A Hypercube-Based Indirect 
@@ -25,7 +26,8 @@ The latest version is available at, and issues should be posted at,
 https://github.com/OliverColeman/ahni
 
 
-*BUILDING AND RUNNING*
+BUILDING AND RUNNING
+
 A runnable JAR file can be built from the source files with:
 ant build-jar
 
@@ -38,18 +40,21 @@ java -jar ahni.jar or3.properties
 (decent documentation for all the available parameters coming eventually...)  
 
 
-*DEVELOPMENT AND CREATING NEW EXPERIMENTS*
+DEVELOPMENT AND CREATING NEW EXPERIMENTS
 
 To create your own experiments you will most likely want to extend 
-ojc.ahni.hyperneat.HyperNEATFitnessFunction . You can use 
-ojc.ahni.experiments.objectrecognition.* as examples.
+ojc.ahni.hyperneat.HyperNEATFitnessFunction or 
+ojc.ahni.hyperneat.HyperNEATTargetFitnessFunction 
+For examples see: 
+ojc.ahni.experiments.TestTargetFitnessFunction and 
+ojc.ahni.experiments.objectrecognition.* 
 
 The main class is ojc.ahni.hyperneat.Run. It expects a .properties file containing
 parameters for NEAT, HyperNEAT, typically the specific experiment being run, 
 and a few other things. See properties/* for examples.
 
 
-*NOTES*
+NOTES
 
 AHNI was built on top of a modified version of ANJI (Another NEAT Java 
 Implementation) by Derek James and Philip Tucker. 
@@ -87,7 +92,7 @@ didn't make much sense for someone like me as there aren't any domains that I
 want to attach the project to.
 
 
-*LICENSE*
+LICENSE
   
 AHNI is licensed under the GNU General Public License v3. A copy of the license
 is included in the distribution. Please note that Bain is distributed WITHOUT 

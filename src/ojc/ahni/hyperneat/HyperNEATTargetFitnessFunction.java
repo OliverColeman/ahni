@@ -60,7 +60,7 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 	
 	public void init(Properties props) {
 		super.init(props);
-		errorType = props.getProperty(ERROR_TYPE_KEY, "sse");
+		errorType = props.getProperty(ERROR_TYPE_KEY, "squared-sum-squared");
 		squareErrorPerOutput = (errorType == "sum-squared" || errorType == "squared-sum-squared");
 		squareErrorPerTrial = (errorType == "squared-sum" || errorType == "squared-sum-squared");
 	}
