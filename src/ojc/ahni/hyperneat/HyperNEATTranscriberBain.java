@@ -3,6 +3,7 @@ package ojc.ahni.hyperneat;
 import ojc.bain.NeuralNetwork;
 import ojc.bain.base.ComponentCollection;
 import ojc.bain.base.NeuronCollection;
+import ojc.bain.neuron.rate.NeuronCollectionWithBias;
 import ojc.bain.base.SynapseCollection;
 
 import org.apache.log4j.Logger;
@@ -29,40 +30,18 @@ import com.anji.util.*;
  * 
  * @author Oliver Coleman
  */
-public class HyperNEATTranscriberBain implements Transcriber<BainNN>, Configurable {
-	public static final String HYPERNEAT_FEED_FORWARD = "ann.hyperneat.feedforward";
-	public static final String HYPERNEAT_ENABLE_BIAS = "ann.hyperneat.enablebias";
-	public static final String HYPERNEAT_INCLUDE_DELTA = "ann.hyperneat.includedelta";
-	public static final String HYPERNEAT_INCLUDE_ANGLE = "ann.hyperneat.includeangle";
-	public static final String HYPERNEAT_LAYER_ENCODING = "ann.hyperneat.useinputlayerencoding";
-	public static final String HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD = "ann.hyperneat.connection.expression.threshold";
-	public static final String HYPERNEAT_CONNECTION_WEIGHT_MIN = "ann.hyperneat.connection.weight.min";
-	public static final String HYPERNEAT_CONNECTION_WEIGHT_MAX = "ann.hyperneat.connection.weight.max";
-	
+public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 	public static final String SUBSTRATE_SIMULATION_RESOLUTION = "ann.hyperneat.bain.resolution";
 	public static final String SUBSTRATE_EXECUTION_MODE = "ann.hyperneat.bain.executionmode";
 	public static final String SUBSTRATE_NEURON_MODEL = "ann.hyperneat.bain.neuron.model";
 	public static final String SUBSTRATE_SYNAPSE_MODEL = "ann.hyperneat.bain.synapse.model";
 	public static final String SUBSTRATE_STEPS_PER_STEP = "ann.hyperneat.stepsperstep";
-	public static final String SUBSTRATE_DEPTH = "ann.hyperneat.depth";
-	public static final String SUBSTRATE_HEIGHT = "ann.hyperneat.height";
-	public static final String SUBSTRATE_WIDTH = "ann.hyperneat.width";
 	
-
 	private final static Logger logger = Logger.getLogger(HyperNEATTranscriberBain.class);
 
 	private Properties properties;
 	private AnjiNetTranscriber cppnTranscriber; // Creates AnjiNets, for use as a CPPN, from chromosomes.
-	private boolean feedForward;
-	private boolean enableBias;
-	private boolean includeDelta;
-	private boolean includeAngle;
-	private double connectionExprThresh;
-	private double connectionWeightMin;
-	private double connectionWeightMax;
-	private int depth;
-	private boolean layerEncodingIsInput = false;
-	private int[] height, width, neuronLayerSize, bainIndexForNeuronLayer, ffSynapseLayerSize, bainIndexForFFSynapseLayer; //ff=feed forward
+	private int[] neuronLayerSize, bainIndexForNeuronLayer, ffSynapseLayerSize, bainIndexForFFSynapseLayer; //ff=feed forward
 	private int neuronCount, synapseCount;
 
 	public HyperNEATTranscriberBain() {
@@ -76,22 +55,9 @@ public class HyperNEATTranscriberBain implements Transcriber<BainNN>, Configurab
 	 * @see Configurable#init(Properties)
 	 */
 	public void init(Properties props) {
-		this.properties = props;
+		super.init(props);
 		
-		feedForward = props.getBooleanProperty(HYPERNEAT_FEED_FORWARD);
-		enableBias = props.getBooleanProperty(HYPERNEAT_ENABLE_BIAS);
-		includeDelta = props.getBooleanProperty(HYPERNEAT_INCLUDE_DELTA);
-		includeAngle = props.getBooleanProperty(HYPERNEAT_INCLUDE_ANGLE);
-		layerEncodingIsInput = props.getBooleanProperty(HYPERNEAT_LAYER_ENCODING, layerEncodingIsInput);
-		connectionExprThresh = props.getFloatProperty(HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD);
-		connectionWeightMin = props.getFloatProperty(HYPERNEAT_CONNECTION_WEIGHT_MIN);
-		connectionWeightMax = props.getFloatProperty(HYPERNEAT_CONNECTION_WEIGHT_MAX);
-
-		depth = props.getIntProperty(SUBSTRATE_DEPTH);
-		String[] heightStr = props.getProperty(SUBSTRATE_HEIGHT).split(",");
-		String[] widthStr = props.getProperty(SUBSTRATE_WIDTH).split(",");
-		height = new int[depth];
-		width = new int[depth];
+		this.properties = props;
 		neuronLayerSize = new int[depth];
 		bainIndexForNeuronLayer = new int[depth];
 		ffSynapseLayerSize = new int[depth-1];
@@ -99,8 +65,6 @@ public class HyperNEATTranscriberBain implements Transcriber<BainNN>, Configurab
 		neuronCount = 0;
 		synapseCount = 0;
 		for (int l = 0; l < depth; l++) {
-			height[l] = Integer.parseInt(heightStr[l]);
-			width[l] = Integer.parseInt(widthStr[l]);
 			neuronLayerSize[l] = height[l] * width[l];
 			bainIndexForNeuronLayer[l] = neuronCount;
 			neuronCount += neuronLayerSize[l];
@@ -173,7 +137,7 @@ public class HyperNEATTranscriberBain implements Transcriber<BainNN>, Configurab
 		int[] cppnIdxB = new int[0]; // bias (either a single output for all layers or one output per layer)
 
 		int cppnOutputIdx = 0;
-		if (layerEncodingIsInput) {
+		if (layerEncodingIsInput) { //same output for all layers
 			cppnIdxW = new int[1];
 			cppnIdxW[0] = cppnOutputIdx++; // weight value
 
@@ -189,7 +153,7 @@ public class HyperNEATTranscriberBain implements Transcriber<BainNN>, Configurab
 			if (enableBias) {
 				cppnIdxB = new int[depth - 1];
 				for (int w = 0; w < depth - 1; w++)
-					cppnIdxB[w] = cppnOutputIdx++; // weight value
+					cppnIdxB[w] = cppnOutputIdx++; // bias value
 			}
 		}
 
@@ -202,7 +166,12 @@ public class HyperNEATTranscriberBain implements Transcriber<BainNN>, Configurab
 			String neuronModelClass = properties.getProperty(SUBSTRATE_NEURON_MODEL, "ojc.bain.neuron.rate.SigmoidNeuronCollection");
 			String synapseModelClass = properties.getProperty(SUBSTRATE_SYNAPSE_MODEL, "ojc.bain.synapse.FixedSynapseCollection");
 			try {
-				neurons = (NeuronCollection) ComponentCollection.createCollection(neuronModelClass, neuronCount);
+				if (enableBias) {
+					neurons = (NeuronCollectionWithBias) ComponentCollection.createCollection(neuronModelClass, neuronCount);
+				}
+				else {
+					neurons = (NeuronCollection) ComponentCollection.createCollection(neuronModelClass, neuronCount);
+				}
 			} catch (Exception e) {
 				System.err.println("Error creating neurons for Bain neural network. Have you specified the name of the neuron collection class correctly, including the containing packages?");
 				e.printStackTrace();
@@ -251,7 +220,9 @@ public class HyperNEATTranscriberBain implements Transcriber<BainNN>, Configurab
 						else
 							cppnTX = 0.5f;
 						cppnInput[cppnIdxTX] = cppnTX;
-
+						
+						int bainNeuronIndexTarget = getBainNeuronIndex(tx, ty, tz);
+						
 						// if (createNewPhenotype)
 						// System.out.println(tz + "," + ty + "," + tx + "  dy = " + dy + "  dx = " + dx);
 
@@ -291,7 +262,9 @@ public class HyperNEATTranscriberBain implements Transcriber<BainNN>, Configurab
 								cppnActivator.reset();
 								double[] cppnOutput = cppnActivator.next(cppnInput);
 								
-								synapses.setPreAndPostNeurons(synapseIndex, getBainNeuronIndex(sx, sy, tz-1), getBainNeuronIndex(tx, ty, tz)); 
+								int bainNeuronIndexSource = getBainNeuronIndex(sx, sy, tz-1);
+								
+								synapses.setPreAndPostNeurons(synapseIndex, bainNeuronIndexSource, bainNeuronIndexTarget); 
 
 								// Determine weight for synapse from source at (sx, sy, tz-1) to target at (tx, ty, tz)
 								double weightVal;
@@ -313,7 +286,7 @@ public class HyperNEATTranscriberBain implements Transcriber<BainNN>, Configurab
 								assert synapseIndex == getBainSynapseIndex(tx, ty, tz, sx, sy);
 								
 								synapseIndex++;
-/*
+
 								// bias
 								if (enableBias && sy == ty && sx == tx) {
 									double biasVal;
@@ -327,26 +300,16 @@ public class HyperNEATTranscriberBain implements Transcriber<BainNN>, Configurab
 										else
 											biasVal = (biasVal + connectionExprThresh) * (connectionWeightMin / (connectionWeightMin + connectionExprThresh));
 
-										bias[tz - 1][ty][tx] = biasVal;
+										((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, biasVal);
 									} else {
-										bias[tz - 1][ty][tx] = 0;
+										((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, 0);
 									}
 								}
-*/
-								// w[wy][wx] = (ty==sy && tx==sx ? 1 : 0);
-
-								// System.out.print("\t" + w[wy][wx]);
 							}
-							// System.out.println();
 						}
-						// System.out.println();
 					}
 				}
-
-				// System.out.println();
 			}
-			// System.out.println();
-			// System.out.println();
 
 
 			if (createNewPhenotype) {

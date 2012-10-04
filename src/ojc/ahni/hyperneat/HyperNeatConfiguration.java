@@ -63,12 +63,12 @@ public class HyperNeatConfiguration extends NeatConfiguration {
         props = newProps;
         short stimulusSize, responseSize;
 		//automatically determine input and output size for hyperneat CPPN
-    	boolean feedForward = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_FEED_FORWARD_KEY);
-        boolean enableBias = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_ENABLE_BIAS);
-        boolean includeDelta = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_INCLUDE_DELTA);
-        boolean includeAngle = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_INCLUDE_ANGLE);
-        boolean layerEncodingIsInput = props.getBooleanProperty(HyperNEATTranscriberGridNet.HYPERNEAT_LAYER_ENCODING);
-        short depth = props.getShortProperty(HyperNEATTranscriberGridNet.HYPERNEAT_DEPTH);
+    	boolean feedForward = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_FEED_FORWARD);
+        boolean enableBias = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_ENABLE_BIAS);
+        boolean includeDelta = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_INCLUDE_DELTA);
+        boolean includeAngle = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_INCLUDE_ANGLE);
+        boolean layerEncodingIsInput = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_LAYER_ENCODING);
+        short depth = props.getShortProperty(HyperNEATTranscriber.SUBSTRATE_DEPTH);
         
         //bias, sx, sy, tx, ty
     	stimulusSize = 5;

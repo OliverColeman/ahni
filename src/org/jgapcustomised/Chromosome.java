@@ -196,7 +196,8 @@ public int getSpeciatedFitnessValue() {
 /**
  * Sets the fitness value of this Chromosome. This method is for use by bulk fitness functions
  * and should not be invoked from anything else. This is the raw fitness value, before species
- * fitness sharing.
+ * fitness sharing. Setting the fitness value will reset the performance value to -1, thus the
+ * performance value should always be set after setting the fitness.
  * 
  * @param a_newFitnessValue a positive integer representing the fitness of this Chromosome. if
  * 0, fitness is set as 1.
@@ -206,6 +207,9 @@ public void setFitnessValue( int a_newFitnessValue ) {
 		m_fitnessValue = a_newFitnessValue;
 	else
 		m_fitnessValue = 1;
+	
+	// Reset performance.
+	m_performanceValue = -1;
 }
 
 

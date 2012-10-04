@@ -11,10 +11,11 @@ import com.anji.util.Properties;
 import com.anji.neat.Evolver;
 
 /**
- * Provides a base for fitness functions for use with HyperNEAT. Provides a multi-threaded framework for performing evaluations on multiple genomes.
- * The methods {@link #getMaxFitnessValue()} and {@link #evaluate(Chromosome, Activator, int)} must be implemented in subclasses.
- * Subclasses may also need to override the methods {@link #init(Properties)}, {@link #initialiseEvaluation()}, {@link #scale(int, int)} and {@link #dispose()}. 
- * See {@link ojc.ahni.experiments.TestTargetFitnessFunction} and {@link ojc.ahni.experiments.objectrecognition.ObjectRecognitionFitnessFunction3} for examples.
+ * Provides a base for fitness functions for use with HyperNEAT. Provides a multi-threaded framework for performing evaluations on multiple genomes. The methods
+ * {@link #getMaxFitnessValue()} and {@link #evaluate(Chromosome, Activator, int)} must be implemented in subclasses. Subclasses may also need to override the
+ * methods {@link #init(Properties)}, {@link #initialiseEvaluation()}, {@link #scale(int, int)} and {@link #dispose()}. See
+ * {@link ojc.ahni.experiments.TestTargetFitnessFunction} and {@link ojc.ahni.experiments.objectrecognition.ObjectRecognitionFitnessFunction3} for examples.
+ * 
  * @author Oliver Coleman
  */
 public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, Configurable {
@@ -34,7 +35,7 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 
 	protected Properties props;
 
-	private HyperNEATTranscriberGridNet transcriber;
+	private HyperNEATTranscriber transcriber;
 	private int numThreads;
 	private int evaluatorsFinishedCount;
 	private Evaluator[] evaluators;
@@ -67,12 +68,13 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 
 	/**
 	 * Subclasses may override this method to perform initialise tasks. <strong>Make sure to call this method from the overriding method.</strong>
+	 * 
 	 * @param props Configuration parameters, typically read from the/a properties file.
 	 */
 	public void init(Properties props) {
 		this.props = props;
 		random = ((Randomizer) props.singletonObjectProperty(Randomizer.class)).getRand();
-		transcriber = new HyperNEATTranscriberGridNet(props);
+		transcriber = (HyperNEATTranscriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
 		depth = transcriber.getDepth();
 		height = transcriber.getHeight();
 		width = transcriber.getWidth();
@@ -165,8 +167,8 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 	}
 
 	/**
-	 * Evaluate an individual genotype. This method is called from {@link #evaluate(List<Chromosome>}}, and must be overridden in order to
-	 * evaluate the genotypes.
+	 * Evaluate an individual genotype. This method is called from {@link #evaluate(List<Chromosome>} , and must be overridden in order to evaluate the
+	 * genotypes.
 	 * 
 	 * @param genotype the genotype being evaluated. This is not usually required but may be useful in some cases.
 	 * @param substrate the phenotypic substrate of the genotype being evaluated.
@@ -175,14 +177,14 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 	protected abstract int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex);
 
 	/**
-	 * Allow sub-class to make necessary changes when a substrate scale occurs. When this method is called the substrate will already have been scaled, so the
-	 * width and height variables will have the new (scaled) values.
+	 * Allow sub-class to make the necessary changes when a substrate scale occurs. If implemented, then at a minimum this method will usually need to set new
+	 * values for the {@link #width} and {#link height} array fields, and the {@link #connectionRange} field if applicable.
 	 * 
 	 * @param scaleCount A count of how many times a scale has previously occurred. In the first call this has value 0.
 	 * @param scaleFactor The amount the substrate is being scaled by.
 	 */
 	protected void scale(int scaleCount, int scaleFactor) {
-		
+
 	}
 
 	public int getConnectionRange() {
@@ -214,7 +216,7 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 	private class Evaluator extends Thread {
 		private volatile boolean go = false;
 		private int id;
-		private GridNet substrate;
+		private Activator substrate;
 
 		public Evaluator(int id) {
 			this.id = id;
@@ -235,7 +237,7 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 							int fitness = evaluate(chrom, substrate, id);
 							chrom.setFitnessValue(fitness);
 							if (chrom.getPerformanceValue() == -1) {
-								chrom.setPerformanceValue((double)fitness / getMaxFitnessValue());
+								chrom.setPerformanceValue((double) fitness / getMaxFitnessValue());
 							}
 							synchronized (this) {
 								if ((targetPerformanceType == 1 && chrom.getPerformanceValue() > bestPerformance) || (targetPerformanceType == 0 && chrom.getPerformanceValue() < bestPerformance)) {

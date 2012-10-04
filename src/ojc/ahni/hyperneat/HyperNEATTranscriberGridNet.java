@@ -3,6 +3,7 @@ package ojc.ahni.hyperneat;
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
+import com.anji.integration.Activator;
 import com.anji.integration.ActivatorTranscriber;
 import com.anji.integration.AnjiActivator;
 import com.anji.integration.AnjiNetTranscriber;
@@ -24,41 +25,19 @@ import com.anji.util.*;
  * 
  * @author Oliver Coleman
  */
-public class HyperNEATTranscriberGridNet implements Transcriber<GridNet>, Configurable {
+public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 	public static final String HYPERNEAT_ACTIVATION_FUNCTION_KEY = "ann.hyperneat.activation.function";
-	public static final String HYPERNEAT_FEED_FORWARD_KEY = "ann.hyperneat.feedforward";
-	public static final String HYPERNEAT_ENABLE_BIAS = "ann.hyperneat.enablebias";
-	public static final String HYPERNEAT_INCLUDE_DELTA = "ann.hyperneat.includedelta";
-	public static final String HYPERNEAT_INCLUDE_ANGLE = "ann.hyperneat.includeangle";
-	public static final String HYPERNEAT_LAYER_ENCODING = "ann.hyperneat.useinputlayerencoding";
 	public static final String HYPERNEAT_CYCLES_PER_STEP = "ann.hyperneat.cyclesperstep";
-	public static final String HYPERNEAT_CONNECTION_RANGE = "ann.hyperneat.connection.range";
-	public static final String HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD = "ann.hyperneat.connection.expression.threshold";
-	public static final String HYPERNEAT_CONNECTION_WEIGHT_MIN = "ann.hyperneat.connection.weight.min";
-	public static final String HYPERNEAT_CONNECTION_WEIGHT_MAX = "ann.hyperneat.connection.weight.max";
-	public static final String HYPERNEAT_DEPTH = "ann.hyperneat.depth";
-	public static final String HYPERNEAT_HEIGHT = "ann.hyperneat.height";
-	public static final String HYPERNEAT_WIDTH = "ann.hyperneat.width";
-
+	
 	private final static Logger logger = Logger.getLogger(HyperNEATTranscriberGridNet.class);
 
 	private AnjiNetTranscriber cppnTranscriber; // creates AnjiNets from
 												// chromosomes
 
 	private ActivationFunction activationFunction;
-	private boolean feedForward;
 	private int cyclesPerStep;
-	private boolean enableBias;
-	private boolean includeDelta;
-	private boolean includeAngle;
-	private int connectionRange;
-	private double connectionWeightMin;
-	private double connectionWeightMax;
-	private double connectionExprThresh;
-	private int depth;
 	private boolean layerEncodingIsInput = false;
-	private int[] height, width;
-
+	
 	public HyperNEATTranscriberGridNet() {
 	}
 
@@ -70,33 +49,12 @@ public class HyperNEATTranscriberGridNet implements Transcriber<GridNet>, Config
 	 * @see Configurable#init(Properties)
 	 */
 	public void init(Properties props) {
+		super.init(props);
+		
 		activationFunction = ActivationFunctionFactory.getInstance().get(props.getProperty(HYPERNEAT_ACTIVATION_FUNCTION_KEY));
 
-		feedForward = props.getBooleanProperty(HYPERNEAT_FEED_FORWARD_KEY);
 		if (!feedForward)
 			cyclesPerStep = props.getIntProperty(HYPERNEAT_CYCLES_PER_STEP);
-
-		enableBias = props.getBooleanProperty(HYPERNEAT_ENABLE_BIAS);
-
-		includeDelta = props.getBooleanProperty(HYPERNEAT_INCLUDE_DELTA);
-		includeAngle = props.getBooleanProperty(HYPERNEAT_INCLUDE_ANGLE);
-
-		layerEncodingIsInput = props.getBooleanProperty(HYPERNEAT_LAYER_ENCODING, layerEncodingIsInput);
-
-		connectionRange = props.getIntProperty(HYPERNEAT_CONNECTION_RANGE);
-		connectionExprThresh = props.getFloatProperty(HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD);
-		connectionWeightMin = props.getFloatProperty(HYPERNEAT_CONNECTION_WEIGHT_MIN);
-		connectionWeightMax = props.getFloatProperty(HYPERNEAT_CONNECTION_WEIGHT_MAX);
-
-		depth = props.getIntProperty(HYPERNEAT_DEPTH);
-		String[] heightStr = props.getProperty(HYPERNEAT_HEIGHT).split(",");
-		String[] widthStr = props.getProperty(HYPERNEAT_WIDTH).split(",");
-		height = new int[depth];
-		width = new int[depth];
-		for (int l = 0; l < depth; l++) {
-			height[l] = Integer.parseInt(heightStr[l]);
-			width[l] = Integer.parseInt(widthStr[l]);
-		}
 
 		cppnTranscriber = (AnjiNetTranscriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
 	}
@@ -111,8 +69,8 @@ public class HyperNEATTranscriberGridNet implements Transcriber<GridNet>, Config
 	/**
 	 * @see Transcriber#transcribe(Chromosome, T substrate)
 	 */
-	public GridNet transcribe(Chromosome genotype, GridNet substrate) throws TranscriberException {
-		return newGridNet(genotype, substrate);
+	public GridNet transcribe(Chromosome genotype, Activator substrate) throws TranscriberException {
+		return newGridNet(genotype, (GridNet) substrate);
 	}
 
 	/**
@@ -125,6 +83,8 @@ public class HyperNEATTranscriberGridNet implements Transcriber<GridNet>, Config
 	public GridNet newGridNet(Chromosome genotype, GridNet phenotype) throws TranscriberException {
 		AnjiActivator cppnActivator = cppnTranscriber.transcribe(genotype);
 		AnjiNet cppn = cppnActivator.getAnjiNet();
+		
+		int connectionRange = this.connectionRange == -1 ? Integer.MAX_VALUE : this.connectionRange;
 		
 		// determine cppn input mapping
 		// target and source coordinates
@@ -355,7 +315,7 @@ public class HyperNEATTranscriberGridNet implements Transcriber<GridNet>, Config
 
 			if (createNewPhenotype) {
 				phenotype = new GridNet(connectionMaxRanges, layerDimensions, weights, bias, activationFunction, 1, "network " + genotype.getId());
-				logger.info("Substrate has " + phenotype.getConnectionCount(true) + " connections.");
+				logger.info("Substrate has input size " + width[0] + "x" + height[0] + " and " + phenotype.getConnectionCount(true) + " connections.");
 			} else {
 				phenotype.setName("network " + genotype.getId());
 			}
@@ -483,33 +443,11 @@ public class HyperNEATTranscriberGridNet implements Transcriber<GridNet>, Config
 		return phenotype;
 	}
 
-	public void resize(int[] width, int[] height, int connectionRange) {
-		this.width = width;
-		this.height = height;
-		this.connectionRange = connectionRange;
-	}
-
-	public int getConnectionRange() {
-		return connectionRange;
-	}
-
 	/**
 	 * @see com.anji.integration.Transcriber#getPhenotypeClass()
 	 */
 	public Class getPhenotypeClass() {
 		return GridNet.class;
-	}
-
-	public int getDepth() {
-		return depth;
-	}
-
-	public int[] getWidth() {
-		return width;
-	}
-
-	public int[] getHeight() {
-		return height;
 	}
 
 	/*
