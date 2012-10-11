@@ -58,26 +58,13 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		super.init(props);
 		
 		this.properties = props;
+		
 		neuronLayerSize = new int[depth];
 		bainIndexForNeuronLayer = new int[depth];
 		ffSynapseLayerSize = new int[depth-1];
 		bainIndexForFFSynapseLayer = new int[depth-1];
-		neuronCount = 0;
-		synapseCount = 0;
-		for (int l = 0; l < depth; l++) {
-			neuronLayerSize[l] = height[l] * width[l];
-			bainIndexForNeuronLayer[l] = neuronCount;
-			neuronCount += neuronLayerSize[l];
-			if (l > 0 && feedForward) {
-				ffSynapseLayerSize[l-1] = neuronLayerSize[l-1] * neuronLayerSize[l];
-				bainIndexForFFSynapseLayer[l-1] = synapseCount;
-				synapseCount += ffSynapseLayerSize[l-1];
-			}
-		}
-		if (!feedForward) {
-			synapseCount = neuronCount * neuronCount;
-		}
-
+		resize(width, height, -1);  //Initialise above arrays.
+		
 		cppnTranscriber = (AnjiNetTranscriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
 	}
 
@@ -312,12 +299,16 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 									} else {
 										((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, 0);
 									}
+									
+									
+									
+									((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, 0);
 								}
 								
 								
 								
-								synapseWeights[synapseIndex-1] = (sy == ty && sx == tx) ? 1 : 0;
-								((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, 0);
+								//synapseWeights[synapseIndex-1] = (sy == ty && sx == tx) ? 1 : 0;
+								
 							}
 						}
 					}
@@ -328,7 +319,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 			
 			
 			
-			
+			/*
 			synapseIndex = 0;
 			for (int tz = 1; tz < depth; tz++) {
 				for (int ty = 0; ty < height[tz]; ty++) {
@@ -344,6 +335,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 					}
 				}
 			}
+			*/
 
 			
 			
@@ -494,9 +486,24 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		return phenotype;
 	}
 
-	public void resize(int[] width, int[] height) {
+	public void resize(int[] width, int[] height, int connectionRange) {
 		this.width = width;
 		this.height = height;
+		neuronCount = 0;
+		synapseCount = 0;
+		for (int l = 0; l < depth; l++) {
+			neuronLayerSize[l] = height[l] * width[l];
+			bainIndexForNeuronLayer[l] = neuronCount;
+			neuronCount += neuronLayerSize[l];
+			if (l > 0 && feedForward) {
+				ffSynapseLayerSize[l-1] = neuronLayerSize[l-1] * neuronLayerSize[l];
+				bainIndexForFFSynapseLayer[l-1] = synapseCount;
+				synapseCount += ffSynapseLayerSize[l-1];
+			}
+		}
+		if (!feedForward) {
+			synapseCount = neuronCount * neuronCount;
+		}
 	}
 
 	
