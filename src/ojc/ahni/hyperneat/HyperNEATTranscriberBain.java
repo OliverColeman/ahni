@@ -164,7 +164,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		SynapseCollection synapses = null;
 		if (createNewPhenotype) {
 			String neuronModelClass = properties.getProperty(SUBSTRATE_NEURON_MODEL, "ojc.bain.neuron.rate.SigmoidNeuronCollection");
-			String synapseModelClass = properties.getProperty(SUBSTRATE_SYNAPSE_MODEL, "ojc.bain.synapse.FixedSynapseCollection");
+			String synapseModelClass = properties.getProperty(SUBSTRATE_SYNAPSE_MODEL, "ojc.bain.synapse.rate.FixedSynapseCollection");
 			try {
 				if (enableBias) {
 					neurons = (NeuronCollectionWithBias) ComponentCollection.createCollection(neuronModelClass, neuronCount);
@@ -172,12 +172,20 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 				else {
 					neurons = (NeuronCollection) ComponentCollection.createCollection(neuronModelClass, neuronCount);
 				}
+				// If the neuron collection is configurable and the configuration has a default preset.
+				if (neurons.getConfigSingleton() != null && neurons.getConfigSingleton().getPreset(0) != null) {
+					neurons.addConfiguration(neurons.getConfigSingleton().getPreset(0));
+				}
 			} catch (Exception e) {
 				System.err.println("Error creating neurons for Bain neural network. Have you specified the name of the neuron collection class correctly, including the containing packages?");
 				e.printStackTrace();
 			}
 			try {
 				synapses = (SynapseCollection) ComponentCollection.createCollection(synapseModelClass, synapseCount);
+				// If the synapse collection is configurable and the configuration has a default preset.
+				if (synapses.getConfigSingleton() != null && synapses.getConfigSingleton().getPreset(0) != null) {
+					synapses.addConfiguration(neurons.getConfigSingleton().getPreset(0));
+				}
 			} catch (Exception e) {
 				System.err.println("Error creating synapses for Bain neural network. Have you specified the name of the synapse collection class correctly, including the containing packages?");
 				e.printStackTrace();
@@ -305,11 +313,45 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 										((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, 0);
 									}
 								}
+								
+								
+								
+								synapseWeights[synapseIndex-1] = (sy == ty && sx == tx) ? 1 : 0;
+								((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, 0);
 							}
 						}
 					}
 				}
 			}
+			
+			
+			
+			
+			
+			
+			synapseIndex = 0;
+			for (int tz = 1; tz < depth; tz++) {
+				for (int ty = 0; ty < height[tz]; ty++) {
+					for (int tx = 0; tx < width[tz]; tx++) {
+						int bainNeuronIndexTarget = getBainNeuronIndex(tx, ty, tz);
+						for (int sy = 0; sy < height[tz-1]; sy++) {
+							for (int sx = 0; sx < width[tz-1]; sx++) {
+								int bainNeuronIndexSource = getBainNeuronIndex(sx, sy, tz-1);
+								System.out.println(sx + ", " + sy + ", " + (tz-1) + " > " + tx + ", " + ty + ", " + tz + " = " + synapseWeights[synapseIndex] + "   (" + bainNeuronIndexSource + " > " + bainNeuronIndexTarget + ")");
+								synapseIndex++;
+							}
+						}
+					}
+				}
+			}
+
+			
+			
+			
+			
+			
+			
+			
 
 
 			if (createNewPhenotype) {
@@ -318,7 +360,8 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 				String execModeName = properties.getProperty(SUBSTRATE_EXECUTION_MODE, null);
 				Kernel.EXECUTION_MODE execMode = execModeName == null ? null : Kernel.EXECUTION_MODE.valueOf(execModeName);
 				NeuralNetwork nn = new NeuralNetwork(simRes, neurons, synapses, execMode);
-				phenotype = new BainNN(nn, stepsPerStep, "network " + genotype.getId());
+				int[] outputDims = new int[]{width[depth-1], height[depth-1]};
+				phenotype = new BainNN(nn, outputDims, stepsPerStep, "network " + genotype.getId());
 				logger.info("Substrate has " + neuronCount  + " neurons and " + synapseCount + " synapses.");
 			} else {
 				phenotype.setName("network " + genotype.getId());

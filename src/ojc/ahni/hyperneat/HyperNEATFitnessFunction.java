@@ -22,49 +22,102 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * fitness.hyperneat.max_threads Maximum number of threads to use for fitness evaluation (including transcription of genotype/cppn to phenotype/substrate).
-	 * If value is <= 0 then the detected number of processor cores will be used.
+	 * Property key for minimum number of threads to use for fitness evaluation (including transcription of genotype/cppn to phenotype/substrate).
 	 */
 	public static final String MIN_THREADS_KEY = "fitness.hyperneat.min_threads";
+	/**
+	 * Property key for maximum number of threads to use for fitness evaluation (including transcription of genotype/cppn to phenotype/substrate).
+	 * If value is <= 0 then which ever is lower of the detected number of processor cores and the specified minimum will be used.
+	 */
 	public static final String MAX_THREADS_KEY = "fitness.hyperneat.max_threads";
 
+	/**
+	 * Property key for multiplicative amount to scale substrate by when the performance of the best individual in the population has reached the specified level.
+	 */
 	public static final String SCALE_FACTOR_KEY = "fitness.hyperneat.scale.factor";
-	public static final String SCALE_TIMES_KEY = "fitness.hyperneat.scale.times";
+	
+	/**
+	 * Property key for the maximum number of rescalings to perform.
+	 */
+	public static final String SCALE_COUNT_KEY = "fitness.hyperneat.scale.times";
+	/**
+	 * Property key for the performance level required before a scaling is performed.
+	 */
 	public static final String SCALE_PERFORMANCE_KEY = "fitness.hyperneat.scale.performance";
+	
+	/**
+	 * Property key for whether the performance values should be recorded before the final scaling has been performed. If false them the performance of individuals (Chromosomes) is set to 0 after each evaluation.
+	 */
 	public static final String SCALE_RIP_KEY = "fitness.hyperneat.scale.recordintermediateperformance";
 
+	
 	protected Properties props;
-
+	protected static Logger logger = Logger.getLogger(HyperNEATFitnessFunction.class);
 	private HyperNEATTranscriber transcriber;
 	private int numThreads;
 	private int evaluatorsFinishedCount;
 	private Evaluator[] evaluators;
 	private Iterator<Chromosome> chromosomesIterator;
+	/**
+	 * The current generation of the evolutionary algorithm.
+	 */
 	protected int generation;
-
-	protected static Logger logger = Logger.getLogger(HyperNEATFitnessFunction.class);
+	
 	protected Random random;
 	/**
-	 * Dimensions of each layer in the substrate network.
+	 * Width of each layer in the substrate network.
 	 */
-	protected int width[], height[];
+	protected int width[];
+	/**
+	 * Height of each layer in the substrate network.
+	 */
+	protected int height[];
+	/**
+	 * Number of layers in the substrate network.
+	 */
 	protected int depth;
+	/**
+	 * Limits the incoming connections to a target neuron to include those from source neurons within the specified range of the target neuron. This is optional.
+	 */ 
 	protected int connectionRange;
 
 	private int scaleFactor = 2;
 	private int scaleTimes = 2;
+	/**
+	 * The performance level required before a scaling is performed.
+	 * @see #SCALE_PERFORMANCE_KEY
+	 */
 	protected double scalePerformance = 0.98f;
+	/**
+	 * The maximum number of rescalings to perform.
+	 * @see #SCALE_COUNT_KEY
+	 */
 	protected int scaleCount = 0;
 	private boolean endRun = false;
 	private boolean scaleRecordIntermediatePerf = true;
 
 	private double bestPerformance;
+	/**
+	 * The best performance in the previous generation.
+	 */
 	protected double lastBestPerformance;
+	/**
+	 * The chromosome with the best performance in the previous generation.
+	 */
 	protected Chromosome lastBestChrom;
+	/**
+	 * The chromosome with the current best performance.
+	 */
 	protected Chromosome newBestChrom;
 
+	/**
+	 * Whether the best performance is lower of higher. If 1 then the best performance is higher, if 0 then the best performance is lower.
+	 */
 	protected int targetPerformanceType = 1;
-	protected double targetPerformance; // may be used by sub-classes
+	/**
+	 * The performance being aimed for.
+	 */
+	protected double targetPerformance;
 
 	/**
 	 * Subclasses may override this method to perform initialise tasks. <strong>Make sure to call this method from the overriding method.</strong>
@@ -81,9 +134,9 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 		connectionRange = transcriber.getConnectionRange();
 
 		targetPerformance = props.getFloatProperty(Evolver.PERFORMANCE_TARGET_KEY, 1);
-		targetPerformanceType = props.getProperty(Evolver.PERFORMANCE_TARGET_TYPE_KEY, "higher").equals("higher") ? 1 : 0;
+		targetPerformanceType = props.getProperty(Evolver.PERFORMANCE_TARGET_TYPE_KEY, "higher").toLowerCase().trim().equals("higher") ? 1 : 0;
 		scalePerformance = props.getDoubleProperty(SCALE_PERFORMANCE_KEY, scalePerformance);
-		scaleTimes = props.getIntProperty(SCALE_TIMES_KEY, scaleTimes);
+		scaleTimes = props.getIntProperty(SCALE_COUNT_KEY, scaleTimes);
 		scaleRecordIntermediatePerf = props.getBooleanProperty(SCALE_RIP_KEY, scaleRecordIntermediatePerf);
 
 		numThreads = Runtime.getRuntime().availableProcessors();
@@ -213,10 +266,12 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 		// System.out.println("finishedEvaluating exit");
 	}
 
+	
 	private class Evaluator extends Thread {
 		private volatile boolean go = false;
 		private int id;
 		private Activator substrate;
+		
 
 		public Evaluator(int id) {
 			this.id = id;
@@ -245,6 +300,7 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 									newBestChrom = chrom;
 								}
 							}
+							
 							// only record performance when all scales have been performed
 							if (!scaleRecordIntermediatePerf && scaleCount < scaleTimes)
 								chrom.setPerformanceValue(0);

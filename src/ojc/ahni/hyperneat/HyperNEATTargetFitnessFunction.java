@@ -117,13 +117,16 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 			for (int y = 0; y < target.length; y++) {
                 for ( int x = 0; x < target[0].length; x++) {
                     double diff = Math.abs(response[y][x] - target[y][x]);
+                    //System.out.println("diff=" + diff + " (" + response[y][x] + " - " + target[y][x] + ")");
                     trialError +=  squareErrorPerOutput ? diff * diff : diff;
                 }
 			}
+			//System.out.println("trial error = " + trialError);
 			error += squareErrorPerTrial ? trialError * trialError : trialError;
 		}
+		//System.out.println("error = " + error);
 		
-		return (int) Math.round((error / maxError) * maxFitnessValue);
+		return maxFitnessValue - (int) Math.round((error / maxError) * maxFitnessValue);
 	}
 
 	@Override

@@ -57,6 +57,7 @@ public class TestTargetFitnessFunction extends HyperNEATTargetFitnessFunction {
 	        	for (int y = 0; y < outputHeight; y++) {
 	                for (int x = 0; x < outputWidth; x++) {
 	                    inputPatterns[t][y][x] = random.nextInt(2);
+	                    targetOutputPatterns[t][y][x] = inputPatterns[t][y][x];
 	                }
 	            }
 	        }
@@ -93,12 +94,14 @@ public class TestTargetFitnessFunction extends HyperNEATTargetFitnessFunction {
 			width[l] *= scaleFactor;
 			height[l] *= scaleFactor;
 		}
-		connectionRange *= scaleFactor;
+    	if (this.connectionRange != -1) {
+    		connectionRange *= scaleFactor;
+    	}
 		createInputAndOutputArrays();
     }
     
     private void createInputAndOutputArrays() {
     	inputPatterns = new double[numTrials][height[0]][width[0]];
-    	targetOutputPatterns = testType == "pass-through" ? inputPatterns : new double[numTrials][height[depth-1]][width[depth-1]];
+    	targetOutputPatterns = new double[numTrials][height[depth-1]][width[depth-1]];
     }
 }

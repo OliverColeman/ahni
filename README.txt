@@ -37,7 +37,8 @@ java -jar ahni.jar <properties file containing parameters for experiment>
 For example:
 java -jar ahni.jar or3.properties
 
-(decent documentation for all the available parameters coming eventually...)  
+See properties/test-pass-through-flip.properties for an example properties 
+file describing the function of each parameter. 
 
 
 DEVELOPMENT AND CREATING NEW EXPERIMENTS

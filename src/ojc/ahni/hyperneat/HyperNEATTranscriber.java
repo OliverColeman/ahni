@@ -66,11 +66,11 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 */ 
 	protected double connectionWeightMax;
 	/**
-	 * Limits the incoming connections to a target neuron to include those from source neurons within the specified range of the target neuron. This is optional.
+	 * Limits the incoming connections to a target neuron to include those from source neurons within the specified range of the target neuron. A value of -1 indicates that this is disabled.
 	 */ 
 	protected int connectionRange;
 	/**
-	 * If true indicates that instead of using a separate output from CPPN to specify weight values for each weight layer, the layer coordinate is input to the CPPN and only a single output from CPPN is used to specify weight values for all weight layers.
+	 * If true indicates that instead of using a separate output from the CPPN to specify weight values for each weight layer in a feed-forward network, the layer coordinate is input to the CPPN and only a single output from CPPN is used to specify weight values for all weight layers.
 	 */ 
 	protected boolean layerEncodingIsInput = false;
 	

@@ -1,5 +1,7 @@
 package ojc.ahni.hyperneat;
 
+import ojc.bain.neuron.rate.NeuronCollectionWithBias;
+
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
@@ -84,7 +86,7 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 		AnjiActivator cppnActivator = cppnTranscriber.transcribe(genotype);
 		AnjiNet cppn = cppnActivator.getAnjiNet();
 		
-		int connectionRange = this.connectionRange == -1 ? Integer.MAX_VALUE : this.connectionRange;
+		int connectionRange = this.connectionRange == -1 ? Integer.MAX_VALUE/4 : this.connectionRange;
 		
 		// determine cppn input mapping
 		// target and source coordinates
@@ -282,9 +284,6 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 										bias[tz - 1][ty][tx] = 0;
 									}
 								}
-
-								// w[wy][wx] = (ty==sy && tx==sx ? 1 : 0);
-
 								// System.out.print("\t" + w[wy][wx]);
 							}
 							// System.out.println();

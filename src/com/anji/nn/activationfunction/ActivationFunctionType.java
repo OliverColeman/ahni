@@ -47,7 +47,7 @@ public class ActivationFunctionType {
      */
     public final static ActivationFunctionType LINEAR = new ActivationFunctionType( "linear" );
     /**
-     * linear
+     * negated linear
      */
     public final static ActivationFunctionType NEGATED_LINEAR = new ActivationFunctionType( "negated-linear" );
 
