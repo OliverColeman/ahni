@@ -198,8 +198,14 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 
 		lastBestChrom = newBestChrom;
 		lastBestPerformance = bestPerformance;
-
+		
 		endRun = false;
+		// If we've completed all scalings and reached the target performance, end the run.
+		if (scaleCount > 0 && scaleCount == scaleTimes && scaleFactor > 1 && ((targetPerformanceType == 1 && bestPerformance >= targetPerformance) || (targetPerformanceType == 0 && bestPerformance <= targetPerformance))) {
+			System.out.println("End run, solution found. bestPerformance: " + bestPerformance + ", targetPerformance: " + targetPerformance);
+			endRun = true;
+		}
+
 		// if we should scale the substrate
 		if (scaleCount < scaleTimes && scaleFactor > 1 && ((targetPerformanceType == 1 && bestPerformance >= scalePerformance) || (targetPerformanceType == 0 && bestPerformance <= scalePerformance))) {
 			// allow sub-class to make necessary changes
@@ -210,12 +216,7 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 
 			scaleCount++;
 		}
-
-		if ((targetPerformanceType == 1 && bestPerformance >= targetPerformance) || (targetPerformanceType == 0 && bestPerformance <= targetPerformance)) {
-			System.out.println("End run, solution found. bestPerformance: " + bestPerformance + ", targetPerformance: " + targetPerformance);
-			endRun = true;
-		}
-
+		
 		generation++;
 	}
 
