@@ -24,6 +24,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	public static final String SUBSTRATE_DEPTH = "ann.hyperneat.depth";
 	public static final String SUBSTRATE_HEIGHT = "ann.hyperneat.height";
 	public static final String SUBSTRATE_WIDTH = "ann.hyperneat.width";
+	public static final String SUBSTRATE_CYCLES_PER_STEP = "ann.hyperneat.cyclesperstep";
 	
 	/**
 	 * The width of each layer in the substrate.
@@ -73,6 +74,11 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 * If true indicates that instead of using a separate output from the CPPN to specify weight values for each weight layer in a feed-forward network, the layer coordinate is input to the CPPN and only a single output from CPPN is used to specify weight values for all weight layers.
 	 */ 
 	protected boolean layerEncodingIsInput = false;
+	/**
+	 * For substrate networks with recurrent connections, the number of activation cycles to perform each time the substrate network is presented with new input and queried for its output. 
+	 */
+	protected int cyclesPerStep;
+	
 	
 	/**
 	 * This method should be called from overriding methods.

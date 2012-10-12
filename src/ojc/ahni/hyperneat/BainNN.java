@@ -11,6 +11,7 @@ public class BainNN implements Activator {
 	private NeuralNetwork nn;
 	private double[] inputs; // We keep a local reference to this so the Bain neural network doesn't go unnecessarily fetching input values from a GPU.
 	private int stepsPerStep;
+	private boolean feedForward;
 	private String name;
 	private int[] outputDimensions;
 	private int outputIndex, outputSize;
@@ -19,11 +20,13 @@ public class BainNN implements Activator {
 	 * Create a new BainNN with the given Bain neural network.
 	 * @param nn The Bain neural network to use.
 	 * @param outputDimensions The size of each dimension in the output. At the moment only one or two dimensional output vectors are supported, so this array should only be of length one or two accordingly. Dimensions should be in the order x, y.
-	 * @param stepsPerStep The number of simulation steps to perform in the Bain neural network for each call to next or nextSequence methods.
+	 * @param stepsPerStep The number of simulation steps to perform in the Bain neural network for each call to next(..) or nextSequence(..) methods. For feed-forward networks this should be equal to the number of layers.
+	 * @param feedForward Indicates if the network topology is strictly feed-forward. This is used to optimise execution of the {@link #nextSequence(double[][])} and {@link #nextSequence(double[][][])} methods. 
 	 */
-	public BainNN(NeuralNetwork nn, int[] outputDimensions, int stepsPerStep) {
+	public BainNN(NeuralNetwork nn, int[] outputDimensions, int stepsPerStep, boolean feedForward) {
 		this.nn = nn;
 		this.stepsPerStep = stepsPerStep;
+		this.feedForward = feedForward;
 		this.outputDimensions = outputDimensions;
 		outputSize = 1;
 		for (int i = 0; i < outputDimensions.length; i++) {
@@ -38,11 +41,14 @@ public class BainNN implements Activator {
 	 * @param nn The Bain neural network to use.
 	 * @param outputDimensions The size of each dimension in the output. At the moment only one or two dimensional output vectors are supported, so this array should only be of length one or two accordingly. Dimensions should be in the order x, y.
 	 * @param stepsPerStep The number of simulation steps to perform in the Bain neural network for each call to next or nextSequence methods.
+	 * @param stepsPerStep The number of simulation steps to perform in the Bain neural network for each call to next(..) or nextSequence(..) methods. For feed-forward networks this should be equal to the number of layers.
+	 * @param feedForward Indicates if the network topology is strictly feed-forward. This is used to optimise execution of the {@link #nextSequence(double[][])} and {@link #nextSequence(double[][][])} methods. 
 	 * @param name A name for this BainNN.
 	 */
-	public BainNN(NeuralNetwork nn, int[] outputDimensions, int stepsPerStep, String name) {
+	public BainNN(NeuralNetwork nn, int[] outputDimensions, int stepsPerStep, boolean feedForward, String name) {
 		this.nn = nn;
 		this.stepsPerStep = stepsPerStep;
+		this.feedForward = feedForward;
 		this.outputDimensions = outputDimensions;
 		this.name = name;
 		outputSize = 1;
@@ -81,25 +87,51 @@ public class BainNN implements Activator {
 
 	@Override
 	public double[][] nextSequence(double[][] stimuli) {
-		int stimCount = stimuli.length;
-		double[][] result = new double[stimCount][];
-		for (int s = 0; s < stimCount; s++) {
-			result[s] = next(stimuli[s]);
+		int stimuliCount = stimuli.length;
+		double[][] result = new double[stimuliCount][outputSize];
+		if (feedForward) {
+			for (int stimuliIndex = 0, responseIndex = 1 - stepsPerStep; stimuliIndex < stimuliCount + stepsPerStep - 1; stimuliIndex++, responseIndex++) {
+				if (stimuliIndex < stimuliCount) {
+					System.arraycopy(stimuli[stimuliIndex], 0, inputs, 0, stimuli[stimuliIndex].length);
+				}
+				nn.step();
+				if (responseIndex >= 0) {
+					System.arraycopy(nn.getNeurons().getOutputs(), outputIndex, result[responseIndex], 0, outputSize);
+				}
+			}
+		} else {
+			for (int s = 0; s < stimuliCount; s++) {
+				result[s] = next(stimuli[s]);
+			}
 		}
 		return result;
 	}
 
 	@Override
 	public double[][] next(double[][] stimuli) {
-		return arrayUnpack(next(arrayPack(stimuli)), outputDimensions[0]);
+		return arrayUnpack(next(arrayPack(stimuli)), outputDimensions[0], outputDimensions[1], 0);
 	}
 
 	@Override
 	public double[][][] nextSequence(double[][][] stimuli) {
-		int stimCount = stimuli.length;
-		double[][][] result = new double[stimCount][][];
-		for (int s = 0; s < stimCount; s++) {
-			result[s] = next(stimuli[s]);
+		int stimuliCount = stimuli.length;
+		double[][][] result = new double[stimuliCount][][];
+		
+		if (feedForward) {
+			for (int stimuliIndex = 0, responseIndex = 1 - stepsPerStep; stimuliIndex < stimuliCount + stepsPerStep - 1; stimuliIndex++, responseIndex++) {
+				if (stimuliIndex < stimuliCount) {
+					double[] input = arrayPack(stimuli[stimuliIndex]);
+					System.arraycopy(input, 0, inputs, 0, input.length);
+				}
+				nn.step();
+				if (responseIndex >= 0) {
+					result[responseIndex] = arrayUnpack(nn.getNeurons().getOutputs(), outputDimensions[0], outputDimensions[1], outputIndex);
+				}
+			}
+		} else {
+			for (int s = 0; s < stimuliCount; s++) {
+				result[s] = next(stimuli[s]);
+			}
 		}
 		return result;
 	}
@@ -171,10 +203,9 @@ public class BainNN implements Activator {
 		return packed;
 	}
 	
-	private double[][] arrayUnpack(double[] packed, int width) {
-		int height = packed.length / width;
+	private double[][] arrayUnpack(double[] packed, int width, int height, int outputIndex) {
 		double[][] unpacked = new double[height][width];
-		int i = 0;
+		int i = outputIndex;
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
 				unpacked[y][x] = packed[i++];

@@ -18,7 +18,7 @@ import com.anji.nn.*;
 import com.anji.util.*;
 
 /**
- * TODO this is currently not much more than a placeholder, it's copied from HyperNEATTranscriberGridNet.
+ * TODO Implement support for recurrent networks.
  * 
  * Constructs a <a href="https://github.com/OliverColeman/bain">Bain</a> neural network from a chromosome using the hypercube (from HyperNEAT) encoding scheme.
  * An {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this class. {@link
@@ -35,7 +35,6 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 	public static final String SUBSTRATE_EXECUTION_MODE = "ann.hyperneat.bain.executionmode";
 	public static final String SUBSTRATE_NEURON_MODEL = "ann.hyperneat.bain.neuron.model";
 	public static final String SUBSTRATE_SYNAPSE_MODEL = "ann.hyperneat.bain.synapse.model";
-	public static final String SUBSTRATE_STEPS_PER_STEP = "ann.hyperneat.stepsperstep";
 	
 	private final static Logger logger = Logger.getLogger(HyperNEATTranscriberBain.class);
 
@@ -299,61 +298,20 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 									} else {
 										((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, 0);
 									}
-									
-									
-									
-									((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, 0);
 								}
-								
-								
-								
-								//synapseWeights[synapseIndex-1] = (sy == ty && sx == tx) ? 1 : 0;
-								
 							}
 						}
 					}
 				}
 			}
 			
-			
-			
-			
-			
-			/*
-			synapseIndex = 0;
-			for (int tz = 1; tz < depth; tz++) {
-				for (int ty = 0; ty < height[tz]; ty++) {
-					for (int tx = 0; tx < width[tz]; tx++) {
-						int bainNeuronIndexTarget = getBainNeuronIndex(tx, ty, tz);
-						for (int sy = 0; sy < height[tz-1]; sy++) {
-							for (int sx = 0; sx < width[tz-1]; sx++) {
-								int bainNeuronIndexSource = getBainNeuronIndex(sx, sy, tz-1);
-								System.out.println(sx + ", " + sy + ", " + (tz-1) + " > " + tx + ", " + ty + ", " + tz + " = " + synapseWeights[synapseIndex] + "   (" + bainNeuronIndexSource + " > " + bainNeuronIndexTarget + ")");
-								synapseIndex++;
-							}
-						}
-					}
-				}
-			}
-			*/
-
-			
-			
-			
-			
-			
-			
-			
-
-
 			if (createNewPhenotype) {
 				int simRes = properties.getIntProperty(SUBSTRATE_SIMULATION_RESOLUTION, 1000);
-				int stepsPerStep = properties.getIntProperty(SUBSTRATE_STEPS_PER_STEP, 1);
 				String execModeName = properties.getProperty(SUBSTRATE_EXECUTION_MODE, null);
 				Kernel.EXECUTION_MODE execMode = execModeName == null ? null : Kernel.EXECUTION_MODE.valueOf(execModeName);
 				NeuralNetwork nn = new NeuralNetwork(simRes, neurons, synapses, execMode);
 				int[] outputDims = new int[]{width[depth-1], height[depth-1]};
-				phenotype = new BainNN(nn, outputDims, stepsPerStep, "network " + genotype.getId());
+				phenotype = new BainNN(nn, outputDims, depth, true, "network " + genotype.getId());
 				logger.info("Substrate has " + neuronCount  + " neurons and " + synapseCount + " synapses.");
 			} else {
 				phenotype.setName("network " + genotype.getId());

@@ -29,7 +29,6 @@ import com.anji.util.*;
  */
 public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 	public static final String HYPERNEAT_ACTIVATION_FUNCTION_KEY = "ann.hyperneat.activation.function";
-	public static final String HYPERNEAT_CYCLES_PER_STEP = "ann.hyperneat.cyclesperstep";
 	
 	private final static Logger logger = Logger.getLogger(HyperNEATTranscriberGridNet.class);
 
@@ -37,7 +36,6 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 												// chromosomes
 
 	private ActivationFunction activationFunction;
-	private int cyclesPerStep;
 	private boolean layerEncodingIsInput = false;
 	
 	public HyperNEATTranscriberGridNet() {
@@ -56,7 +54,7 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 		activationFunction = ActivationFunctionFactory.getInstance().get(props.getProperty(HYPERNEAT_ACTIVATION_FUNCTION_KEY));
 
 		if (!feedForward)
-			cyclesPerStep = props.getIntProperty(HYPERNEAT_CYCLES_PER_STEP);
+			cyclesPerStep = props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP);
 
 		cppnTranscriber = (AnjiNetTranscriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
 	}
