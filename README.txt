@@ -1,26 +1,7 @@
 AHNI - Another HyperNEAT Implementation
 
-Copyright Oliver J. Coleman, 2012. oliver.coleman@gmail.com
-
-
-ABOUT
-
-AHNI implements the HyperNEAT neuroevolution algorithm:
-Stanley, K.O., D’Ambrosio, D.B., Gauci, J.: A Hypercube-Based Indirect 
-Encoding for Evolving Large-Scale Neural Networks. Artificial Life. 15, 
-185–212 (2009).
-
-AHNI was originally written for my Honours project:  
-Coleman, O.J.: Evolving neural networks for visual processing, 
-BS Thesis. University of New South Wales (2010).
-
-The Object Recognition experiments in the package 
-ojc.ahni.experiments.objectrecognition correspond to those described in this
-report (the robot navigation experiments have been removed, contact me to get
-the code for these).
- 
-It is now being extended for my PhD: "Evolving plastic neural 
-networks for online learning". For more details see http://ojcoleman.com .
+AHNI implements the HyperNEAT neuroevolution algorithm, see 
+http://eplex.cs.ucf.edu/hyperNEATpage/HyperNEAT.html
 
 The latest version is available at, and issues should be posted at,
 https://github.com/OliverColeman/ahni
@@ -91,6 +72,13 @@ you were thinking about it.
 No, the package names don't follow the Java conventions of reversed URLs, it
 didn't make much sense for someone like me as there aren't any domains that I
 want to attach the project to.
+
+AHNI was originally written for my Honours project:  
+Coleman, O.J.: Evolving neural networks for visual processing, 
+BS Thesis. University of New South Wales (2010).
+
+It is now being extended for my PhD: "Evolving plastic neural 
+networks for online learning". For more details see http://ojcoleman.com .
 
 
 LICENSE
