@@ -6,6 +6,7 @@ com.anji.nn.activationfunction
 com.anji.persistence
 com.anji.run
 com.anji.util
+ojc.ahni
 ojc.ahni.experiments
 ojc.ahni.experiments.objectrecognition
 ojc.ahni.hyperneat
