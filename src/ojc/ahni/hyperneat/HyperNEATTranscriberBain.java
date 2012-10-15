@@ -21,8 +21,7 @@ import com.anji.util.*;
  * TODO Implement support for recurrent networks.
  * 
  * Constructs a <a href="https://github.com/OliverColeman/bain">Bain</a> neural network from a chromosome using the hypercube (from HyperNEAT) encoding scheme.
- * An {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this class. {@link
- * com.anji.integration.ActivatorTranscriber.getNet()} or {@link com.anji.integration.ActivatorTranscriber.getPhenotype()} is then used to get the resulting
+ * An {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this class. {@link com.anji.integration.ActivatorTranscriber#newActivator(Chromosome)} is then used to get the resulting
  * network.
  * 
  * To transcribe the neural network from a chromosome a connective pattern producing network (CPPN) is created from the chromosome, and then this is "queried"
@@ -60,8 +59,10 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		
 		neuronLayerSize = new int[depth];
 		bainIndexForNeuronLayer = new int[depth];
-		ffSynapseLayerSize = new int[depth-1];
-		bainIndexForFFSynapseLayer = new int[depth-1];
+		if (feedForward) {
+			ffSynapseLayerSize = new int[depth-1];
+			bainIndexForFFSynapseLayer = new int[depth-1];
+		}
 		resize(width, height, -1);  //Initialise above arrays.
 		
 		cppnTranscriber = (AnjiNetTranscriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
@@ -74,9 +75,6 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		return newBainNN(genotype, null);
 	}
 
-	/**
-	 * @see Transcriber#transcribe(Chromosome, T substrate)
-	 */
 	public BainNN transcribe(Chromosome genotype, BainNN substrate) throws TranscriberException {
 		return newBainNN(genotype, substrate);
 	}
@@ -279,8 +277,6 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 								
 								assert synapseIndex == getBainSynapseIndex(tx, ty, tz, sx, sy);
 								
-								synapseIndex++;
-
 								// bias
 								if (enableBias && sy == ty && sx == tx) {
 									double biasVal;
@@ -299,6 +295,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 										((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, 0);
 									}
 								}
+								synapseIndex++;
 							}
 						}
 					}
@@ -311,7 +308,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 				Kernel.EXECUTION_MODE execMode = execModeName == null ? null : Kernel.EXECUTION_MODE.valueOf(execModeName);
 				NeuralNetwork nn = new NeuralNetwork(simRes, neurons, synapses, execMode);
 				int[] outputDims = new int[]{width[depth-1], height[depth-1]};
-				phenotype = new BainNN(nn, outputDims, depth, true, "network " + genotype.getId());
+				phenotype = new BainNN(nn, outputDims, depth-1, true, "network " + genotype.getId());
 				logger.info("Substrate has " + neuronCount  + " neurons and " + synapseCount + " synapses.");
 			} else {
 				phenotype.setName("network " + genotype.getId());

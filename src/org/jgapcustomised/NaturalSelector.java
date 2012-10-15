@@ -186,7 +186,7 @@ public abstract class NaturalSelector {
     }
 
     /**
-     * @param b true if elitisim is to be enabled
+     * @param p true if elitism is to be enabled
      */
     public void setElitismProportion(double p) {
         elitismProportion = p;
@@ -200,7 +200,7 @@ public abstract class NaturalSelector {
     }
 
     /**
-     * @param i minimum size a specie must be to support an elite chromosome
+     * @param sf minimum size a specie must be to support an elite chromosome
      */
     public void setSpeciatedFitness(boolean sf) {
         speciatedFitness = sf;

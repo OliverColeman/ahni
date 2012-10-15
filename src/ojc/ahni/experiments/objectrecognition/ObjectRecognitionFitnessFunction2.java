@@ -61,9 +61,6 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
      * underlying network is not memorizing the sequence of inputs. Calculation of the fitness based
      * on error is delegated to the subclass. This method adjusts fitness for network size, based on
      * configuration.
-     *
-     * @param genotypes <code>List</code> contains <code>Chromosome</code> objects.
-     * @see TargetFitnessFunction#calculateErrorFitness(double[][], double, double)
      */
     public void initialiseEvaluation() {
     	//generate trials

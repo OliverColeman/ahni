@@ -231,9 +231,6 @@ public class Species {
 	/**
 	 * update internal variables (fittest, stagnantGenerationsCount) to begin
 	 * new generation
-	 * 
-	 * @param keepers
-	 *            <code>Collection</code> contains chromosome objects
 	 */
 	public void newGeneration() {
 		age++;

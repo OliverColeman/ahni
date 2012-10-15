@@ -70,19 +70,10 @@ public AnjiActivator( AnjiNet aNet, int aNumCycles ) throws IllegalArgumentExcep
 			throw new IllegalArgumentException( "min and max values for response nodes differ" );
 }
 
-/**
- * @return nextSequence output pattern
- * @see AnjiActivator#nextSequence(double[])
- */
 public double[] next() {
 	return next( (double[]) null );
 }
 
-/**
- * @param newInputValues input activation pattern to be "shown" to network; if null, uses
- * previous values
- * @return result of activation
- */
 public double[] next( double[] newInputValues ) {
 	if ( newInputValues != null )
 		inputPattern.setValues( newInputValues );
@@ -109,11 +100,6 @@ public double[] next( double[] newInputValues ) {
 	return result;
 }
 
-/**
- * @param newInputValues input pattern sequence
- * @return nextSequence output pattern sequence
- * @see AnjiActivator#nextSequence(double[])
- */
 public double[][] nextSequence( double[][] newInputValues ) {
 	double[][] result = new double[ newInputValues.length ][];
 	for ( int i = 0; i < newInputValues.length; ++i ) {
@@ -122,18 +108,10 @@ public double[][] nextSequence( double[][] newInputValues ) {
 	return result;
 }
 
-/**
- * @param stimuli
- * @return double[][] output array given input <code>stimuli</code>.
- */
 public double[][] next( double[][] stimuli ) {
     throw new IllegalArgumentException("AnjiActivator can only accept one dimensional input patterns");
 }
 
-/**
- * @param stimuli
- * @return double[][][] sequence of output arrays given input sequence <code>stimult</code>.
- */
 public double[][][] nextSequence( double[][][] stimuli ) {
     throw new IllegalArgumentException("AnjiActivator can only accept one dimensional input patterns");
 }

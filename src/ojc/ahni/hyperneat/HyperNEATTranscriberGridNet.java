@@ -18,18 +18,16 @@ import com.anji.util.*;
 
 /**
  * Constructs a {@link ojc.ahni.hyperneat.GridNet} neural network from a chromosome using the hypercube (from HyperNEAT) encoding scheme. An
- * {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this class. {@link
- * com.anji.integration.ActivatorTranscriber.getNet()} or {@link com.anji.integration.ActivatorTranscriber.getPhenotype()} is then used to get the resulting
- * network.
+ * {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this class.
  * 
- * To transcribe the neural network from a chromosome a connective pattern producing network (CPPN) is created from the chromosome, and then this is "queried"
- * to determine the weights of the neural network. The CPPN is an {@link com.anji.nn.AnjiNet}.
+ * To transcribe the neural network from a {@link Chromosome} a connective pattern producing network (CPPN) is created from the Chromosome, and then this is
+ * "queried" to determine the weight of each connection in the neural network. The CPPN is an {@link com.anji.nn.AnjiNet}.
  * 
  * @author Oliver Coleman
  */
 public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 	public static final String HYPERNEAT_ACTIVATION_FUNCTION_KEY = "ann.hyperneat.activation.function";
-	
+
 	private final static Logger logger = Logger.getLogger(HyperNEATTranscriberGridNet.class);
 
 	private AnjiNetTranscriber cppnTranscriber; // creates AnjiNets from
@@ -37,7 +35,7 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 
 	private ActivationFunction activationFunction;
 	private boolean layerEncodingIsInput = false;
-	
+
 	public HyperNEATTranscriberGridNet() {
 	}
 
@@ -50,7 +48,7 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 	 */
 	public void init(Properties props) {
 		super.init(props);
-		
+
 		activationFunction = ActivationFunctionFactory.getInstance().get(props.getProperty(HYPERNEAT_ACTIVATION_FUNCTION_KEY));
 
 		if (!feedForward)
@@ -66,15 +64,12 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 		return newGridNet(genotype, null);
 	}
 
-	/**
-	 * @see Transcriber#transcribe(Chromosome, T substrate)
-	 */
 	public GridNet transcribe(Chromosome genotype, Activator substrate) throws TranscriberException {
 		return newGridNet(genotype, (GridNet) substrate);
 	}
 
 	/**
-	 * create a new neural network from the a genotype.
+	 * Create a new neural network from the a genotype.
 	 * 
 	 * @param genotype chromosome to transcribe
 	 * @return phenotype If given this will be updated and returned, if NULL then a new network will be created.
@@ -83,9 +78,9 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 	public GridNet newGridNet(Chromosome genotype, GridNet phenotype) throws TranscriberException {
 		AnjiActivator cppnActivator = cppnTranscriber.transcribe(genotype);
 		AnjiNet cppn = cppnActivator.getAnjiNet();
-		
-		int connectionRange = this.connectionRange == -1 ? Integer.MAX_VALUE/4 : this.connectionRange;
-		
+
+		int connectionRange = this.connectionRange == -1 ? Integer.MAX_VALUE / 4 : this.connectionRange;
+
 		// determine cppn input mapping
 		// target and source coordinates
 		int cppnIdxTX = -1, cppnIdxTY = -1, cppnIdxTZ = -1, cppnIdxSX = -1, cppnIdxSY = -1;

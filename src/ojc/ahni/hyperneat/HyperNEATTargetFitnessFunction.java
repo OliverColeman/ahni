@@ -1,5 +1,7 @@
 package ojc.ahni.hyperneat;
 
+import java.util.Arrays;
+
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
@@ -106,9 +108,7 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 			maxErrorPerTrial *= maxErrorPerTrial;
 		}
 		double maxError = inputPatterns.length * maxErrorPerTrial;
-		
 		double[][][] responses = substrate.nextSequence(inputPatterns);
-		
 		double error = 0;
 		for ( int i = 0; i < responses.length; ++i ) {
 			double trialError = 0;
@@ -117,15 +117,11 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 			for (int y = 0; y < target.length; y++) {
                 for ( int x = 0; x < target[0].length; x++) {
                     double diff = Math.abs(response[y][x] - target[y][x]);
-                    //System.out.println("diff=" + diff + " (" + response[y][x] + " - " + target[y][x] + ")");
                     trialError +=  squareErrorPerOutput ? diff * diff : diff;
                 }
 			}
-			//System.out.println("trial error = " + trialError);
 			error += squareErrorPerTrial ? trialError * trialError : trialError;
 		}
-		//System.out.println("error = " + error);
-		
 		return maxFitnessValue - (int) Math.round((error / maxError) * maxFitnessValue);
 	}
 

@@ -101,7 +101,7 @@ public AnjiActivator transcribe(Chromosome genotype) throws TranscriberException
 }
 
 /**
- * @see Transcriber#transcribe(Chromosome, T)
+ * @see Transcriber#transcribe(Chromosome, Activator)
  * Note: this method has been added to conform with the Transcriber interface, 
  * but does not use the substrate argument for performance gains.
  */

@@ -165,9 +165,9 @@ public class Genotype implements Serializable {
     }
     
      /**
-     * @param chromosomes <code>Collection</code> contains Chromosome objects
-     * @see Genotype#addChromosome(Chromosome)
-     */
+      * Add the specified chromosomes to this Genotype.
+      * @param chromosomes A collection of Chromosome objects.
+      */
     protected void addChromosomes(Collection<Chromosome> chromosomes) {
         Iterator<Chromosome> iter = chromosomes.iterator();
         while (iter.hasNext()) {
@@ -177,8 +177,8 @@ public class Genotype implements Serializable {
     }
 
     /**
-     * @param chromosomeMaterial <code>Collection</code> contains ChromosomeMaterial objects
-     * @see Genotype#addChromosomeFromMaterial(ChromosomeMaterial)
+     * Add Chromosomes to this Genotype described by the given ChromosomeMaterial objects.
+     *  @param chromosomeMaterial A collection of ChromosomeMaterial objects.
      */
     protected void addChromosomesFromMaterial(Collection<ChromosomeMaterial> chromosomeMaterial) {
         Iterator<ChromosomeMaterial> iter = chromosomeMaterial.iterator();

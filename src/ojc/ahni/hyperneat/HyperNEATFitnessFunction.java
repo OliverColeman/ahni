@@ -221,7 +221,7 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 	}
 
 	/**
-	 * Evaluate an individual genotype. This method is called from {@link #evaluate(List<Chromosome>} , and must be overridden in order to evaluate the
+	 * Evaluate an individual genotype. This method is called from {@link #evaluate(List)} , and must be overridden in order to evaluate the
 	 * genotypes.
 	 * 
 	 * @param genotype the genotype being evaluated. This is not usually required but may be useful in some cases.

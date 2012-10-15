@@ -32,8 +32,8 @@ public interface Activator extends XmlPersistable {
  * @return Object output array of type double with dimensions dependent on
  * implementation, given last provided input activation via
  * <code>nextSequence(double[])</code> or <code>nextSequence(double[][])</code>.
- * @see Activator#nextSequence(double[])
  * @see Activator#nextSequence(double[][])
+ * @see Activator#nextSequence(double[][][])
  */
 public Object next();
 
