@@ -124,25 +124,21 @@ public class ActivationFunctionType {
             
             types.put( ActivationFunctionType.LINEAR.toString(), ActivationFunctionType.LINEAR );
             types.put( ActivationFunctionType.CLAMPED_LINEAR.toString(), ActivationFunctionType.CLAMPED_LINEAR );
-            //types.put( ActivationFunctionType.NEGATED_LINEAR.toString(), ActivationFunctionType.NEGATED_LINEAR );
-            //types.put( ActivationFunctionType.SIGNED_CLAMPED_LINEAR.toString(), ActivationFunctionType.SIGNED_CLAMPED_LINEAR );
+            types.put( ActivationFunctionType.NEGATED_LINEAR.toString(), ActivationFunctionType.NEGATED_LINEAR );
+            types.put( ActivationFunctionType.SIGNED_CLAMPED_LINEAR.toString(), ActivationFunctionType.SIGNED_CLAMPED_LINEAR );
             types.put( ActivationFunctionType.ABSOLUTE.toString(), ActivationFunctionType.ABSOLUTE );
-            //types.put( ActivationFunctionType.CLAMPED_ABSOLUTE.toString(), ActivationFunctionType.CLAMPED_ABSOLUTE );
+            types.put( ActivationFunctionType.CLAMPED_ABSOLUTE.toString(), ActivationFunctionType.CLAMPED_ABSOLUTE );
             types.put( ActivationFunctionType.STEP.toString(), ActivationFunctionType.STEP );
             types.put( ActivationFunctionType.CONVERT_TO_SIGNED.toString(), ActivationFunctionType.CONVERT_TO_SIGNED );
             types.put( ActivationFunctionType.INVERSE_ABS.toString(), ActivationFunctionType.INVERSE_ABS );
-            
             types.put( ActivationFunctionType.DIVIDE.toString(), ActivationFunctionType.DIVIDE );
-            
             types.put( ActivationFunctionType.SIGMOID.toString(), ActivationFunctionType.SIGMOID );
-            //types.put( ActivationFunctionType.BIPOLAR_SIGMOID.toString(), ActivationFunctionType.BIPOLAR_SIGMOID );
+            types.put( ActivationFunctionType.BIPOLAR_SIGMOID.toString(), ActivationFunctionType.BIPOLAR_SIGMOID );
             types.put( ActivationFunctionType.GAUSSIAN.toString(), ActivationFunctionType.GAUSSIAN );
             types.put( ActivationFunctionType.SINE.toString(), ActivationFunctionType.SINE );
-            
-            
-            //types.put( ActivationFunctionType.COSINE.toString(), ActivationFunctionType.COSINE );
-            //types.put( ActivationFunctionType.TANH.toString(), ActivationFunctionType.TANH );
-            //types.put( ActivationFunctionType.TANH_CUBIC.toString(), ActivationFunctionType.TANH_CUBIC );
+            types.put( ActivationFunctionType.COSINE.toString(), ActivationFunctionType.COSINE );
+            types.put( ActivationFunctionType.TANH.toString(), ActivationFunctionType.TANH );
+            types.put( ActivationFunctionType.TANH_CUBIC.toString(), ActivationFunctionType.TANH_CUBIC );
             
             typesArray = new ActivationFunctionType[types.size()];
             typesArray = (ActivationFunctionType[]) types.values().toArray(typesArray);

@@ -457,14 +457,18 @@ public class Genotype implements Serializable {
             it = m_chromosomes.iterator();
             while (it.hasNext()) {
                 Chromosome c = it.next();
-                if (fittest == null || fittest.getFitnessValue() < c.getFitnessValue())
+                if (fittest == null || fittest.getFitnessValue() < c.getFitnessValue()) {
                 	fittest = c;
-                
+                }
                 if (bestPerforming == null || 
-                		((targetPerformanceType == 1 && bestPerforming.getPerformanceValue() < c.getPerformanceValue()) || (targetPerformanceType == 0 && bestPerforming.getPerformanceValue() > c.getPerformanceValue())) ||
-                		(bestPerforming.getPerformanceValue() == c.getPerformanceValue() && bestPerforming.getFitnessValue() < c.getFitnessValue()))
+                		((targetPerformanceType == 1 && bestPerforming.getPerformanceValue() > c.getPerformanceValue()) || (targetPerformanceType == 0 && bestPerforming.getPerformanceValue() < c.getPerformanceValue())) ||
+                		(bestPerforming.getPerformanceValue() == c.getPerformanceValue() && bestPerforming.getFitnessValue() < c.getFitnessValue())) {
                 	bestPerforming = c;
+                	//System.out.println("bpv="+bestPerforming.getPerformanceValue());
+                }
             }
+            
+            
             
             //check if best fitness has dropped a lot (indication that evaluation function is too inconsistent) 
             if (oldFittest != null) {

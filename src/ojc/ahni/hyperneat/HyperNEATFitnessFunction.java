@@ -136,7 +136,7 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 		targetPerformance = props.getFloatProperty(Evolver.PERFORMANCE_TARGET_KEY, 1);
 		targetPerformanceType = props.getProperty(Evolver.PERFORMANCE_TARGET_TYPE_KEY, "higher").toLowerCase().trim().equals("higher") ? 1 : 0;
 		scalePerformance = props.getDoubleProperty(SCALE_PERFORMANCE_KEY, scalePerformance);
-		scaleTimes = props.getIntProperty(SCALE_COUNT_KEY, scaleTimes);
+		scaleTimes = Math.max(0, props.getIntProperty(SCALE_COUNT_KEY, scaleTimes));
 		scaleRecordIntermediatePerf = props.getBooleanProperty(SCALE_RIP_KEY, scaleRecordIntermediatePerf);
 
 		numThreads = Runtime.getRuntime().availableProcessors();
@@ -201,7 +201,7 @@ public abstract class HyperNEATFitnessFunction implements BulkFitnessFunction, C
 		
 		endRun = false;
 		// If we've completed all scalings and reached the target performance, end the run.
-		if (scaleCount > 0 && scaleCount == scaleTimes && scaleFactor > 1 && ((targetPerformanceType == 1 && bestPerformance >= targetPerformance) || (targetPerformanceType == 0 && bestPerformance <= targetPerformance))) {
+		if (scaleCount >= 0 && scaleCount == scaleTimes && scaleFactor > 1 && ((targetPerformanceType == 1 && bestPerformance >= targetPerformance) || (targetPerformanceType == 0 && bestPerformance <= targetPerformance))) {
 			System.out.println("End run, solution found. bestPerformance: " + bestPerformance + ", targetPerformance: " + targetPerformance);
 			endRun = true;
 		}

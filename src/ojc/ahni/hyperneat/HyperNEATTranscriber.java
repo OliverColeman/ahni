@@ -106,9 +106,9 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		connectionWeightMin = props.getFloatProperty(HYPERNEAT_CONNECTION_WEIGHT_MIN);
 		connectionWeightMax = props.getFloatProperty(HYPERNEAT_CONNECTION_WEIGHT_MAX);
 		connectionRange = props.getIntProperty(HYPERNEAT_CONNECTION_RANGE, -1);
+		depth = props.getIntProperty(SUBSTRATE_DEPTH);
 		cyclesPerStep = feedForward ? depth-1 : props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP, 1);
 		
-		depth = props.getIntProperty(SUBSTRATE_DEPTH);
 		String[] heightStr = props.getProperty(SUBSTRATE_HEIGHT).split(",");
 		String[] widthStr = props.getProperty(SUBSTRATE_WIDTH).split(",");
 		height = new int[depth];

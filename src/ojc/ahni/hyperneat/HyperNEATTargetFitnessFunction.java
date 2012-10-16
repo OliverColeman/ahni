@@ -108,7 +108,7 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 			maxErrorPerTrial *= maxErrorPerTrial;
 		}
 		double maxError = inputPatterns.length * maxErrorPerTrial;
-		double[][][] responses = substrate.nextSequence(inputPatterns);
+		double[][][] responses = substrate.nextSequence(inputPatterns);			
 		double error = 0;
 		for ( int i = 0; i < responses.length; ++i ) {
 			double trialError = 0;
