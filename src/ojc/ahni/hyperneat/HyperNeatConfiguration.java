@@ -61,41 +61,11 @@ public class HyperNeatConfiguration extends NeatConfiguration {
     public void init(Properties newProps) throws InvalidConfigurationException {
     	super.init(newProps);
         props = newProps;
-        short stimulusSize, responseSize;
-		//automatically determine input and output size for hyperneat CPPN
-    	boolean feedForward = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_FEED_FORWARD);
-        boolean enableBias = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_ENABLE_BIAS);
-        boolean includeDelta = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_INCLUDE_DELTA);
-        boolean includeAngle = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_INCLUDE_ANGLE);
-        boolean layerEncodingIsInput = props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_LAYER_ENCODING);
-        short depth = props.getShortProperty(HyperNEATTranscriber.SUBSTRATE_DEPTH);
         
-        //bias, sx, sy, tx, ty
-    	stimulusSize = 5;
-    	if (includeDelta)
-    		stimulusSize += 2; //x and y delta    	
-    	if (depth > 2 && layerEncodingIsInput) { //if depth == 2 network necessarily feed forward, and only one layer of connections can exist
-    		stimulusSize++; //target layer (tz)
-    		if (!feedForward) {
-    			stimulusSize++; //source layer (sz) (could be any layer, not just previous layer)
-    			if (includeDelta) //delta only when not feed forward (z delta always 1 for FF network)
-            		stimulusSize++; //z delta
-    		}
-    	}
-    	if (includeAngle)
-    		stimulusSize++; //angle between source and target using only x,y coords of source and target  
+        HyperNEATTranscriber transcriber = (HyperNEATTranscriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
+		short stimulusSize = transcriber.getCPPNInputCount();
+		short responseSize = transcriber.getCPPNOutputCount();
 		
-    	if (layerEncodingIsInput) {
-        	responseSize = 1; //weight value output
-        	if (enableBias)
-        		responseSize++; //bias value output
-    	}
-    	else {
-    		responseSize = (short)(depth-1); //weight value output
-        	if (enableBias)
-        		responseSize += (short)(depth-1); //bias value output
-    	}
-    	
     	logger.info("CPPN: input size: " + stimulusSize + "  output size: " + responseSize);
         
         ChromosomeMaterial sample = NeatChromosomeUtility.newSampleChromosomeMaterial(

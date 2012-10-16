@@ -78,6 +78,16 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 * For substrate networks with recurrent connections, the number of activation cycles to perform each time the substrate network is presented with new input and queried for its output. 
 	 */
 	protected int cyclesPerStep;
+	/**
+	 * The number of inputs to the CPPN.
+	 * @see #getCPPNInputCount()
+	 */
+	protected short cppnInputCount;
+	/**
+	 * The number of outputs from the CPPN.
+	 * @see #getCPPNOutputCount()
+	 */
+	protected short cppnOutputCount;
 	
 	
 	/**
@@ -90,20 +100,54 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		includeDelta = props.getBooleanProperty(HYPERNEAT_INCLUDE_DELTA);
 		includeAngle = props.getBooleanProperty(HYPERNEAT_INCLUDE_ANGLE);
 		layerEncodingIsInput = props.getBooleanProperty(HYPERNEAT_LAYER_ENCODING, layerEncodingIsInput);
+		// layerEncodingIsInput must be used for recurrent networks.
+		layerEncodingIsInput = !feedForward ? true : layerEncodingIsInput;
 		connectionExprThresh = props.getFloatProperty(HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD);
 		connectionWeightMin = props.getFloatProperty(HYPERNEAT_CONNECTION_WEIGHT_MIN);
 		connectionWeightMax = props.getFloatProperty(HYPERNEAT_CONNECTION_WEIGHT_MAX);
 		connectionRange = props.getIntProperty(HYPERNEAT_CONNECTION_RANGE, -1);
+		cyclesPerStep = feedForward ? depth-1 : props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP, 1);
 		
 		depth = props.getIntProperty(SUBSTRATE_DEPTH);
 		String[] heightStr = props.getProperty(SUBSTRATE_HEIGHT).split(",");
 		String[] widthStr = props.getProperty(SUBSTRATE_WIDTH).split(",");
 		height = new int[depth];
 		width = new int[depth];
+		if (heightStr.length != depth ||widthStr.length != depth) {
+			throw new IllegalArgumentException("Number of comma-separated layer dimensions in " + SUBSTRATE_HEIGHT + " or " + SUBSTRATE_WIDTH + " does not match " + SUBSTRATE_DEPTH + ".");
+		}
 		for (int l = 0; l < depth; l++) {
 			height[l] = Integer.parseInt(heightStr[l]);
 			width[l] = Integer.parseInt(widthStr[l]);
 		}
+		
+        // Determine CPPN input and output sizes.
+    	cppnInputCount = 5; // Bias, sx, sy, tx, ty.
+    	if (includeDelta) {
+    		cppnInputCount += 2; //x and y delta
+    	}
+    	if (feedForward && layerEncodingIsInput && depth>2 || !feedForward) {
+    		cppnInputCount++; //target layer (tz)
+			if (!feedForward) {
+				cppnInputCount++; //source layer (sz) (could be any layer, not just previous layer)
+				if (includeDelta) {
+					cppnInputCount++; //z delta
+				}
+			}
+		}
+    	if (includeAngle) {
+    		cppnInputCount++; //angle between source and target using only x,y coords of source and target
+    	}
+    	if (layerEncodingIsInput) {
+        	cppnOutputCount = 1; //weight value output
+        	if (enableBias)
+        		cppnOutputCount++; //bias value output
+    	}
+    	else {
+    		cppnOutputCount = (short)(depth-1); //weight value output
+        	if (enableBias)
+        		cppnOutputCount += (short)(depth-1); //bias value output
+    	}
 	}
 	
 	/**
@@ -139,5 +183,16 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		this.width = width;
 		this.height = height;
 		this.connectionRange = connectionRange;
+	}
+	
+	/**
+	 * The number of inputs to the CPPN.
+	 */
+	public short getCPPNInputCount() {
+		return cppnInputCount;
+	}
+
+	public short getCPPNOutputCount() {
+		return cppnOutputCount;
 	}
 }
