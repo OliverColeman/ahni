@@ -28,7 +28,7 @@ public class SignedClampedLinearActivationFunction implements ActivationFunction
 	/**
 	 * id string
 	 */
-	public final static String NAME = ActivationFunctionType.SIGNED_CLAMPED_LINEAR.toString();
+	public final static String NAME = "signed-clamped-linear";
 
 	/**
 	 * @see java.lang.Object#toString()

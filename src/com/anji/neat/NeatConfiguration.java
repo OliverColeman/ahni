@@ -20,6 +20,7 @@
 package com.anji.neat;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
 
@@ -36,7 +37,8 @@ import org.jgapcustomised.impl.WeightedRouletteSelector;
 
 import com.anji.integration.ActivatorTranscriber;
 import com.anji.integration.SimpleSelector;
-import com.anji.nn.activationfunction.ActivationFunctionType;
+import com.anji.nn.activationfunction.ActivationFunction;
+import com.anji.nn.activationfunction.ActivationFunctionFactory;
 import com.anji.util.Properties;
 import com.anji.util.Randomizer;
 
@@ -174,10 +176,10 @@ public class NeatConfiguration extends Configuration {
     protected NeatCrossoverReproductionOperator crossoverOper = null;
     protected double maxConnectionWeight = Float.MAX_VALUE;
     protected double minConnectionWeight = -Float.MAX_VALUE;
-    protected ActivationFunctionType inputActivationType;
-    protected ActivationFunctionType outputActivationType;
-    protected ActivationFunctionType hiddenActivationType;
-    protected ActivationFunctionType[] hiddenActivationTypeRandomAllowed;
+    protected String inputActivationType;
+    protected String outputActivationType;
+    protected String hiddenActivationType;
+    protected String[] hiddenActivationTypeRandomAllowed;
     private NeatIdMap neatIdMap;
 
     /**
@@ -292,26 +294,18 @@ public class NeatConfiguration extends Configuration {
 
         // population
         setPopulationSize(props.getIntProperty(POPUL_SIZE_KEY, DEFAULT_POPUL_SIZE));
-        hiddenActivationType = ActivationFunctionType.valueOf(props.getProperty(INITIAL_TOPOLOGY_ACTIVATION_KEY, ActivationFunctionType.SIGMOID.toString()));
+        hiddenActivationType = props.getProperty(INITIAL_TOPOLOGY_ACTIVATION_KEY, "sigmoid");
         
-        if (hiddenActivationType.equals(ActivationFunctionType.RANDOM)) {
-        	String[] typeStr = props.getProperty(INITIAL_TOPOLOGY_ACTIVATION_RANDOM_ALLOWED_KEY, "sigmoid, gaussian, absolute, sine").split(",");
-        	hiddenActivationTypeRandomAllowed = new ActivationFunctionType[typeStr.length];
-    		for (int i = 0; i < typeStr.length; i++) {
-    			hiddenActivationTypeRandomAllowed[i] = ActivationFunctionType.valueOf(typeStr[i].trim().toLowerCase());
-    		}
+        if (hiddenActivationType.equals("random")) {
+        	hiddenActivationTypeRandomAllowed = props.getProperty(INITIAL_TOPOLOGY_ACTIVATION_RANDOM_ALLOWED_KEY, "sigmoid, gaussian, absolute, sine").split(",");
+        	for (int i = 0; i < hiddenActivationTypeRandomAllowed.length; i++) {
+        		hiddenActivationTypeRandomAllowed[i] = hiddenActivationTypeRandomAllowed[i].trim().toLowerCase();
+        	}
         }
 
-        inputActivationType = ActivationFunctionType.valueOf(props.getProperty(INITIAL_TOPOLOGY_ACTIVATION_INPUT_KEY, null));
-        if (inputActivationType == null) {
-            inputActivationType = hiddenActivationType;
-        }
-
-        outputActivationType = ActivationFunctionType.valueOf(props.getProperty(INITIAL_TOPOLOGY_ACTIVATION_OUTPUT_KEY, null));
-        if (outputActivationType == null) {
-            outputActivationType = hiddenActivationType;
-        }
-
+        inputActivationType = props.getProperty(INITIAL_TOPOLOGY_ACTIVATION_INPUT_KEY, hiddenActivationType);
+        outputActivationType = props.getProperty(INITIAL_TOPOLOGY_ACTIVATION_OUTPUT_KEY, hiddenActivationType);
+        
         //System.out.println(props.getProperty(INITIAL_TOPOLOGY_ACTIVATION_INPUT_KEY, null ));
         //System.out.println(inputActivationType + ", " + hiddenActivationType + ", " + outputActivationType);
 
@@ -390,20 +384,25 @@ public class NeatConfiguration extends Configuration {
      * @return NeuronAllele
      */
     public NeuronAllele newNeuronAllele(NeuronType type) {
-        ActivationFunctionType act;
+        String funcType;
         if (NeuronType.INPUT.equals(type)) {
-            act = inputActivationType;
+        	funcType = inputActivationType;
         } else if (NeuronType.OUTPUT.equals(type)) {
-            act = outputActivationType;
+        	funcType = outputActivationType;
         } else {
-            act = hiddenActivationType;
+        	funcType = hiddenActivationType;
+        }
+        
+        ActivationFunction function;
+        if (funcType.equals("random")) {
+        	String randType = hiddenActivationTypeRandomAllowed[getRandomGenerator().nextInt(hiddenActivationTypeRandomAllowed.length)];
+        	function = ActivationFunctionFactory.valueOf(randType);
+        }
+        else {
+        	function = ActivationFunctionFactory.valueOf(funcType);
         }
 
-        if (act.equals(ActivationFunctionType.RANDOM)) {
-            act = hiddenActivationTypeRandomAllowed[getRandomGenerator().nextInt(hiddenActivationTypeRandomAllowed.length)];
-        }
-
-        NeuronGene gene = new NeuronGene(type, nextInnovationId(), act);
+        NeuronGene gene = new NeuronGene(type, nextInnovationId(), function);
         return new NeuronAllele(gene);
     }
 
@@ -423,12 +422,17 @@ public class NeatConfiguration extends Configuration {
             neatIdMap.putNeuronId(connectionId, id);
         }
 
-        ActivationFunctionType act = hiddenActivationType;
-        if (act.equals(ActivationFunctionType.RANDOM)) {
-            act = hiddenActivationTypeRandomAllowed[getRandomGenerator().nextInt(hiddenActivationTypeRandomAllowed.length)];
+        String funcType = hiddenActivationType;
+        ActivationFunction function;
+        if (funcType.equals("random")) {
+        	String randType = hiddenActivationTypeRandomAllowed[getRandomGenerator().nextInt(hiddenActivationTypeRandomAllowed.length)];
+        	function = ActivationFunctionFactory.valueOf(randType);
         }
-
-        NeuronGene gene = new NeuronGene(NeuronType.HIDDEN, id, act);
+        else {
+        	function = ActivationFunctionFactory.valueOf(funcType);
+        }
+        
+        NeuronGene gene = new NeuronGene(NeuronType.HIDDEN, id, function);
         return new NeuronAllele(gene);
     }
 

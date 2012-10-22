@@ -29,7 +29,7 @@ public class ClampedAbsoluteActivationFunction implements ActivationFunction {
 	/**
 	 * identifying string
 	 */
-	public final static String NAME = ActivationFunctionType.CLAMPED_ABSOLUTE.toString();
+	public final static String NAME = "clamped-absolute";
 
 	/**
 	 * @see Object#toString()

@@ -87,12 +87,12 @@ public double getMinResponse();
 public double getMaxResponse();
 
 /**
- * @return dimension(s) of input array
+ * @return dimension(s) of input array. If the input array is a single dimension vector then the returned array will have length 1; in general the returned array will have as many elements as there are dimensions in the input vector. 
  */
 public int[] getInputDimension();
 
 /**
- * @return dimension(s) of output array
+ * @return dimension(s) of output array. If the output array is a single dimension vector then the returned array will have length 1; in general the returned array will have as many elements as there are dimensions in the output vector.
  */
 public int[] getOutputDimension();
 }

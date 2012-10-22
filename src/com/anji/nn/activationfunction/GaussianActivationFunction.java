@@ -31,7 +31,7 @@ public class GaussianActivationFunction implements ActivationFunction {
 	/**
 	 * identifying string
 	 */
-	public final static String NAME = ActivationFunctionType.GAUSSIAN.toString();
+	public final static String NAME = "gaussian";
 
 	/**
 	 * @see Object#toString()

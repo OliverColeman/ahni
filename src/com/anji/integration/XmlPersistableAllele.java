@@ -28,7 +28,8 @@ import com.anji.neat.ConnectionGene;
 import com.anji.neat.NeuronAllele;
 import com.anji.neat.NeuronGene;
 import com.anji.neat.NeuronType;
-import com.anji.nn.activationfunction.ActivationFunctionType;
+import com.anji.nn.activationfunction.ActivationFunction;
+import com.anji.nn.activationfunction.ActivationFunctionFactory;
 import com.anji.util.XmlPersistable;
 
 /**
@@ -145,11 +146,11 @@ public static NeuronAllele neuronFromXml( Node node ) throws IllegalArgumentExce
 	str = atts.getNamedItem( XmlPersistableAllele.XML_ID_TAG ).getNodeValue();
 	Long id = Long.valueOf( str );
 
-	ActivationFunctionType activationType = ActivationFunctionType.SIGMOID;
+	ActivationFunction activationType = ActivationFunctionFactory.valueOf("sigmoid");
 	Node actNode = atts.getNamedItem( XmlPersistableAllele.NEURON_XML_ACTIVATION_TYPE_TAG );
 	if ( actNode != null ) {
 		str = actNode.getNodeValue();
-		activationType = ActivationFunctionType.valueOf( str );
+		activationType = ActivationFunctionFactory.valueOf( str );
 		if ( activationType == null )
 			throw new IllegalArgumentException( "invalid activation function type: " + str );
 	}

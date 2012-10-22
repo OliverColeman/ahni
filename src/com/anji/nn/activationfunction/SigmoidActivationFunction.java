@@ -41,7 +41,7 @@ public class SigmoidActivationFunction implements ActivationFunction {
 	/**
 	 * identifying string
 	 */
-	public final static String NAME = ActivationFunctionType.SIGMOID.toString();
+	public final static String NAME = "sigmoid";
 
 	/**
 	 * @see Object#toString()

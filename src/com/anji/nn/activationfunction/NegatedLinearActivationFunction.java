@@ -9,7 +9,7 @@ public class NegatedLinearActivationFunction implements ActivationFunction {
 	/**
 	 * identifying string
 	 */
-	public final static String NAME = ActivationFunctionType.NEGATED_LINEAR.toString();
+	public final static String NAME = "negated-linear";
 
 	/**
 	 * @see Object#toString()

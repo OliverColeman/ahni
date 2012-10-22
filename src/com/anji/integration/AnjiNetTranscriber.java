@@ -156,7 +156,7 @@ public AnjiNet newAnjiNet( Chromosome genotype ) throws TranscriberException {
 	it = hiddenNeuronAlleles.values().iterator();
 	while ( it.hasNext() ) {
 		NeuronAllele neuronAllele = (NeuronAllele) it.next();
-        Neuron n = new Neuron( ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType().toString() ) );
+        Neuron n = new Neuron( ActivationFunctionFactory.valueOf(neuronAllele.getActivationType().toString() ) );
 		n.setId( neuronAllele.getInnovationId().longValue() );
 		allNeurons.put( neuronAllele.getInnovationId(), n );
 	}

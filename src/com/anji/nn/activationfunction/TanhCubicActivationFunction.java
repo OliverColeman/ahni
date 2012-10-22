@@ -30,7 +30,7 @@ public class TanhCubicActivationFunction implements ActivationFunction {
 	/**
 	 * identifying string
 	 */
-	public final static String NAME = ActivationFunctionType.TANH_CUBIC.toString();
+	public final static String NAME = "tanh-cubic";
 
 	/**
 	 * @see Object#toString()

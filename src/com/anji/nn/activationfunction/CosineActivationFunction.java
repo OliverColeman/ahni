@@ -30,7 +30,7 @@ public class CosineActivationFunction implements ActivationFunction {
 	/**
 	 * identifying string
 	 */
-	public final static String NAME = ActivationFunctionType.COSINE.toString();
+	public final static String NAME = "cosine";
 
 	/**
 	 * @see Object#toString()

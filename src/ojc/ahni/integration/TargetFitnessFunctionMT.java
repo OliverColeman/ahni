@@ -1,4 +1,4 @@
-package ojc.ahni.hyperneat;
+package ojc.ahni.integration;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
@@ -12,9 +12,9 @@ import com.anji.util.*;
  * 
  * @author Oliver Coleman
  */
-public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
+public class TargetFitnessFunctionMT extends BulkFitnessFunctionMT {
 	private static final long serialVersionUID = 1L;
-	private static Logger logger = Logger.getLogger(HyperNEATTargetFitnessFunction.class);
+	private static Logger logger = Logger.getLogger(TargetFitnessFunctionMT.class);
 	
 	/**
 	 * The type of error calculation to perform for each input and target output pair. Valid types are:<ul>
@@ -27,32 +27,32 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 	public static final String ERROR_TYPE_KEY = "fitness.function.error.type"; 
 	
 	/**
-	 * Array containing stimuli (input) examples, in the form [trial][y][x]. The dimensions should match those of the input layer of the substrate network.
+	 * Array containing stimuli (input) examples, in the form [trial][input index]. The dimensions should match those of the input layer of the substrate network.
 	 */
-	protected double[][][] inputPatterns;
+	protected double[][] inputPatterns;
 
 	/**
-	 * Array containing target (desired output) examples, in the form [trial][y][x]. The dimensions should match those of the output layer of the substrate
+	 * Array containing target (desired output) examples, in the form [trial][input index]. The dimensions should match those of the output layer of the substrate
 	 * network.
 	 */
-	protected double[][][] targetOutputPatterns;
+	protected double[][] targetOutputPatterns;
 
 	private int maxFitnessValue = 1000000; // The maximum possible fitness value.
 	private String errorType;
 	private boolean squareErrorPerOutput;
 	private boolean squareErrorPerTrial;
 	
-	protected HyperNEATTargetFitnessFunction() {
+	protected TargetFitnessFunctionMT() {
 	}
 	
 	/**
 	 * Create a HyperNEATTargetFitnessFunction with the specified input and output examples.
-	 * @param inputPatterns Array containing input patterns, in the form [trial][y][x]. The dimensions should match those of the input layer of the substrate network.
-	 * @param targetOutputPatterns Array containing target output patterns, in the form [trial][y][x]. The dimensions should match those of the output layer of the substrate network.
+	 * @param inputPatterns Array containing input patterns, in the form [trial][input index]. The dimensions should match those of the input layer of the substrate network.
+	 * @param targetOutputPatterns Array containing target output patterns, in the form [trial][input index]. The dimensions should match those of the output layer of the substrate network.
 	 * @param minTargetValue The minimum possible value in the given input patterns.
 	 * @param maxTargetValue The maximum possible value in the given target patterns.
 	 */
-	public HyperNEATTargetFitnessFunction(double[][][] inputPatterns, double[][][] targetOutputPatterns, double minTargetValue, double maxTargetValue) {
+	public TargetFitnessFunctionMT(double[][] inputPatterns, double[][] targetOutputPatterns, double minTargetValue, double maxTargetValue) {
 		this.inputPatterns = inputPatterns;
 		this.targetOutputPatterns = targetOutputPatterns;
 	}
@@ -85,22 +85,20 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 		double maxResponse = substrate.getMaxResponse();
 		double responseRange = maxResponse - minResponse;
 		double maxErrorPerOutput = squareErrorPerOutput ? responseRange * responseRange : responseRange;
-		double maxErrorPerTrial = width[depth-1] * height[depth-1] * maxErrorPerOutput;
+		double maxErrorPerTrial = substrate.getInputDimension()[0] * maxErrorPerOutput;
 		if (squareErrorPerTrial) {
 			maxErrorPerTrial *= maxErrorPerTrial;
 		}
 		double maxError = inputPatterns.length * maxErrorPerTrial;
-		double[][][] responses = substrate.nextSequence(inputPatterns);			
+		double[][] responses = substrate.nextSequence(inputPatterns);			
 		double error = 0;
 		for ( int i = 0; i < responses.length; ++i ) {
 			double trialError = 0;
-			double[][] response = responses[i];
-			double[][] target = targetOutputPatterns[i];
-			for (int y = 0; y < target.length; y++) {
-                for ( int x = 0; x < target[0].length; x++) {
-                    double diff = Math.abs(response[y][x] - target[y][x]);
-                    trialError +=  squareErrorPerOutput ? diff * diff : diff;
-                }
+			double[] response = responses[i];
+			double[] target = targetOutputPatterns[i];
+			for (int o = 0; o < target.length; o++) {
+                double diff = Math.abs(response[o] - target[o]);
+                trialError +=  squareErrorPerOutput ? diff * diff : diff;
 			}
 			error += squareErrorPerTrial ? trialError * trialError : trialError;
 		}

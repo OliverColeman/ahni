@@ -21,7 +21,7 @@ package com.anji.neat;
 
 import org.jgapcustomised.Gene;
 
-import com.anji.nn.activationfunction.ActivationFunctionType;
+import com.anji.nn.activationfunction.ActivationFunction;
 
 /**
  * Gene corresponding to NEAT node gene according to <a
@@ -39,7 +39,7 @@ private Long id;
 
 private NeuronType type = NeuronType.HIDDEN;
 
-private ActivationFunctionType activationType;
+private ActivationFunction activationType;
 
 /**
  * @see Object#toString()
@@ -64,10 +64,10 @@ private NeuronGene() {
  * @param newInnovationId
  * @param anActivationType
  */
-public NeuronGene( NeuronType newType, Long newInnovationId, ActivationFunctionType anActivationType ) {
+public NeuronGene( NeuronType newType, Long newInnovationId, ActivationFunction anActivationType ) {
 	super( newInnovationId );
 
-    //if (anActivationType.equals(ActivationFunctionType.RANDOM))
+    //if (anActivationType.equals(ActivationFunction.RANDOM))
 	//	throw new IllegalArgumentException( "activation function can not be random for NeuronGene" );
 
 	type = newType;
@@ -93,7 +93,7 @@ boolean isType( NeuronType aType ) {
 /**
  * @return gets activation function type
  */
-ActivationFunctionType getActivationType() {
+ActivationFunction getActivationType() {
 	return activationType;
 }
 
@@ -101,7 +101,7 @@ ActivationFunctionType getActivationType() {
  * for hibernate
  * @param anActivationType The activationType to set.
  */
-private void setActivationType( ActivationFunctionType anActivationType ) {
+private void setActivationType( ActivationFunction anActivationType ) {
 	activationType = anActivationType;
 }
 

@@ -29,7 +29,7 @@ public class AbsoluteActivationFunction implements ActivationFunction {
 	/**
 	 * identifying string
 	 */
-	public final static String NAME = ActivationFunctionType.ABSOLUTE.toString();
+	public final static String NAME = "absolute";
 
 	/**
 	 * @see Object#toString()

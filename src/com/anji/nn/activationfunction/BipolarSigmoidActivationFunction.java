@@ -33,7 +33,7 @@ public class BipolarSigmoidActivationFunction implements ActivationFunction {
 	/**
 	 * identifying string
 	 */
-	public final static String NAME = ActivationFunctionType.BIPOLAR_SIGMOID.toString();
+	public final static String NAME = "sigmoid-bipolar";
 
 	/**
 	 * @see Object#toString()

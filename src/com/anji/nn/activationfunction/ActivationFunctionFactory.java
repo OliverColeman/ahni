@@ -30,7 +30,7 @@ import java.util.Map;
  */
 public class ActivationFunctionFactory {
 
-	private Map activationFunctions = new HashMap();
+	private Map activationFunctions = new HashMap<String, ActivationFunction>();
 
 	private static ActivationFunctionFactory instance = null;
 
@@ -58,6 +58,9 @@ public class ActivationFunctionFactory {
         activationFunctions.put( ClampedAbsoluteActivationFunction.NAME, new ClampedAbsoluteActivationFunction() );
         activationFunctions.put( ConvertToSignedActivationFunction.NAME, new ConvertToSignedActivationFunction() );
         activationFunctions.put( DivideActivationFunction.NAME, new DivideActivationFunction() );
+        activationFunctions.put( LogicAndActivationFunction.NAME, new LogicAndActivationFunction() );
+        activationFunctions.put( LogicOrActivationFunction.NAME, new LogicOrActivationFunction() );
+        activationFunctions.put( LogicXORActivationFunction.NAME, new LogicXORActivationFunction() );
 	}
 
 	/**
@@ -77,6 +80,14 @@ public class ActivationFunctionFactory {
 	public ActivationFunction get( String key ) {
 		return (ActivationFunction) activationFunctions.get( key );
 	}
+	
+	/**
+	 * Returns an instance of the specified activation function type.
+	 */
+	public static ActivationFunction valueOf(String type) {
+		return getInstance().get(type);
+	}
+	
 
 	/**
 	 * @return linear activation function

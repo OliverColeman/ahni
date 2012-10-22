@@ -11,7 +11,7 @@ public class DivideActivationFunction implements ActivationFunction, ActivationF
 	/**
 	 * identifying string
 	 */
-	public final static String NAME = ActivationFunctionType.DIVIDE.toString();
+	public final static String NAME = "divide";
 
 	/**
 	 * @see Object#toString()

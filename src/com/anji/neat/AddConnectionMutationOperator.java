@@ -31,7 +31,8 @@ import org.jgapcustomised.MutationOperator;
 
 import com.anji.integration.AnjiRequiredException;
 import com.anji.nn.RecurrencyPolicy;
-import com.anji.nn.activationfunction.ActivationFunctionType;
+import com.anji.nn.activationfunction.ActivationFunction;
+import com.anji.nn.activationfunction.LinearActivationFunction;
 import com.anji.util.Configurable;
 import com.anji.util.Properties;
 
@@ -245,7 +246,7 @@ private boolean connectionAllowed( NeuronAllele src, NeuronAllele dest, SortedMa
 				.getInnovationId(), conns.values() );
 		return !connected;
 	}
-	return ( ActivationFunctionType.LINEAR.equals( dest.getActivationType() ) == false );
+	return (dest.getActivationType() instanceof LinearActivationFunction);
 }
 
 }

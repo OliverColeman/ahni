@@ -9,7 +9,7 @@ public class ConvertToSignedActivationFunction implements ActivationFunction {
 	/**
 	 * unique ID string
 	 */
-	public final static String NAME = ActivationFunctionType.CONVERT_TO_SIGNED.toString();
+	public final static String NAME = "sign";
 
 	/**
 	 * @see java.lang.Object#toString()

@@ -16,6 +16,7 @@ import ojc.ahni.*;
 import ojc.ahni.hyperneat.GridNet;
 import ojc.ahni.hyperneat.HyperNEATFitnessFunction;
 import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
+import ojc.ahni.integration.BulkFitnessFunctionMT;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
@@ -41,6 +42,8 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
 	public static final String FITNESS_WEIGHT_INV_DIST_KEY = "or.fitness.weight.distance.inverse";
 	public static final String PERFORMANCE_METRIC_KEY = "or.performance.metric";
 	public static final String NUM_TRIALS_KEY = "or.numtrials";
+	
+	private static Logger logger = Logger.getLogger(ObjectRecognitionFitnessFunction3.class);
 	
 	private String shapesImageDir;
 	private String trialsImageDir;

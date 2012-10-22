@@ -30,7 +30,7 @@ public class SineActivationFunction implements ActivationFunction {
 	/**
 	 * identifying string
 	 */
-	public final static String NAME = ActivationFunctionType.SINE.toString();
+	public final static String NAME = "sine";
 
 	/**
 	 * @see Object#toString()

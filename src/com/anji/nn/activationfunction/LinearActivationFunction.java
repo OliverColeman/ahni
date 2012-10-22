@@ -30,7 +30,7 @@ public class LinearActivationFunction implements ActivationFunction {
 	/**
 	 * identifying string
 	 */
-	public final static String NAME = ActivationFunctionType.LINEAR.toString();
+	public final static String NAME = "linear";
 
 	/**
 	 * @see Object#toString()

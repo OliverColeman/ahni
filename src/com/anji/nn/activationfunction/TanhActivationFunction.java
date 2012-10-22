@@ -30,7 +30,7 @@ public class TanhActivationFunction implements ActivationFunction {
 	/**
 	 * identifying string
 	 */
-	public final static String NAME = ActivationFunctionType.TANH.toString();
+	public final static String NAME = "tanh";
 
 	/**
 	 * @see Object#toString()

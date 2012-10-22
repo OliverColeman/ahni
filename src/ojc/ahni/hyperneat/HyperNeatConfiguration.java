@@ -38,7 +38,7 @@ import com.anji.integration.ActivatorTranscriber;
 import com.anji.integration.SimpleSelector;
 import com.anji.neat.NeatChromosomeUtility;
 import com.anji.neat.NeatConfiguration;
-import com.anji.nn.activationfunction.ActivationFunctionType;
+import com.anji.nn.activationfunction.ActivationFunction;
 import com.anji.util.Properties;
 import com.anji.util.Randomizer;
 

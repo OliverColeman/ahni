@@ -23,7 +23,7 @@ import java.util.Random;
 
 import org.jgapcustomised.Allele;
 
-import com.anji.nn.activationfunction.ActivationFunctionType;
+import com.anji.nn.activationfunction.ActivationFunction;
 
 /**
  * Gene corresponding to NEAT node gene according to <a
@@ -96,7 +96,7 @@ public boolean isType( NeuronType aType ) {
  * @return activation type
  * @see NeuronGene#getActivationType()
  */
-public ActivationFunctionType getActivationType() {
+public ActivationFunction getActivationType() {
 	return neuronGene.getActivationType();
 }
 

@@ -1,4 +1,4 @@
-package ojc.ahni.hyperneat;
+package ojc.ahni.integration;
 
 import java.util.Arrays;
 

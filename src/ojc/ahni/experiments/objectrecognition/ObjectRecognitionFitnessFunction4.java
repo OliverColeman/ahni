@@ -39,6 +39,8 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 	public static final String MIN_SCALE_KEY = "or.minscale";
 	public static final String MAX_ROTATE_KEY = "or.maxrotate";
 	
+	private static Logger logger = Logger.getLogger(ObjectRecognitionFitnessFunction4.class);
+	
 	//unique directory for images for this run
 	String imageDir;
 	
