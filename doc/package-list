@@ -10,6 +10,7 @@ ojc.ahni
 ojc.ahni.experiments
 ojc.ahni.experiments.objectrecognition
 ojc.ahni.hyperneat
+ojc.ahni.integration
 org.jgapcustomised
 org.jgapcustomised.event
 org.jgapcustomised.impl
