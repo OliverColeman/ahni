@@ -30,9 +30,10 @@ import com.anji.util.Configurable;
 import com.anji.util.Properties;
 
 /**
- * Constructs a <a href="https://github.com/OliverColeman/bain">Bain</a> neural network from a chromosome using the NEAT encoding scheme.
+ * <p>Constructs a <a href="https://github.com/OliverColeman/bain">Bain</a> neural network from a chromosome using the NEAT encoding scheme.
  * An {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this class. {@link com.anji.integration.ActivatorTranscriber#newActivator(Chromosome)} is then used to get the resulting
- * network.
+ * network.</p>
+ * <p>Bain neural networks are not well suited to non-layered feed-forward networks as every neuron and synapse must be activated every simulation step.</p>
  * 
  * @author Oliver Coleman
  */

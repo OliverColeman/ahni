@@ -1,13 +1,12 @@
 package ojc.ahni.integration;
 
-import java.util.Arrays;
-
 import com.anji.integration.Activator;
 
 import ojc.bain.NeuralNetwork;
 
 /**
- * Provides an interface to <a href="https://github.com/OliverColeman/bain">Bain</a> neural networks to allow integration with the ANJI/AHNI framework.
+ * <p>Provides an interface to <a href="https://github.com/OliverColeman/bain">Bain</a> neural networks to allow integration with the ANJI/AHNI framework.</p>
+ * <p>Bain neural networks are not well suited to non-layered feed-forward networks as every neuron and synapse must be activated every simulation step.</p>
  */
 public class BainNN implements Activator {
 	/**
@@ -43,7 +42,7 @@ public class BainNN implements Activator {
 	 * @param inputDimensions The size of each dimension in the input, see {@link Activator#getInputDimension()}. At the moment only one or two dimensional input vectors are supported, so this array should only be of length one or two accordingly. Dimensions should be in the order x, y.
 	 * @param outputDimensions The size of each dimension in the output, see {@link Activator#getOutputDimension()}. At the moment only one or two dimensional output vectors are supported, so this array should only be of length one or two accordingly. Dimensions should be in the order x, y.
 	 * @param stepsPerStep The number of simulation steps to perform in the Bain neural network for each call to next(..) or nextSequence(..) methods. For feed-forward networks this should be equal to the number of layers.
-	 * @param feedForward Indicates if the network topology is strictly feed-forward. This is used to optimise execution of the {@link #nextSequence(double[][])} and {@link #nextSequence(double[][][])} methods. 
+	 * @param topology Specifies the network topology, see {@link #topology}. 
 	 */
 	public BainNN(NeuralNetwork nn, int[] inputDimensions, int[] outputDimensions, int stepsPerStep, Topology topology) {
 		this.nn = nn;
@@ -65,7 +64,7 @@ public class BainNN implements Activator {
 	 * @param inputDimensions The size of each dimension in the input, see {@link Activator#getInputDimension()}. At the moment only one or two dimensional input vectors are supported, so this array should only be of length one or two accordingly. Dimensions should be in the order x, y.
 	 * @param outputDimensions The size of each dimension in the output, see {@link Activator#getOutputDimension()}. At the moment only one or two dimensional output vectors are supported, so this array should only be of length one or two accordingly. Dimensions should be in the order x, y.
 	 * @param stepsPerStep The number of simulation steps to perform in the Bain neural network for each call to next(..) or nextSequence(..) methods. For feed-forward networks this should be equal to the number of layers.
-	 * @param feedForward Indicates if the network topology is strictly feed-forward. This is used to optimise execution of the {@link #nextSequence(double[][])} and {@link #nextSequence(double[][][])} methods. 
+	 * @param topology Specifies the network topology, see {@link #topology}. 
 	 * @param name A name for this BainNN.
 	 */
 	public BainNN(NeuralNetwork nn, int[] inputDimensions, int[] outputDimensions, int stepsPerStep, Topology topology, String name) {
