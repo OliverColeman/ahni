@@ -36,6 +36,7 @@ import org.jgapcustomised.impl.WeightedRouletteSelector;
 
 import com.anji.integration.ActivatorTranscriber;
 import com.anji.integration.SimpleSelector;
+import com.anji.integration.Transcriber;
 import com.anji.neat.NeatChromosomeUtility;
 import com.anji.neat.NeatConfiguration;
 import com.anji.nn.activationfunction.ActivationFunction;
@@ -62,19 +63,19 @@ public class HyperNeatConfiguration extends NeatConfiguration {
     	super.init(newProps);
         props = newProps;
         
-        HyperNEATTranscriber transcriber = (HyperNEATTranscriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
-		short stimulusSize = transcriber.getCPPNInputCount();
-		short responseSize = transcriber.getCPPNOutputCount();
-		
-    	logger.info("CPPN: input size: " + stimulusSize + "  output size: " + responseSize);
-        
-        ChromosomeMaterial sample = NeatChromosomeUtility.newSampleChromosomeMaterial(
+        Transcriber transcriber = (Transcriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
+        if (transcriber instanceof HyperNEATTranscriber) {
+			short stimulusSize = ((HyperNEATTranscriber) transcriber).getCPPNInputCount();
+			short responseSize = ((HyperNEATTranscriber) transcriber).getCPPNOutputCount();
+    
+			ChromosomeMaterial sample = NeatChromosomeUtility.newSampleChromosomeMaterial(
         		stimulusSize,
                 props.getShortProperty(INITIAL_TOPOLOGY_NUM_HIDDEN_NEURONS_KEY, DEFAULT_INITIAL_HIDDEN_SIZE),
                 responseSize,
                 this,
                 props.getBooleanProperty(INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, true));
-        setSampleChromosomeMaterial(sample);
+	        setSampleChromosomeMaterial(sample);
+        }
     }
 
     /**

@@ -54,9 +54,9 @@ public class NeatConfiguration extends Configuration {
      * properties key, file in which unique ID sequence number is stored
      */
     public static final String ID_FACTORY_KEY = "id.file";
-    private static final short DEFAULT_STIMULUS_SIZE = 3;
+    public static final short DEFAULT_STIMULUS_SIZE = 3;
     protected static final short DEFAULT_INITIAL_HIDDEN_SIZE = 0;
-    private static final short DEFAULT_RESPONSE_SIZE = 3;
+    public static final short DEFAULT_RESPONSE_SIZE = 3;
     /**
      * default survival rate
      */
@@ -393,16 +393,11 @@ public class NeatConfiguration extends Configuration {
         	funcType = hiddenActivationType;
         }
         
-        ActivationFunction function;
         if (funcType.equals("random")) {
-        	String randType = hiddenActivationTypeRandomAllowed[getRandomGenerator().nextInt(hiddenActivationTypeRandomAllowed.length)];
-        	function = ActivationFunctionFactory.valueOf(randType);
-        }
-        else {
-        	function = ActivationFunctionFactory.valueOf(funcType);
+        	funcType = hiddenActivationTypeRandomAllowed[getRandomGenerator().nextInt(hiddenActivationTypeRandomAllowed.length)];
         }
 
-        NeuronGene gene = new NeuronGene(type, nextInnovationId(), function);
+        NeuronGene gene = new NeuronGene(type, nextInnovationId(), funcType);
         return new NeuronAllele(gene);
     }
 
@@ -425,14 +420,10 @@ public class NeatConfiguration extends Configuration {
         String funcType = hiddenActivationType;
         ActivationFunction function;
         if (funcType.equals("random")) {
-        	String randType = hiddenActivationTypeRandomAllowed[getRandomGenerator().nextInt(hiddenActivationTypeRandomAllowed.length)];
-        	function = ActivationFunctionFactory.valueOf(randType);
-        }
-        else {
-        	function = ActivationFunctionFactory.valueOf(funcType);
+        	funcType = hiddenActivationTypeRandomAllowed[getRandomGenerator().nextInt(hiddenActivationTypeRandomAllowed.length)];
         }
         
-        NeuronGene gene = new NeuronGene(NeuronType.HIDDEN, id, function);
+        NeuronGene gene = new NeuronGene(NeuronType.HIDDEN, id, funcType);
         return new NeuronAllele(gene);
     }
 

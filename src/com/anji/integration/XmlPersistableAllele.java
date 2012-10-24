@@ -29,7 +29,6 @@ import com.anji.neat.NeuronAllele;
 import com.anji.neat.NeuronGene;
 import com.anji.neat.NeuronType;
 import com.anji.nn.activationfunction.ActivationFunction;
-import com.anji.nn.activationfunction.ActivationFunctionFactory;
 import com.anji.util.XmlPersistable;
 
 /**
@@ -86,7 +85,7 @@ public String toXml() {
 		result.append( NEURON_XML_TYPE_TAG ).append( "=\"" ).append( nAllele.getType().toString() )
 				.append( "\" " );
 		result.append( NEURON_XML_ACTIVATION_TYPE_TAG ).append( "=\"" ).append(
-				nAllele.getActivationType().toString() );
+				nAllele.getActivationType() );
 		result.append( "\"/>\n" );
 	}
 	else if ( allele instanceof ConnectionAllele ) {
@@ -145,12 +144,12 @@ public static NeuronAllele neuronFromXml( Node node ) throws IllegalArgumentExce
 
 	str = atts.getNamedItem( XmlPersistableAllele.XML_ID_TAG ).getNodeValue();
 	Long id = Long.valueOf( str );
-
-	ActivationFunction activationType = ActivationFunctionFactory.valueOf("sigmoid");
+	
+	// Assume sigmoid if we can't determine it.
+	String activationType = "sigmoid";
 	Node actNode = atts.getNamedItem( XmlPersistableAllele.NEURON_XML_ACTIVATION_TYPE_TAG );
 	if ( actNode != null ) {
-		str = actNode.getNodeValue();
-		activationType = ActivationFunctionFactory.valueOf( str );
+		activationType = actNode.getNodeValue();
 		if ( activationType == null )
 			throw new IllegalArgumentException( "invalid activation function type: " + str );
 	}

@@ -96,7 +96,7 @@ public boolean isType( NeuronType aType ) {
  * @return activation type
  * @see NeuronGene#getActivationType()
  */
-public ActivationFunction getActivationType() {
+public String getActivationType() {
 	return neuronGene.getActivationType();
 }
 

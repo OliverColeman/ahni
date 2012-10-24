@@ -67,14 +67,13 @@ public static ChromosomeMaterial newSampleChromosomeMaterial( short newNumInputs
  * in <code>connAlleles</code> whose destination neuron is in
  * <code>destNeuronInnovationIds</code>
  */
-public static Collection extractConnectionAllelesForDestNeurons( Collection connAlleles,
-		Collection destNeuronInnovationIds ) {
-	Collection result = new ArrayList();
+public static Collection<ConnectionAllele> extractConnectionAllelesForDestNeurons( Collection<ConnectionAllele> connAlleles, Collection destNeuronInnovationIds ) {
+	Collection<ConnectionAllele> result = new ArrayList<ConnectionAllele>();
 
 	// for every connection ...
-	Iterator connIter = connAlleles.iterator();
+	Iterator<ConnectionAllele> connIter = connAlleles.iterator();
 	while ( connIter.hasNext() ) {
-		ConnectionAllele cAllele = (ConnectionAllele) connIter.next();
+		ConnectionAllele cAllele = connIter.next();
 		if ( destNeuronInnovationIds.contains( cAllele.getDestNeuronId() ) )
 			result.add( cAllele );
 	}
@@ -212,8 +211,8 @@ public static List getNeuronList( Collection alleles ) {
  * @param type
  * @return SortedMap contains key Long innovation id, value NeuronGene objects
  */
-public static SortedMap getNeuronMap( Collection alleles, NeuronType type ) {
-	TreeMap result = new TreeMap();
+public static SortedMap<Long, NeuronAllele> getNeuronMap( Collection alleles, NeuronType type ) {
+	TreeMap<Long, NeuronAllele> result = new TreeMap<Long, NeuronAllele>();
 	Iterator iter = alleles.iterator();
 	while ( iter.hasNext() ) {
 		Allele allele = (Allele) iter.next();
@@ -228,7 +227,7 @@ public static SortedMap getNeuronMap( Collection alleles, NeuronType type ) {
 						+ allele.toString() );
 
 			if ( ( type == null ) || neuronAllele.isType( type ) )
-				result.put( id, allele );
+				result.put( id, neuronAllele );
 		}
 	}
 	return result;
@@ -297,8 +296,8 @@ public static SortedMap getConnectionMap( Set alleles ) {
  * @param alleles <code>Collection</code> contains gene objects
  * @return <code>List</code> containing <code>ConnectionGene</code> objects
  */
-public static List getConnectionList( Collection alleles ) {
-	List result = new ArrayList();
+public static List<ConnectionAllele> getConnectionList( Collection alleles ) {
+	List<ConnectionAllele> result = new ArrayList<ConnectionAllele>();
 	Iterator iter = alleles.iterator();
 	while ( iter.hasNext() ) {
 		Allele allele = (Allele) iter.next();
@@ -308,7 +307,7 @@ public static List getConnectionList( Collection alleles ) {
 			if ( result.contains( allele ) )
 				throw new IllegalArgumentException( "chromosome contains duplicate connection gene: "
 						+ allele.toString() );
-			result.add( allele );
+			result.add((ConnectionAllele) allele);
 		}
 	}
 	return result;

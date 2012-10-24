@@ -129,7 +129,7 @@ public AnjiNet newAnjiNet( Chromosome genotype ) throws TranscriberException {
 	Iterator it = inNeuronAlleles.values().iterator();
 	while ( it.hasNext() ) {
 		NeuronAllele neuronAllele = (NeuronAllele) it.next();
-		Neuron n = new Neuron( ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType().toString() ) );
+		Neuron n = new Neuron( ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType() ) );
         n.setId( neuronAllele.getInnovationId().longValue() );
 		inNeurons.add( n );
 		allNeurons.put( neuronAllele.getInnovationId(), n );
@@ -143,7 +143,7 @@ public AnjiNet newAnjiNet( Chromosome genotype ) throws TranscriberException {
 	while ( it.hasNext() ) {
 		NeuronAllele neuronAllele = (NeuronAllele) it.next();
 
-        Neuron n = new Neuron( ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType().toString() ) );
+        Neuron n = new Neuron( ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType() ) );
         
         n.setId( neuronAllele.getInnovationId().longValue() );
 		outNeurons.add( n );
@@ -156,7 +156,7 @@ public AnjiNet newAnjiNet( Chromosome genotype ) throws TranscriberException {
 	it = hiddenNeuronAlleles.values().iterator();
 	while ( it.hasNext() ) {
 		NeuronAllele neuronAllele = (NeuronAllele) it.next();
-        Neuron n = new Neuron( ActivationFunctionFactory.valueOf(neuronAllele.getActivationType().toString() ) );
+        Neuron n = new Neuron( ActivationFunctionFactory.valueOf(neuronAllele.getActivationType() ) );
 		n.setId( neuronAllele.getInnovationId().longValue() );
 		allNeurons.put( neuronAllele.getInnovationId(), n );
 	}

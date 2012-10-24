@@ -39,7 +39,7 @@ private Long id;
 
 private NeuronType type = NeuronType.HIDDEN;
 
-private ActivationFunction activationType;
+private String activationType;
 
 /**
  * @see Object#toString()
@@ -64,7 +64,7 @@ private NeuronGene() {
  * @param newInnovationId
  * @param anActivationType
  */
-public NeuronGene( NeuronType newType, Long newInnovationId, ActivationFunction anActivationType ) {
+public NeuronGene( NeuronType newType, Long newInnovationId, String anActivationType ) {
 	super( newInnovationId );
 
     //if (anActivationType.equals(ActivationFunction.RANDOM))
@@ -93,7 +93,7 @@ boolean isType( NeuronType aType ) {
 /**
  * @return gets activation function type
  */
-ActivationFunction getActivationType() {
+String getActivationType() {
 	return activationType;
 }
 
@@ -101,7 +101,7 @@ ActivationFunction getActivationType() {
  * for hibernate
  * @param anActivationType The activationType to set.
  */
-private void setActivationType( ActivationFunction anActivationType ) {
+private void setActivationType( String anActivationType ) {
 	activationType = anActivationType;
 }
 

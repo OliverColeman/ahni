@@ -79,11 +79,16 @@ public class TargetFitnessFunctionMT extends BulkFitnessFunctionMT {
 		maxFitnessValue = newMaxFitnessValue;
 	}
 	
+	static boolean outputRangeWarned = false;
 	@Override
 	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
 		double minResponse = substrate.getMinResponse();
 		double maxResponse = substrate.getMaxResponse();
 		double responseRange = maxResponse - minResponse;
+		if (!outputRangeWarned && responseRange > 1000) {
+			logger.warn("Response range of network output is very large (" + responseRange + "), which may cause problems with target output fitness evaluation if the typical output range is small and the desired output range is also small. Consider using a different output neuron type.");
+			outputRangeWarned = true;
+		}
 		double maxErrorPerOutput = squareErrorPerOutput ? responseRange * responseRange : responseRange;
 		double maxErrorPerTrial = substrate.getInputDimension()[0] * maxErrorPerOutput;
 		if (squareErrorPerTrial) {

@@ -25,12 +25,12 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 	/**
 	 * Property key for minimum number of threads to use for fitness evaluation (including transcription of genotype/cppn to phenotype/substrate).
 	 */
-	public static final String MIN_THREADS_KEY = "fitness.hyperneat.min_threads";
+	public static final String MIN_THREADS_KEY = "fitness.min_threads";
 	/**
 	 * Property key for maximum number of threads to use for fitness evaluation (including transcription of genotype/cppn to phenotype/substrate).
 	 * If value is <= 0 then which ever is lower of the detected number of processor cores and the specified minimum will be used.
 	 */
-	public static final String MAX_THREADS_KEY = "fitness.hyperneat.max_threads";
+	public static final String MAX_THREADS_KEY = "fitness.max_threads";
 
 	
 	protected Properties props;

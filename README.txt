@@ -64,6 +64,7 @@ following changes were made to ANJI:
   problems when determining the size and average or total fitness of a species.
 * There was a bug where elites could be removed from the population when the 
   population size was being adjusted. 
+* Numerous other minor API changes and refactoring.
 
 ANJI makes use of a customised version of the JGAP library. Unfortunately
 this precludes an easy upgrade to more recent versions of JGAP, just in case

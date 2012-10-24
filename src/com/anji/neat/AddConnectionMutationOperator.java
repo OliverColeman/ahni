@@ -246,7 +246,7 @@ private boolean connectionAllowed( NeuronAllele src, NeuronAllele dest, SortedMa
 				.getInnovationId(), conns.values() );
 		return !connected;
 	}
-	return (dest.getActivationType() instanceof LinearActivationFunction);
+	return (dest.getActivationType().equals(LinearActivationFunction.NAME));
 }
 
 }

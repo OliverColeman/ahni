@@ -19,8 +19,6 @@ import com.anji.nn.*;
 import com.anji.util.*;
 
 /**
- * TODO Implement support for recurrent networks.
- * 
  * Constructs a <a href="https://github.com/OliverColeman/bain">Bain</a> neural network from a chromosome using the hypercube (from HyperNEAT) encoding scheme.
  * An {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this class. {@link com.anji.integration.ActivatorTranscriber#newActivator(Chromosome)} is then used to get the resulting
  * network.
@@ -167,8 +165,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 					neurons.addConfiguration(neurons.getConfigSingleton().getPreset(0));
 				}
 			} catch (Exception e) {
-				System.err.println("Error creating neurons for Bain neural network. Have you specified the name of the neuron collection class correctly, including the containing packages?");
-				e.printStackTrace();
+				throw new TranscriberException("Error creating neurons for Bain neural network. Have you specified the name of the neuron collection class correctly, including the containing packages?", e);
 			}
 			try {
 				synapses = (SynapseCollection) ComponentCollection.createCollection(synapseModelClass, synapseCount);
@@ -177,8 +174,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 					synapses.addConfiguration(neurons.getConfigSingleton().getPreset(0));
 				}
 			} catch (Exception e) {
-				System.err.println("Error creating synapses for Bain neural network. Have you specified the name of the synapse collection class correctly, including the containing packages?");
-				e.printStackTrace();
+				throw new TranscriberException("Error creating synapses for Bain neural network. Have you specified the name of the synapse collection class correctly, including the containing packages?", e);
 			}
 		}
 		else {
@@ -316,7 +312,8 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 			Kernel.EXECUTION_MODE execMode = execModeName == null ? null : Kernel.EXECUTION_MODE.valueOf(execModeName);
 			NeuralNetwork nn = new NeuralNetwork(simRes, neurons, synapses, execMode);
 			int[] outputDims = new int[]{width[depth-1], height[depth-1]};
-			phenotype = new BainNN(nn, outputDims, cyclesPerStep, true, "network " + genotype.getId());
+			int[] inputDims = new int[]{width[0], height[0]};
+			phenotype = new BainNN(nn, inputDims, outputDims, cyclesPerStep, feedForward ? BainNN.Topology.FEED_FORWARD_LAYERED : BainNN.Topology.RECURRENT, "network " + genotype.getId());
 			logger.info("Substrate has " + neuronCount  + " neurons and " + synapseCount + " synapses.");
 		} else {
 			phenotype.setName("network " + genotype.getId());
