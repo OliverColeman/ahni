@@ -28,7 +28,7 @@ import com.anji.neat.Evolver;
  * {@link #postEvaluate(Chromosome, Activator, int)} and {@link #dispose()}.
  * Subclasses may wish to override {@link #evolutionFinished(ojc.ahni.hyperneat.HyperNEATEvolver)} to perform testing or other analysis
  * on the fittest and/or best performing Chromosomes evolved during the run; the method
- * {@link #generateSubstrate(Chromosome, Activator) may be used to create substrates for a Chromosome.</p>
+ * {@link #generateSubstrate(Chromosome, Activator)} may be used to create substrates for a Chromosome.</p>
  *  
  * <p>See {@link ojc.ahni.integration.TargetFitnessFunctionMT} for an example.</p>
  * 

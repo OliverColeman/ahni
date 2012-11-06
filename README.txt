@@ -36,6 +36,19 @@ parameters for NEAT, HyperNEAT, typically the specific experiment being run,
 and a few other things. See properties/* for examples.
 
 
+ES-HyperNEAT
+
+AHNI supports the Evolvable Substrate HyperNEAT (ES-HyperNEAT) extension (See
+http://eplex.cs.ucf.edu/ESHyperNEAT/).
+
+Currently only transcription to a Bain NeuralNetwork is supported, via the 
+ojc.ahni.hyperneat.ESHyperNEATTranscriberBain class. Currently only 2D 
+substrates are supported. 3D substrates will likely be coming soon (or let me 
+know if you want to implement this ;)).
+
+See ESHN-bain-test-pass-through.properties for a usage example.
+
+
 NOTES
 
 AHNI was built on top of a modified version of ANJI (Another NEAT Java 
