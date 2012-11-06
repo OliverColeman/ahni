@@ -35,6 +35,8 @@ The main class is ojc.ahni.hyperneat.Run. It expects a .properties file containi
 parameters for NEAT, HyperNEAT, typically the specific experiment being run, 
 and a few other things. See properties/* for examples.
 
+API documentation is available at http://olivercoleman.github.com/ahni/doc/index.html
+
 
 ES-HyperNEAT
 
