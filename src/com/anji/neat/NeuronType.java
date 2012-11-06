@@ -23,95 +23,96 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Enumerated type representing flavors of neurons: input, output, hidden. Values returned in
- * <code>toString()</code> correspond to values in <a href="http://nevt.sourceforge.net/">NEVT
- * </a> XML data model.
+ * Enumerated type representing flavors of neurons: input, output, hidden. Values returned in <code>toString()</code>
+ * correspond to values in <a href="http://nevt.sourceforge.net/">NEVT </a> XML data model.
  * 
  * @author Philip Tucker
  */
 public class NeuronType {
 
-/**
- * for hibernate
- */
-private Long id;
+	/**
+	 * for hibernate
+	 */
+	private Long id;
 
-private String name = null;
+	private String name = null;
 
-private static Map types = null;
+	private static Map types = null;
 
-/**
- * input neuron
- */
-public final static NeuronType INPUT = new NeuronType( "in" );
+	/**
+	 * input neuron
+	 */
+	public final static NeuronType INPUT = new NeuronType("in");
 
-/**
- * hidden neuron
- */
-public final static NeuronType HIDDEN = new NeuronType( "hid" );
+	/**
+	 * hidden neuron
+	 */
+	public final static NeuronType HIDDEN = new NeuronType("hid");
 
-/**
- * output neuron
- */
-public final static NeuronType OUTPUT = new NeuronType( "out" );
+	/**
+	 * output neuron
+	 */
+	public final static NeuronType OUTPUT = new NeuronType("out");
 
-/**
- * @param newName id of type
- */
-private NeuronType( String newName ) {
-	name = newName;
-}
-
-/**
- * @param name id of type
- * @return <code>NeuronType</code> enumerated type corresponding to <code>name</code>
- */
-public static NeuronType valueOf( String name ) {
-	if ( types == null ) {
-		types = new HashMap();
-		types.put( NeuronType.INPUT.toString(), NeuronType.INPUT );
-		types.put( NeuronType.HIDDEN.toString(), NeuronType.HIDDEN );
-		types.put( NeuronType.OUTPUT.toString(), NeuronType.OUTPUT );
+	/**
+	 * @param newName id of type
+	 */
+	private NeuronType(String newName) {
+		name = newName;
 	}
-	return (NeuronType) types.get( name );
-}
 
-/**
- * @see Object#equals(java.lang.Object)
- */
-public boolean equals( Object o ) {
-	return ( this == o );
-}
+	/**
+	 * @param name id of type
+	 * @return <code>NeuronType</code> enumerated type corresponding to <code>name</code>
+	 */
+	public static NeuronType valueOf(String name) {
+		if (types == null) {
+			types = new HashMap();
+			types.put(NeuronType.INPUT.toString(), NeuronType.INPUT);
+			types.put(NeuronType.HIDDEN.toString(), NeuronType.HIDDEN);
+			types.put(NeuronType.OUTPUT.toString(), NeuronType.OUTPUT);
+		}
+		return (NeuronType) types.get(name);
+	}
 
-/**
- * @see Object#toString()
- */
-public String toString() {
-	return name;
-}
+	/**
+	 * @see Object#equals(java.lang.Object)
+	 */
+	public boolean equals(Object o) {
+		return (this == o);
+	}
 
-/**
- * define this so objects may be used in hash tables
- * 
- * @see Object#hashCode()
- */
-public int hashCode() {
-	return name.hashCode();
-}
+	/**
+	 * @see Object#toString()
+	 */
+	public String toString() {
+		return name;
+	}
 
-/**
- * for hibernate
- * @return unique id
- */
-private Long getId() {
-	return id;
-}
+	/**
+	 * define this so objects may be used in hash tables
+	 * 
+	 * @see Object#hashCode()
+	 */
+	public int hashCode() {
+		return name.hashCode();
+	}
 
-/**
- * for hibernate
- * @param aId
- */
-private void setId( Long aId ) {
-	id = aId;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @return unique id
+	 */
+	private Long getId() {
+		return id;
+	}
+
+	/**
+	 * for hibernate
+	 * 
+	 * @param aId
+	 */
+	private void setId(Long aId) {
+		id = aId;
+	}
 }

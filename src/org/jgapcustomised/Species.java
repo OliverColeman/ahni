@@ -26,9 +26,8 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Species are reproductively isolated segments of a population. They are used
- * to ensure diversity in the population. This can protect innovation, and also
- * serve to maintain a broader search space, avoiding being trapped in local
+ * Species are reproductively isolated segments of a population. They are used to ensure diversity in the population.
+ * This can protect innovation, and also serve to maintain a broader search space, avoiding being trapped in local
  * optima.
  * 
  * Modified by Oliver Coleman 2010-09-11 to use fittest chromosome as representative
@@ -65,13 +64,12 @@ public class Species {
 	private static long idCount = 0;
 
 	/**
-	 * chromosomes active in current population; these logically should be a
-	 * <code>Set</code>, but we use a <code>List</code> to make random selection
-	 * easier, specifically in <code>ReproductionOperator</code>
+	 * chromosomes active in current population; these logically should be a <code>Set</code>, but we use a
+	 * <code>List</code> to make random selection easier, specifically in <code>ReproductionOperator</code>
 	 */
 	private List<Chromosome> chromosomes = new ArrayList<Chromosome>();
 
-	//private Chromosome representative = null;
+	// private Chromosome representative = null;
 
 	private SpeciationParms speciationParms = null;
 
@@ -82,10 +80,8 @@ public class Species {
 	private int age = 0;
 
 	private int eliteCount;
-	
+
 	public int originalSize;
-	
-	
 
 	/**
 	 * for hibernate
@@ -96,7 +92,7 @@ public class Species {
 	 * @see java.lang.Object#hashCode()
 	 */
 	public int hashCode() {
-		//return representative.hashCode();
+		// return representative.hashCode();
 		return getFittest().hashCode();
 	}
 
@@ -105,7 +101,7 @@ public class Species {
 	 */
 	public boolean equals(Object o) {
 		Species other = (Species) o;
-		//return representative.equals(other.representative);
+		// return representative.equals(other.representative);
 		return getFittest().equals(other.getFittest());
 	}
 
@@ -113,7 +109,7 @@ public class Species {
 	 * @return unique ID; this is chromosome ID of representative
 	 */
 	public Long getRepresentativeId() {
-		//return representative.getId();
+		// return representative.getId();
 		if (getFittest() == null) {
 			System.out.println("species empty!");
 			return -1l;
@@ -122,16 +118,15 @@ public class Species {
 	}
 
 	/**
-	 * Create new specie from representative. Representative is first member of
-	 * specie, and all other members of specie are determined by compatibility
-	 * with representative. Even if representative dies from population, a
-	 * reference is kept here to determine specie membership.
+	 * Create new specie from representative. Representative is first member of specie, and all other members of specie
+	 * are determined by compatibility with representative. Even if representative dies from population, a reference is
+	 * kept here to determine specie membership.
 	 * 
 	 * @param aSpeciationParms
 	 * @param aRepresentative
 	 */
 	public Species(SpeciationParms aSpeciationParms, Chromosome aRepresentative) {
-		//representative = aRepresentative;
+		// representative = aRepresentative;
 		fittest = aRepresentative;
 		aRepresentative.setSpecie(this);
 		chromosomes.add(aRepresentative);
@@ -144,18 +139,17 @@ public class Species {
 	 * @return representative chromosome
 	 */
 	protected Chromosome getRepresentative() {
-		//return representative;
+		// return representative;
 		return getFittest();
 	}
 
 	/**
 	 * @param aChromosome
-	 * @return true if chromosome is added, false if chromosome already is a
-	 *         member of this specie
+	 * @return true if chromosome is added, false if chromosome already is a member of this specie
 	 */
 	public boolean add(Chromosome aChromosome) {
-		//if (chromosomes.isEmpty() && !match(aChromosome))
-		//	throw new IllegalArgumentException("chromosome does not match specie: " + aChromosome);
+		// if (chromosomes.isEmpty() && !match(aChromosome))
+		// throw new IllegalArgumentException("chromosome does not match specie: " + aChromosome);
 		if (chromosomes.contains(aChromosome))
 			return false;
 		aChromosome.setSpecie(this);
@@ -163,12 +157,10 @@ public class Species {
 			fittest = aChromosome;
 		return chromosomes.add(aChromosome);
 	}
-	
-	
+
 	/**
 	 * @param aChromosome
-	 * @return true if chromosome was removed, false if chromosome not a
-	 *         member of this specie
+	 * @return true if chromosome was removed, false if chromosome not a member of this specie
 	 */
 	public boolean remove(Chromosome aChromosome) {
 		aChromosome.resetSpecie();
@@ -176,7 +168,6 @@ public class Species {
 			fittest = null;
 		return chromosomes.remove(aChromosome);
 	}
-	
 
 	/**
 	 * @return all chromosomes in specie
@@ -184,10 +175,10 @@ public class Species {
 	public List<Chromosome> getChromosomes() {
 		return Collections.unmodifiableList(chromosomes);
 	}
-	
+
 	/**
-	 * Remove all chromosomes from this species.
-	 * NOTE: this method does not update the species field in the removed Chromosomes.
+	 * Remove all chromosomes from this species. NOTE: this method does not update the species field in the removed
+	 * Chromosomes.
 	 */
 	public void clear() {
 		chromosomes.clear();
@@ -195,11 +186,10 @@ public class Species {
 	}
 
 	/**
-	 * Remove all chromosomes from this specie except <code>keepers</code>
-	 * NOTE: this method does not update the species field in the removed Chromosomes. 
+	 * Remove all chromosomes from this specie except <code>keepers</code> NOTE: this method does not update the species
+	 * field in the removed Chromosomes.
 	 * 
-	 * @param keepers
-	 *            <code>Collection</code> contains chromosome objects
+	 * @param keepers <code>Collection</code> contains chromosome objects
 	 */
 	public void cull(Collection<Chromosome> keepers) {
 		Iterator<Chromosome> it = chromosomes.iterator();
@@ -229,17 +219,16 @@ public class Species {
 	}
 
 	/**
-	 * update internal variables (fittest, stagnantGenerationsCount) to begin
-	 * new generation
+	 * update internal variables (fittest, stagnantGenerationsCount) to begin new generation
 	 */
 	public void newGeneration() {
 		age++;
-		
+
 		if (!chromosomes.isEmpty())
 			getFittest();
 
 		if (fittest != null) {
-			//if fitness hasn't improved increase stagnant generations count
+			// if fitness hasn't improved increase stagnant generations count
 			if (fittest.getFitnessValue() <= previousGenBestFitness) {
 				stagnantGenerationsCount++;
 				// System.out.println("Stagnant generations increased to " +
@@ -279,23 +268,20 @@ public class Species {
 	/**
 	 * @param aChromosome
 	 * @return double adjusted fitness for aChromosome relative to this specie
-	 * @throws IllegalArgumentException
-	 *             if chromosome is not a member if this specie
+	 * @throws IllegalArgumentException if chromosome is not a member if this specie
 	 */
 	public double getChromosomeFitnessValue(Chromosome aChromosome) {
 		if (aChromosome.getFitnessValue() < 0)
 			throw new IllegalArgumentException("chromosome's fitness has not been set: " + aChromosome.toString());
 		/*
-		 * removed check for performance if (chromosomes.contains(aChromosome)
-		 * == false) throw new IllegalArgumentException(
-		 * "chromosome not a member of this specie: " + aChromosome.toString());
+		 * removed check for performance if (chromosomes.contains(aChromosome) == false) throw new
+		 * IllegalArgumentException( "chromosome not a member of this specie: " + aChromosome.toString());
 		 */
 		return ((double) aChromosome.getFitnessValue()) / chromosomes.size();
 	}
 
 	/**
-	 * @return average raw fitness (i.e., not adjusted for specie size) of all
-	 *         chromosomes in specie
+	 * @return average raw fitness (i.e., not adjusted for specie size) of all chromosomes in specie
 	 */
 	public double getFitnessValue() {
 		long totalRawFitness = 0;
@@ -335,13 +321,9 @@ public class Species {
 	}
 
 	/**
-	 * @param proportion
-	 *            The proportion of Chromosomes to select, range (0, 1).
-	 * @param minToSelect
-	 *            The minimum number of Chromosomes to select. Use 0 for no
-	 *            minimum.
-	 * @return top proportion (or minToSelect, which ever is greater) of fittest
-	 *         Chromosomes in this species.
+	 * @param proportion The proportion of Chromosomes to select, range (0, 1).
+	 * @param minToSelect The minimum number of Chromosomes to select. Use 0 for no minimum.
+	 * @return top proportion (or minToSelect, which ever is greater) of fittest Chromosomes in this species.
 	 */
 	public List<Chromosome> getElite(double proportion, int minToSelect) {
 		eliteCount = 0;
@@ -374,16 +356,15 @@ public class Species {
 
 	/**
 	 * @param aChromosome
-	 * @return boolean true iff compatibility difference between
-	 *         <code>aChromosome</code? and representative is less than
-	 *         speciation threshold
+	 * @return boolean true iff compatibility difference between <code>aChromosome</code? and representative is less
+	 *         than speciation threshold
 	 */
 	public boolean match(Chromosome aChromosome) {
 		if (isEmpty()) {
 			System.err.println("Attempt to determine chromosome match for empty species");
 			return false;
 		}
-		//return (representative.distance(aChromosome, speciationParms) < speciationParms.getSpeciationThreshold());
+		// return (representative.distance(aChromosome, speciationParms) < speciationParms.getSpeciationThreshold());
 		return (getFittest().distance(aChromosome, speciationParms) < speciationParms.getSpeciationThreshold());
 	}
 
@@ -397,8 +378,7 @@ public class Species {
 	}
 
 	/**
-	 * @return String XML representation of object according to <a
-	 *         href="http://nevt.sourceforge.net/">NEVT </a>.
+	 * @return String XML representation of object according to <a href="http://nevt.sourceforge.net/">NEVT </a>.
 	 */
 	public String toXml() {
 		StringBuffer result = new StringBuffer();

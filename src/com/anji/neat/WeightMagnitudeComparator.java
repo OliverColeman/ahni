@@ -26,37 +26,36 @@ import java.util.Comparator;
  */
 public class WeightMagnitudeComparator implements Comparator {
 
-private static WeightMagnitudeComparator instance = null;
+	private static WeightMagnitudeComparator instance = null;
 
-private WeightMagnitudeComparator() {
-	super();
-}
+	private WeightMagnitudeComparator() {
+		super();
+	}
 
-/**
- * @return singleton
- */
-public static WeightMagnitudeComparator getInstance() {
-	if ( instance == null )
-		instance = new WeightMagnitudeComparator();
-	return instance;
-}
+	/**
+	 * @return singleton
+	 */
+	public static WeightMagnitudeComparator getInstance() {
+		if (instance == null)
+			instance = new WeightMagnitudeComparator();
+		return instance;
+	}
 
-/**
- * @param o1
- * @param o2
- * @return compare absolute value of weights of <code>ConnectionAllele</code> objects; return
- * 1 if <code>o1</code>><code>o2</code>, 0 if <code>o1</code>==<code>o2</code>; -1
- * otherwise
- */
-public int compare( Object o1, Object o2 ) {
-	ConnectionAllele connAllele1 = (ConnectionAllele) o1;
-	ConnectionAllele connAllele2 = (ConnectionAllele) o2;
-	double result = Math.abs( connAllele1.getWeight() ) - Math.abs( connAllele2.getWeight() );
-	if ( result > 0 )
-		return 1;
-	else if ( result < 0 )
-		return -1;
-	else
-		return 0;
-}
+	/**
+	 * @param o1
+	 * @param o2
+	 * @return compare absolute value of weights of <code>ConnectionAllele</code> objects; return 1 if <code>o1</code>>
+	 *         <code>o2</code>, 0 if <code>o1</code>==<code>o2</code>; -1 otherwise
+	 */
+	public int compare(Object o1, Object o2) {
+		ConnectionAllele connAllele1 = (ConnectionAllele) o1;
+		ConnectionAllele connAllele2 = (ConnectionAllele) o2;
+		double result = Math.abs(connAllele1.getWeight()) - Math.abs(connAllele2.getWeight());
+		if (result > 0)
+			return 1;
+		else if (result < 0)
+			return -1;
+		else
+			return 0;
+	}
 }

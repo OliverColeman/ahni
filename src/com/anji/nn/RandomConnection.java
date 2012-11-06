@@ -24,36 +24,35 @@ package com.anji.nn;
 
 import java.util.Random;
 
-
 /**
  * @author Philip Tucker
  */
 public class RandomConnection implements Connection {
 
 	private Random rand = new Random();
-	
+
 	private RandomConnection() {
 		// no-op
 	}
-	
+
 	private static RandomConnection instance;
 
 	/**
 	 * @param aRand new random generator
 	 */
-	public void setRand( Random aRand ) {
+	public void setRand(Random aRand) {
 		rand = aRand;
 	}
-	
+
 	/**
 	 * @return singleton instance
 	 */
 	public static RandomConnection getInstance() {
-		if ( instance == null )
+		if (instance == null)
 			instance = new RandomConnection();
 		return instance;
 	}
-	
+
 	/**
 	 * @see com.anji.nn.Connection#read()
 	 */
@@ -66,8 +65,8 @@ public class RandomConnection implements Connection {
 	 */
 	public String toXml() {
 		StringBuffer result = new StringBuffer();
-		result.append( "<" ).append( Connection.XML_TAG );
-		result.append( "\" from-input=\"bias\" />" );
+		result.append("<").append(Connection.XML_TAG);
+		result.append("\" from-input=\"bias\" />");
 
 		return result.toString();
 	}
@@ -79,6 +78,4 @@ public class RandomConnection implements Connection {
 		return 222;
 	}
 
-
 }
-

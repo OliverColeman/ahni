@@ -56,20 +56,25 @@ public class GridNet implements Activator {
 	/**
 	 * Creates a GridNet with the given specifications.
 	 * 
-	 * @param connectionMaxRanges The maximum length/range of connections in either direction in the x, y and z axes. The array has format
-	 *            [z=0|y=1|x=2],[negative=0|positive=1] = max range. For example a standard feed-forward network with width W (x-axis), height H (y-axis) and
-	 *            depth D (z-axis) would be described: {{-1, 1}, {H, H}, {W, W}}, where -1 for the negative direction for the z-axis indicates that connections
-	 *            may not go from layer n to layer &lt; n.
-	 * @param weights The connection weights of the network between each neuron, where neurons are specfied by their coordinates, in the format
-	 *            [z1][y1][x1][zR][yR][xR], where xR, yR, and zR are relative to x1, y1 and z1, and with the corresponding negative direction ranges from
-	 *            connectionMaxRanges added to avoid negative array indices. x1, y1, z1 is the target and xR, yR, zR is the source. Note that the range of
-	 *            connections for neurons at or close to the edge of the grid must be circumscribed by the edge of the grid, so the last three dimensions of the
-	 *            array must have differing sizes to account for this (except in the unlikely scenario that connections extend only straight down); also note
-	 *            that no connections may extend into the input layer so the connection matrices must also be circumscribed accordingly for this (thus the
-	 *            number of layers in the network including the input layer is weights.length+1).
-	 * @param bias the bias for each neuron not in the input layer, in the format [z][y][x] where z, y, and x are the coordinates of the neuron (as input
-	 *            neurons don't receive a bias bias.length should match weights.length).
-	 * @param function the ActivationFunction to use; only one type of activation function is used throughout the network.
+	 * @param connectionMaxRanges The maximum length/range of connections in either direction in the x, y and z axes.
+	 *            The array has format [z=0|y=1|x=2],[negative=0|positive=1] = max range. For example a standard
+	 *            feed-forward network with width W (x-axis), height H (y-axis) and depth D (z-axis) would be described:
+	 *            {{-1, 1}, {H, H}, {W, W}}, where -1 for the negative direction for the z-axis indicates that
+	 *            connections may not go from layer n to layer &lt; n.
+	 * @param weights The connection weights of the network between each neuron, where neurons are specfied by their
+	 *            coordinates, in the format [z1][y1][x1][zR][yR][xR], where xR, yR, and zR are relative to x1, y1 and
+	 *            z1, and with the corresponding negative direction ranges from connectionMaxRanges added to avoid
+	 *            negative array indices. x1, y1, z1 is the target and xR, yR, zR is the source. Note that the range of
+	 *            connections for neurons at or close to the edge of the grid must be circumscribed by the edge of the
+	 *            grid, so the last three dimensions of the array must have differing sizes to account for this (except
+	 *            in the unlikely scenario that connections extend only straight down); also note that no connections
+	 *            may extend into the input layer so the connection matrices must also be circumscribed accordingly for
+	 *            this (thus the number of layers in the network including the input layer is weights.length+1).
+	 * @param bias the bias for each neuron not in the input layer, in the format [z][y][x] where z, y, and x are the
+	 *            coordinates of the neuron (as input neurons don't receive a bias bias.length should match
+	 *            weights.length).
+	 * @param function the ActivationFunction to use; only one type of activation function is used throughout the
+	 *            network.
 	 * @param cyclesPerStep Number of activation cycles to perform per step(), must be >= 1.
 	 * @param aName Name of the network.
 	 */
@@ -104,16 +109,20 @@ public class GridNet implements Activator {
 	 * Creates a GridNet with the given specifications.
 	 * 
 	 * @param connectionMaxRange The maximum length/range of connections in either direction in the x, y and z axes.
-	 * @param weights The connection weights of the network between each neuron, where neurons are specfied by their coordinates, in the format
-	 *            [z1][y1][x1][zR][yR][xR], where xR, yR, and zR are relative to x1, y1 and z1, and with the corresponding negative direction ranges from
-	 *            connectionMaxRanges added to avoid negative array indices. x1, y1, z1 is the target and xR, yR, zR is the source. Note that the range of
-	 *            connections for neurons at or close to the edge of the grid must be circumscribed by the edge of the grid, so the last three dimensions of the
-	 *            array must have differing sizes to account for this (except in the unlikely scenario that connections extend only straight down); also note
-	 *            that no connections may extend into the input layer so the connection matrices must also be circumscribed accordingly for this (thus the
-	 *            number of layers in the network including the input layer is weights.length+1).
-	 * @param bias the bias for each neuron not in the input layer, in the format [z][y][x] where z, y, and x are the coordinates of the neuron (as input
-	 *            neurons don't receive a bias bias.length should match weights.length).
-	 * @param function the ActivationFunction to use; only one type of activation function is used throughout the network.
+	 * @param weights The connection weights of the network between each neuron, where neurons are specfied by their
+	 *            coordinates, in the format [z1][y1][x1][zR][yR][xR], where xR, yR, and zR are relative to x1, y1 and
+	 *            z1, and with the corresponding negative direction ranges from connectionMaxRanges added to avoid
+	 *            negative array indices. x1, y1, z1 is the target and xR, yR, zR is the source. Note that the range of
+	 *            connections for neurons at or close to the edge of the grid must be circumscribed by the edge of the
+	 *            grid, so the last three dimensions of the array must have differing sizes to account for this (except
+	 *            in the unlikely scenario that connections extend only straight down); also note that no connections
+	 *            may extend into the input layer so the connection matrices must also be circumscribed accordingly for
+	 *            this (thus the number of layers in the network including the input layer is weights.length+1).
+	 * @param bias the bias for each neuron not in the input layer, in the format [z][y][x] where z, y, and x are the
+	 *            coordinates of the neuron (as input neurons don't receive a bias bias.length should match
+	 *            weights.length).
+	 * @param function the ActivationFunction to use; only one type of activation function is used throughout the
+	 *            network.
 	 * @param cyclesPerStep Number of activation cycles to perform per step(), must be >= 1.
 	 * @param aName Name of the network.
 	 */
@@ -158,15 +167,19 @@ public class GridNet implements Activator {
 	 * Creates a feed-forward GridNet with the given specifications.
 	 * 
 	 * @param connectionMaxRange The maximum length/range of connections in either direction in the tx and ty axes.
-	 * @param weights The connection weights of the network between layers. Format is [l-1][y1][x1][yR][xR], where x1 and y1 are the coordinates of the target
-	 *            neuron in layer l and xR and yR are the relative (to x1 and y1) coordinates of the source neuron in layer l-1, and with the corresponding
-	 *            negative direction ranges from connectionMaxRanges added to avoid negative array indices. Note that the range of connections for neurons at or
-	 *            close to the edge of the grid must be circumscribed by the edge of the grid, so the last two dimensions of the array must have differing sizes
-	 *            to account for this (except in the unlikely scenario that connections extend only straight down). The number of layers in the network
+	 * @param weights The connection weights of the network between layers. Format is [l-1][y1][x1][yR][xR], where x1
+	 *            and y1 are the coordinates of the target neuron in layer l and xR and yR are the relative (to x1 and
+	 *            y1) coordinates of the source neuron in layer l-1, and with the corresponding negative direction
+	 *            ranges from connectionMaxRanges added to avoid negative array indices. Note that the range of
+	 *            connections for neurons at or close to the edge of the grid must be circumscribed by the edge of the
+	 *            grid, so the last two dimensions of the array must have differing sizes to account for this (except in
+	 *            the unlikely scenario that connections extend only straight down). The number of layers in the network
 	 *            including the input layer is weights.length+1.
-	 * @param bias the bias for each neuron not in the input layer, in the format [z][y][x] where z, y, and x are the coordinates of the neuron (as input
-	 *            neurons don't receive a bias bias.length should match weights.length).
-	 * @param function the ActivationFunction to use; only one type of activation function is used throughout the network.
+	 * @param bias the bias for each neuron not in the input layer, in the format [z][y][x] where z, y, and x are the
+	 *            coordinates of the neuron (as input neurons don't receive a bias bias.length should match
+	 *            weights.length).
+	 * @param function the ActivationFunction to use; only one type of activation function is used throughout the
+	 *            network.
 	 * @param aName Name of the network.
 	 */
 	public GridNet(int connectionMaxRange, int[][] layerDimensions, double[][][][][] weights, double[][][] bias, ActivationFunction function, String aName) {
@@ -191,17 +204,20 @@ public class GridNet implements Activator {
 	/**
 	 * Creates a feed-forward GridNet with the given specifications.
 	 * 
-	 * @param connectionMaxRanges The maximum length/range of connections in either direction in the tx and ty axes. The array has format
-	 *            [ty=0|tx=1],[negative=0|positive=1] = max range.
-	 * @param weights The connection weights of the network between layers. Format is [l-1][y1][x1][yR][xR], where x1 and y1 are the coordinates of the target
-	 *            neuron in layer l and xR and yR are the relative (to x1 and y1) coordinates of the source neuron in layer l-1, and with the corresponding
-	 *            negative direction ranges from connectionMaxRanges added to avoid negative array indices. Note that the range of connections for neurons at or
-	 *            close to the edge of the grid must be circumscribed by the edge of the grid, so the last two dimensions of the array must have differing sizes
-	 *            to account for this (except in the unlikely scenario that connections extend only straight down). The number of layers in the network
+	 * @param connectionMaxRanges The maximum length/range of connections in either direction in the tx and ty axes. The
+	 *            array has format [ty=0|tx=1],[negative=0|positive=1] = max range.
+	 * @param weights The connection weights of the network between layers. Format is [l-1][y1][x1][yR][xR], where x1
+	 *            and y1 are the coordinates of the target neuron in layer l and xR and yR are the relative (to x1 and
+	 *            y1) coordinates of the source neuron in layer l-1, and with the corresponding negative direction
+	 *            ranges from connectionMaxRanges added to avoid negative array indices. Note that the range of
+	 *            connections for neurons at or close to the edge of the grid must be circumscribed by the edge of the
+	 *            grid, so the last two dimensions of the array must have differing sizes to account for this (except in
+	 *            the unlikely scenario that connections extend only straight down). The number of layers in the network
 	 *            including the input layer is weights.length+1.
-	 * @param bias the bias for each neuron not in the input layer, in the format [z][y][x] where z, y, and x are the coordinates of the neuron (as input
-	 *            neurons don't receive a bias bias.length should match weights.
-	 * @param function the ActivationFunction to use; only one type of activation function is used throughout the network.
+	 * @param bias the bias for each neuron not in the input layer, in the format [z][y][x] where z, y, and x are the
+	 *            coordinates of the neuron (as input neurons don't receive a bias bias.length should match weights.
+	 * @param function the ActivationFunction to use; only one type of activation function is used throughout the
+	 *            network.
 	 * @param aName Name of the network.
 	 */
 	public GridNet(int[][][] connectionMaxRanges, int[][] layerDimensions, double[][][][][] weights, double[][][] bias, ActivationFunction function, String aName) {
@@ -226,12 +242,13 @@ public class GridNet implements Activator {
 	/**
 	 * Creates a fully-connected feed-forward GridNet with the given specifications.
 	 * 
-	 * @param weights The connection weights of the network between layers. Format is [l-1][y1][x1][y2][x2], where x1 and y1 are coordinates of target neuron in
-	 *            layer l and x2 and y2 are coordinates of source neuron in layer l-1. The number of layers in the network including the input layer is
-	 *            weights.length+1.
-	 * @param bias the bias for each neuron not in the input layer, in the format [z][y][x] where z, y, and x are the coordinates of the neuron (as input
-	 *            neurons don't receive a bias bias.length should match weights.
-	 * @param function the ActivationFunction to use; only one type of activation function is used throughout the network.
+	 * @param weights The connection weights of the network between layers. Format is [l-1][y1][x1][y2][x2], where x1
+	 *            and y1 are coordinates of target neuron in layer l and x2 and y2 are coordinates of source neuron in
+	 *            layer l-1. The number of layers in the network including the input layer is weights.length+1.
+	 * @param bias the bias for each neuron not in the input layer, in the format [z][y][x] where z, y, and x are the
+	 *            coordinates of the neuron (as input neurons don't receive a bias bias.length should match weights.
+	 * @param function the ActivationFunction to use; only one type of activation function is used throughout the
+	 *            network.
 	 * @param aName Name of the network.
 	 */
 	public GridNet(double[][][][][] weights, int[][] layerDimensions, double[][][] bias, ActivationFunction function, String aName) {
@@ -295,8 +312,8 @@ public class GridNet implements Activator {
 	}
 
 	/**
-	 * @return Number corresponding to cost of network activation in resources. This function over-estimates the cost, dependent on the ratio of the
-	 *         connectionMaxRanges to the dimensions of the network.
+	 * @return Number corresponding to cost of network activation in resources. This function over-estimates the cost,
+	 *         dependent on the ratio of the connectionMaxRanges to the dimensions of the network.
 	 */
 	public long cost() {
 		return getConnectionCount(true) * activationFunction.cost();
@@ -305,9 +322,10 @@ public class GridNet implements Activator {
 	/**
 	 * Set array to use as the input layer.
 	 * 
-	 * @param inputs The new input pattern. The format is input[ty][tx]. The array should be the same dimensions as the network, otherwise things will break.
-	 *            The array is copied by reference, replacing the original first layer activation array. Changes to newInput after this call outside of this
-	 *            network will be reflected in the network. The network never changes the input layer.
+	 * @param inputs The new input pattern. The format is input[ty][tx]. The array should be the same dimensions as the
+	 *            network, otherwise things will break. The array is copied by reference, replacing the original first
+	 *            layer activation array. Changes to newInput after this call outside of this network will be reflected
+	 *            in the network. The network never changes the input layer.
 	 */
 	public void setInputs(double[][] inputs) {
 		activation[0] = inputs;
@@ -325,8 +343,8 @@ public class GridNet implements Activator {
 	/**
 	 * Get output pattern.
 	 * 
-	 * @return A reference to the output pattern. The format is output[ty][tx]. For recurrent networks it's probably not a good idea to modify the returned
-	 *         array.
+	 * @return A reference to the output pattern. The format is output[ty][tx]. For recurrent networks it's probably not
+	 *         a good idea to modify the returned array.
 	 */
 	public double[][] getOutputs() {
 		return activation[depth - 1];
@@ -340,11 +358,13 @@ public class GridNet implements Activator {
 	}
 
 	/**
-	 * Provides a reference to the internal weights array. Format is [z1][y1][x1][zR][yR][xR], where xR, yR, and zR are relative to x1, y1 and z1, and with the
-	 * corresponding negative direction ranges from connectionMaxRanges added to avoid negative array indices. x1, y1, z1 is the target and xR, yR, zR is the
-	 * source coordinates. Note that the range of connections for neurons at or close to the edge of the grid are circumscribed by the edge of the grid, so the
-	 * last three dimensions of the array will have differing sizes to account for this (except in the unlikely scenario that connections extend only straight
-	 * down). Note that modifications to the returned array are reflected in the operation of the GridNet.
+	 * Provides a reference to the internal weights array. Format is [z1][y1][x1][zR][yR][xR], where xR, yR, and zR are
+	 * relative to x1, y1 and z1, and with the corresponding negative direction ranges from connectionMaxRanges added to
+	 * avoid negative array indices. x1, y1, z1 is the target and xR, yR, zR is the source coordinates. Note that the
+	 * range of connections for neurons at or close to the edge of the grid are circumscribed by the edge of the grid,
+	 * so the last three dimensions of the array will have differing sizes to account for this (except in the unlikely
+	 * scenario that connections extend only straight down). Note that modifications to the returned array are reflected
+	 * in the operation of the GridNet.
 	 * 
 	 * @return A reference to the weights array.
 	 */
@@ -357,7 +377,8 @@ public class GridNet implements Activator {
 	}
 
 	/**
-	 * Perform one activation step, consisting of cyclesPerStep steps, calculating new activation for all neurons. For feed-forward networks use stepFF.
+	 * Perform one activation step, consisting of cyclesPerStep steps, calculating new activation for all neurons. For
+	 * feed-forward networks use stepFF.
 	 */
 	public void step() {
 		// the activationNew and activation arrays are swapped every step, so set
@@ -385,7 +406,8 @@ public class GridNet implements Activator {
 
 								for (int wx = 0, sx = Math.max(0, tx + wx - connectionMaxRanges[tz - 1][2][0]); wx < w[wz][wy].length; wx++, sx++) {
 
-									// System.out.println("\tw: " + wz + "," + wy + "," + wx + "\tt: " + tz + "," + ty + "," + tx);
+									// System.out.println("\tw: " + wz + "," + wy + "," + wx + "\tt: " + tz + "," + ty +
+									// "," + tx);
 
 									sum += activation[sz][sy][sx] * w[wz][wy][wx];
 								}
@@ -413,8 +435,8 @@ public class GridNet implements Activator {
 	}
 
 	/**
-	 * Perform one complete cycle for a feed forward network, propogating signal from input layer to output layer, only activating each layer once in sequence
-	 * (connections can only exist from layer n to layer n+1).
+	 * Perform one complete cycle for a feed forward network, propogating signal from input layer to output layer, only
+	 * activating each layer once in sequence (connections can only exist from layer n to layer n+1).
 	 */
 	public void stepFF() {
 		// for each target layer
@@ -423,7 +445,8 @@ public class GridNet implements Activator {
 				for (int tx = 0; tx < width[tz]; tx++) {
 					// System.out.println(tz + "," + ty + "," + tx);
 
-					double[][] w = weights[tz - 1][ty][tx][0]; // weight matrix for connections from s{z,y,x} to t{z,y,x}
+					double[][] w = weights[tz - 1][ty][tx][0]; // weight matrix for connections from s{z,y,x} to
+																// t{z,y,x}
 					double sum = bias[tz - 1][ty][tx];
 
 					// for each source neuron for connections from zyx
@@ -434,7 +457,8 @@ public class GridNet implements Activator {
 
 						for (int wx = 0, sx = Math.max(0, tx + wx - connectionMaxRanges[tz - 1][2][0]); wx < w[wy].length; wx++, sx++) {
 
-							// System.out.println("\tw: " + wz + "," + wy + "," + wx + "\tt: " + tz + "," + ty + "," + tx);
+							// System.out.println("\tw: " + wz + "," + wy + "," + wx + "\tt: " + tz + "," + ty + "," +
+							// tx);
 							sum += activation[sz][sy][sx] * w[wy][wx];
 						}
 					}
@@ -453,8 +477,9 @@ public class GridNet implements Activator {
 	// +++++++++++ Activator interface ++++++++++++++
 
 	/**
-	 * @return double[][] output layer given last provided input activation via <code>next(double[])</code> or <code>next(double[][])</code>, copied by reference.
-	 *         For recurrent networks it's probably not a good idea to modify the returned array.
+	 * @return double[][] output layer given last provided input activation via <code>next(double[])</code> or
+	 *         <code>next(double[][])</code>, copied by reference. For recurrent networks it's probably not a good idea
+	 *         to modify the returned array.
 	 * @see Activator#next(double[])
 	 * @see Activator#next(double[][])
 	 */
@@ -468,10 +493,11 @@ public class GridNet implements Activator {
 
 	/**
 	 * 
-	 * @param stimuli first row of input layer. The stimuli array is copied by reference, replacing the original first layer row array. Changes to stimuli after
-	 *            this call outside of this network will be reflected in the network. The network never changes the input layer.
-	 * @return double[] first row of output array given input stimuli, copied by reference. For recurrent networks it's probably not a good idea to modify the
-	 *         returned array.
+	 * @param stimuli first row of input layer. The stimuli array is copied by reference, replacing the original first
+	 *            layer row array. Changes to stimuli after this call outside of this network will be reflected in the
+	 *            network. The network never changes the input layer.
+	 * @return double[] first row of output array given input stimuli, copied by reference. For recurrent networks it's
+	 *         probably not a good idea to modify the returned array.
 	 */
 	public double[] next(double[] stimuli) {
 		activation[0][0] = stimuli;
@@ -483,8 +509,9 @@ public class GridNet implements Activator {
 	}
 
 	/**
-	 * @param stimuli sequence of first row of input layer. The stimuli arrays are copied by reference, replacing the original first layer array. Changes to the
-	 *            last stimuli array after this call outside of this network will be reflected in the network. The GridNet never changes the input layer.
+	 * @param stimuli sequence of first row of input layer. The stimuli arrays are copied by reference, replacing the
+	 *            original first layer array. Changes to the last stimuli array after this call outside of this network
+	 *            will be reflected in the network. The GridNet never changes the input layer.
 	 * @return double[][] sequence of first row of output values array given input stimuli.
 	 */
 	public double[][] nextSequence(double[][] stimuli) {
@@ -501,8 +528,9 @@ public class GridNet implements Activator {
 	}
 
 	/**
-	 * @param stimuli input layer. The stimuli array is copied by reference, replacing the original first layer array. Changes to stimuli after this call
-	 *            outside of this network will be reflected in the network. The network never changes the input layer.
+	 * @param stimuli input layer. The stimuli array is copied by reference, replacing the original first layer array.
+	 *            Changes to stimuli after this call outside of this network will be reflected in the network. The
+	 *            network never changes the input layer.
 	 * @return double[][] output layer given input stimuli, copied by reference.
 	 */
 	public double[][] next(double[][] stimuli) {
@@ -515,9 +543,9 @@ public class GridNet implements Activator {
 	}
 
 	/**
-	 * @param stimuli sequence of input layer values. The stimuli arrays are copied by reference, replacing the original first layer array. Changes to the last
-	 *            stimuli array after this call outside of this network will be reflected in the network. The network never changes the values in the input
-	 *            layer.
+	 * @param stimuli sequence of input layer values. The stimuli arrays are copied by reference, replacing the original
+	 *            first layer array. Changes to the last stimuli array after this call outside of this network will be
+	 *            reflected in the network. The network never changes the values in the input layer.
 	 * 
 	 * @return double[][][] sequence of output value arrays given input stimuli.
 	 */
@@ -631,7 +659,8 @@ public class GridNet implements Activator {
 				for (int tx = 0; tx < width[tz]; tx++) {
 					output += "t " + tz + "," + ty + "," + tx + "\n";
 
-					double[][] w = weights[tz - 1][ty][tx][0]; // weight matrix for connections from s{z,y,x} to t{z,y,x}
+					double[][] w = weights[tz - 1][ty][tx][0]; // weight matrix for connections from s{z,y,x} to
+																// t{z,y,x}
 
 					// for each source neuron for connections from zyx
 					// s{z,y,x} is an index into the activation matrix to the source neuron
@@ -679,14 +708,15 @@ public class GridNet implements Activator {
 		 * 
 		 * long time = 0; for (int i = 0; i < 2500; i++) { long start = System.currentTimeMillis();
 		 * 
-		 * for (int tx = 0; tx < 5; tx++) { for (int ty = 0; ty < 500; ty++) { for (int tz = 0; tz < 500; tz++) { array[tx][ty][tz] = 0; }
-		 * //Arrays.fill(array[tx][ty], 0); //System.arraycopy(arrayEmpty, 0, array[tx][ty], 0, arrayEmpty.length); } } time += System.currentTimeMillis() -
-		 * start;
+		 * for (int tx = 0; tx < 5; tx++) { for (int ty = 0; ty < 500; ty++) { for (int tz = 0; tz < 500; tz++) {
+		 * array[tx][ty][tz] = 0; } //Arrays.fill(array[tx][ty], 0); //System.arraycopy(arrayEmpty, 0, array[tx][ty], 0,
+		 * arrayEmpty.length); } } time += System.currentTimeMillis() - start;
 		 * 
-		 * for (int tx = 0; tx < 5; tx++) { for (int ty = 0; ty < 500; ty++) { for (int tz = 0; tz < 500; tz++) { if (array[tx][ty][tz] != 0) {
-		 * System.out.println("non zero"); System.exit(0); } } } }
+		 * for (int tx = 0; tx < 5; tx++) { for (int ty = 0; ty < 500; ty++) { for (int tz = 0; tz < 500; tz++) { if
+		 * (array[tx][ty][tz] != 0) { System.out.println("non zero"); System.exit(0); } } } }
 		 * 
-		 * for (int tx = 0; tx < 5; tx++) { for (int ty = 0; ty < 500; ty++) { for (int tz = 0; tz < 500; tz++) { array[tx][ty][tz] = tx*ty*tz; } } } }
+		 * for (int tx = 0; tx < 5; tx++) { for (int ty = 0; ty < 500; ty++) { for (int tz = 0; tz < 500; tz++) {
+		 * array[tx][ty][tz] = tx*ty*tz; } } } }
 		 * 
 		 * System.out.println(time);
 		 */
@@ -695,27 +725,30 @@ public class GridNet implements Activator {
 		int height = 4;
 		int width = 4;
 		/*
-		 * int[][] cmr = new int[3][2]; cmr[0][0] = 1; //tz neg, no connections to previous or own layer cmr[0][1] = 1; //tz pos cmr[1][0] = 1; //ty neg
-		 * cmr[1][1] = 1; //ty pos cmr[2][0] = 1; //tx neg cmr[2][1] = 1; //tx pos
+		 * int[][] cmr = new int[3][2]; cmr[0][0] = 1; //tz neg, no connections to previous or own layer cmr[0][1] = 1;
+		 * //tz pos cmr[1][0] = 1; //ty neg cmr[1][1] = 1; //ty pos cmr[2][0] = 1; //tx neg cmr[2][1] = 1; //tx pos
 		 */
 
 		int cmr = 2;
 		/*
-		 * double[][][][][] weights = new double[depth-1][height][width][][]; //for each target neuron for (int z = 0; z < depth-1; z++) { for (int y = 0; y <
-		 * height; y++) { for (int x = 0; x < width; x++) { //calculate dimensions of this weight matrix (bounded by grid edges) //int dy = Math.min(height-1,
-		 * ty+cmr[1][1]) - Math.max(0, ty-cmr[1][0]) + 1; //int dx = Math.min(height-1, tx+cmr[2][1]) - Math.max(0, tx-cmr[2][0]) + 1; int dy =
-		 * Math.min(height-1, y+cmr) - Math.max(0, y-cmr) + 1; int dx = Math.min(height-1, x+cmr) - Math.max(0, x-cmr) + 1;
+		 * double[][][][][] weights = new double[depth-1][height][width][][]; //for each target neuron for (int z = 0; z
+		 * < depth-1; z++) { for (int y = 0; y < height; y++) { for (int x = 0; x < width; x++) { //calculate dimensions
+		 * of this weight matrix (bounded by grid edges) //int dy = Math.min(height-1, ty+cmr[1][1]) - Math.max(0,
+		 * ty-cmr[1][0]) + 1; //int dx = Math.min(height-1, tx+cmr[2][1]) - Math.max(0, tx-cmr[2][0]) + 1; int dy =
+		 * Math.min(height-1, y+cmr) - Math.max(0, y-cmr) + 1; int dx = Math.min(height-1, x+cmr) - Math.max(0, x-cmr) +
+		 * 1;
 		 * 
 		 * //System.out.println(tz + "," + ty + "," + tx + "  dy = " + dy + "  dx = " + dx);
 		 * 
 		 * weights[z][y][x] = new double[dy][dx]; double[][] w = weights[z][y][x];
 		 * 
-		 * //for each connection to zyx //w{y,x} is index into weight matrix //s{y,x} is index of source neuron //for (int wy = 0, ty = Math.max(0,
-		 * ty-cmr[1][0]); for (int wy = 0, sy = Math.max(0, y-cmr); wy < dy; wy++, sy++) { //for (int wx = 0, tx = Math.max(0, tx-cmr[2][0]); for (int wx = 0,
-		 * sx = Math.max(0, x-cmr); wx < dx; wx++, sx++) { //System.out.print("\t" + ty + "," + tx);
+		 * //for each connection to zyx //w{y,x} is index into weight matrix //s{y,x} is index of source neuron //for
+		 * (int wy = 0, ty = Math.max(0, ty-cmr[1][0]); for (int wy = 0, sy = Math.max(0, y-cmr); wy < dy; wy++, sy++) {
+		 * //for (int wx = 0, tx = Math.max(0, tx-cmr[2][0]); for (int wx = 0, sx = Math.max(0, x-cmr); wx < dx; wx++,
+		 * sx++) { //System.out.print("\t" + ty + "," + tx);
 		 * 
-		 * if (y-sy >= 0 && x-sx >= 0) //if (y == sy+1 && x == sx+1) //weights[tz][ty][tx][wy][wx] = 0.5/(0.5+Math.sqrt((ty-wy)*(ty-wy) + (tx-wx)*(tx-wx)));
-		 * w[wy][wx] = 1; else w[wy][wx] = 0;
+		 * if (y-sy >= 0 && x-sx >= 0) //if (y == sy+1 && x == sx+1) //weights[tz][ty][tx][wy][wx] =
+		 * 0.5/(0.5+Math.sqrt((ty-wy)*(ty-wy) + (tx-wx)*(tx-wx))); w[wy][wx] = 1; else w[wy][wx] = 0;
 		 * 
 		 * //System.out.print("\t" + w[wy][wx]); } //System.out.println(); } //System.out.println(); } } }
 		 */
@@ -731,7 +764,8 @@ public class GridNet implements Activator {
 					int dy = Math.min(height - 1, ty + cmr) - Math.max(0, ty - cmr) + 1;
 					int dx = Math.min(width - 1, tx + cmr) - Math.max(0, tx - cmr) + 1;
 
-					// System.out.println(tz + ", " + ty + ", " + tx + "  dz = " + dz + "  dy = " + dy + "  dx = " + dx);
+					// System.out.println(tz + ", " + ty + ", " + tx + "  dz = " + dz + "  dy = " + dy + "  dx = " +
+					// dx);
 
 					weights[tz - 1][ty][tx] = new double[dz][dy][dx];
 					double[][][] w = weights[tz - 1][ty][tx];
@@ -746,7 +780,8 @@ public class GridNet implements Activator {
 							for (int wx = 0, sx = Math.max(0, tx - cmr); wx < dx; wx++, sx++) {
 								// if (Math.abs(tz-sz) == 1 && Math.abs(ty-sy) == 1 && Math.abs(tx-sx) == 1)
 								if (ty >= sy && tx >= sx && tz == sz + 1 && sy == 0 && sx == 0)
-									// weights[tz][ty][tx][wy][wx] = 0.5/(0.5+Math.sqrt((ty-wy)*(ty-wy) + (tx-wx)*(tx-wx)));
+									// weights[tz][ty][tx][wy][wx] = 0.5/(0.5+Math.sqrt((ty-wy)*(ty-wy) +
+									// (tx-wx)*(tx-wx)));
 									w[wz][wy][wx] = 1;
 								// w[wz][wy][wx] = tx*height + ty;
 								else
@@ -763,22 +798,25 @@ public class GridNet implements Activator {
 		/*
 		 * double[][][][][] weights = new double[depth-1][height][width][height][width];
 		 * 
-		 * for (int tz = 0; tz < depth-1; tz++) { for (int ty = 0; ty < height; ty++) { for (int tx = 0; tx < width; tx++) { //for each connection from zyx for
-		 * (int wy = 0; wy < height; wy++) { for (int wx = 0; wx < width; wx++) { if (Math.abs(ty-wy) <= 1 && Math.abs(tx-wx) <= 1) weights[tz][ty][tx][wy][wx]
-		 * = 0.5/(0.5+Math.sqrt((ty-wy)*(ty-wy) + (tx-wx)*(tx-wx))); else weights[tz][ty][tx][wy][wx] = 0; } } } } }
+		 * for (int tz = 0; tz < depth-1; tz++) { for (int ty = 0; ty < height; ty++) { for (int tx = 0; tx < width;
+		 * tx++) { //for each connection from zyx for (int wy = 0; wy < height; wy++) { for (int wx = 0; wx < width;
+		 * wx++) { if (Math.abs(ty-wy) <= 1 && Math.abs(tx-wx) <= 1) weights[tz][ty][tx][wy][wx] =
+		 * 0.5/(0.5+Math.sqrt((ty-wy)*(ty-wy) + (tx-wx)*(tx-wx))); else weights[tz][ty][tx][wy][wx] = 0; } } } } }
 		 */
 
 		// GridNet net = new GridNet(weights, ActivationFunctionFactory.getInstance().getLinear(), "test");
 		// GridNet net = new GridNet(cmr, weights, ActivationFunctionFactory.getInstance().getLinear(), "test");
 		/*
-		 * GridNet net = new GridNet(cmr, weights, bias, ActivationFunctionFactory.getInstance().getLinear(), depth-1, "test");
+		 * GridNet net = new GridNet(cmr, weights, bias, ActivationFunctionFactory.getInstance().getLinear(), depth-1,
+		 * "test");
 		 * 
 		 * double[][] input = net.getInputs();
 		 * 
-		 * for (int ty = 0, v = 1; ty < input.length; ty++) { for (int tx = 0; tx < input[0].length; tx++, v++) { input[ty][tx] = v; //input[ty][tx] = 1; } }
-		 * //input[1][1] = 1;
+		 * for (int ty = 0, v = 1; ty < input.length; ty++) { for (int tx = 0; tx < input[0].length; tx++, v++) {
+		 * input[ty][tx] = v; //input[ty][tx] = 1; } } //input[1][1] = 1;
 		 * 
-		 * //for (int s = 0; s < depth; s++) { // System.out.println("\nStep " + s + "\n"); net.step(); //} //net.stepFF();
+		 * //for (int s = 0; s < depth; s++) { // System.out.println("\nStep " + s + "\n"); net.step(); //}
+		 * //net.stepFF();
 		 */
 	}
 }

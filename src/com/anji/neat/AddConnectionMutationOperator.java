@@ -38,11 +38,10 @@ import com.anji.util.Properties;
 
 /**
  * Implements NEAT add connection mutation inspired by <a
- * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf"> Evolving Neural Networks
- * through Augmenting Topologies </a>. In ANJI, mutation rate refers to the likelihood of any
- * candidate new mutation (i.e., any 2 unconnected nodes, not counting those that would create a
- * loop if recurrency is disabled) occurring. In traditional NEAT, it is the likelihood of a
- * chromosome experiencing a mutation, and each chromosome can not have more than one
+ * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf"> Evolving Neural Networks through Augmenting
+ * Topologies </a>. In ANJI, mutation rate refers to the likelihood of any candidate new mutation (i.e., any 2
+ * unconnected nodes, not counting those that would create a loop if recurrency is disabled) occurring. In traditional
+ * NEAT, it is the likelihood of a chromosome experiencing a mutation, and each chromosome can not have more than one
  * topological mutation per generation.
  * 
  * @author Philip Tucker
@@ -54,199 +53,187 @@ public class AddConnectionMutationOperator extends MutationOperator implements C
 	 */
 	public static final String ADD_CONN_MUTATE_RATE_KEY = "add.connection.mutation.rate";
 
-/**
- * default mutation rate
- */
-public static final double DEFAULT_MUTATE_RATE = 0.01f;
+	/**
+	 * default mutation rate
+	 */
+	public static final double DEFAULT_MUTATE_RATE = 0.01f;
 
-private RecurrencyPolicy policy;
+	private RecurrencyPolicy policy;
 
-/**
- * @see com.anji.util.Configurable#init(com.anji.util.Properties)
- */
-public void init( Properties props ) throws Exception {
-	setMutationRate( props.getDoubleProperty( ADD_CONN_MUTATE_RATE_KEY,
-			DEFAULT_MUTATE_RATE ) );
-	policy = RecurrencyPolicy.load( props );
-}
-
-/**
- * @see AddConnectionMutationOperator#AddConnectionMutationOperator(double)
- */
-public AddConnectionMutationOperator() {
-	this( DEFAULT_MUTATE_RATE, RecurrencyPolicy.BEST_GUESS );
-}
-
-/**
- * @param newMutationRate
- * @see AddConnectionMutationOperator#AddConnectionMutationOperator(double, RecurrencyPolicy)
- */
-public AddConnectionMutationOperator( double newMutationRate ) {
-	this( newMutationRate, RecurrencyPolicy.BEST_GUESS );
-}
-
-/**
- * Creates new operator with specified recurrency policy.
- * 
- * @param aPolicy
- * @see RecurrencyPolicy
- */
-public AddConnectionMutationOperator( RecurrencyPolicy aPolicy ) {
-	this( DEFAULT_MUTATE_RATE, aPolicy );
-}
-
-/**
- * Creates new operator with specified mutation rate and recurrency policy.
- * 
- * @param aMutationRate
- * @param aPolicy
- * @see RecurrencyPolicy
- */
-public AddConnectionMutationOperator( double aMutationRate, RecurrencyPolicy aPolicy ) {
-	super( aMutationRate );
-	policy = aPolicy;
-}
-
-/**
- * Adds connections according to <a
- * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">NEAT </a> add connection
- * mutation.
- * 
- * @param jgapConfig
- * @param target chromosome material to mutate
- * @param allelesToAdd <code>Set</code> contains <code>Allele</code> objects
- * @param allelesToRemove <code>Set</code> contains <code>Allele</code> objects
- * @see org.jgapcustomised.MutationOperator#mutate(org.jgapcustomised.Configuration, org.jgapcustomised.ChromosomeMaterial,
- * java.util.Set, java.util.Set)
- */
-protected void mutate( Configuration jgapConfig, final ChromosomeMaterial target,
-		Set allelesToAdd, Set allelesToRemove ) {
-	if ( ( jgapConfig instanceof NeatConfiguration ) == false )
-		throw new AnjiRequiredException( "com.anji.neat.NeatConfiguration" );
-	NeatConfiguration config = (NeatConfiguration) jgapConfig;
-
-	// connection can mutate between any 2 neurons, excluding those neurons already removed
-	List neuronList = NeatChromosomeUtility.getNeuronList( target.getAlleles() );
-	SortedMap conns = NeatChromosomeUtility.getConnectionMap( target.getAlleles() );
-
-	// Determine # neurons to add and iterate randomly through alleles ...
-	int maxConnectionsToAdd = ( neuronList.size() * neuronList.size() ) - conns.size();
-	int numConnectionsToAdd = numMutations( config.getRandomGenerator(), maxConnectionsToAdd );
-
-	addConnections( numConnectionsToAdd, config, neuronList, conns, allelesToAdd );
-}
-
-/**
- * Given the collections of neurons and connections, returns the new connections that should be
- * added, up to a max of numConnectionsToAdd.
- * 
- * @param numConnectionsToAdd
- * @param config
- * @param neuronList <code>List</code> contains <code>NeuronAllele</code> objects
- * @param conns <code>SortedMap</code> contains <code>ConnectionAllele</code> objects;
- * contains original alleles plus new connection alleles added
- * @param allelesToAdd <code>Set</code> contains <code>Allele</code> objects; contains new
- * connection alleles added
- */
-private void addConnections( int numConnectionsToAdd, NeatConfiguration config,
-		List neuronList, SortedMap conns, Set allelesToAdd ) {
-	HashSet rejectedConnIds = new HashSet();
-
-	for ( int i = 0; i < numConnectionsToAdd; ++i ) {
-		ConnectionAllele newConn = null;
-		NeuronAllele src = null;
-		NeuronAllele dest = null;
-
-		// ... until we find a new src and destination neuron that aren't connected and that we
-		// haven't searched yet ...
-		while ( newConn == null ) {
-			int srcIdx = config.getRandomGenerator().nextInt( neuronList.size() );
-			int destIdx = config.getRandomGenerator().nextInt( neuronList.size() );
-			src = (NeuronAllele) neuronList.get( srcIdx );
-			dest = (NeuronAllele) neuronList.get( destIdx );
-
-			newConn = config.newConnectionAllele( src.getInnovationId(), dest.getInnovationId() );
-			if ( conns.containsKey( newConn.getInnovationId() )
-					|| rejectedConnIds.contains( newConn.getInnovationId() ) )
-				newConn = null;
-		}
-
-		// ... for which a mutation can occur
-		if ( connectionAllowed( src, dest, conns ) ) {
-			conns.put( newConn.getInnovationId(), newConn );
-			newConn.setToRandomValue( config.getRandomGenerator() );
-			allelesToAdd.add( newConn );
-		}
-		else
-			rejectedConnIds.add( newConn.getInnovationId() );
+	/**
+	 * @see com.anji.util.Configurable#init(com.anji.util.Properties)
+	 */
+	public void init(Properties props) throws Exception {
+		setMutationRate(props.getDoubleProperty(ADD_CONN_MUTATE_RATE_KEY, DEFAULT_MUTATE_RATE));
+		policy = RecurrencyPolicy.load(props);
 	}
-}
 
-/**
- * Given the collections of neurons and connections, returns the new connection that should be
- * added.
- * 
- * @param config
- * @param neuronList <code>List</code> contains <code>NeuronAllele</code> objects
- * @param conns <code>SortedMap</code> contains <code>ConnectionAllele</code> objects;
- * contains new connection allele added
- * @param allelesToAdd <code>Set</code> contains <code>Allele</code> objects; contains new
- * connection allele added TOTO - allele (callers)
- */
-public void addSingleConnection( NeatConfiguration config, List neuronList, SortedMap conns,
-		Set allelesToAdd ) {
-	HashSet rejectedConnIds = new HashSet();
-	boolean isAdded = false;
-	int maxConnections = ( neuronList.size() * neuronList.size() ) - conns.size();
-	while ( !isAdded && ( rejectedConnIds.size() < maxConnections ) ) {
-		ConnectionAllele newConn = null;
-		NeuronAllele src = null;
-		NeuronAllele dest = null;
-
-		// ... until we find a new src and destination neuron that aren't connected and that we
-		// haven't searched yet ...
-		while ( newConn == null ) {
-			int srcIdx = config.getRandomGenerator().nextInt( neuronList.size() );
-			int destIdx = config.getRandomGenerator().nextInt( neuronList.size() );
-			src = (NeuronAllele) neuronList.get( srcIdx );
-			dest = (NeuronAllele) neuronList.get( destIdx );
-
-			newConn = config.newConnectionAllele( src.getInnovationId(), dest.getInnovationId() );
-			if ( conns.containsKey( newConn.getInnovationId() )
-					|| rejectedConnIds.contains( newConn.getInnovationId() ) )
-				newConn = null;
-		}
-
-		// ... for which a mutation can occur
-		if ( connectionAllowed( src, dest, conns ) ) {
-			conns.put( newConn.getInnovationId(), newConn );
-			newConn.setToRandomValue( config.getRandomGenerator() );
-			allelesToAdd.add( newConn );
-			isAdded = true;
-		}
-		else
-			rejectedConnIds.add( newConn.getInnovationId() );
+	/**
+	 * @see AddConnectionMutationOperator#AddConnectionMutationOperator(double)
+	 */
+	public AddConnectionMutationOperator() {
+		this(DEFAULT_MUTATE_RATE, RecurrencyPolicy.BEST_GUESS);
 	}
-}
 
-/**
- * @param src
- * @param dest
- * @param conns <code>SortedMap</code> contains key <code>Long</code> id, value
- * <code>ConnectionAllele</code> objects
- * @return true of connection between <code>src</code> and <code>dest</code> is allowed
- * according to recurrency policy; false otherwise.
- * @see NeatChromosomeUtility#neuronsAreConnected(Long, Long, Collection)
- */
-private boolean connectionAllowed( NeuronAllele src, NeuronAllele dest, SortedMap conns ) {
-	if ( RecurrencyPolicy.DISALLOWED.equals( policy ) ) {
-		if ( dest.isType( NeuronType.INPUT ) || src.isType( NeuronType.OUTPUT ) )
-			return false;
-		boolean connected = NeatChromosomeUtility.neuronsAreConnected( dest.getInnovationId(), src
-				.getInnovationId(), conns.values() );
-		return !connected;
+	/**
+	 * @param newMutationRate
+	 * @see AddConnectionMutationOperator#AddConnectionMutationOperator(double, RecurrencyPolicy)
+	 */
+	public AddConnectionMutationOperator(double newMutationRate) {
+		this(newMutationRate, RecurrencyPolicy.BEST_GUESS);
 	}
-	return (dest.getActivationType().equals(LinearActivationFunction.NAME));
-}
+
+	/**
+	 * Creates new operator with specified recurrency policy.
+	 * 
+	 * @param aPolicy
+	 * @see RecurrencyPolicy
+	 */
+	public AddConnectionMutationOperator(RecurrencyPolicy aPolicy) {
+		this(DEFAULT_MUTATE_RATE, aPolicy);
+	}
+
+	/**
+	 * Creates new operator with specified mutation rate and recurrency policy.
+	 * 
+	 * @param aMutationRate
+	 * @param aPolicy
+	 * @see RecurrencyPolicy
+	 */
+	public AddConnectionMutationOperator(double aMutationRate, RecurrencyPolicy aPolicy) {
+		super(aMutationRate);
+		policy = aPolicy;
+	}
+
+	/**
+	 * Adds connections according to <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">NEAT </a> add
+	 * connection mutation.
+	 * 
+	 * @param jgapConfig
+	 * @param target chromosome material to mutate
+	 * @param allelesToAdd <code>Set</code> contains <code>Allele</code> objects
+	 * @param allelesToRemove <code>Set</code> contains <code>Allele</code> objects
+	 * @see org.jgapcustomised.MutationOperator#mutate(org.jgapcustomised.Configuration,
+	 *      org.jgapcustomised.ChromosomeMaterial, java.util.Set, java.util.Set)
+	 */
+	protected void mutate(Configuration jgapConfig, final ChromosomeMaterial target, Set allelesToAdd, Set allelesToRemove) {
+		if ((jgapConfig instanceof NeatConfiguration) == false)
+			throw new AnjiRequiredException("com.anji.neat.NeatConfiguration");
+		NeatConfiguration config = (NeatConfiguration) jgapConfig;
+
+		// connection can mutate between any 2 neurons, excluding those neurons already removed
+		List neuronList = NeatChromosomeUtility.getNeuronList(target.getAlleles());
+		SortedMap conns = NeatChromosomeUtility.getConnectionMap(target.getAlleles());
+
+		// Determine # neurons to add and iterate randomly through alleles ...
+		int maxConnectionsToAdd = (neuronList.size() * neuronList.size()) - conns.size();
+		int numConnectionsToAdd = numMutations(config.getRandomGenerator(), maxConnectionsToAdd);
+
+		addConnections(numConnectionsToAdd, config, neuronList, conns, allelesToAdd);
+	}
+
+	/**
+	 * Given the collections of neurons and connections, returns the new connections that should be added, up to a max
+	 * of numConnectionsToAdd.
+	 * 
+	 * @param numConnectionsToAdd
+	 * @param config
+	 * @param neuronList <code>List</code> contains <code>NeuronAllele</code> objects
+	 * @param conns <code>SortedMap</code> contains <code>ConnectionAllele</code> objects; contains original alleles
+	 *            plus new connection alleles added
+	 * @param allelesToAdd <code>Set</code> contains <code>Allele</code> objects; contains new connection alleles added
+	 */
+	private void addConnections(int numConnectionsToAdd, NeatConfiguration config, List neuronList, SortedMap conns, Set allelesToAdd) {
+		HashSet rejectedConnIds = new HashSet();
+
+		for (int i = 0; i < numConnectionsToAdd; ++i) {
+			ConnectionAllele newConn = null;
+			NeuronAllele src = null;
+			NeuronAllele dest = null;
+
+			// ... until we find a new src and destination neuron that aren't connected and that we
+			// haven't searched yet ...
+			while (newConn == null) {
+				int srcIdx = config.getRandomGenerator().nextInt(neuronList.size());
+				int destIdx = config.getRandomGenerator().nextInt(neuronList.size());
+				src = (NeuronAllele) neuronList.get(srcIdx);
+				dest = (NeuronAllele) neuronList.get(destIdx);
+
+				newConn = config.newConnectionAllele(src.getInnovationId(), dest.getInnovationId());
+				if (conns.containsKey(newConn.getInnovationId()) || rejectedConnIds.contains(newConn.getInnovationId()))
+					newConn = null;
+			}
+
+			// ... for which a mutation can occur
+			if (connectionAllowed(src, dest, conns)) {
+				conns.put(newConn.getInnovationId(), newConn);
+				newConn.setToRandomValue(config.getRandomGenerator());
+				allelesToAdd.add(newConn);
+			} else
+				rejectedConnIds.add(newConn.getInnovationId());
+		}
+	}
+
+	/**
+	 * Given the collections of neurons and connections, returns the new connection that should be added.
+	 * 
+	 * @param config
+	 * @param neuronList <code>List</code> contains <code>NeuronAllele</code> objects
+	 * @param conns <code>SortedMap</code> contains <code>ConnectionAllele</code> objects; contains new connection
+	 *            allele added
+	 * @param allelesToAdd <code>Set</code> contains <code>Allele</code> objects; contains new connection allele added
+	 *            TOTO - allele (callers)
+	 */
+	public void addSingleConnection(NeatConfiguration config, List neuronList, SortedMap conns, Set allelesToAdd) {
+		HashSet rejectedConnIds = new HashSet();
+		boolean isAdded = false;
+		int maxConnections = (neuronList.size() * neuronList.size()) - conns.size();
+		while (!isAdded && (rejectedConnIds.size() < maxConnections)) {
+			ConnectionAllele newConn = null;
+			NeuronAllele src = null;
+			NeuronAllele dest = null;
+
+			// ... until we find a new src and destination neuron that aren't connected and that we
+			// haven't searched yet ...
+			while (newConn == null) {
+				int srcIdx = config.getRandomGenerator().nextInt(neuronList.size());
+				int destIdx = config.getRandomGenerator().nextInt(neuronList.size());
+				src = (NeuronAllele) neuronList.get(srcIdx);
+				dest = (NeuronAllele) neuronList.get(destIdx);
+
+				newConn = config.newConnectionAllele(src.getInnovationId(), dest.getInnovationId());
+				if (conns.containsKey(newConn.getInnovationId()) || rejectedConnIds.contains(newConn.getInnovationId()))
+					newConn = null;
+			}
+
+			// ... for which a mutation can occur
+			if (connectionAllowed(src, dest, conns)) {
+				conns.put(newConn.getInnovationId(), newConn);
+				newConn.setToRandomValue(config.getRandomGenerator());
+				allelesToAdd.add(newConn);
+				isAdded = true;
+			} else
+				rejectedConnIds.add(newConn.getInnovationId());
+		}
+	}
+
+	/**
+	 * @param src
+	 * @param dest
+	 * @param conns <code>SortedMap</code> contains key <code>Long</code> id, value <code>ConnectionAllele</code>
+	 *            objects
+	 * @return true of connection between <code>src</code> and <code>dest</code> is allowed according to recurrency
+	 *         policy; false otherwise.
+	 * @see NeatChromosomeUtility#neuronsAreConnected(Long, Long, Collection)
+	 */
+	private boolean connectionAllowed(NeuronAllele src, NeuronAllele dest, SortedMap conns) {
+		if (RecurrencyPolicy.DISALLOWED.equals(policy)) {
+			if (dest.isType(NeuronType.INPUT) || src.isType(NeuronType.OUTPUT))
+				return false;
+			boolean connected = NeatChromosomeUtility.neuronsAreConnected(dest.getInnovationId(), src.getInnovationId(), conns.values());
+			return !connected;
+		}
+		return (dest.getActivationType().equals(LinearActivationFunction.NAME));
+	}
 
 }

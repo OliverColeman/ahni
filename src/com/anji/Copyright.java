@@ -24,18 +24,15 @@ package com.anji;
  */
 public class Copyright {
 
-/**
- * copyright string
- */
-public final static String STRING = "ANJI v2.0, Copyright (C) 2004 Derek James and Philip Tucker\n"
-		+ "ANJI comes with ABSOLUTELY NO WARRANTY\n"
-		+ "This is free software, and you are welcome to redistribute it\n"
-		+ "under the conditions of the GNU General Public License.";
+	/**
+	 * copyright string
+	 */
+	public final static String STRING = "ANJI v2.0, Copyright (C) 2004 Derek James and Philip Tucker\n" + "ANJI comes with ABSOLUTELY NO WARRANTY\n" + "This is free software, and you are welcome to redistribute it\n" + "under the conditions of the GNU General Public License.";
 
-/**
- * private ctor
- */
-private Copyright() {
-	super();
-}
+	/**
+	 * private ctor
+	 */
+	private Copyright() {
+		super();
+	}
 }

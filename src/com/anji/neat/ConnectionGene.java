@@ -23,97 +23,99 @@ import org.jgapcustomised.Gene;
 
 /**
  * Gene corresponding to NEAT connection gene according to <a
- * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf"> Evolving Neural Networks
- * through Augmenting Topologies </a>
+ * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf"> Evolving Neural Networks through Augmenting
+ * Topologies </a>
  * 
  * @author Philip Tucker
  */
 public class ConnectionGene extends Gene {
 
-/**
- * for hibernate
- */
-private Long id;
+	/**
+	 * for hibernate
+	 */
+	private Long id;
 
-private Long srcNeuronId = null;
+	private Long srcNeuronId = null;
 
-private Long destNeuronId = null;
+	private Long destNeuronId = null;
 
-/**
- * @see Object#toString()
- */
-public String toString() {
-	StringBuffer result = new StringBuffer();
-	result.append( getInnovationId() ).append( ": " ).append( srcNeuronId ).append( "->" )
-			.append( destNeuronId );
-	return result.toString();
-}
+	/**
+	 * @see Object#toString()
+	 */
+	public String toString() {
+		StringBuffer result = new StringBuffer();
+		result.append(getInnovationId()).append(": ").append(srcNeuronId).append("->").append(destNeuronId);
+		return result.toString();
+	}
 
-/**
- * for hibernate
- */
-private ConnectionGene() {
-	super();
-}
+	/**
+	 * for hibernate
+	 */
+	private ConnectionGene() {
+		super();
+	}
 
-/**
- * Construct new ConnectionGene with given src, destination, and ID. Protected since this should
- * only be constructed via factory methods in <code>ConnectionGene</code> and
- * <code>NeatChromosomeUtility</code>
- * 
- * @param anInnovationId
- * @param aSrcNeuronId
- * @param aDestNeuronId
- */
-public ConnectionGene( Long anInnovationId, Long aSrcNeuronId, Long aDestNeuronId ) {
-	super( anInnovationId );
-	srcNeuronId = aSrcNeuronId;
-	destNeuronId = aDestNeuronId;
-}
+	/**
+	 * Construct new ConnectionGene with given src, destination, and ID. Protected since this should only be constructed
+	 * via factory methods in <code>ConnectionGene</code> and <code>NeatChromosomeUtility</code>
+	 * 
+	 * @param anInnovationId
+	 * @param aSrcNeuronId
+	 * @param aDestNeuronId
+	 */
+	public ConnectionGene(Long anInnovationId, Long aSrcNeuronId, Long aDestNeuronId) {
+		super(anInnovationId);
+		srcNeuronId = aSrcNeuronId;
+		destNeuronId = aDestNeuronId;
+	}
 
-/**
- * @return innovation ID of destination neuron
- */
-public Long getDestNeuronId() {
-	return destNeuronId;
-}
+	/**
+	 * @return innovation ID of destination neuron
+	 */
+	public Long getDestNeuronId() {
+		return destNeuronId;
+	}
 
-/**
- * @return innovation ID of source neuron
- */
-public Long getSrcNeuronId() {
-	return srcNeuronId;
-}
+	/**
+	 * @return innovation ID of source neuron
+	 */
+	public Long getSrcNeuronId() {
+		return srcNeuronId;
+	}
 
-/**
- * for hibernate
- * @param aDestNeuronId
- */
-private void setDestNeuronId( Long aDestNeuronId ) {
-	destNeuronId = aDestNeuronId;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param aDestNeuronId
+	 */
+	private void setDestNeuronId(Long aDestNeuronId) {
+		destNeuronId = aDestNeuronId;
+	}
 
-/**
- * for hibernate
- * @param aSrcNeuronId
- */
-private void setSrcNeuronId( Long aSrcNeuronId ) {
-	srcNeuronId = aSrcNeuronId;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param aSrcNeuronId
+	 */
+	private void setSrcNeuronId(Long aSrcNeuronId) {
+		srcNeuronId = aSrcNeuronId;
+	}
 
-/**
- * for hibernate
- * @return unique id
- */
-private Long getId() {
-	return id;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @return unique id
+	 */
+	private Long getId() {
+		return id;
+	}
 
-/**
- * for hibernate
- * @param aId
- */
-private void setId( Long aId ) {
-	id = aId;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param aId
+	 */
+	private void setId(Long aId) {
+		id = aId;
+	}
 }

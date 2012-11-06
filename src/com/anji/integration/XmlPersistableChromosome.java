@@ -31,77 +31,75 @@ import com.anji.util.XmlPersistable;
  */
 public class XmlPersistableChromosome implements XmlPersistable {
 
-/**
- * base XML tag
- */
-public final static String XML_CHROMOSOME_TAG = "chromosome";
+	/**
+	 * base XML tag
+	 */
+	public final static String XML_CHROMOSOME_TAG = "chromosome";
 
-/**
- * XML ID tag
- */
-public final static String XML_CHROMOSOME_ID_TAG = "id";
+	/**
+	 * XML ID tag
+	 */
+	public final static String XML_CHROMOSOME_ID_TAG = "id";
 
-/**
- * XML primary parent ID tag
- */
-public final static String XML_CHROMOSOME_PRIMARY_PARENT_ID_TAG = "primary-parent-id";
+	/**
+	 * XML primary parent ID tag
+	 */
+	public final static String XML_CHROMOSOME_PRIMARY_PARENT_ID_TAG = "primary-parent-id";
 
-/**
- * XML secondary parent ID tag
- */
-public final static String XML_CHROMOSOME_SECONDARY_PARENT_ID_TAG = "secondary-parent-id";
+	/**
+	 * XML secondary parent ID tag
+	 */
+	public final static String XML_CHROMOSOME_SECONDARY_PARENT_ID_TAG = "secondary-parent-id";
 
-private Chromosome chromosome;
+	private Chromosome chromosome;
 
-/**
- * @param aChromosome
- */
-public XmlPersistableChromosome( Chromosome aChromosome ) {
-	super();
-	chromosome = aChromosome;
-}
-
-/**
- * @see com.anji.util.XmlPersistable#toXml()
- */
-public String toXml() {
-	StringBuffer result = new StringBuffer();
-	result.append( "<" ).append( XML_CHROMOSOME_TAG );
-	result.append( " " ).append( XML_CHROMOSOME_ID_TAG ).append( "=\"" ).append(
-			chromosome.getId() );
-	if ( chromosome.getPrimaryParentId() != null ) {
-		result.append( "\" " ).append( XML_CHROMOSOME_PRIMARY_PARENT_ID_TAG );
-		result.append( "=\"" ).append( chromosome.getPrimaryParentId() );
+	/**
+	 * @param aChromosome
+	 */
+	public XmlPersistableChromosome(Chromosome aChromosome) {
+		super();
+		chromosome = aChromosome;
 	}
-	if ( chromosome.getSecondaryParentId() != null ) {
-		result.append( "\" " ).append( XML_CHROMOSOME_SECONDARY_PARENT_ID_TAG );
-		result.append( "=\"" ).append( chromosome.getSecondaryParentId() );
+
+	/**
+	 * @see com.anji.util.XmlPersistable#toXml()
+	 */
+	public String toXml() {
+		StringBuffer result = new StringBuffer();
+		result.append("<").append(XML_CHROMOSOME_TAG);
+		result.append(" ").append(XML_CHROMOSOME_ID_TAG).append("=\"").append(chromosome.getId());
+		if (chromosome.getPrimaryParentId() != null) {
+			result.append("\" ").append(XML_CHROMOSOME_PRIMARY_PARENT_ID_TAG);
+			result.append("=\"").append(chromosome.getPrimaryParentId());
+		}
+		if (chromosome.getSecondaryParentId() != null) {
+			result.append("\" ").append(XML_CHROMOSOME_SECONDARY_PARENT_ID_TAG);
+			result.append("=\"").append(chromosome.getSecondaryParentId());
+		}
+		result.append("\">");
+		Iterator iter = chromosome.getAlleles().iterator();
+		while (iter.hasNext()) {
+			Allele allele = (Allele) iter.next();
+			XmlPersistableAllele xmlAllele = new XmlPersistableAllele(allele);
+			result.append(xmlAllele.toXml());
+		}
+		result.append("</").append(XML_CHROMOSOME_TAG).append(">");
+		return result.toString();
 	}
-	result.append( "\">" );
-	Iterator iter = chromosome.getAlleles().iterator();
-	while ( iter.hasNext() ) {
-		Allele allele = (Allele) iter.next();
-		XmlPersistableAllele xmlAllele = new XmlPersistableAllele( allele );
-		result.append( xmlAllele.toXml() );
+
+	/**
+	 * @see com.anji.util.XmlPersistable#getXmlRootTag()
+	 */
+	public String getXmlRootTag() {
+		return XML_CHROMOSOME_TAG;
 	}
-	result.append( "</" ).append( XML_CHROMOSOME_TAG ).append( ">" );
-	return result.toString();
-}
 
-/**
- * @see com.anji.util.XmlPersistable#getXmlRootTag()
- */
-public String getXmlRootTag() {
-	return XML_CHROMOSOME_TAG;
-}
-
-/**
- * @see com.anji.util.XmlPersistable#getXmld()
- */
-public String getXmld() {
-	Long id = chromosome.getId();
-	return ( id == null ) ? "" : id.toString();
-}
+	/**
+	 * @see com.anji.util.XmlPersistable#getXmld()
+	 */
+	public String getXmld() {
+		Long id = chromosome.getId();
+		return (id == null) ? "" : id.toString();
+	}
 
 }
-

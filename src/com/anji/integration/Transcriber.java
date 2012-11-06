@@ -33,27 +33,28 @@ import com.anji.util.Configurable;
  */
 public interface Transcriber<T extends Activator> extends Configurable {
 
-/**
- * Sub-classes must implement this method to convert the genotype to a phenotype.
- * @param c chromosome to transcribe
- * @return phenotype
- * @throws TranscriberException
- */
-public T transcribe(Chromosome c) throws TranscriberException;
+	/**
+	 * Sub-classes must implement this method to convert the genotype to a phenotype.
+	 * 
+	 * @param c chromosome to transcribe
+	 * @return phenotype
+	 * @throws TranscriberException
+	 */
+	public T transcribe(Chromosome c) throws TranscriberException;
 
-/**
- * Sub-classes must implement this method to convert the genotype to a phenotype,
- * using an existing substrate object to allow performance gains by avoiding
- * destroying and creating large objects or arrays.
- * @param c chromosome to transcribe
- * @param substrate An existing phenotype substrate to reuse
- * @return phenotype
- * @throws TranscriberException
- */
-public T transcribe(Chromosome c, T substrate) throws TranscriberException;
+	/**
+	 * Sub-classes must implement this method to convert the genotype to a phenotype, using an existing substrate object
+	 * to allow performance gains by avoiding destroying and creating large objects or arrays.
+	 * 
+	 * @param c chromosome to transcribe
+	 * @param substrate An existing phenotype substrate to reuse
+	 * @return phenotype
+	 * @throws TranscriberException
+	 */
+	public T transcribe(Chromosome c, T substrate) throws TranscriberException;
 
-/**
- * @return class of phenotype returned by <code>transcribe()</code>
- */
-public Class getPhenotypeClass();
+	/**
+	 * @return class of phenotype returned by <code>transcribe()</code>
+	 */
+	public Class getPhenotypeClass();
 }

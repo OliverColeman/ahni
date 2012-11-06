@@ -28,193 +28,191 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Natural selectors are responsible for actually selecting a specified number
- * of Chromosome specimens from a population, using the fitness values as a
- * guide. Usually fitness is treated as a statistic probability of survival,
- * not as the sole determining factor. Therefore, Chromosomes with higher
- * fitness values are more likely to survive than those with lesser fitness
- * values, but it's not guaranteed.
+ * Natural selectors are responsible for actually selecting a specified number of Chromosome specimens from a
+ * population, using the fitness values as a guide. Usually fitness is treated as a statistic probability of survival,
+ * not as the sole determining factor. Therefore, Chromosomes with higher fitness values are more likely to survive than
+ * those with lesser fitness values, but it's not guaranteed.
  */
 public abstract class NaturalSelector {
-    private int numChromosomes;
-    private double survivalRate = 0;
-    private double elitismProportion = 0.1f;
-    private int elitismMinToSelect = 1;
-    private int elitismMinSpeciesSize = 5;
-    private int maxStagnantGenerations = 0;
-    private int minAge = 10;
-    protected boolean speciatedFitness = true;
-    private List<Chromosome> elite = new ArrayList<Chromosome>();
+	private int numChromosomes;
+	private double survivalRate = 0;
+	private double elitismProportion = 0.1f;
+	private int elitismMinToSelect = 1;
+	private int elitismMinSpeciesSize = 5;
+	private int maxStagnantGenerations = 0;
+	private int minAge = 10;
+	protected boolean speciatedFitness = true;
+	private List<Chromosome> elite = new ArrayList<Chromosome>();
 
-    /**
-     * If elitism is enabled, places appropriate chromosomes in <code>elite</code> list.  Elitism follows
-     * methodology in <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">NEAT</a>.  Passes
-     * everything else to subclass <code>add( Configuration config, Chromosome c )</code> method.
-     * @param config
-     * @param chroms <code>List</code> contains Chromosome objects
-     */
-    public final void add(Configuration config, List<Species> species, List<Chromosome> chroms) {
-        numChromosomes += chroms.size();
-        
-        //determine elites for each species
-        Iterator<Species> speciesIter = species.iterator();
-        while (speciesIter.hasNext()) {
-            Species s = speciesIter.next();
-            if (s.getStagnantGenerationsCount() < maxStagnantGenerations) {
-                if ((elitismProportion > 0 || elitismMinToSelect > 0) && (s.size() >= elitismMinSpeciesSize || s.getAge() < minAge)) {
-                    List<Chromosome> elites = s.getElite(elitismProportion, elitismMinToSelect);
-                    elite.addAll(elites);
-                    //System.out.println("Adding " + elites.size() + " elites from species: " + s.getID());
-                }
-            }
-            //else {
-            //    System.out.println("Not adding species, too stagnant, ID: " + s.getID());
-            //}
-        }
+	/**
+	 * If elitism is enabled, places appropriate chromosomes in <code>elite</code> list. Elitism follows methodology in
+	 * <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">NEAT</a>. Passes everything else to subclass
+	 * <code>add( Configuration config, Chromosome c )</code> method.
+	 * 
+	 * @param config
+	 * @param chroms <code>List</code> contains Chromosome objects
+	 */
+	public final void add(Configuration config, List<Species> species, List<Chromosome> chroms) {
+		numChromosomes += chroms.size();
 
-        Iterator<Chromosome> chromIter = chroms.iterator();
-        while (chromIter.hasNext()) {
-            Chromosome c = chromIter.next();
-            Species specie = c.getSpecie();
+		// determine elites for each species
+		Iterator<Species> speciesIter = species.iterator();
+		while (speciesIter.hasNext()) {
+			Species s = speciesIter.next();
+			if (s.getStagnantGenerationsCount() < maxStagnantGenerations) {
+				if ((elitismProportion > 0 || elitismMinToSelect > 0) && (s.size() >= elitismMinSpeciesSize || s.getAge() < minAge)) {
+					List<Chromosome> elites = s.getElite(elitismProportion, elitismMinToSelect);
+					elite.addAll(elites);
+					// System.out.println("Adding " + elites.size() + " elites from species: " + s.getID());
+				}
+			}
+			// else {
+			// System.out.println("Not adding species, too stagnant, ID: " + s.getID());
+			// }
+		}
 
-            //don't add if it's already in the list of elites
-            if (!c.isElite) {
-                //if this individual's species hasn't been stagnant for too long add it to the pool
-                if (specie == null || (specie != null && specie.getStagnantGenerationsCount() < maxStagnantGenerations)) {
-                    add(config, c);
-                }
-            }
-            //else {
-            //    System.out.println("Not adding chrom: already in elites");
-            //}
-        }
+		Iterator<Chromosome> chromIter = chroms.iterator();
+		while (chromIter.hasNext()) {
+			Chromosome c = chromIter.next();
+			Species specie = c.getSpecie();
 
-        //System.out.println("selected " + elite.size() + " chroms as elite");
-    }
+			// don't add if it's already in the list of elites
+			if (!c.isElite) {
+				// if this individual's species hasn't been stagnant for too long add it to the pool
+				if (specie == null || (specie != null && specie.getStagnantGenerationsCount() < maxStagnantGenerations)) {
+					add(config, c);
+				}
+			}
+			// else {
+			// System.out.println("Not adding chrom: already in elites");
+			// }
+		}
 
-    /**
-     * @param config
-     * @param c chromosome to add to selection pool
-     */
-    protected abstract void add(Configuration config, Chromosome c);
+		// System.out.println("selected " + elite.size() + " chroms as elite");
+	}
 
-    /**
-     * Select a given number of Chromosomes from the pool that will move on
-     * to the next generation population. This selection should be guided by
-     * the fitness values.
-     * Elite chromosomes always survivie, unless there are more elite than the survival rate permits.  In this case,
-     * elite with highest fitness are chosen.  Remainder of survivors are determined by subclass
-     * <code>select( Configuration config, int numToSurvive )</code> method.
-     * @param config
-     * @return List contains Chromosome objects
-     */
-    public List<Chromosome> select(Configuration config) {
-        //start with elites
-    	List<Chromosome> result = new ArrayList<Chromosome>(elite);
+	/**
+	 * @param config
+	 * @param c chromosome to add to selection pool
+	 */
+	protected abstract void add(Configuration config, Chromosome c);
 
-        int numToSelect = (int) ((numChromosomes * getSurvivalRate()) + 0.5);
-    
-        if (result.size() > numToSelect) {
-        	//remove least fittest (not species fitness sharing) from selected
-            Collections.sort(result, new ChromosomeFitnessComparator<Chromosome>(true /* asc */, false /* speciated fitness */));
-            int numToRemove = result.size() - numToSelect;
-            for (int i = 0; i < numToRemove; ++i) {
-                result.remove(0);
-            }
-        } else if (result.size() < numToSelect) {
-            int moreToSelect = numToSelect - result.size();
-            List<Chromosome> more = select(config, moreToSelect);
-            result.addAll(more);
-        }
+	/**
+	 * Select a given number of Chromosomes from the pool that will move on to the next generation population. This
+	 * selection should be guided by the fitness values. Elite chromosomes always survivie, unless there are more elite
+	 * than the survival rate permits. In this case, elite with highest fitness are chosen. Remainder of survivors are
+	 * determined by subclass <code>select( Configuration config, int numToSurvive )</code> method.
+	 * 
+	 * @param config
+	 * @return List contains Chromosome objects
+	 */
+	public List<Chromosome> select(Configuration config) {
+		// start with elites
+		List<Chromosome> result = new ArrayList<Chromosome>(elite);
 
-        return result;
-    }
+		int numToSelect = (int) ((numChromosomes * getSurvivalRate()) + 0.5);
 
-    /**
-     * @param config
-     * @param numToSurvive
-     * @return <code>List</code> contains <code>Chromosome</code> objects, those that have survived; size
-     * of this list should be <code>numToSurvive</code>, unless fewer than that number of chromosomes have
-     * been added to selector
-     */
-    protected abstract List<Chromosome> select(Configuration config, int numToSurvive);
+		if (result.size() > numToSelect) {
+			// remove least fittest (not species fitness sharing) from selected
+			Collections.sort(result, new ChromosomeFitnessComparator<Chromosome>(true /* asc */, false /* speciated fitness */));
+			int numToRemove = result.size() - numToSelect;
+			for (int i = 0; i < numToRemove; ++i) {
+				result.remove(0);
+			}
+		} else if (result.size() < numToSelect) {
+			int moreToSelect = numToSelect - result.size();
+			List<Chromosome> more = select(config, moreToSelect);
+			result.addAll(more);
+		}
 
-    /**
-     * clear pool of candidate chromosomes
-     * @see NaturalSelector#emptyImpl()
-     */
-    public void empty() {
-        numChromosomes = 0;
-        elite.clear();
-        emptyImpl();
-    }
+		return result;
+	}
 
-    /**
-     * @see NaturalSelector#empty()
-     */
-    protected abstract void emptyImpl();
+	/**
+	 * @param config
+	 * @param numToSurvive
+	 * @return <code>List</code> contains <code>Chromosome</code> objects, those that have survived; size of this list
+	 *         should be <code>numToSurvive</code>, unless fewer than that number of chromosomes have been added to
+	 *         selector
+	 */
+	protected abstract List<Chromosome> select(Configuration config, int numToSurvive);
 
-    /**
-     * @return double survival rate
-     */
-    public double getSurvivalRate() {
-        return survivalRate;
-    }
+	/**
+	 * clear pool of candidate chromosomes
+	 * 
+	 * @see NaturalSelector#emptyImpl()
+	 */
+	public void empty() {
+		numChromosomes = 0;
+		elite.clear();
+		emptyImpl();
+	}
 
-    /**
-     * @param aSurvivalRate
-     */
-    public void setSurvivalRate(double aSurvivalRate) {
-        if (aSurvivalRate < 0.0 || aSurvivalRate > 1.0) {
-            throw new IllegalArgumentException("0.0 <= survivalRate <= 1.0");
-        }
-        this.survivalRate = aSurvivalRate;
-    }
+	/**
+	 * @see NaturalSelector#empty()
+	 */
+	protected abstract void emptyImpl();
 
-    /**
-     * @return minimum size a specie must be to support an elite chromosome
-     */
-    public int getElitismMinSpeciesSize() {
-        return elitismMinSpeciesSize;
-    }
+	/**
+	 * @return double survival rate
+	 */
+	public double getSurvivalRate() {
+		return survivalRate;
+	}
 
-    /**
-     * @param i minimum size a specie must be to support an elite chromosome
-     */
-    public void setElitismMinSpeciesSize(int i) {
-        elitismMinSpeciesSize = i;
-    }
+	/**
+	 * @param aSurvivalRate
+	 */
+	public void setSurvivalRate(double aSurvivalRate) {
+		if (aSurvivalRate < 0.0 || aSurvivalRate > 1.0) {
+			throw new IllegalArgumentException("0.0 <= survivalRate <= 1.0");
+		}
+		this.survivalRate = aSurvivalRate;
+	}
 
-    /**
-     * @param p true if elitism is to be enabled
-     */
-    public void setElitismProportion(double p) {
-        elitismProportion = p;
-    }
+	/**
+	 * @return minimum size a specie must be to support an elite chromosome
+	 */
+	public int getElitismMinSpeciesSize() {
+		return elitismMinSpeciesSize;
+	}
 
-    /**
-     * @param i minimum size a specie must be to support an elite chromosome
-     */
-    public void setElitismMinToSelect(int i) {
-        elitismMinToSelect = i;
-    }
+	/**
+	 * @param i minimum size a specie must be to support an elite chromosome
+	 */
+	public void setElitismMinSpeciesSize(int i) {
+		elitismMinSpeciesSize = i;
+	}
 
-    /**
-     * @param sf minimum size a specie must be to support an elite chromosome
-     */
-    public void setSpeciatedFitness(boolean sf) {
-        speciatedFitness = sf;
-    }
+	/**
+	 * @param p true if elitism is to be enabled
+	 */
+	public void setElitismProportion(double p) {
+		elitismProportion = p;
+	}
 
-    /**
-     * @param i maximum number of generations a species can survive without increasing fitness
-     */
-    public void setMaxStagnantGenerations(int i) {
-        maxStagnantGenerations = i;
-    }
+	/**
+	 * @param i minimum size a specie must be to support an elite chromosome
+	 */
+	public void setElitismMinToSelect(int i) {
+		elitismMinToSelect = i;
+	}
+
+	/**
+	 * @param sf minimum size a specie must be to support an elite chromosome
+	 */
+	public void setSpeciatedFitness(boolean sf) {
+		speciatedFitness = sf;
+	}
+
+	/**
+	 * @param i maximum number of generations a species can survive without increasing fitness
+	 */
+	public void setMaxStagnantGenerations(int i) {
+		maxStagnantGenerations = i;
+	}
 
 	public void setMinAge(int minAge) {
 		this.minAge = minAge;
 	}
 }
-

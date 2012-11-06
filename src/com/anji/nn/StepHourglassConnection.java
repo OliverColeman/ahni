@@ -20,78 +20,79 @@
 package com.anji.nn;
 
 /**
- * StepHourglassConnection Connection returning a value between 0 and 1, where 1 indicates the
- * fully allotted amount of time remaining and 0 indicates no time remainnig.
+ * StepHourglassConnection Connection returning a value between 0 and 1, where 1 indicates the fully allotted amount of
+ * time remaining and 0 indicates no time remainnig.
  */
 public class StepHourglassConnection implements Connection {
 
-private long maxSteps;
+	private long maxSteps;
 
-private long stepsRemaining;
+	private long stepsRemaining;
 
-/**
- * ctor
- */
-public StepHourglassConnection() {
-	super();
-	reset( 1 );
-}
+	/**
+	 * ctor
+	 */
+	public StepHourglassConnection() {
+		super();
+		reset(1);
+	}
 
-/**
- * reset hourglass to have max time remaining
- * @param aMaxSteps maximum steps before hourglass is empty
- */
-public void reset( int aMaxSteps ) {
-	if ( aMaxSteps <= 0 )
-		throw new IllegalArgumentException( "max steps must be > 0" );
-	maxSteps = aMaxSteps;
-	stepsRemaining = maxSteps;
-}
+	/**
+	 * reset hourglass to have max time remaining
+	 * 
+	 * @param aMaxSteps maximum steps before hourglass is empty
+	 */
+	public void reset(int aMaxSteps) {
+		if (aMaxSteps <= 0)
+			throw new IllegalArgumentException("max steps must be > 0");
+		maxSteps = aMaxSteps;
+		stepsRemaining = maxSteps;
+	}
 
-/**
- * reset hourglass to have max time remaining
- */
-public void reset() {
-	stepsRemaining = maxSteps;
-}
+	/**
+	 * reset hourglass to have max time remaining
+	 */
+	public void reset() {
+		stepsRemaining = maxSteps;
+	}
 
-/**
- * returns ratio of time remaining to total time
- * @see com.anji.nn.Connection#read()
- */
-public double read() {
-	return ( stepsRemaining <= 0 ) ? 0 : ( (double) stepsRemaining / maxSteps );
-}
+	/**
+	 * returns ratio of time remaining to total time
+	 * 
+	 * @see com.anji.nn.Connection#read()
+	 */
+	public double read() {
+		return (stepsRemaining <= 0) ? 0 : ((double) stepsRemaining / maxSteps);
+	}
 
-/**
- * proceed one step closer to completion
- */
-public void step() {
-	--stepsRemaining;
-}
+	/**
+	 * proceed one step closer to completion
+	 */
+	public void step() {
+		--stepsRemaining;
+	}
 
-/**
- * @see java.lang.Object#toString()
- */
-public String toString() {
-	return new StringBuffer().append( stepsRemaining ).append( "/" ).append( maxSteps )
-			.toString();
-}
+	/**
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+		return new StringBuffer().append(stepsRemaining).append("/").append(maxSteps).toString();
+	}
 
-/**
- * @see com.anji.nn.Connection#toXml()
- */
-public String toXml() {
-	StringBuffer result = new StringBuffer();
-	result.append( "<" ).append( XML_TAG ).append( " hourglass-steps-remaining=\"" );
-	result.append( stepsRemaining ).append( "\" />" );
-	return result.toString();
-}
+	/**
+	 * @see com.anji.nn.Connection#toXml()
+	 */
+	public String toXml() {
+		StringBuffer result = new StringBuffer();
+		result.append("<").append(XML_TAG).append(" hourglass-steps-remaining=\"");
+		result.append(stepsRemaining).append("\" />");
+		return result.toString();
+	}
 
-/**
- * @see com.anji.nn.Connection#cost()
- */
-public long cost() {
-	return 74;
-}
+	/**
+	 * @see com.anji.nn.Connection#cost()
+	 */
+	public long cost() {
+		return 74;
+	}
 }

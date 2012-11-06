@@ -1,6 +1,5 @@
 package com.anji.nn.activationfunction;
 
-
 /**
  * Divide activation function (divides first input by second input).
  * 
@@ -30,10 +29,10 @@ public class DivideActivationFunction implements ActivationFunction, ActivationF
 	/**
 	 * Not used, returns 0.
 	 */
-	public double apply( double input ) {
+	public double apply(double input) {
 		return 0;
 	}
-	
+
 	/**
 	 * Return first input divided by second input (or just first input if no second input).
 	 */
@@ -44,7 +43,6 @@ public class DivideActivationFunction implements ActivationFunction, ActivationF
 			return Float.MAX_VALUE * Math.signum(input[0]);
 		return input[0] / input[1];
 	}
-	
 
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMaxValue()
@@ -52,7 +50,7 @@ public class DivideActivationFunction implements ActivationFunction, ActivationF
 	public double getMaxValue() {
 		return Float.MAX_VALUE;
 	}
-	
+
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */

@@ -23,95 +23,101 @@ import java.util.Set;
 
 /**
  * Hibernate-able run object.
+ * 
  * @author Philip Tucker
  */
 public class Representation {
 
-private String name;
+	private String name;
 
-private Set populations;
+	private Set populations;
 
-private Set domains;
+	private Set domains;
 
-/**
- * ctor for hibernate
- */
-private Representation() {
-	// no-op
-}
+	/**
+	 * ctor for hibernate
+	 */
+	private Representation() {
+		// no-op
+	}
 
-/**
- * @param aName
- */
-public Representation( String aName ) {
-	name = aName;
-}
+	/**
+	 * @param aName
+	 */
+	public Representation(String aName) {
+		name = aName;
+	}
 
-/**
- * Add new population to representation.
- * @param aPopulation
- */
-public void addPopulation( Population aPopulation ) {
-	populations.add( aPopulation );
-}
+	/**
+	 * Add new population to representation.
+	 * 
+	 * @param aPopulation
+	 */
+	public void addPopulation(Population aPopulation) {
+		populations.add(aPopulation);
+	}
 
-/**
- * Add new domain to representation.
- * @param aDomain
- */
-public void addDomain( Domain aDomain ) {
-	domains.add( aDomain );
-}
+	/**
+	 * Add new domain to representation.
+	 * 
+	 * @param aDomain
+	 */
+	public void addDomain(Domain aDomain) {
+		domains.add(aDomain);
+	}
 
-/**
- * @see java.lang.Object#toString()
- */
-public String toString() {
-	return name;
-}
+	/**
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+		return name;
+	}
 
-/**
- * @return unique run ID
- */
-public String getName() {
-	return name;
-}
+	/**
+	 * @return unique run ID
+	 */
+	public String getName() {
+		return name;
+	}
 
-/**
- * @return <code>Set</code> contains <code>Population</code> objects
- */
-public Set getPopulations() {
-	return populations;
-}
+	/**
+	 * @return <code>Set</code> contains <code>Population</code> objects
+	 */
+	public Set getPopulations() {
+		return populations;
+	}
 
-/**
- * for hibernate
- * @param aPopulations
- */
-private void setPopulations( Set aPopulations ) {
-	populations = aPopulations;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param aPopulations
+	 */
+	private void setPopulations(Set aPopulations) {
+		populations = aPopulations;
+	}
 
-/**
- * for hibernate
- * @param aName
- */
-private void setName( String aName ) {
-	name = aName;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param aName
+	 */
+	private void setName(String aName) {
+		name = aName;
+	}
 
-/**
- * @return domains
- */
-public Set getDomains() {
-	return domains;
-}
+	/**
+	 * @return domains
+	 */
+	public Set getDomains() {
+		return domains;
+	}
 
-/**
- * for hibernate
- * @param aDomains
- */
-private void setDomains( Set aDomains ) {
-	domains = aDomains;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param aDomains
+	 */
+	private void setDomains(Set aDomains) {
+		domains = aDomains;
+	}
 }

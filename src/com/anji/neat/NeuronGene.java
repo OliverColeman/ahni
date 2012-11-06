@@ -25,107 +25,110 @@ import com.anji.nn.activationfunction.ActivationFunction;
 
 /**
  * Gene corresponding to NEAT node gene according to <a
- * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf"> Evolving Neural Networks
- * through Augmenting Topologies </a>
+ * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf"> Evolving Neural Networks through Augmenting
+ * Topologies </a>
  * 
  * @author Philip Tucker
  */
 public class NeuronGene extends Gene {
 
-/**
- * for hibernate
- */
-private Long id;
+	/**
+	 * for hibernate
+	 */
+	private Long id;
 
-private NeuronType type = NeuronType.HIDDEN;
+	private NeuronType type = NeuronType.HIDDEN;
 
-private String activationType;
+	private String activationType;
 
-/**
- * @see Object#toString()
- */
-public String toString() {
-	return getInnovationId().toString();
-}
+	/**
+	 * @see Object#toString()
+	 */
+	public String toString() {
+		return getInnovationId().toString();
+	}
 
-/**
- * for hibernate
- */
-private NeuronGene() {
-	super();
-}
+	/**
+	 * for hibernate
+	 */
+	private NeuronGene() {
+		super();
+	}
 
-/**
- * Construct new NeuronGene with given type and ID. Protected since this should only be
- * constructed via factory methods in <code>NeuronGene</code> and
- * <code>NeatChromosomeUtility</code>, and persistence objects.
- * 
- * @param newType
- * @param newInnovationId
- * @param anActivationType
- */
-public NeuronGene( NeuronType newType, Long newInnovationId, String anActivationType ) {
-	super( newInnovationId );
+	/**
+	 * Construct new NeuronGene with given type and ID. Protected since this should only be constructed via factory
+	 * methods in <code>NeuronGene</code> and <code>NeatChromosomeUtility</code>, and persistence objects.
+	 * 
+	 * @param newType
+	 * @param newInnovationId
+	 * @param anActivationType
+	 */
+	public NeuronGene(NeuronType newType, Long newInnovationId, String anActivationType) {
+		super(newInnovationId);
 
-    //if (anActivationType.equals(ActivationFunction.RANDOM))
-	//	throw new IllegalArgumentException( "activation function can not be random for NeuronGene" );
+		// if (anActivationType.equals(ActivationFunction.RANDOM))
+		// throw new IllegalArgumentException( "activation function can not be random for NeuronGene" );
 
-	type = newType;
-	activationType = anActivationType;
-}
+		type = newType;
+		activationType = anActivationType;
+	}
 
-/**
- * @return type of neuron
- * @see NeuronType
- */
-NeuronType getType() {
-	return type;
-}
+	/**
+	 * @return type of neuron
+	 * @see NeuronType
+	 */
+	NeuronType getType() {
+		return type;
+	}
 
-/**
- * @param aType
- * @return true iff neuron is of type <code>aType</code>
- */
-boolean isType( NeuronType aType ) {
-	return type.equals( aType );
-}
+	/**
+	 * @param aType
+	 * @return true iff neuron is of type <code>aType</code>
+	 */
+	boolean isType(NeuronType aType) {
+		return type.equals(aType);
+	}
 
-/**
- * @return gets activation function type
- */
-String getActivationType() {
-	return activationType;
-}
+	/**
+	 * @return gets activation function type
+	 */
+	String getActivationType() {
+		return activationType;
+	}
 
-/**
- * for hibernate
- * @param anActivationType The activationType to set.
- */
-private void setActivationType( String anActivationType ) {
-	activationType = anActivationType;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param anActivationType The activationType to set.
+	 */
+	private void setActivationType(String anActivationType) {
+		activationType = anActivationType;
+	}
 
-/**
- * for hibernate
- * @param aType
- */
-private void setType( NeuronType aType ) {
-	type = aType;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param aType
+	 */
+	private void setType(NeuronType aType) {
+		type = aType;
+	}
 
-/**
- * for hibernate
- * @return unique id
- */
-private Long getId() {
-	return id;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @return unique id
+	 */
+	private Long getId() {
+		return id;
+	}
 
-/**
- * for hibernate
- * @param aId
- */
-private void setId( Long aId ) {
-	id = aId;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param aId
+	 */
+	private void setId(Long aId) {
+		id = aId;
+	}
 }

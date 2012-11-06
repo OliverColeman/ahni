@@ -24,7 +24,6 @@ package com.anji.integration;
 
 import com.anji.util.Properties;
 
-
 /**
  * @author Philip Tucker
  */
@@ -35,7 +34,7 @@ public class ErrorFunction {
 	private double targetRange = 0;
 
 	private static ErrorFunction instance = null;
-	
+
 	private ErrorFunction() {
 		super();
 	}
@@ -44,17 +43,17 @@ public class ErrorFunction {
 	 * @return singleton instance
 	 */
 	public static ErrorFunction getInstance() {
-		if ( instance == null )
+		if (instance == null)
 			instance = new ErrorFunction();
 		return instance;
 	}
-	
+
 	/**
 	 * @param props
 	 * @see com.anji.util.Configurable#init(com.anji.util.Properties)
 	 */
-	public void init( Properties props ) {
-		targetRange = props.getFloatProperty( TARGETS_RANGE_KEY, 0.0f );
+	public void init(Properties props) {
+		targetRange = props.getFloatProperty(TARGETS_RANGE_KEY, 0.0f);
 	}
 
 	/**
@@ -63,13 +62,13 @@ public class ErrorFunction {
 	 * @param sumOfSquares
 	 * @return maximum error given the number and range of responses
 	 */
-	public double getMaxError( int responseCount, double minMaxRange, boolean sumOfSquares) {
-        double maxDiffPerResponse = minMaxRange - targetRange;
-        if ( sumOfSquares )
+	public double getMaxError(int responseCount, double minMaxRange, boolean sumOfSquares) {
+		double maxDiffPerResponse = minMaxRange - targetRange;
+		if (sumOfSquares)
 			maxDiffPerResponse *= maxDiffPerResponse;
 		return maxDiffPerResponse * responseCount;
 	}
-	
+
 	/**
 	 * Calculate the sum of differences between <code>responses</code> and target values.
 	 * 
@@ -78,24 +77,22 @@ public class ErrorFunction {
 	 * @param sumOfSquares if true, square each diff before summing
 	 * @return total sum of differences
 	 */
-	public double calculateError( double[][] targets, double[][] responses, boolean sumOfSquares ) {
+	public double calculateError(double[][] targets, double[][] responses, boolean sumOfSquares) {
 		double result = 0;
-		for ( int i = 0; i < targets.length; ++i ) {
-			double[] response = responses[ i ];
-			double[] target = targets[ i ];
-			if ( response.length != target.length )
-				throw new IllegalArgumentException( "for training set " + i
-						+ " dimensions do not match for response [" + response.length + "] and target ["
-						+ target.length + "]" );
-			for ( int j = 0; j < target.length; ++j ) {
+		for (int i = 0; i < targets.length; ++i) {
+			double[] response = responses[i];
+			double[] target = targets[i];
+			if (response.length != target.length)
+				throw new IllegalArgumentException("for training set " + i + " dimensions do not match for response [" + response.length + "] and target [" + target.length + "]");
+			for (int j = 0; j < target.length; ++j) {
 				double diff = 0;
-				if ( response[ j ] > ( target[ j ] + targetRange ) )
-					diff = ( response[ j ] - ( target[ j ] + targetRange ) );
-				else if ( response[ j ] < ( target[ j ] - targetRange ) )
-					diff = ( ( target[ j ] - targetRange ) - response[ j ] );
+				if (response[j] > (target[j] + targetRange))
+					diff = (response[j] - (target[j] + targetRange));
+				else if (response[j] < (target[j] - targetRange))
+					diff = ((target[j] - targetRange) - response[j]);
 
-				if ( sumOfSquares )
-					result += ( diff * diff );
+				if (sumOfSquares)
+					result += (diff * diff);
 				else
 					result += diff;
 			}
@@ -103,42 +100,39 @@ public class ErrorFunction {
 		return result;
 	}
 
-
-    /**
+	/**
 	 * Calculate the sum of differences between <code>responses</code> and target values.
-	 *
+	 * 
 	 * @param targetOutputPatterns
 	 * @param responses values to compare to target.
 	 * @param sumOfSquares if true, square each diff before summing
 	 * @return total sum of differences
 	 */
-	public double calculateError( double[][][] targetOutputPatterns, double[][][] responses, boolean sumOfSquares ) {
+	public double calculateError(double[][][] targetOutputPatterns, double[][][] responses, boolean sumOfSquares) {
 		double result = 0;
-		for ( int i = 0; i < targetOutputPatterns.length; ++i ) {
-			double[][] response = responses[ i ];
-			double[][] target = targetOutputPatterns[ i ];
-			if ( response.length != target.length )
-				throw new IllegalArgumentException( "for training set " + i
-						+ " dimensions do not match for response [" + response.length + "] and target ["
-						+ target.length + "]" );
-			for ( int j = 0; j < target.length; ++j ) {
-                for ( int k = 0; k < target[0].length; ++k ) {
-                    double diff = 0;
-                    if ( response[j][k] > ( target[j][k] + targetRange ) )
-                        diff = ( response[j][k] - ( target[j][k] + targetRange ) );
-                    else if ( response[j][k] < ( target[j][k] - targetRange ) )
-                        diff = ( ( target[j][k] - targetRange ) - response[j][k] );
+		for (int i = 0; i < targetOutputPatterns.length; ++i) {
+			double[][] response = responses[i];
+			double[][] target = targetOutputPatterns[i];
+			if (response.length != target.length)
+				throw new IllegalArgumentException("for training set " + i + " dimensions do not match for response [" + response.length + "] and target [" + target.length + "]");
+			for (int j = 0; j < target.length; ++j) {
+				for (int k = 0; k < target[0].length; ++k) {
+					double diff = 0;
+					if (response[j][k] > (target[j][k] + targetRange))
+						diff = (response[j][k] - (target[j][k] + targetRange));
+					else if (response[j][k] < (target[j][k] - targetRange))
+						diff = ((target[j][k] - targetRange) - response[j][k]);
 
-                    if ( sumOfSquares )
-                        result += ( diff * diff );
-                    else
-                        result += diff;
-                }
+					if (sumOfSquares)
+						result += (diff * diff);
+					else
+						result += diff;
+				}
 			}
 		}
 		return result;
 	}
-	
+
 	/**
 	 * @return if response is within this range of the target, error is 0
 	 */
@@ -146,4 +140,3 @@ public class ErrorFunction {
 		return targetRange;
 	}
 }
-

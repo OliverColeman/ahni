@@ -35,6 +35,7 @@ import org.w3c.dom.Node;
 
 /**
  * Factory for generating unique IDs across multiple runs.
+ * 
  * @author Philip Tucker
  */
 public class IdFactory {
@@ -49,109 +50,108 @@ public class IdFactory {
 	 */
 	public final static String XML_TAG = "id";
 
-private long nextId = DEFAULT_BASE_ID;
-private String fileName = null;
+	private long nextId = DEFAULT_BASE_ID;
+	private String fileName = null;
 
-/**
- * @return long next unique ID
- */
- public long next() {
-	return nextId++;
- }
-
-/**
- * construct new factory with default values
- */
-public IdFactory() {
-	// noop
-}
-
-/**
- * construct new factory from persisted file <code>aFileName</code>
- * @param aFileName
- * @throws IOException
- */
-public IdFactory( String aFileName ) throws IOException {
-	fileName = aFileName;
-	FileInputStream in = null;
-	try {
-		File f = new File( aFileName );
-		if ( f.exists() ) {
-			in = new FileInputStream( fileName );
-			nextId = fromXml( in );
-		}
+	/**
+	 * @return long next unique ID
+	 */
+	public long next() {
+		return nextId++;
 	}
-	finally {
-		if ( in != null )
-			in.close();
+
+	/**
+	 * construct new factory with default values
+	 */
+	public IdFactory() {
+		// noop
 	}
-}
 
-/**
- * load ID counter from XML
- * @param in XML representation of ID counter
- * @return long next unique ID
- * @throws IllegalArgumentException
- */
-private static long fromXml( InputStream in ) throws IllegalArgumentException {
-	try {
-		DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-		Document doc = builder.parse( in );
-
-		Node node = doc.getFirstChild();
-		if ( XML_TAG.equals( node.getNodeName() ) == false )
-			throw new IllegalArgumentException( "tag != " + XML_TAG );
-
-		node = node.getFirstChild();
-		if ( node == null )
-			throw new IllegalArgumentException( "empty id node" );
-
-		String aNextIdStr = node.getNodeValue();
-		if ( aNextIdStr == null || aNextIdStr.length() == 0 )
-			throw new IllegalArgumentException( "empty id" );
-
-		long id = Long.parseLong( aNextIdStr );
-		return id;
-	}
-	catch ( Exception e ) {
-		throw new IllegalArgumentException( "xml does not parse: " + e.getMessage() );
-	}
-}
-
-/**
- * @see java.lang.Object#toString()
- */
-public String toString() {
-	return toXml();
-}
-
-/**
- * @return String XML representation of object
- */
-public String toXml() {
-	StringBuffer result = new StringBuffer();
-	result.append( "<id>" ).append( nextId ).append( "</id>" );
-	return result.toString();
-}
-
-/**
- * persist object to file
- * @throws IOException
- */
-public void store() throws IOException {
-	if ( fileName != null ) {
-		FileWriter out = null;
+	/**
+	 * construct new factory from persisted file <code>aFileName</code>
+	 * 
+	 * @param aFileName
+	 * @throws IOException
+	 */
+	public IdFactory(String aFileName) throws IOException {
+		fileName = aFileName;
+		FileInputStream in = null;
 		try {
-			out = new FileWriter( fileName );
-			out.write( toXml() );
-			out.flush();
-		}
-		finally {
-			if ( out != null )
-				out.close();
+			File f = new File(aFileName);
+			if (f.exists()) {
+				in = new FileInputStream(fileName);
+				nextId = fromXml(in);
+			}
+		} finally {
+			if (in != null)
+				in.close();
 		}
 	}
-}
+
+	/**
+	 * load ID counter from XML
+	 * 
+	 * @param in XML representation of ID counter
+	 * @return long next unique ID
+	 * @throws IllegalArgumentException
+	 */
+	private static long fromXml(InputStream in) throws IllegalArgumentException {
+		try {
+			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+			Document doc = builder.parse(in);
+
+			Node node = doc.getFirstChild();
+			if (XML_TAG.equals(node.getNodeName()) == false)
+				throw new IllegalArgumentException("tag != " + XML_TAG);
+
+			node = node.getFirstChild();
+			if (node == null)
+				throw new IllegalArgumentException("empty id node");
+
+			String aNextIdStr = node.getNodeValue();
+			if (aNextIdStr == null || aNextIdStr.length() == 0)
+				throw new IllegalArgumentException("empty id");
+
+			long id = Long.parseLong(aNextIdStr);
+			return id;
+		} catch (Exception e) {
+			throw new IllegalArgumentException("xml does not parse: " + e.getMessage());
+		}
+	}
+
+	/**
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+		return toXml();
+	}
+
+	/**
+	 * @return String XML representation of object
+	 */
+	public String toXml() {
+		StringBuffer result = new StringBuffer();
+		result.append("<id>").append(nextId).append("</id>");
+		return result.toString();
+	}
+
+	/**
+	 * persist object to file
+	 * 
+	 * @throws IOException
+	 */
+	public void store() throws IOException {
+		if (fileName != null) {
+			FileWriter out = null;
+			try {
+				out = new FileWriter(fileName);
+				out.write(toXml());
+				out.flush();
+			} finally {
+				if (out != null)
+					out.close();
+			}
+		}
+	}
 
 }
-

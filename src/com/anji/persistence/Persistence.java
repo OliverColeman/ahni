@@ -35,67 +35,69 @@ import com.anji.util.Properties;
  */
 public interface Persistence extends Configurable {
 
-/**
- * properties key; persistence class implementation
- */
-public final static String PERSISTENCE_CLASS_KEY = "persistence";
+	/**
+	 * properties key; persistence class implementation
+	 */
+	public final static String PERSISTENCE_CLASS_KEY = "persistence";
 
-/**
- * See <a href=" {@docRoot}/params.htm" target="anji_params">Parameter Details </a> for
- * specific property settings.
- * @param newProps configuration parameters
- */
-public void init( Properties newProps );
+	/**
+	 * See <a href=" {@docRoot} /params.htm" target="anji_params">Parameter Details </a> for specific property settings.
+	 * 
+	 * @param newProps configuration parameters
+	 */
+	public void init(Properties newProps);
 
-/**
- * remove all data from storage
- */
-public void reset();
+	/**
+	 * remove all data from storage
+	 */
+	public void reset();
 
-/**
- * @param c chromosome to store
- * @throws Exception
- */
-public void store( Chromosome c ) throws Exception;
+	/**
+	 * @param c chromosome to store
+	 * @throws Exception
+	 */
+	public void store(Chromosome c) throws Exception;
 
-/**
- * @param a activator to store
- * @throws Exception
- */
-public void store( Activator a ) throws Exception;
+	/**
+	 * @param a activator to store
+	 * @throws Exception
+	 */
+	public void store(Activator a) throws Exception;
 
-/**
- * @param r run to store
- * @throws Exception
- */
-public void store( Run r ) throws Exception;
+	/**
+	 * @param r run to store
+	 * @throws Exception
+	 */
+	public void store(Run r) throws Exception;
 
-/**
- * delete chromosome identified by by <code>id</code>
- * 
- * @param id id of chromosome to delete
- * @throws Exception
- */
-public void deleteChromosome( String id ) throws Exception;
+	/**
+	 * delete chromosome identified by by <code>id</code>
+	 * 
+	 * @param id id of chromosome to delete
+	 * @throws Exception
+	 */
+	public void deleteChromosome(String id) throws Exception;
 
-/**
- * @param id
- * @param config
- * @return chromosome from persistence
- */
-public Chromosome loadChromosome( String id, Configuration config );
+	/**
+	 * @param id
+	 * @param config
+	 * @return chromosome from persistence
+	 */
+	public Chromosome loadChromosome(String id, Configuration config);
 
-/**
- * loads genotype as of latest generation in run
- * @param config
- * @return genotype; null if there is no previous run
- */
-public Genotype loadGenotype( Configuration config );
+	/**
+	 * loads genotype as of latest generation in run
+	 * 
+	 * @param config
+	 * @return genotype; null if there is no previous run
+	 */
+	public Genotype loadGenotype(Configuration config);
 
-/**
- * Begin run.  All successive calls to this persistance object will be in the context of this run.
- * @param runId
- */
-public void startRun( String runId );
+	/**
+	 * Begin run. All successive calls to this persistance object will be in the context of this run.
+	 * 
+	 * @param runId
+	 */
+	public void startRun(String runId);
 
 }

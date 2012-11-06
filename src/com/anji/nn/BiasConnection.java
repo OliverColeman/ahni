@@ -22,9 +22,9 @@
 
 package com.anji.nn;
 
-
 /**
  * Connection used for bias node, clamped at 1.
+ * 
  * @author Philip Tucker
  */
 public class BiasConnection implements Connection {
@@ -32,18 +32,18 @@ public class BiasConnection implements Connection {
 	private BiasConnection() {
 		// no-op
 	}
-	
+
 	private static BiasConnection instance;
-	
+
 	/**
 	 * @return singleton instance
 	 */
 	public static BiasConnection getInstance() {
-		if ( instance == null )
+		if (instance == null)
 			instance = new BiasConnection();
 		return instance;
 	}
-	
+
 	/**
 	 * @see com.anji.nn.Connection#read()
 	 */
@@ -56,8 +56,8 @@ public class BiasConnection implements Connection {
 	 */
 	public String toXml() {
 		StringBuffer result = new StringBuffer();
-		result.append( "<" ).append( Connection.XML_TAG );
-		result.append( "\" from-input=\"bias\" />" );
+		result.append("<").append(Connection.XML_TAG);
+		result.append("\" from-input=\"bias\" />");
 
 		return result.toString();
 	}
@@ -70,4 +70,3 @@ public class BiasConnection implements Connection {
 	}
 
 }
-

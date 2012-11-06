@@ -19,7 +19,6 @@
  */
 package com.anji.nn.activationfunction;
 
-
 /**
  * @author Philip Tucker
  */
@@ -36,14 +35,14 @@ public class SignedClampedLinearActivationFunction implements ActivationFunction
 	public String toString() {
 		return NAME;
 	}
-	
+
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public double apply( double input ) {
-		if ( input <= -1.0d )
+	public double apply(double input) {
+		if (input <= -1.0d)
 			return -1;
-		else if ( input >= 1.0f )
+		else if (input >= 1.0f)
 			return 1;
 		else
 			return input;

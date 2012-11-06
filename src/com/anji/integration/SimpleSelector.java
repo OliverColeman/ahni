@@ -33,42 +33,47 @@ import org.jgapcustomised.NaturalSelector;
 
 /**
  * Selects chromosomes based directly on fitness value, as opposed to a statistical probability.
+ * 
  * @author Philip Tucker
  */
 public class SimpleSelector extends NaturalSelector {
 
-private List chromosomes = new ArrayList();
+	private List chromosomes = new ArrayList();
 
-/**
- * Add <code>a_chromosomeToAdd</code> to set of chromosomes to be evaluated.
- * @param a_activeConfigurator
- * @param a_chromosomeToAdd
- */
-protected void add( Configuration a_activeConfigurator, Chromosome a_chromosomeToAdd ) {
-	chromosomes.add( a_chromosomeToAdd );
+	/**
+	 * Add <code>a_chromosomeToAdd</code> to set of chromosomes to be evaluated.
+	 * 
+	 * @param a_activeConfigurator
+	 * @param a_chromosomeToAdd
+	 */
+	protected void add(Configuration a_activeConfigurator, Chromosome a_chromosomeToAdd) {
+		chromosomes.add(a_chromosomeToAdd);
+	}
+
+	/**
+	 * Returns the <code>a_howManyToSelect</code> chromosomes with highest fitness.
+	 * 
+	 * @param a_activeConfiguration
+	 * @param a_howManyToSelect
+	 * @return <code>List</code> contains <code>Chromosome</code> objects
+	 */
+	protected List select(Configuration a_activeConfiguration, int a_howManyToSelect) {
+		Collections.sort(chromosomes, new ChromosomeFitnessComparator(false /* asc */, speciatedFitness /*
+																										 * speciated
+																										 * fitness
+																										 */));
+		List<Chromosome> result = new ArrayList<Chromosome>(a_howManyToSelect);
+		Iterator<Chromosome> it = chromosomes.iterator();
+		while (it.hasNext() && (result.size() < a_howManyToSelect))
+			result.add(it.next());
+		return result;
+	}
+
+	/**
+	 * empty chromosome list
+	 */
+	protected void emptyImpl() {
+		chromosomes.clear();
+	}
+
 }
-
-/**
- * Returns the <code>a_howManyToSelect</code> chromosomes with highest fitness.
- * @param a_activeConfiguration
- * @param a_howManyToSelect
- * @return <code>List</code> contains <code>Chromosome</code> objects
- */
-protected List select( Configuration a_activeConfiguration, int a_howManyToSelect ) {
-	Collections.sort( chromosomes, new ChromosomeFitnessComparator( false /* asc */, speciatedFitness /* speciated fitness*/ ) );
-	List<Chromosome> result = new ArrayList<Chromosome>( a_howManyToSelect );
-	Iterator<Chromosome> it = chromosomes.iterator();
-	while ( it.hasNext() && ( result.size() < a_howManyToSelect ) )
-		result.add(it.next());
-	return result;
-}
-
-/**
- * empty chromosome list
- */
-protected void emptyImpl() {
-	chromosomes.clear();
-}
-
-}
-

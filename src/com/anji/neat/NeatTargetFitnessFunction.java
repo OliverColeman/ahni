@@ -19,16 +19,17 @@
  */
 package com.anji.neat;
 
+import ojc.ahni.hyperneat.HyperNEATEvolver;
+
 import com.anji.integration.ErrorFunction;
 import com.anji.integration.TargetFitnessFunction;
 import com.anji.util.Properties;
 
 /**
- * Fitness function where error is subtracted from max fitness, then squared. Fitness is skewed
- * such that max fitness is <code>MAX_FITNESS</code>. See
- * <code>calculateErrorFitness()</code> for details. This mimics the error function used in <a
- * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf"> Evolving Neural Networks
- * through Augmenting Topologies </a>.
+ * Fitness function where error is subtracted from max fitness, then squared. Fitness is skewed such that max fitness is
+ * <code>MAX_FITNESS</code>. See <code>calculateErrorFitness()</code> for details. This mimics the error function used
+ * in <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf"> Evolving Neural Networks through Augmenting
+ * Topologies </a>.
  * 
  * @author Philip Tucker
  * @see com.anji.integration.TargetFitnessFunction
@@ -40,56 +41,54 @@ public class NeatTargetFitnessFunction extends TargetFitnessFunction {
 	private final static int MAX_FITNESS = 160000000;
 
 	/**
-	 * See <a href=" {@docRoot}/params.htm" target="anji_params">Parameter Details </a> for
-	 * specific property settings.
+	 * See <a href=" {@docRoot} /params.htm" target="anji_params">Parameter Details </a> for specific property settings.
 	 * 
 	 * @param newProps configuration parameters
 	 */
-	public void init( Properties newProps ) {
+	public void init(Properties newProps) {
 		try {
-			super.init( newProps );
-			ErrorFunction.getInstance().init( newProps );
-			setMaxFitnessValue( MAX_FITNESS );
-		}
-		catch ( Exception e ) {
-			throw new IllegalArgumentException( "invalid properties: " + e.getClass().toString()
-					+ ": " + e.getMessage() );
+			super.init(newProps);
+			ErrorFunction.getInstance().init(newProps);
+			setMaxFitnessValue(MAX_FITNESS);
+		} catch (Exception e) {
+			throw new IllegalArgumentException("invalid properties: " + e.getClass().toString() + ": " + e.getMessage());
 		}
 	}
 
 	/**
-	 * Subtract <code>responses</code> from targets, sum all differences, subtract from max
-	 * fitness, and square result.
+	 * Subtract <code>responses</code> from targets, sum all differences, subtract from max fitness, and square result.
 	 * 
 	 * @param responses output top be compared to targets
 	 * @param minResponse
 	 * @param maxResponse
 	 * @return result of calculation
 	 */
-	protected int calculateErrorFitness( double[][] responses, double minResponse, double maxResponse ) {
-		double maxSumDiff = ErrorFunction.getInstance().getMaxError(
-				getTargets().length * getTargets()[ 0 ].length,
-				( maxResponse - minResponse ), SUM_OF_SQUARES );
-		double maxRawFitnessValue = (double) Math.pow( maxSumDiff, 2 );
+	protected int calculateErrorFitness(double[][] responses, double minResponse, double maxResponse) {
+		double maxSumDiff = ErrorFunction.getInstance().getMaxError(getTargets().length * getTargets()[0].length, (maxResponse - minResponse), SUM_OF_SQUARES);
+		double maxRawFitnessValue = (double) Math.pow(maxSumDiff, 2);
 
-		double sumDiff = ErrorFunction.getInstance().calculateError( getTargets(), responses, false );
-		if ( sumDiff > maxSumDiff )
-			throw new IllegalStateException( "sum diff > max sum diff" );
-		double rawFitnessValue = (double) Math.pow( maxSumDiff - sumDiff, 2 );
-		double skewedFitness = ( rawFitnessValue / maxRawFitnessValue ) * MAX_FITNESS;
+		double sumDiff = ErrorFunction.getInstance().calculateError(getTargets(), responses, false);
+		if (sumDiff > maxSumDiff)
+			throw new IllegalStateException("sum diff > max sum diff");
+		double rawFitnessValue = (double) Math.pow(maxSumDiff - sumDiff, 2);
+		double skewedFitness = (rawFitnessValue / maxRawFitnessValue) * MAX_FITNESS;
 		int result = (int) skewedFitness;
 		return result;
 	}
-	
 
 	public double getPerformanceFromFitnessValue(int fitness) {
 		return (double) fitness / MAX_FITNESS;
 	}
 
 	public boolean endRun() {
-    	return false;
-    }
+		return false;
+	}
+
 	@Override
-    public void dispose() {
+	public void dispose() {
+	}
+	
+	@Override
+	public void evolutionFinished(HyperNEATEvolver evolver) {
 	}
 }

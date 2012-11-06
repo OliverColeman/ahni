@@ -30,192 +30,191 @@ import com.anji.nn.Pattern;
  */
 public class AnjiActivator implements Activator {
 
-private AnjiNet net;
+	private AnjiNet net;
 
-private Pattern inputPattern = null;
+	private Pattern inputPattern = null;
 
-private int numCycles = 1;
+	private int numCycles = 1;
 
-private int outputDimension;
+	private int outputDimension;
 
-private double minResponseValue;
+	private double minResponseValue;
 
-private double maxResponseValue;
+	private double maxResponseValue;
 
-/**
- * @param aNet ANN
- * @param aNumCycles number of times input pattern is "shown" to network before a result is
- * returned; this allows for recurrent connections to take effect
- * @throws IllegalArgumentException
- */
-public AnjiActivator( AnjiNet aNet, int aNumCycles ) throws IllegalArgumentException {
-	super();
-	setNumCycles( aNumCycles );
-	net = aNet;
-	outputDimension = aNet.getOutputDimension();
+	/**
+	 * @param aNet ANN
+	 * @param aNumCycles number of times input pattern is "shown" to network before a result is returned; this allows
+	 *            for recurrent connections to take effect
+	 * @throws IllegalArgumentException
+	 */
+	public AnjiActivator(AnjiNet aNet, int aNumCycles) throws IllegalArgumentException {
+		super();
+		setNumCycles(aNumCycles);
+		net = aNet;
+		outputDimension = aNet.getOutputDimension();
 
-	// input neurons
-	inputPattern = new Pattern( aNet.getInputDimension() );
-	for ( int i = 0; i < aNet.getInputDimension(); ++i ) {
-		Neuron n = aNet.getInputNeuron( i );
-		n.addIncomingConnection( inputPattern.getConnection( i ) );
+		// input neurons
+		inputPattern = new Pattern(aNet.getInputDimension());
+		for (int i = 0; i < aNet.getInputDimension(); ++i) {
+			Neuron n = aNet.getInputNeuron(i);
+			n.addIncomingConnection(inputPattern.getConnection(i));
+		}
+
+		// verify consistent response ranges
+		minResponseValue = net.getOutputNeuron(0).getFunc().getMinValue();
+		maxResponseValue = net.getOutputNeuron(0).getFunc().getMaxValue();
+		for (int i = 1; i < net.getOutputDimension(); ++i)
+			if (minResponseValue != net.getOutputNeuron(i).getFunc().getMinValue() || maxResponseValue != net.getOutputNeuron(i).getFunc().getMaxValue())
+				throw new IllegalArgumentException("min and max values for response nodes differ");
 	}
 
-	// verify consistent response ranges
-	minResponseValue = net.getOutputNeuron( 0 ).getFunc().getMinValue();
-	maxResponseValue = net.getOutputNeuron( 0 ).getFunc().getMaxValue();
-	for ( int i = 1; i < net.getOutputDimension(); ++i )
-		if ( minResponseValue != net.getOutputNeuron( i ).getFunc().getMinValue()
-				|| maxResponseValue != net.getOutputNeuron( i ).getFunc().getMaxValue() )
-			throw new IllegalArgumentException( "min and max values for response nodes differ" );
-}
+	public double[] next() {
+		return next((double[]) null);
+	}
 
-public double[] next() {
-	return next( (double[]) null );
-}
+	public double[] next(double[] newInputValues) {
+		if (newInputValues != null)
+			inputPattern.setValues(newInputValues);
 
-public double[] next( double[] newInputValues ) {
-	if ( newInputValues != null )
-		inputPattern.setValues( newInputValues );
+		// step through network activations
+		for (int cycle = 0; cycle < numCycles - 1; ++cycle) {
+			net.step();
 
-	// step through network activations
-	for ( int cycle = 0; cycle < numCycles - 1; ++cycle ) {
+			// sanity check - this may not be necessary if we construct the nets properly such that
+			// recurrency is determined by building the network backward from the output layer; in that
+			// way, a neuron could not be created having only recurrent outputs
+			net.fullyActivate();
+		}
+
+		// last step, get results
 		net.step();
-
-		// sanity check - this may not be necessary if we construct the nets properly such that
-		// recurrency is determined by building the network backward from the output layer; in that
-		// way, a neuron could not be created having only recurrent outputs
+		double[] result = new double[outputDimension];
+		for (int idx = 0; idx < outputDimension; ++idx) {
+			Neuron n = net.getOutputNeuron(idx);
+			result[idx] = n.getValue();
+		}
 		net.fullyActivate();
+
+		return result;
 	}
 
-	// last step, get results
-	net.step();
-	double[] result = new double[ outputDimension ];
-	for ( int idx = 0; idx < outputDimension; ++idx ) {
-		Neuron n = net.getOutputNeuron( idx );
-		result[ idx ] = n.getValue();
+	public double[][] nextSequence(double[][] newInputValues) {
+		double[][] result = new double[newInputValues.length][];
+		for (int i = 0; i < newInputValues.length; ++i) {
+			result[i] = next(newInputValues[i]);
+		}
+		return result;
 	}
-	net.fullyActivate();
 
-	return result;
-}
-
-public double[][] nextSequence( double[][] newInputValues ) {
-	double[][] result = new double[ newInputValues.length ][];
-	for ( int i = 0; i < newInputValues.length; ++i ) {
-		result[ i ] = next( newInputValues[ i ] );
+	public double[][] next(double[][] stimuli) {
+		throw new IllegalArgumentException("AnjiActivator can only accept one dimensional input patterns");
 	}
-	return result;
-}
 
-public double[][] next( double[][] stimuli ) {
-    throw new IllegalArgumentException("AnjiActivator can only accept one dimensional input patterns");
-}
+	public double[][][] nextSequence(double[][][] stimuli) {
+		throw new IllegalArgumentException("AnjiActivator can only accept one dimensional input patterns");
+	}
 
-public double[][][] nextSequence( double[][][] stimuli ) {
-    throw new IllegalArgumentException("AnjiActivator can only accept one dimensional input patterns");
-}
+	/**
+	 * @param array glue between double arrays and neuron connections.
+	 */
+	public void setInputPattern(Pattern array) {
+		inputPattern = array;
+	}
 
-/**
- * @param array glue between double arrays and neuron connections.
- */
-public void setInputPattern( Pattern array ) {
-	inputPattern = array;
-}
+	/**
+	 * clear all memory in network, including neurons and recurrent connections
+	 */
+	public void reset() {
+		net.reset();
+	}
 
-/**
- * clear all memory in network, including neurons and recurrent connections
- */
-public void reset() {
-	net.reset();
-}
+	/**
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+		return net.toString();
+	}
 
-/**
- * @see java.lang.Object#toString()
- */
-public String toString() {
-	return net.toString();
-}
+	/**
+	 * @see com.anji.integration.Activator#toXml()
+	 */
+	public String toXml() {
+		return net.toXml();
+	}
 
-/**
- * @see com.anji.integration.Activator#toXml()
- */
-public String toXml() {
-	return net.toXml();
-}
+	/**
+	 * @see com.anji.integration.Activator#getName()
+	 */
+	public String getName() {
+		return net.getName();
+	}
 
-/**
- * @see com.anji.integration.Activator#getName()
- */
-public String getName() {
-	return net.getName();
-}
+	/**
+	 * @param aNumCycles number of times input pattern is "shown" to network before a result is returned; this allows
+	 *            for recurrent connections to take effect
+	 * @throws IllegalArgumentException
+	 */
+	public void setNumCycles(int aNumCycles) throws IllegalArgumentException {
+		if (aNumCycles < 1)
+			throw new IllegalArgumentException("numCycles must be >= 1");
+		numCycles = aNumCycles;
+	}
 
-/**
- * @param aNumCycles number of times input pattern is "shown" to network before a result is
- * returned; this allows for recurrent connections to take effect
- * @throws IllegalArgumentException
- */
-public void setNumCycles( int aNumCycles ) throws IllegalArgumentException {
-	if ( aNumCycles < 1 )
-		throw new IllegalArgumentException( "numCycles must be >= 1" );
-	numCycles = aNumCycles;
-}
+	/**
+	 * @return dimension of input pattern
+	 */
+	public int[] getInputDimension() {
+		return new int[] { inputPattern.getDimension() };
+	}
 
-/**
- * @return dimension of input pattern
- */
-public int[] getInputDimension() {
-	return new int[] {inputPattern.getDimension()};
-}
+	/**
+	 * @return dimension of output pattern
+	 */
+	public int[] getOutputDimension() {
+		return new int[] { outputDimension };
+	}
 
-/**
- * @return dimension of output pattern
- */
-public int[] getOutputDimension() {
-	return new int[] {outputDimension};
-}
+	/**
+	 * @return true if network contains any recurrent connections, false otherwise
+	 */
+	public boolean isRecurrent() {
+		return net.isRecurrent();
+	}
 
-/**
- * @return true if network contains any recurrent connections, false otherwise
- */
-public boolean isRecurrent() {
-	return net.isRecurrent();
-}
+	/**
+	 * @return min response
+	 */
+	public double getMinResponse() {
+		return net.getOutputNeuron(0).getFunc().getMinValue();
+	}
 
-/**
- * @return min response
- */
-public double getMinResponse() {
-	return net.getOutputNeuron( 0 ).getFunc().getMinValue();
-}
+	/**
+	 * @return max responses
+	 */
+	public double getMaxResponse() {
+		return net.getOutputNeuron(0).getFunc().getMaxValue();
+	}
 
-/**
- * @return max responses
- */
-public double getMaxResponse() {
-	return net.getOutputNeuron( 0 ).getFunc().getMaxValue();
-}
+	/**
+	 * @see com.anji.util.XmlPersistable#getXmlRootTag()
+	 */
+	public String getXmlRootTag() {
+		return "network";
+	}
 
-/**
- * @see com.anji.util.XmlPersistable#getXmlRootTag()
- */
-public String getXmlRootTag() {
-	return "network";
-}
+	/**
+	 * @see com.anji.util.XmlPersistable#getXmld()
+	 */
+	public String getXmld() {
+		return net.getName();
+	}
 
-/**
- * @see com.anji.util.XmlPersistable#getXmld()
- */
-public String getXmld() {
-	return net.getName();
-}
-
-/**
- * Return the underlying AnjiNet.
- */
-public AnjiNet getAnjiNet() {
-	return net;
-}
+	/**
+	 * Return the underlying AnjiNet.
+	 */
+	public AnjiNet getAnjiNet() {
+		return net;
+	}
 
 }

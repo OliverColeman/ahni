@@ -21,12 +21,13 @@ package com.anji.nn.activationfunction;
 
 /**
  * Inverse absolute value.
+ * 
  * @author Philip Tucker
  */
 public class InverseAbsActivationFunction implements ActivationFunction {
 
 	private final static double SLOPE = 0.3f;
-	
+
 	/**
 	 * identifying string
 	 */
@@ -48,9 +49,10 @@ public class InverseAbsActivationFunction implements ActivationFunction {
 
 	/**
 	 * Inverse absolute value.
+	 * 
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public double apply( double input ) {
+	public double apply(double input) {
 		return 1 / (SLOPE * Math.abs(input) + 1);
 	}
 
@@ -60,7 +62,7 @@ public class InverseAbsActivationFunction implements ActivationFunction {
 	public double getMaxValue() {
 		return 1;
 	}
-	
+
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */

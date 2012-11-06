@@ -19,7 +19,6 @@
  */
 package com.anji.nn.activationfunction;
 
-
 /**
  * Cosine activation function.
  * 
@@ -51,7 +50,7 @@ public class CosineActivationFunction implements ActivationFunction {
 	 * 
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public double apply( double input ) {
+	public double apply(double input) {
 		return (double) Math.cos(input);
 	}
 
@@ -61,7 +60,7 @@ public class CosineActivationFunction implements ActivationFunction {
 	public double getMaxValue() {
 		return 1;
 	}
-	
+
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */

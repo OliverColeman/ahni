@@ -24,146 +24,147 @@ import java.util.Iterator;
 
 /**
  * Connection between neurons.
+ * 
  * @author Philip Tucker
  */
 public class NeuronConnection implements Connection {
 
-static final String SRC_XML_TAG = "src-id";
+	static final String SRC_XML_TAG = "src-id";
 
-static final String DEST_XML_TAG = "tgt-id";
+	static final String DEST_XML_TAG = "tgt-id";
 
-static final String WEIGHT_XML_TAG = "weight";
+	static final String WEIGHT_XML_TAG = "weight";
 
-static final String RECURRENT_XML_TAG = "recurrent";
+	static final String RECURRENT_XML_TAG = "recurrent";
 
-private long id = hashCode();
+	private long id = hashCode();
 
-private Neuron incomingNode = null;
+	private Neuron incomingNode = null;
 
-private double weight = 0;
+	private double weight = 0;
 
-/**
- * @param anIncoming
- * @see NeuronConnection#NeuronConnection(Neuron, double)
- */
-public NeuronConnection( Neuron anIncoming ) {
-	this( anIncoming, 0 );
-}
+	/**
+	 * @param anIncoming
+	 * @see NeuronConnection#NeuronConnection(Neuron, double)
+	 */
+	public NeuronConnection(Neuron anIncoming) {
+		this(anIncoming, 0);
+	}
 
-/**
- * Create connection with input neuron <code>anIncoming</code> and weight <code>aWeight</code>.
- * @param anIncoming
- * @param aWeight
- */
-public NeuronConnection( Neuron anIncoming, double aWeight ) {
-	super();
-	incomingNode = anIncoming;
-	weight = aWeight;
-}
+	/**
+	 * Create connection with input neuron <code>anIncoming</code> and weight <code>aWeight</code>.
+	 * 
+	 * @param anIncoming
+	 * @param aWeight
+	 */
+	public NeuronConnection(Neuron anIncoming, double aWeight) {
+		super();
+		incomingNode = anIncoming;
+		weight = aWeight;
+	}
 
-/**
- * @param f new weight
- */
-public void setWeight( double f ) {
-	weight = f;
-}
+	/**
+	 * @param f new weight
+	 */
+	public void setWeight(double f) {
+		weight = f;
+	}
 
-/**
- * @return double
- */
-public double read() {
-	return weight * incomingNode.getValue();
-}
+	/**
+	 * @return double
+	 */
+	public double read() {
+		return weight * incomingNode.getValue();
+	}
 
-/**
- * @see Object#toString()
- */
-public String toString() {
-	return "id: " + id + ", src: " + incomingNode.getId();
-}
+	/**
+	 * @see Object#toString()
+	 */
+	public String toString() {
+		return "id: " + id + ", src: " + incomingNode.getId();
+	}
 
-/**
- * @return String XML representation of object
- */
-public String toXml() {
-	StringBuffer result = new StringBuffer();
-	result.append( "<" ).append( XML_TAG ).append( " id=\"" ).append( id );
-	result.append( "\" " ).append( SRC_XML_TAG ).append( "=\"" ).append( incomingNode.getId() );
-	result.append( "\" " ).append( WEIGHT_XML_TAG ).append( "=\"" ).append( getWeight() );
-	result.append( "\" " ).append( RECURRENT_XML_TAG ).append( "=\"" ).append( isRecurrent() )
-			.append( " />" );
-	return result.toString();
-}
+	/**
+	 * @return String XML representation of object
+	 */
+	public String toXml() {
+		StringBuffer result = new StringBuffer();
+		result.append("<").append(XML_TAG).append(" id=\"").append(id);
+		result.append("\" ").append(SRC_XML_TAG).append("=\"").append(incomingNode.getId());
+		result.append("\" ").append(WEIGHT_XML_TAG).append("=\"").append(getWeight());
+		result.append("\" ").append(RECURRENT_XML_TAG).append("=\"").append(isRecurrent()).append(" />");
+		return result.toString();
+	}
 
-/**
- * @param l new innovation ID
- */
-public void setId( long l ) {
-	id = l;
-}
+	/**
+	 * @param l new innovation ID
+	 */
+	public void setId(long l) {
+		id = l;
+	}
 
-/**
- * for tracking back to chromosome innovation id
- * @return long ID
- */
-protected long getId() {
-	return id;
-}
+	/**
+	 * for tracking back to chromosome innovation id
+	 * 
+	 * @return long ID
+	 */
+	protected long getId() {
+		return id;
+	}
 
-/**
- * @return Neuron input
- */
-protected Neuron getIncomingNode() {
-	return incomingNode;
-}
+	/**
+	 * @return Neuron input
+	 */
+	protected Neuron getIncomingNode() {
+		return incomingNode;
+	}
 
-/**
- * @return double connection weight
- */
-protected double getWeight() {
-	return weight;
-}
+	/**
+	 * @return double connection weight
+	 */
+	protected double getWeight() {
+		return weight;
+	}
 
-/**
- * Utility method to convert collection of connections, presumably an entire ANN, to XML. XML
- * representation is consistent with <a href="http://nevt.sourceforge.net/">NEVT </a>.
- * @param allNeurons
- * @param result
- */
-public static void appendToXml( Collection allNeurons, StringBuffer result ) {
-	Iterator neuronIter = allNeurons.iterator();
-	while ( neuronIter.hasNext() ) {
-		Neuron neuron = (Neuron) neuronIter.next();
-		Iterator connIter = neuron.getIncomingConns().iterator();
-		while ( connIter.hasNext() ) {
-			Connection conn = (Connection) connIter.next();
-			if ( conn instanceof NeuronConnection ) {
-				NeuronConnection nConn = (NeuronConnection) conn;
-				long srcId = nConn.getIncomingNode().getId();
-				result.append( "<" ).append( XML_TAG ).append( " " );
-				result.append( SRC_XML_TAG ).append( "=\"" ).append( srcId ).append( "\" " );
-				result.append( DEST_XML_TAG ).append( "=\"" ).append( neuron.getId() ).append( "\" " );
-				result.append( WEIGHT_XML_TAG ).append( "=\"" ).append( nConn.getWeight() ).append(
-						"\" " );
-				result.append( RECURRENT_XML_TAG ).append( "=\"" ).append( nConn.isRecurrent() )
-						.append( "\" />\n" );
+	/**
+	 * Utility method to convert collection of connections, presumably an entire ANN, to XML. XML representation is
+	 * consistent with <a href="http://nevt.sourceforge.net/">NEVT </a>.
+	 * 
+	 * @param allNeurons
+	 * @param result
+	 */
+	public static void appendToXml(Collection allNeurons, StringBuffer result) {
+		Iterator neuronIter = allNeurons.iterator();
+		while (neuronIter.hasNext()) {
+			Neuron neuron = (Neuron) neuronIter.next();
+			Iterator connIter = neuron.getIncomingConns().iterator();
+			while (connIter.hasNext()) {
+				Connection conn = (Connection) connIter.next();
+				if (conn instanceof NeuronConnection) {
+					NeuronConnection nConn = (NeuronConnection) conn;
+					long srcId = nConn.getIncomingNode().getId();
+					result.append("<").append(XML_TAG).append(" ");
+					result.append(SRC_XML_TAG).append("=\"").append(srcId).append("\" ");
+					result.append(DEST_XML_TAG).append("=\"").append(neuron.getId()).append("\" ");
+					result.append(WEIGHT_XML_TAG).append("=\"").append(nConn.getWeight()).append("\" ");
+					result.append(RECURRENT_XML_TAG).append("=\"").append(nConn.isRecurrent()).append("\" />\n");
+				}
 			}
 		}
 	}
-}
 
-/**
- * @return false
- */
-public boolean isRecurrent() {
-	return false;
-}
+	/**
+	 * @return false
+	 */
+	public boolean isRecurrent() {
+		return false;
+	}
 
-/**
- * @see com.anji.nn.Connection#cost()
- */
-public long cost() {
-	return 57;
-}
+	/**
+	 * @see com.anji.nn.Connection#cost()
+	 */
+	public long cost() {
+		return 57;
+	}
 
 }

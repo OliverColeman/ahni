@@ -34,54 +34,51 @@ import com.anji.util.Properties;
 
 /**
  * Writes log events to stdout.
+ * 
  * @author Philip Tucker
  */
 public class ConsoleLogEventListener implements GeneticEventListener, Configurable {
 
-private PrintStream out = null;
-private Configuration config = null;
+	private PrintStream out = null;
+	private Configuration config = null;
 
-/**
- * @param newConfig
- * @see ConsoleLogEventListener#ConsoleLogEventListener(Configuration, PrintStream)
- */
-public ConsoleLogEventListener(Configuration newConfig) {
-	this(newConfig, System.out);
-}
-
-/**
- * @param newConfig
- * @param newOut
- */
-public ConsoleLogEventListener(Configuration newConfig, PrintStream newOut) {
-	config = newConfig;
-	out = newOut;
-}
-
-/**
- * @param p configuration parameters
- */
-public void init(Properties p) {
-	// noop
-}
-
-/**
- * @param event <code>GeneticEvent.GENOTYPE_EVOLVED_EVENT</code> is the
- * only event handled; writes species count and stats of fittest chromosome.
- */
-public void geneticEventFired(GeneticEvent event) {
-	if ( GeneticEvent.GENOTYPE_EVOLVED_EVENT.equals( event.getEventName() ) ) {
-		Genotype genotype = (Genotype) event.getSource();
-		Chromosome fittest = genotype.getFittestChromosome();
-		double maxFitnessValue = (config.getBulkFitnessFunction() != null) ?
-			config.getBulkFitnessFunction().getMaxFitnessValue() :
-			config.getFitnessFunction().getMaxFitnessValue();
-		double fitness = (maxFitnessValue == 0) ? fittest.getFitnessValue() :
-			(fittest.getFitnessValue() / maxFitnessValue);
-		out.println( "species count: " + genotype.getSpecies().size() );
-		out.println( "fittest chromosome: " + fittest.getId() + ", score == " + fitness + " and # genes == " + fittest.size() );	
+	/**
+	 * @param newConfig
+	 * @see ConsoleLogEventListener#ConsoleLogEventListener(Configuration, PrintStream)
+	 */
+	public ConsoleLogEventListener(Configuration newConfig) {
+		this(newConfig, System.out);
 	}
-}
+
+	/**
+	 * @param newConfig
+	 * @param newOut
+	 */
+	public ConsoleLogEventListener(Configuration newConfig, PrintStream newOut) {
+		config = newConfig;
+		out = newOut;
+	}
+
+	/**
+	 * @param p configuration parameters
+	 */
+	public void init(Properties p) {
+		// noop
+	}
+
+	/**
+	 * @param event <code>GeneticEvent.GENOTYPE_EVOLVED_EVENT</code> is the only event handled; writes species count and
+	 *            stats of fittest chromosome.
+	 */
+	public void geneticEventFired(GeneticEvent event) {
+		if (GeneticEvent.GENOTYPE_EVOLVED_EVENT.equals(event.getEventName())) {
+			Genotype genotype = (Genotype) event.getSource();
+			Chromosome fittest = genotype.getFittestChromosome();
+			double maxFitnessValue = (config.getBulkFitnessFunction() != null) ? config.getBulkFitnessFunction().getMaxFitnessValue() : config.getFitnessFunction().getMaxFitnessValue();
+			double fitness = (maxFitnessValue == 0) ? fittest.getFitnessValue() : (fittest.getFitnessValue() / maxFitnessValue);
+			out.println("species count: " + genotype.getSpecies().size());
+			out.println("fittest chromosome: " + fittest.getId() + ", score == " + fitness + " and # genes == " + fittest.size());
+		}
+	}
 
 }
-

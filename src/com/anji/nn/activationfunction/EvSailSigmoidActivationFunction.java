@@ -50,20 +50,19 @@ public class EvSailSigmoidActivationFunction implements ActivationFunction {
 
 	/**
 	 * Approximation of classic sigmoid.
+	 * 
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public double apply( double input ) {
-		if ( input <= -SEP )
+	public double apply(double input) {
+		if (input <= -SEP)
 			return 0;
-		else if ( input <= 0 ) {
+		else if (input <= 0) {
 			double tmp = input + SEP;
-			return ( tmp * tmp ) / DENOMINATOR;
-		}
-		else if ( input < SEP ) {
+			return (tmp * tmp) / DENOMINATOR;
+		} else if (input < SEP) {
 			double tmp = input - SEP;
-			return 1 - ( ( tmp * tmp ) / DENOMINATOR );
-		}
-		else
+			return 1 - ((tmp * tmp) / DENOMINATOR);
+		} else
 			return 1;
 	}
 
@@ -73,7 +72,7 @@ public class EvSailSigmoidActivationFunction implements ActivationFunction {
 	public double getMaxValue() {
 		return 1;
 	}
-	
+
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */

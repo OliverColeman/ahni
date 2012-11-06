@@ -30,9 +30,8 @@ import com.anji.util.Configurable;
 import com.anji.util.Properties;
 
 /**
- * Factory interface to abstract construction of neural network objects. JOONE
- * implementation is not currently supported, but the guts of the code remain to
- * be re-addressed later.
+ * Factory interface to abstract construction of neural network objects. JOONE implementation is not currently
+ * supported, but the guts of the code remain to be re-addressed later.
  * 
  * @author Philip Tucker
  */
@@ -46,8 +45,7 @@ public class ActivatorTranscriber implements Configurable {
 	private Transcriber transcriber;
 
 	/**
-	 * See <a href=" {@docRoot} /params.htm" target="anji_params">Parameter
-	 * Details </a> for specific property settings.
+	 * See <a href=" {@docRoot} /params.htm" target="anji_params">Parameter Details </a> for specific property settings.
 	 * 
 	 * @param props configuration parameters
 	 * @throws TranscriberException
@@ -58,9 +56,8 @@ public class ActivatorTranscriber implements Configurable {
 	}
 
 	/**
-	 * Constructs <code>Activator</code> phenotype from <code>Chromosome</code>
-	 * genotype. The specific implementatrion of Activator is determined by
-	 * configuration parameters.
+	 * Constructs <code>Activator</code> phenotype from <code>Chromosome</code> genotype. The specific implementatrion
+	 * of Activator is determined by configuration parameters.
 	 * 
 	 * @param ch <code>Chromosome</code> from which activator will be built
 	 * @return Activator phenotype built from <code>Chromosome</code> genotype

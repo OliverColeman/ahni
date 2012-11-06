@@ -19,7 +19,6 @@
  */
 package com.anji.nn.activationfunction;
 
-
 /**
  * @author Philip Tucker
  */
@@ -40,10 +39,10 @@ public class ClampedLinearActivationFunction implements ActivationFunction {
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public double apply( double input ) {
-		if ( input <= 0 )
+	public double apply(double input) {
+		if (input <= 0)
 			return 0;
-		else if ( input >= 1 )
+		else if (input >= 1)
 			return 1;
 		else
 			return input;

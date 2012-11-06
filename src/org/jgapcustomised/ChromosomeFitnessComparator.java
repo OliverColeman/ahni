@@ -36,18 +36,18 @@ public class ChromosomeFitnessComparator<T> implements Comparator<T> {
 	 * @see ChromosomeFitnessComparator#ChromosomeFitnessComparator(boolean, boolean)
 	 */
 	public ChromosomeFitnessComparator() {
-		this( true, true );
+		this(true, true);
 	}
 
 	/**
-	 * Enables sorting of chromosomes in order of fitness. Ascending order if
-	 * <code>ascending</code> is true, descending otherwise. Uses fitness adjusted for species
-	 * fitness sharing if <code>speciated</code> is true, raw fitness otherwise.
+	 * Enables sorting of chromosomes in order of fitness. Ascending order if <code>ascending</code> is true, descending
+	 * otherwise. Uses fitness adjusted for species fitness sharing if <code>speciated</code> is true, raw fitness
+	 * otherwise.
 	 * 
 	 * @param ascending
 	 * @param speciated
 	 */
-	public ChromosomeFitnessComparator( boolean ascending, boolean speciated ) {
+	public ChromosomeFitnessComparator(boolean ascending, boolean speciated) {
 		super();
 		isAscending = ascending;
 		isSpeciated = speciated;
@@ -56,11 +56,11 @@ public class ChromosomeFitnessComparator<T> implements Comparator<T> {
 	/**
 	 * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
 	 */
-	public int compare(T o1, T o2 ) {
+	public int compare(T o1, T o2) {
 		Chromosome c1 = (Chromosome) o1;
 		Chromosome c2 = (Chromosome) o2;
-		int fitness1 = ( isSpeciated ? c1.getSpeciatedFitnessValue() : c1.getFitnessValue() );
-		int fitness2 = ( isSpeciated ? c2.getSpeciatedFitnessValue() : c2.getFitnessValue() );
+		int fitness1 = (isSpeciated ? c1.getSpeciatedFitnessValue() : c1.getFitnessValue());
+		int fitness2 = (isSpeciated ? c2.getSpeciatedFitnessValue() : c2.getFitnessValue());
 		return isAscending ? fitness1 - fitness2 : fitness2 - fitness1;
 	}
 

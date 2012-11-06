@@ -18,57 +18,47 @@
  * 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 package org.jgapcustomised.impl;
+
 import org.jgapcustomised.Chromosome;
 
 /**
- * Provides a pooling mechanism for Chromosome instances so that
- * discarded Chromosome instances can be recycled, thus saving memory and the
- * overhead of constructing new ones from scratch each time.
+ * Provides a pooling mechanism for Chromosome instances so that discarded Chromosome instances can be recycled, thus
+ * saving memory and the overhead of constructing new ones from scratch each time.
  */
-public class ChromosomePool
-{
-    /**
-     * The internal pool in which the Chromosomes are stored.
-     */
-    private Pool m_chromosomePool;
+public class ChromosomePool {
+	/**
+	 * The internal pool in which the Chromosomes are stored.
+	 */
+	private Pool m_chromosomePool;
 
-    /**
-     * Constructor.
-     */
-    public ChromosomePool()
-    {
-        m_chromosomePool = new Pool();
-    }
+	/**
+	 * Constructor.
+	 */
+	public ChromosomePool() {
+		m_chromosomePool = new Pool();
+	}
 
-    /**
-     * Attempts to acquire an Chromosome instance from the chromosome pool.
-     * It should be noted that nothing is guaranteed about the value of the
-     * Chromosome's genes and they should be treated as undefined.
-     *
-     * @return A Chromosome instance from the pool or null if no
-     *         Chromosome instances are available in the pool.
-     */
-    public synchronized Chromosome acquireChromosome()
-    {
-        return (Chromosome) m_chromosomePool.acquirePooledObject();
-    } 
+	/**
+	 * Attempts to acquire an Chromosome instance from the chromosome pool. It should be noted that nothing is
+	 * guaranteed about the value of the Chromosome's genes and they should be treated as undefined.
+	 * 
+	 * @return A Chromosome instance from the pool or null if no Chromosome instances are available in the pool.
+	 */
+	public synchronized Chromosome acquireChromosome() {
+		return (Chromosome) m_chromosomePool.acquirePooledObject();
+	}
 
-    /**
-     * Releases a Chromosome to the pool. It's not required that the Chromosome
-     * originated from the pool--any Chromosome can be released to it. This
-     * method will invoke the cleanup() method on each of the Chromosome's
-     * genes prior to adding it back to the pool.
-     *
-     * @param a_chromosome The Chromosome instance to be released into the pool.
-     */
-    public synchronized void releaseChromosome(Chromosome a_chromosome) {
-        // Now add it to the pool.
-        // -----------------------
-        m_chromosomePool.releaseObject( a_chromosome );
-    }
+	/**
+	 * Releases a Chromosome to the pool. It's not required that the Chromosome originated from the pool--any Chromosome
+	 * can be released to it. This method will invoke the cleanup() method on each of the Chromosome's genes prior to
+	 * adding it back to the pool.
+	 * 
+	 * @param a_chromosome The Chromosome instance to be released into the pool.
+	 */
+	public synchronized void releaseChromosome(Chromosome a_chromosome) {
+		// Now add it to the pool.
+		// -----------------------
+		m_chromosomePool.releaseObject(a_chromosome);
+	}
 
 }
-
-
-
-

@@ -23,95 +23,101 @@ import java.util.Set;
 
 /**
  * Hibernate-able run object.
+ * 
  * @author Philip Tucker
  */
 public class Domain {
 
-private String name;
+	private String name;
 
-private Set populations;
+	private Set populations;
 
-private Set representations;
+	private Set representations;
 
-/**
- * ctor for hibernate
- */
-private Domain() {
-	// no-op
-}
+	/**
+	 * ctor for hibernate
+	 */
+	private Domain() {
+		// no-op
+	}
 
-/**
- * @param aName
- */
-public Domain( String aName ) {
-	name = aName;
-}
+	/**
+	 * @param aName
+	 */
+	public Domain(String aName) {
+		name = aName;
+	}
 
-/**
- * Add new population to domain.
- * @param aPopulation
- */
-public void addPopulation( Population aPopulation ) {
-	populations.add( aPopulation );
-}
+	/**
+	 * Add new population to domain.
+	 * 
+	 * @param aPopulation
+	 */
+	public void addPopulation(Population aPopulation) {
+		populations.add(aPopulation);
+	}
 
-/**
- * Add new representation to domain.
- * @param representation
- */
-public void addRepresentation( Representation representation ) {
-	representations.add( representation );
-}
+	/**
+	 * Add new representation to domain.
+	 * 
+	 * @param representation
+	 */
+	public void addRepresentation(Representation representation) {
+		representations.add(representation);
+	}
 
-/**
- * @see java.lang.Object#toString()
- */
-public String toString() {
-	return name;
-}
+	/**
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+		return name;
+	}
 
-/**
- * @return unique run ID
- */
-public String getName() {
-	return name;
-}
+	/**
+	 * @return unique run ID
+	 */
+	public String getName() {
+		return name;
+	}
 
-/**
- * @return <code>Set</code> contains <code>Population</code> objects
- */
-public Set getPopulations() {
-	return populations;
-}
+	/**
+	 * @return <code>Set</code> contains <code>Population</code> objects
+	 */
+	public Set getPopulations() {
+		return populations;
+	}
 
-/**
- * for hibernate
- * @param aPopulations
- */
-private void setPopulations( Set aPopulations ) {
-	populations = aPopulations;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param aPopulations
+	 */
+	private void setPopulations(Set aPopulations) {
+		populations = aPopulations;
+	}
 
-/**
- * for hibernate
- * @param aName
- */
-private void setName( String aName ) {
-	name = aName;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param aName
+	 */
+	private void setName(String aName) {
+		name = aName;
+	}
 
-/**
- * @return <code>Set</code> contains <code>Representation</code> objects
- */
-public Set getRepresentations() {
-	return representations;
-}
+	/**
+	 * @return <code>Set</code> contains <code>Representation</code> objects
+	 */
+	public Set getRepresentations() {
+		return representations;
+	}
 
-/**
- * for hibernate
- * @param aRepresentations
- */
-private void setRepresentations( Set aRepresentations ) {
-	representations = aRepresentations;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param aRepresentations
+	 */
+	private void setRepresentations(Set aRepresentations) {
+		representations = aRepresentations;
+	}
 }

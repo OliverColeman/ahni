@@ -22,30 +22,39 @@ package org.jgapcustomised;
 import java.io.Serializable;
 import java.util.List;
 
+import ojc.ahni.hyperneat.HyperNEATEvolver;
+
 /**
- * Bulk fitness functions are used to determine how optimal a group of solutions are relative to
- * each other. Bulk fitness functions can be useful (vs. normal fitness functions) when fitness
- * of a particular solution cannot be easily computed in isolation, but instead is dependent
- * upon the fitness of its fellow solutions that are also under consideration. This abstract
- * class should be extended and the <code>evaluate(List)</code> method implemented to evaluate
- * each of the Chromosomes given in an array and set their fitness values prior to returning.
+ * Bulk fitness functions are used to determine how optimal a group of solutions are relative to each other. Bulk
+ * fitness functions can be useful (vs. normal fitness functions) when fitness of a particular solution cannot be easily
+ * computed in isolation, but instead is dependent upon the fitness of its fellow solutions that are also under
+ * consideration. This abstract class should be extended and the <code>evaluate(List)</code> method implemented to
+ * evaluate each of the Chromosomes given in an array and set their fitness values prior to returning.
  */
 public interface BulkFitnessFunction extends Serializable {
 	/**
-	 * Calculates and sets the fitness values on each of the given Chromosomes via their
-	 * setFitnessValue() method.
-	 * 
-	 * @param subjects <code>List</code> contains <code>Chromosome</code> objects for which
-	 * the fitness values must be computed and set.
+	 * Calculates and sets the fitness values on each of the given Chromosomes via their setFitnessValue() method. May also
+	 * set the performance of a Chromosome if this is calculated independently of fitness. 
+	 * @param subjects {@link Chromosome} objects for which the fitness values must be computed and set.
 	 */
 	public void evaluate(List<Chromosome> subjects);
 
 	/**
-	 * @return int maximum possible fitness value this function will return
+	 * @return Maximum possible fitness value this function will return
 	 */
 	public int getMaxFitnessValue();
-	
+
+	/**
+	 * @return Return true when an evolutionary run should be completed before the maximum number of generations is complete, false otherwise.
+	 */
 	public boolean endRun();
-	
-	public void dispose(); 
+
+	public void dispose();
+
+	/**
+	 * This method is called when an evolutionary run has finished. It can be used to perform testing or other analysis
+	 * on the fittest and/or best performing Chromosomes evolved during the run.
+	 * @param evolver Methods on this object can be used to obtain the fittest and best performing Chromosomes evolved during the run.
+	 */
+	public void evolutionFinished(HyperNEATEvolver evolver);
 }

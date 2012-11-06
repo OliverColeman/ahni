@@ -19,24 +19,23 @@
  */
 package com.anji.util;
 
-
 /**
  * @author Philip Tucker
  */
 public interface XmlPersistable {
 
-/**
- * @return XML String representation of this object
- */
-public String toXml();
+	/**
+	 * @return XML String representation of this object
+	 */
+	public String toXml();
 
-/**
- * @return root tag
- */
-public String getXmlRootTag();
+	/**
+	 * @return root tag
+	 */
+	public String getXmlRootTag();
 
-/**
- * @return id
- */
-public String getXmld();
+	/**
+	 * @return id
+	 */
+	public String getXmld();
 }

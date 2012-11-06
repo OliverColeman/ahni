@@ -20,8 +20,8 @@
 package com.anji.nn;
 
 /**
- * A connection between neurons that caches its value from previous timestep. This is used to
- * avoid deadlock when activating neurons and connections in a loop.
+ * A connection between neurons that caches its value from previous timestep. This is used to avoid deadlock when
+ * activating neurons and connections in a loop.
  * 
  * @author Philip Tucker
  */
@@ -32,16 +32,16 @@ public class CacheNeuronConnection extends NeuronConnection {
 	/**
 	 * @see NeuronConnection#NeuronConnection(Neuron)
 	 */
-	public CacheNeuronConnection( Neuron anIncoming ) {
-		super( anIncoming );
+	public CacheNeuronConnection(Neuron anIncoming) {
+		super(anIncoming);
 		reset();
 	}
 
 	/**
 	 * @see NeuronConnection#NeuronConnection(Neuron, double)
 	 */
-	public CacheNeuronConnection( Neuron anIncoming, double aWeight ) {
-		super( anIncoming, aWeight );
+	public CacheNeuronConnection(Neuron anIncoming, double aWeight) {
+		super(anIncoming, aWeight);
 		reset();
 	}
 
@@ -56,9 +56,7 @@ public class CacheNeuronConnection extends NeuronConnection {
 	 * update value
 	 */
 	public void step() {
-		value = Math.min(
-				Math.max( getWeight() * getIncomingNode().getValue(), -Float.MAX_VALUE ),
-				Float.MAX_VALUE );
+		value = Math.min(Math.max(getWeight() * getIncomingNode().getValue(), -Float.MAX_VALUE), Float.MAX_VALUE);
 	}
 
 	/**
@@ -66,10 +64,10 @@ public class CacheNeuronConnection extends NeuronConnection {
 	 */
 	public String toXml() {
 		StringBuffer result = new StringBuffer();
-		result.append( "<" ).append( XML_TAG ).append( " id=\"" ).append( getId() );
-		result.append( "\" src-id=\"" ).append( getIncomingNode().getId() );
-		result.append( "\" weight=\"" ).append( getWeight() ).append( "\" />" );
-		result.append( "\" recurrent=\"true\" />" );
+		result.append("<").append(XML_TAG).append(" id=\"").append(getId());
+		result.append("\" src-id=\"").append(getIncomingNode().getId());
+		result.append("\" weight=\"").append(getWeight()).append("\" />");
+		result.append("\" recurrent=\"true\" />");
 
 		return result.toString();
 	}
@@ -94,6 +92,5 @@ public class CacheNeuronConnection extends NeuronConnection {
 	public long cost() {
 		return 159;
 	}
-
 
 }

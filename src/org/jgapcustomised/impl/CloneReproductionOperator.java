@@ -28,42 +28,40 @@ import org.jgapcustomised.Chromosome;
 import org.jgapcustomised.Configuration;
 import org.jgapcustomised.ReproductionOperator;
 
-
 /**
  * Produces offspring be creating clones of parents.
+ * 
  * @author Philip Tucker
  */
 public class CloneReproductionOperator extends ReproductionOperator {
 
-/**
- * Adds new children of <code>parents</code> to <code>offspring</code>.
- * @param config
- * @param parents <code>List</code> contains Chromosome objects
- * @param numOffspring
- * @param offspring <code>List</code> contains ChromosomeMaterial objects
- * @see org.jgapcustomised.ReproductionOperator#reproduce(Configuration, List, int, List)
- */
-protected void reproduce( Configuration config, List parents, int numOffspring, 
-		List offspring ) 
-{
-	reproduce( parents, numOffspring, offspring );
-}
-
-/**
- * Adds new children of <code>parents</code> to <code>offspring</code>.
- * @param parents <code>List</code> contains <code>Chromosome</code> objects
- * @param numOffspring
- * @param offspring <code>List</code> contains <code>ChromosomeMaterial</code> objects
- */
-public static void reproduce( List parents, int numOffspring, List offspring )
-{
-	// TODO - sort parents by fitness to favor fittest?
-	int parentsSize = parents.size();
-	for ( int i = 0; i < numOffspring; ++i ) {
-		Chromosome parent = (Chromosome) parents.get( i % parentsSize );
-		offspring.add( parent.cloneMaterial() );
+	/**
+	 * Adds new children of <code>parents</code> to <code>offspring</code>.
+	 * 
+	 * @param config
+	 * @param parents <code>List</code> contains Chromosome objects
+	 * @param numOffspring
+	 * @param offspring <code>List</code> contains ChromosomeMaterial objects
+	 * @see org.jgapcustomised.ReproductionOperator#reproduce(Configuration, List, int, List)
+	 */
+	protected void reproduce(Configuration config, List parents, int numOffspring, List offspring) {
+		reproduce(parents, numOffspring, offspring);
 	}
-}
+
+	/**
+	 * Adds new children of <code>parents</code> to <code>offspring</code>.
+	 * 
+	 * @param parents <code>List</code> contains <code>Chromosome</code> objects
+	 * @param numOffspring
+	 * @param offspring <code>List</code> contains <code>ChromosomeMaterial</code> objects
+	 */
+	public static void reproduce(List parents, int numOffspring, List offspring) {
+		// TODO - sort parents by fitness to favor fittest?
+		int parentsSize = parents.size();
+		for (int i = 0; i < numOffspring; ++i) {
+			Chromosome parent = (Chromosome) parents.get(i % parentsSize);
+			offspring.add(parent.cloneMaterial());
+		}
+	}
 
 }
-

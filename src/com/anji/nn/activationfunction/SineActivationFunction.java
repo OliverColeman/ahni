@@ -19,7 +19,6 @@
  */
 package com.anji.nn.activationfunction;
 
-
 /**
  * Sine activation function.
  * 
@@ -51,7 +50,7 @@ public class SineActivationFunction implements ActivationFunction {
 	 * 
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public double apply( double input ) {
+	public double apply(double input) {
 		return (double) Math.sin(input);
 	}
 
@@ -61,7 +60,7 @@ public class SineActivationFunction implements ActivationFunction {
 	public double getMaxValue() {
 		return 1;
 	}
-	
+
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */

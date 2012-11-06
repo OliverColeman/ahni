@@ -1,6 +1,5 @@
 package com.anji.nn.activationfunction;
 
-
 /**
  * Negative linear activation function.
  */
@@ -30,7 +29,7 @@ public class NegatedLinearActivationFunction implements ActivationFunction {
 	 * 
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public double apply( double input ) {
+	public double apply(double input) {
 		return -input;
 	}
 
@@ -40,7 +39,7 @@ public class NegatedLinearActivationFunction implements ActivationFunction {
 	public double getMaxValue() {
 		return Float.MAX_VALUE;
 	}
-	
+
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */

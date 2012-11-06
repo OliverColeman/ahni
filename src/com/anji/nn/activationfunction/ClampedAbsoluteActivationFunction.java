@@ -18,7 +18,6 @@
  */
 package com.anji.nn.activationfunction;
 
-
 /**
  * Absolute activation function.
  * 
@@ -50,7 +49,7 @@ public class ClampedAbsoluteActivationFunction implements ActivationFunction {
 	 * 
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public double apply( double input ) {
+	public double apply(double input) {
 		return Math.min(Math.abs(input), 1);
 	}
 
@@ -60,7 +59,7 @@ public class ClampedAbsoluteActivationFunction implements ActivationFunction {
 	public double getMaxValue() {
 		return 1;
 	}
-	
+
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */

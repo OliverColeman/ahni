@@ -23,40 +23,39 @@ import org.jgapcustomised.impl.WeightedRouletteSelector;
  */
 public class DummyConfiguration extends Configuration {
 
-private final static int DEFAULT_POPULATION_SIZE = 100;
+	private final static int DEFAULT_POPULATION_SIZE = 100;
 
-private final static double DEFAULT_SURVIVAL_RATE = 0.20f;
+	private final static double DEFAULT_SURVIVAL_RATE = 0.20f;
 
-private final static double DEFAULT_REPRODUCTION_RATE = 0.80f;
+	private final static double DEFAULT_REPRODUCTION_RATE = 0.80f;
 
-/**
- * ctor
- */
-public DummyConfiguration() {
-	super();
+	/**
+	 * ctor
+	 */
+	public DummyConfiguration() {
+		super();
 
-	try {
-		setEventManager( new EventManager() );
-		setRandomGenerator( new Random() );
-		setBulkFitnessFunction( new DummyBulkFitnessFunction( getRandomGenerator() ) );
-		NaturalSelector selector = new WeightedRouletteSelector();
-		selector.setSurvivalRate( DEFAULT_SURVIVAL_RATE );
-		setNaturalSelector( selector );
-		setPopulationSize( DEFAULT_POPULATION_SIZE );
+		try {
+			setEventManager(new EventManager());
+			setRandomGenerator(new Random());
+			setBulkFitnessFunction(new DummyBulkFitnessFunction(getRandomGenerator()));
+			NaturalSelector selector = new WeightedRouletteSelector();
+			selector.setSurvivalRate(DEFAULT_SURVIVAL_RATE);
+			setNaturalSelector(selector);
+			setPopulationSize(DEFAULT_POPULATION_SIZE);
 
-		List initAlleles = new ArrayList( 1 );
-		IntegerAllele initAllele = new IntegerAllele( this, 0, 10 );
-		initAllele.setValue( new Integer( 1 ) );
-		initAlleles.add( initAllele );
-		setSampleChromosomeMaterial( new ChromosomeMaterial( initAlleles ) );
+			List initAlleles = new ArrayList(1);
+			IntegerAllele initAllele = new IntegerAllele(this, 0, 10);
+			initAllele.setValue(new Integer(1));
+			initAlleles.add(initAllele);
+			setSampleChromosomeMaterial(new ChromosomeMaterial(initAlleles));
 
-		ReproductionOperator repro = new DummyReproductionOperator();
-		repro.setSlice( DEFAULT_REPRODUCTION_RATE );
-		addReproductionOperator( repro );
+			ReproductionOperator repro = new DummyReproductionOperator();
+			repro.setSlice(DEFAULT_REPRODUCTION_RATE);
+			addReproductionOperator(repro);
+		} catch (InvalidConfigurationException e) {
+			throw new InvalidConfigurationRuntimeException("error in DummyConfiguration: " + e);
+		}
 	}
-	catch ( InvalidConfigurationException e ) {
-		throw new InvalidConfigurationRuntimeException( "error in DummyConfiguration: " + e );
-	}
-}
 
 }

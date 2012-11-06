@@ -14,49 +14,47 @@ package com.anji.util;
 import java.util.Random;
 
 /**
- * Singleton holder of <code>Random</code> object to ensure all of system is using same random
- * sequence. This is important for testing and diagnostics since it can guarantee
- * reproducability.
+ * Singleton holder of <code>Random</code> object to ensure all of system is using same random sequence. This is
+ * important for testing and diagnostics since it can guarantee reproducability.
  * 
  * @author Philip Tucker
  */
 public class Randomizer implements Configurable {
 
-private static final String RANDOM_SEED_KEY = "random.seed";
+	private static final String RANDOM_SEED_KEY = "random.seed";
 
-private Random rand = new Random();
+	private Random rand = new Random();
 
-private long seed = 0;
+	private long seed = 0;
 
-/**
- * should call <code>init()</code> after ctor
- */
-public Randomizer() {
-	// noop
-}
+	/**
+	 * should call <code>init()</code> after ctor
+	 */
+	public Randomizer() {
+		// noop
+	}
 
-/**
- * See <a href=" {@docRoot}/params.htm" target="anji_params">Parameter Details </a> for
- * specific property settings.
- * 
- * @param props configuration parameters
- */
-public synchronized void init( Properties props ) {
-	seed = props.getLongProperty( RANDOM_SEED_KEY, System.currentTimeMillis() );
-	rand.setSeed( seed );
-}
+	/**
+	 * See <a href=" {@docRoot} /params.htm" target="anji_params">Parameter Details </a> for specific property settings.
+	 * 
+	 * @param props configuration parameters
+	 */
+	public synchronized void init(Properties props) {
+		seed = props.getLongProperty(RANDOM_SEED_KEY, System.currentTimeMillis());
+		rand.setSeed(seed);
+	}
 
-/**
- * @return Random
- */
-public Random getRand() {
-	return rand;
-}
+	/**
+	 * @return Random
+	 */
+	public Random getRand() {
+		return rand;
+	}
 
-/**
- * @return seed
- */
-public long getSeed() {
-	return seed;
-}
+	/**
+	 * @return seed
+	 */
+	public long getSeed() {
+		return seed;
+	}
 }

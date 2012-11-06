@@ -19,7 +19,6 @@
  */
 package com.anji.nn.activationfunction;
 
-
 /**
  * Hyperbolic tangent.
  * 
@@ -51,8 +50,8 @@ public class TanhActivationFunction implements ActivationFunction {
 	 * 
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public double apply( double input ) {
-		return (-1 + ( 2 / ( 1 + (double) Math.exp( -2 * ( input ) ) ) ));
+	public double apply(double input) {
+		return (-1 + (2 / (1 + (double) Math.exp(-2 * (input)))));
 	}
 
 	/**
@@ -61,7 +60,7 @@ public class TanhActivationFunction implements ActivationFunction {
 	public double getMaxValue() {
 		return 1;
 	}
-	
+
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */

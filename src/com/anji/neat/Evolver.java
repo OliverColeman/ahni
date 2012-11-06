@@ -32,7 +32,6 @@ import java.util.Iterator;
 import java.util.TreeMap;
 import java.util.Vector;
 
-
 import org.apache.log4j.Logger;
 import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.Chromosome;
@@ -59,7 +58,7 @@ public class Evolver implements Configurable {
 	 * properties key, # generations in run
 	 */
 	public static final String NUM_GENERATIONS_KEY = "num.generations";
-	
+
 	public static final String PERFORMANCE_TARGET_TYPE_KEY = "performance.target.type";
 	public static final String PERFORMANCE_TARGET_KEY = "performance.target";
 
@@ -68,27 +67,26 @@ public class Evolver implements Configurable {
 	 */
 	public static final String FITNESS_FUNCTION_CLASS_KEY = "fitness_function";
 
-	//private static final String FITNESS_THRESHOLD_KEY = "fitness.threshold";
+	// private static final String FITNESS_THRESHOLD_KEY = "fitness.threshold";
 
 	private static final String RESET_KEY = "run.reset";
 
 	private static final String HIBERNATE_ENABLE_KEY = "hibernate.enable";
-	
+
 	private static final String LOGGING_ENABLE_KEY = "logging.enable";
-	
+
 	private static final String LOAD_GENOTYPE_KEY = "persist.load.genotype";
 
 	private static final String PERSIST_ENABLE_KEY = "persist.enable";
 
 	private static final String PRESENTATION_GENERATE_KEY = "presentation.generate";
-	
+
 	private static final String LOG_PER_GENERATIONS_KEY = "log.pergenerations";
-	
-	
-	///**
+
+	// /**
 	// * properties key, target fitness value - after reaching this run will halt
 	// */
-	//public static final String FITNESS_TARGET_KEY = "fitness.target";
+	// public static final String FITNESS_TARGET_KEY = "fitness.target";
 
 	private NeatConfiguration config = null;
 	private Properties props = null;
@@ -102,10 +100,10 @@ public class Evolver implements Configurable {
 
 	private int numEvolutions = 0;
 
-	//private double targetFitness = 0;
+	// private double targetFitness = 0;
 
-	//private double thresholdFitness = 0;
-	
+	// private double thresholdFitness = 0;
+
 	private double targetPerformance = 1;
 
 	private int maxFitness = 0;
@@ -117,9 +115,9 @@ public class Evolver implements Configurable {
 	static final Runtime runtime = Runtime.getRuntime();
 
 	private BulkFitnessFunction bulkFitnessFunc;
-	
+
 	private int logPerGenerations = 1;
-	
+
 	double[] bestPerformance;
 	double[] bestFitness;
 	double[] bestPC;
@@ -132,9 +130,8 @@ public class Evolver implements Configurable {
 	}
 
 	/**
-	 * Construct new evolver with given properties. See <a href=" {@docRoot}
-	 * /params.htm" target="anji_params">Parameter Details </a> for specific
-	 * property settings.
+	 * Construct new evolver with given properties. See <a href=" {@docRoot} /params.htm" target="anji_params">Parameter
+	 * Details </a> for specific property settings.
 	 * 
 	 * @see com.anji.util.Configurable#init(com.anji.util.Properties)
 	 */
@@ -146,7 +143,7 @@ public class Evolver implements Configurable {
 			resetter.setUserInteraction(false);
 			resetter.reset();
 		}
-		
+
 		this.props = props;
 		config = new NeatConfiguration(props);
 
@@ -157,15 +154,14 @@ public class Evolver implements Configurable {
 
 		numEvolutions = props.getIntProperty(NUM_GENERATIONS_KEY);
 		targetPerformance = props.getFloatProperty(PERFORMANCE_TARGET_KEY, 1);
-		//targetFitness = props.getFloatProperty(FITNESS_TARGET_KEY, 1);
-		//thresholdFitness = props.getFloatProperty(FITNESS_THRESHOLD_KEY, targetFitness);
+		// targetFitness = props.getFloatProperty(FITNESS_TARGET_KEY, 1);
+		// thresholdFitness = props.getFloatProperty(FITNESS_THRESHOLD_KEY, targetFitness);
 		logPerGenerations = props.getIntProperty(LOG_PER_GENERATIONS_KEY, 1);
-		
 
 		//
 		// event listeners
 		//
-		
+
 		// run
 		// TODO - hibernate
 		Run run = (Run) props.singletonObjectProperty(Run.class);
@@ -173,14 +169,14 @@ public class Evolver implements Configurable {
 			db.startRun(run.getName());
 			config.getEventManager().addEventListener(GeneticEvent.GENOTYPE_EVALUATED_EVENT, run);
 		}
-		
+
 		if (props.getBooleanProperty(LOGGING_ENABLE_KEY, true)) {
 			// logging
 			LogEventListener logListener = new LogEventListener(config);
 			config.getEventManager().addEventListener(GeneticEvent.GENOTYPE_EVOLVED_EVENT, logListener);
 			config.getEventManager().addEventListener(GeneticEvent.GENOTYPE_EVALUATED_EVENT, logListener);
 		}
-		
+
 		// persistence
 		if (props.getBooleanProperty(PERSIST_ENABLE_KEY, false)) {
 			System.out.println("\n\nhere2\n");
@@ -201,7 +197,6 @@ public class Evolver implements Configurable {
 			config.getEventManager().addEventListener(GeneticEvent.GENOTYPE_EVALUATED_EVENT, presListener);
 			config.getEventManager().addEventListener(GeneticEvent.RUN_COMPLETED_EVENT, presListener);
 		}
-		
 
 		// fitness function
 		bulkFitnessFunc = (BulkFitnessFunction) props.singletonObjectProperty(FITNESS_FUNCTION_CLASS_KEY);
@@ -230,7 +225,7 @@ public class Evolver implements Configurable {
 		bestPerformance = new double[numEvolutions];
 		bestFitness = new double[numEvolutions];
 		bestPC = new double[numEvolutions];
-		
+
 		if (loadGenotypeFromDB) {
 			// load population, either from previous run or random
 			genotype = db.loadGenotype(config);
@@ -260,49 +255,49 @@ public class Evolver implements Configurable {
 		// initialize result data
 		int generationOfFirstSolution = -1;
 		fittest = genotype.getFittestChromosome();
-		
-		
+
 		File dirFile = new File(props.getProperty("output.dir"));
 		if (!dirFile.exists())
 			dirFile.mkdirs();
-        BufferedWriter speciesInfoWriter = new BufferedWriter(new FileWriter(props.getProperty("output.dir") + "species-history-size.txt"));
-        StringBuffer output = new StringBuffer();
-        output.append("Gen,\tTSE,\tTS,\tNew,\tExt");
-        for (int i = 0; i < 100; i++)
-            output.append(",\t" + i);
-        output.append("\n");
-        speciesInfoWriter.write(output.toString());
-        speciesInfoWriter.flush();
-        
+		BufferedWriter speciesInfoWriter = new BufferedWriter(new FileWriter(props.getProperty("output.dir") + "species-history-size.txt"));
+		StringBuffer output = new StringBuffer();
+		output.append("Gen,\tTSE,\tTS,\tNew,\tExt");
+		for (int i = 0; i < 100; i++)
+			output.append(",\t" + i);
+		output.append("\n");
+		speciesInfoWriter.write(output.toString());
+		speciesInfoWriter.flush();
+
 		double avgGenTime = 0;
 		int previousSpeciesCount = 0;
 		int generation;
 		TreeMap<Long, Species> allSpeciesEver = new TreeMap<Long, Species>();
 		long start = System.currentTimeMillis();
-		
-		//for (generation = 0; (generation < numEvolutions && (adjustedFitness < targetFitness || genotype.preventRunEnd())); ++generation) {
+
+		// for (generation = 0; (generation < numEvolutions && (adjustedFitness < targetFitness ||
+		// genotype.preventRunEnd())); ++generation) {
 		for (generation = 0; generation < numEvolutions && !bulkFitnessFunc.endRun(); ++generation) {
 			previousSpeciesCount = genotype.getSpecies().size();
-			
+
 			// generation start time
 			// Date generationStartDate = Calendar.getInstance().getTime();
 			// logger.info( "Generation " + generation + ": start" );
 
 			// nextSequence generation
 			fittest = genotype.evolve();
-			
+
 			bestPerforming = genotype.getBestPerforming();
 
 			// result data
-			//if (bestPerforming.getPerformanceValue() >= targetPerformance && generationOfFirstSolution == -1)
+			// if (bestPerforming.getPerformanceValue() >= targetPerformance && generationOfFirstSolution == -1)
 			if (bulkFitnessFunc.endRun())
 				generationOfFirstSolution = generation;
 
 			// champFitnesses[generation] = adjustedFitness;
-			
+
 			bestPerformance[generation] = bestPerforming.getPerformanceValue();
-			bestFitness[generation] = (double)fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue();
-			
+			bestFitness[generation] = (double) fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue();
+
 			int numSpecies = genotype.getSpecies().size();
 			int minSpeciesSize = Integer.MAX_VALUE;
 			int maxSpeciesSize = 0;
@@ -312,74 +307,75 @@ public class Evolver implements Configurable {
 			int minSpeciesAge = Integer.MAX_VALUE;
 			double avgBestSpeciesFitness = 0;
 			Iterator<Species> speciesIter = genotype.getSpecies().iterator();
-	        while (speciesIter.hasNext()) {
-	            Species species = speciesIter.next();
-	            
-	            if (species.originalSize > maxSpeciesSize) maxSpeciesSize = species.originalSize;
-	            if (species.originalSize < minSpeciesSize) minSpeciesSize = species.originalSize;
-	            
-	            if (species.getAge() > maxSpeciesAge) maxSpeciesAge = species.getAge();
-	            if (species.getAge() < minSpeciesAge) minSpeciesAge = species.getAge();
-	            
-	            if (species.getFittest() != null)
-	            	avgBestSpeciesFitness += species.getFittest().getFitnessValue();
-	            
-	            Long speciesKey = new Long(species.getID());
-	            if (allSpeciesEver.containsKey(speciesKey)) { //if existing species
-	            	if (species.getFittest() != species.getPreviousFittest())
-	            		numSpeciesWithNewFittest++;
-	            }
-	            else {
-	            	numNewSpecies++;
-	            	allSpeciesEver.put(speciesKey, species);
-	            }
-	        }
-	        avgBestSpeciesFitness /= ((long) numSpecies * bulkFitnessFunc.getMaxFitnessValue());
-	        int numExtinctSpecies = previousSpeciesCount - numSpecies + numNewSpecies;
-			
-	        
-	    	//write out some info about species history
+			while (speciesIter.hasNext()) {
+				Species species = speciesIter.next();
+
+				if (species.originalSize > maxSpeciesSize)
+					maxSpeciesSize = species.originalSize;
+				if (species.originalSize < minSpeciesSize)
+					minSpeciesSize = species.originalSize;
+
+				if (species.getAge() > maxSpeciesAge)
+					maxSpeciesAge = species.getAge();
+				if (species.getAge() < minSpeciesAge)
+					minSpeciesAge = species.getAge();
+
+				if (species.getFittest() != null)
+					avgBestSpeciesFitness += species.getFittest().getFitnessValue();
+
+				Long speciesKey = new Long(species.getID());
+				if (allSpeciesEver.containsKey(speciesKey)) { // if existing species
+					if (species.getFittest() != species.getPreviousFittest())
+						numSpeciesWithNewFittest++;
+				} else {
+					numNewSpecies++;
+					allSpeciesEver.put(speciesKey, species);
+				}
+			}
+			avgBestSpeciesFitness /= ((long) numSpecies * bulkFitnessFunc.getMaxFitnessValue());
+			int numExtinctSpecies = previousSpeciesCount - numSpecies + numNewSpecies;
+
+			// write out some info about species history
 			speciesIter = allSpeciesEver.values().iterator();
 			output = new StringBuffer(generation + ",\t" + allSpeciesEver.size() + ",\t" + numSpecies + ",\t" + numNewSpecies + ",\t" + numExtinctSpecies);
-	        while (speciesIter.hasNext()) {
-	            Species species = speciesIter.next();
-	            //output += ",\t" + species.getID() + ":" + species.size();
-	            output.append(",\t");
-	            output.append(species.originalSize);
-	        }
-	        output.append("\n");
-	        speciesInfoWriter.write(output.toString());
-	        speciesInfoWriter.flush();
-			
+			while (speciesIter.hasNext()) {
+				Species species = speciesIter.next();
+				// output += ",\t" + species.getID() + ":" + species.size();
+				output.append(",\t");
+				output.append(species.originalSize);
+			}
+			output.append("\n");
+			speciesInfoWriter.write(output.toString());
+			speciesInfoWriter.flush();
+
 			if (generation % logPerGenerations == 0) {
 				double speciationCompatThreshold = genotype.getParameters().getSpeciationThreshold();
-				
+
 				long memTotal = Math.round(runtime.totalMemory() / 1048576);
 				long memFree = Math.round(runtime.freeMemory() / 1048576);
 				long memUsed = memTotal - memFree;
-				
+
 				long duration = (System.currentTimeMillis() - start) / 1000;
 				if (avgGenTime == 0)
 					avgGenTime = duration;
 				else
 					avgGenTime = avgGenTime * 0.9 + duration * 0.1;
 				int eta = (int) Math.round(avgGenTime * (numEvolutions - generation));
-				
-				// System.out.print(generation+"(" + (int)(adjustedFitness*100) + "," + genotype.getSpecies().size() + "), ");
-				//System.out.println(generation + "(" + nf.format((double)fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + ", " + nf.format(bestPerformance[generation]) + ", " + duration + "s, " + memUsed + "M), ");
+
+				// System.out.print(generation+"(" + (int)(adjustedFitness*100) + "," + genotype.getSpecies().size() +
+				// "), ");
+				// System.out.println(generation + "(" + nf.format((double)fittest.getFitnessValue() /
+				// bulkFitnessFunc.getMaxFitnessValue()) + ", " + nf.format(bestPerformance[generation]) + ", " +
+				// duration + "s, " + memUsed + "M), ");
 				// System.out.print((int)(adjustedFitness*100)+",");
-				// System.out.println(generation+"(" + (int)(adjustedFitness*100) + " : " + champ.getFitnessValue() + "), ");
-				
-				logger.info("Gen: " + generation + 
-						"  Fittest: " + fittest.getId() + "  (F: " + nf4.format((double)fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + "  P: " + nf4.format(fittest.getPerformanceValue()) + ")" + 
-						"  Best perf: " + bestPerforming.getId() + "  (F: " + nf4.format((double)bestPerforming.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + "  P: " + nf4.format(bestPerforming.getPerformanceValue()) + ")" + "  ABSF: " + nf4.format(avgBestSpeciesFitness) + 
-						"  S: " + numSpecies + "  NS/ES: " + numNewSpecies + "/" + numExtinctSpecies + "  SCT: " + nf1.format(speciationCompatThreshold) + "  Min/Max SS: " + minSpeciesSize + "/" + maxSpeciesSize + "  Min/Max SA: " + minSpeciesAge + "/" + maxSpeciesAge + "  SNF: " + numSpeciesWithNewFittest + "  Time: " + duration + "s  ETA: " + Misc.formatTimeInterval(eta) + "  Mem: " + memUsed + "MB");
-				
-				
+				// System.out.println(generation+"(" + (int)(adjustedFitness*100) + " : " + champ.getFitnessValue() +
+				// "), ");
+
+				logger.info("Gen: " + generation + "  Fittest: " + fittest.getId() + "  (F: " + nf4.format((double) fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + "  P: " + nf4.format(fittest.getPerformanceValue()) + ")" + "  Best perf: " + bestPerforming.getId() + "  (F: " + nf4.format((double) bestPerforming.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + "  P: " + nf4.format(bestPerforming.getPerformanceValue()) + ")" + "  ABSF: " + nf4.format(avgBestSpeciesFitness) + "  S: " + numSpecies + "  NS/ES: " + numNewSpecies + "/" + numExtinctSpecies + "  SCT: " + nf1.format(speciationCompatThreshold) + "  Min/Max SS: " + minSpeciesSize + "/" + maxSpeciesSize + "  Min/Max SA: " + minSpeciesAge + "/" + maxSpeciesAge + "  SNF: " + numSpeciesWithNewFittest + "  Time: " + duration + "s  ETA: " + Misc.formatTimeInterval(eta) + "  Mem: " + memUsed + "MB");
+
 				start = System.currentTimeMillis();
 			}
-			
-		
+
 			// generation finish
 			// Date generationEndDate = Calendar.getInstance().getTime();
 			// long durationMillis = generationEndDate.getTime() -
@@ -399,15 +395,15 @@ public class Evolver implements Configurable {
 			double lastPerf = bestPerformance[generation - 1];
 			for (int i = generation; i < numEvolutions; i++)
 				bestPerformance[i] = lastPerf;
-			
+
 			double lastFitness = bestFitness[generation - 1];
 			for (int i = generation; i < numEvolutions; i++)
 				bestFitness[i] = lastFitness;
-			
+
 			double lastPC = bestPC[generation - 1];
 			for (int i = generation; i < numEvolutions; i++)
 				bestPC[i] = lastPC;
-			
+
 		}
 
 		// run finish
@@ -418,7 +414,7 @@ public class Evolver implements Configurable {
 		// logger.info( "Run: end [" + fmt.format( runStartDate ) + " - " +
 		// fmt.format( runEndDate ) + "] [" + durationMillis +
 		// "]  Best fitness: " + adjustedFitness);
-		
+
 		System.out.println();
 		System.out.println();
 		System.out.println("Best performance for this run (average per 10 gens): ");
@@ -443,14 +439,14 @@ public class Evolver implements Configurable {
 		System.out.println();
 		System.out.println();
 		System.out.println();
-		
+
 		return bestPerformance;
 	}
-	
+
 	public double[] getBestFitness() {
 		return bestFitness;
 	}
-	
+
 	public double[] getBestPerformance() {
 		return bestPerformance;
 	}
@@ -460,8 +456,8 @@ public class Evolver implements Configurable {
 	}
 
 	/**
-	 * Log summary data of run including generation in which the first solution
-	 * occurred, and the champion of the final generation.
+	 * Log summary data of run including generation in which the first solution occurred, and the champion of the final
+	 * generation.
 	 * 
 	 * @param generationOfFirstSolution
 	 * @param champ
@@ -476,33 +472,28 @@ public class Evolver implements Configurable {
 	/**
 	 * Main program used to perform an evolutionary run.
 	 * 
-	 * @param args
-	 *            command line arguments; args[0] used as properties file
+	 * @param args command line arguments; args[0] used as properties file
 	 * @throws Throwable
 	 */
 	/*
-	 * public static void main( String[] args ) throws Throwable { try {
-	 * //System.out.println( Copyright.STRING );
+	 * public static void main( String[] args ) throws Throwable { try { //System.out.println( Copyright.STRING );
 	 * 
 	 * if ( args.length != 1 ) { usage(); System.exit( -1 ); }
 	 * 
-	 * Properties props = new Properties( args[ 0 ] ); Evolver evolver = new
-	 * Evolver(); evolver.init( props ); evolver.run();
+	 * Properties props = new Properties( args[ 0 ] ); Evolver evolver = new Evolver(); evolver.init( props );
+	 * evolver.run();
 	 * 
 	 * 
 	 * 
-	 * // HyperNEATTranscriber transcriber = new HyperNEATTranscriber(props); //
-	 * GridNet net = transcriber.newGridNet(evolver.getChamp()); //
-	 * System.out.println("Champ weights:"); //
+	 * // HyperNEATTranscriber transcriber = new HyperNEATTranscriber(props); // GridNet net =
+	 * transcriber.newGridNet(evolver.getChamp()); // System.out.println("Champ weights:"); //
 	 * System.out.println(net.toString());
 	 * 
 	 * 
-	 * // NeatActivator na = new NeatActivator(); // na.init( props ); //
-	 * logger.info( "\n" + na.displayActivation( "" + evolver.getChamp().getId()
-	 * ) );
+	 * // NeatActivator na = new NeatActivator(); // na.init( props ); // logger.info( "\n" + na.displayActivation( "" +
+	 * evolver.getChamp().getId() ) );
 	 * 
-	 * System.exit( 0 ); } catch ( Throwable th ) { logger.error( "", th );
-	 * throw th; } }
+	 * System.exit( 0 ); } catch ( Throwable th ) { logger.error( "", th ); throw th; } }
 	 */
 	/**
 	 * @return champion of last generation
@@ -527,13 +518,13 @@ public class Evolver implements Configurable {
 		return targetPerformance;
 	}
 
-	///**
+	// /**
 	// * @return threshold fitness value, 0 ... 1
 	// */
-	//public double getThresholdFitness() {
-	//	return thresholdFitness;
-	//}
-	
+	// public double getThresholdFitness() {
+	// return thresholdFitness;
+	// }
+
 	public void dispose() {
 		bulkFitnessFunc.dispose();
 	}

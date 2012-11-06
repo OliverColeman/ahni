@@ -25,7 +25,9 @@ public class LogicAndActivationFunction extends LogicActivationFunction {
 	}
 
 	/**
-	 * Returns the result of a logical AND over all inputs, where an input value greater than or equal to 0.5 is considered logical true, and less than 0.5 false.
+	 * Returns the result of a logical AND over all inputs, where an input value greater than or equal to 0.5 is
+	 * considered logical true, and less than 0.5 false.
+	 * 
 	 * @return 1 or 0 depending on result of logic operation.
 	 */
 	public double apply(double[] input) {

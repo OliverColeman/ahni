@@ -20,8 +20,8 @@
 package com.anji.nn.activationfunction;
 
 /**
- * Hyperbolic tangent modified to have a "well" around 0. This can be used for control neurons
- * for which we would ilke the neural netowkr to be able easily to rest at 0.
+ * Hyperbolic tangent modified to have a "well" around 0. This can be used for control neurons for which we would ilke
+ * the neural netowkr to be able easily to rest at 0.
  * 
  * @author Philip Tucker
  */
@@ -51,8 +51,8 @@ public class TanhCubicActivationFunction implements ActivationFunction {
 	 * 
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public double apply( double input ) {
-		return -1 + ( 2 / ( 1 + (double) Math.exp( (double) Math.pow( -input, 3 ) ) ) );
+	public double apply(double input) {
+		return -1 + (2 / (1 + (double) Math.exp((double) Math.pow(-input, 3))));
 	}
 
 	/**

@@ -41,8 +41,7 @@ import com.anji.util.Properties;
  */
 public class SingleTopologicalMutationOperator extends MutationOperator implements Configurable {
 
-	private final static double DEFAULT_MUTATION_RATE = calculateMutationRate(AddConnectionMutationOperator.DEFAULT_MUTATE_RATE,
-	        AddNeuronMutationOperator.DEFAULT_MUTATE_RATE);
+	private final static double DEFAULT_MUTATION_RATE = calculateMutationRate(AddConnectionMutationOperator.DEFAULT_MUTATE_RATE, AddNeuronMutationOperator.DEFAULT_MUTATE_RATE);
 
 	private AddConnectionMutationOperator addConnOp;
 
@@ -69,7 +68,7 @@ public class SingleTopologicalMutationOperator extends MutationOperator implemen
 	private static double calculateMutationRate(double addConnMutationRate, double addNeuronMutationRate) {
 		return addConnMutationRate + addNeuronMutationRate - (addConnMutationRate * addNeuronMutationRate);
 	}
-	
+
 	/**
 	 * should call <code>init()</code> after this constructor
 	 */
@@ -98,7 +97,7 @@ public class SingleTopologicalMutationOperator extends MutationOperator implemen
 	protected void mutate(Configuration jgapConfig, ChromosomeMaterial target, Set allelesToAdd, Set allelesToRemove) {
 		if ((jgapConfig instanceof NeatConfiguration) == false)
 			throw new AnjiRequiredException("com.anji.neat.NeatConfiguration");
-		
+
 		NeatConfiguration config = (NeatConfiguration) jgapConfig;
 
 		Random rand = config.getRandomGenerator();
@@ -115,8 +114,7 @@ public class SingleTopologicalMutationOperator extends MutationOperator implemen
 				boolean isAdded = false;
 				while (iter.hasNext() && !isAdded) {
 					ConnectionAllele oldConnectAllele = (ConnectionAllele) iter.next();
-					isAdded = addNeuronOp.addNeuronAtConnection(config, NeatChromosomeUtility.getNeuronMap(alleles), oldConnectAllele, allelesToAdd,
-					        allelesToRemove);
+					isAdded = addNeuronOp.addNeuronAtConnection(config, NeatChromosomeUtility.getNeuronMap(alleles), oldConnectAllele, allelesToAdd, allelesToRemove);
 				}
 			}
 		}

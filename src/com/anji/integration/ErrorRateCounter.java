@@ -27,67 +27,63 @@ import org.apache.log4j.Logger;
  */
 public class ErrorRateCounter {
 
-private static Logger logger = Logger.getLogger( ErrorRateCounter.class );
+	private static Logger logger = Logger.getLogger(ErrorRateCounter.class);
 
-private static ErrorRateCounter instance = null;
+	private static ErrorRateCounter instance = null;
 
-private ErrorRateCounter() {
-	super();
-}
+	private ErrorRateCounter() {
+		super();
+	}
 
-/**
- * @return singleton instance
- */
-public static ErrorRateCounter getInstance() {
-	if ( instance == null )
-		instance = new ErrorRateCounter();
-	return instance;
-}
+	/**
+	 * @return singleton instance
+	 */
+	public static ErrorRateCounter getInstance() {
+		if (instance == null)
+			instance = new ErrorRateCounter();
+		return instance;
+	}
 
-/**
- * @param targets
- * @param responses
- * @see ErrorRateCounter#countErrors(String, double[][], double[][])
- */
-public void countErrors( double[][] targets, double[][] responses ) {
-	countErrors( "", targets, responses );
-}
+	/**
+	 * @param targets
+	 * @param responses
+	 * @see ErrorRateCounter#countErrors(String, double[][], double[][])
+	 */
+	public void countErrors(double[][] targets, double[][] responses) {
+		countErrors("", targets, responses);
+	}
 
-/**
- * Calculate the sum of differences between <code>responses</code> and target values.
- * 
- * @param logPrefix <code>String</code> to prepend to all logs and exceptions
- * @param targets
- * @param responses values to compare to targets
- */
-public void countErrors( String logPrefix, double[][] targets, double[][] responses ) {
-	int truePositives = 0;
-	int falsePositives = 0;
-	int trueNegatives = 0;
-	int falseNegatives = 0;
-	for ( int i = 0; i < targets.length; ++i ) {
-		double[] response = responses[ i ];
-		double[] target = targets[ i ];
-		if ( response.length != target.length )
-			throw new IllegalArgumentException( logPrefix + ": for training set " + i
-					+ " dimensions do not match for response [" + response.length + "] and target ["
-					+ target.length + "]" );
-		for ( int j = 0; j < target.length; ++j ) {
-			if ( target[ j ] > 0.5 ) {
-				if ( response[ j ] > 0.5 )
-					++truePositives;
-				else
-					++falseNegatives;
-			}
-			else {
-				if ( response[ j ] > 0.5 )
-					++falsePositives;
-				else
-					++trueNegatives;
+	/**
+	 * Calculate the sum of differences between <code>responses</code> and target values.
+	 * 
+	 * @param logPrefix <code>String</code> to prepend to all logs and exceptions
+	 * @param targets
+	 * @param responses values to compare to targets
+	 */
+	public void countErrors(String logPrefix, double[][] targets, double[][] responses) {
+		int truePositives = 0;
+		int falsePositives = 0;
+		int trueNegatives = 0;
+		int falseNegatives = 0;
+		for (int i = 0; i < targets.length; ++i) {
+			double[] response = responses[i];
+			double[] target = targets[i];
+			if (response.length != target.length)
+				throw new IllegalArgumentException(logPrefix + ": for training set " + i + " dimensions do not match for response [" + response.length + "] and target [" + target.length + "]");
+			for (int j = 0; j < target.length; ++j) {
+				if (target[j] > 0.5) {
+					if (response[j] > 0.5)
+						++truePositives;
+					else
+						++falseNegatives;
+				} else {
+					if (response[j] > 0.5)
+						++falsePositives;
+					else
+						++trueNegatives;
+				}
 			}
 		}
+		logger.info(logPrefix + ": TP/FN/FP/TN: " + truePositives + "/" + falseNegatives + "/" + falsePositives + "/" + trueNegatives);
 	}
-	logger.info( logPrefix + ": TP/FN/FP/TN: " + truePositives + "/" + falseNegatives + "/"
-			+ falsePositives + "/" + trueNegatives );
-}
 }

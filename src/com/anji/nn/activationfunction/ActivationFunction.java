@@ -23,31 +23,32 @@ package com.anji.nn.activationfunction;
 
 /**
  * Abstracts activation function for neurons.
+ * 
  * @author Philip Tucker
  */
 public interface ActivationFunction {
 
-/**
- * Apply activation function to input.
- * @param input
- * @return double result of applying activation function to <code>input</code>
- */
-public abstract double apply( double input );
+	/**
+	 * Apply activation function to input.
+	 * 
+	 * @param input
+	 * @return double result of applying activation function to <code>input</code>
+	 */
+	public abstract double apply(double input);
 
-/**
- * @return ceiling value for this function
- */
-public double getMaxValue();
+	/**
+	 * @return ceiling value for this function
+	 */
+	public double getMaxValue();
 
-/**
- * @return floor value for this function
- */
-public double getMinValue();
+	/**
+	 * @return floor value for this function
+	 */
+	public double getMinValue();
 
-/**
- * @return number corresponding to cost of activation in resources
- */
-public long cost();
+	/**
+	 * @return number corresponding to cost of activation in resources
+	 */
+	public long cost();
 
 }
-

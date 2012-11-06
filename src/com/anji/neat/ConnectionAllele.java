@@ -25,107 +25,105 @@ import org.jgapcustomised.Allele;
 
 /**
  * Gene corresponding to NEAT connection gene according to <a
- * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf"> Evolving Neural Networks
- * through Augmenting Topologies </a>
+ * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf"> Evolving Neural Networks through Augmenting
+ * Topologies </a>
  * 
  * @author Philip Tucker
  */
 public class ConnectionAllele extends Allele {
-		private ConnectionGene connectionGene;
-	
-/**
- * default connection weight
- */
-public final static double DEFAULT_WEIGHT = 0;
+	private ConnectionGene connectionGene;
 
-private final static double MIN_INIT_WEIGHT = -0.5f;
+	/**
+	 * default connection weight
+	 */
+	public final static double DEFAULT_WEIGHT = 0;
 
-private final static double MAX_INIT_WEIGHT = 0.5f;
+	private final static double MIN_INIT_WEIGHT = -0.5f;
 
-private double weight = DEFAULT_WEIGHT;
+	private final static double MAX_INIT_WEIGHT = 0.5f;
 
+	private double weight = DEFAULT_WEIGHT;
 
-/**
- * @see Object#toString()
- */
-public String toString() {
-	return connectionGene.toString() + " [" + weight + "]";
-}
+	/**
+	 * @see Object#toString()
+	 */
+	public String toString() {
+		return connectionGene.toString() + " [" + weight + "]";
+	}
 
-/**
- * for hibernate
- */
-private ConnectionAllele() {
-	super();
-}
+	/**
+	 * for hibernate
+	 */
+	private ConnectionAllele() {
+		super();
+	}
 
-/**
- * @param aConnectionGene
- */
-public ConnectionAllele( ConnectionGene aConnectionGene ) {
-	super( aConnectionGene );
-	connectionGene = aConnectionGene;
-}
+	/**
+	 * @param aConnectionGene
+	 */
+	public ConnectionAllele(ConnectionGene aConnectionGene) {
+		super(aConnectionGene);
+		connectionGene = aConnectionGene;
+	}
 
-/**
- * @see org.jgapcustomised.Allele#cloneAllele()
- */
-public Allele cloneAllele() {
-	ConnectionAllele allele = new ConnectionAllele( connectionGene );
-	allele.setWeight( weight );
-	return allele;
-}
+	/**
+	 * @see org.jgapcustomised.Allele#cloneAllele()
+	 */
+	public Allele cloneAllele() {
+		ConnectionAllele allele = new ConnectionAllele(connectionGene);
+		allele.setWeight(weight);
+		return allele;
+	}
 
-/**
- * @param target should be <code>ConnectionAllele</code> with same gene
- * @return <code>double</code> compatibility distance based on weight; always positive
- * @see Allele#distance(Allele)
- */
-public double distance( Allele target ) {
-	// TODO - removed to help performance
-	//		if ( target.getInnovationId().equals( getInnovationId() ) == false )
-	//			throw new Exception( "should not compute distance for alleles of different gene" );
-	return Math.abs( weight - ( (ConnectionAllele) target ).getWeight() );
-}
+	/**
+	 * @param target should be <code>ConnectionAllele</code> with same gene
+	 * @return <code>double</code> compatibility distance based on weight; always positive
+	 * @see Allele#distance(Allele)
+	 */
+	public double distance(Allele target) {
+		// TODO - removed to help performance
+		// if ( target.getInnovationId().equals( getInnovationId() ) == false )
+		// throw new Exception( "should not compute distance for alleles of different gene" );
+		return Math.abs(weight - ((ConnectionAllele) target).getWeight());
+	}
 
-/**
- * set weight to random value distributed uniformly between <code>MIN_INIT_WEIGHT</code> and
- * <code>MAX_INIT_WEIGHT</code>
- * 
- * @param a_numberGenerator
- */
-public void setToRandomValue( Random a_numberGenerator ) {
-	weight = MIN_INIT_WEIGHT + ( a_numberGenerator.nextFloat() * ( MAX_INIT_WEIGHT - MIN_INIT_WEIGHT ) );
-}
+	/**
+	 * set weight to random value distributed uniformly between <code>MIN_INIT_WEIGHT</code> and
+	 * <code>MAX_INIT_WEIGHT</code>
+	 * 
+	 * @param a_numberGenerator
+	 */
+	public void setToRandomValue(Random a_numberGenerator) {
+		weight = MIN_INIT_WEIGHT + (a_numberGenerator.nextFloat() * (MAX_INIT_WEIGHT - MIN_INIT_WEIGHT));
+	}
 
-/**
- * @return connection weight
- */
-public double getWeight() {
-	return weight;
-}
+	/**
+	 * @return connection weight
+	 */
+	public double getWeight() {
+		return weight;
+	}
 
-/**
- * @param aWeight new connection weight
- */
-public void setWeight( double aWeight ) {
-	weight = aWeight;
-}
+	/**
+	 * @param aWeight new connection weight
+	 */
+	public void setWeight(double aWeight) {
+		weight = aWeight;
+	}
 
-/**
- * @return src neuron ID
- * @see ConnectionGene#getSrcNeuronId()
- */
-public Long getSrcNeuronId() {
-	return connectionGene.getSrcNeuronId();
-}
+	/**
+	 * @return src neuron ID
+	 * @see ConnectionGene#getSrcNeuronId()
+	 */
+	public Long getSrcNeuronId() {
+		return connectionGene.getSrcNeuronId();
+	}
 
-
-/**
- * @return dest neuron ID
- * @see ConnectionGene#getDestNeuronId()
- */
-public Long getDestNeuronId() {
-	return connectionGene.getDestNeuronId();
-}
+	/**
+	 * @return dest neuron ID
+	 * @see ConnectionGene#getDestNeuronId()
+	 */
+	public Long getDestNeuronId() {
+		return connectionGene.getDestNeuronId();
+	}
 }

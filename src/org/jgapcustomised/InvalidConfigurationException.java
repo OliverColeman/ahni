@@ -19,27 +19,20 @@
  */
 package org.jgapcustomised;
 
-
 /**
- * This exception is typically thrown when an invalid value has been
- * passed to a Configuration object, an attempt is made to lock a Configuration
- * object before all required settings have been provided, or an attempt is
- * made to alter a setting in a Configuration object after it has been
- * successfully locked.
+ * This exception is typically thrown when an invalid value has been passed to a Configuration object, an attempt is
+ * made to lock a Configuration object before all required settings have been provided, or an attempt is made to alter a
+ * setting in a Configuration object after it has been successfully locked.
+ * 
  * @see org.jgapcustomised.InvalidConfigurationRuntimeException
  */
-public class InvalidConfigurationException extends Exception
-{
-    /**
-     * Constructs a new InvalidConfigurationException instance with the
-     * given error message.
-     *
-     * @param a_message An error message describing the reason this exception
-     *                  is being thrown.
-     */
-    public InvalidConfigurationException( String a_message )
-    {
-        super( a_message );
-    }
+public class InvalidConfigurationException extends Exception {
+	/**
+	 * Constructs a new InvalidConfigurationException instance with the given error message.
+	 * 
+	 * @param a_message An error message describing the reason this exception is being thrown.
+	 */
+	public InvalidConfigurationException(String a_message) {
+		super(a_message);
+	}
 }
-

@@ -1,5 +1,6 @@
 package ojc.ahni.hyperneat;
 
+import ojc.ahni.hyperneat.HyperNEATTranscriber.CPPN;
 import ojc.bain.neuron.rate.NeuronCollectionWithBias;
 
 import org.apache.log4j.Logger;
@@ -17,11 +18,13 @@ import com.anji.nn.activationfunction.ActivationFunctionFactory;
 import com.anji.util.*;
 
 /**
- * Constructs a {@link ojc.ahni.hyperneat.GridNet} neural network from a chromosome using the hypercube (from HyperNEAT) encoding scheme. An
- * {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this class.
+ * Constructs a {@link ojc.ahni.hyperneat.GridNet} neural network from a chromosome using the hypercube (from HyperNEAT)
+ * encoding scheme. An {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this
+ * class.
  * 
- * To transcribe the neural network from a {@link Chromosome} a connective pattern producing network (CPPN) is created from the Chromosome, and then this is
- * "queried" to determine the weight of each connection in the neural network. The CPPN is an {@link com.anji.nn.AnjiNet}.
+ * To transcribe the neural network from a {@link Chromosome} a connective pattern producing network (CPPN) is created
+ * from the Chromosome, and then this is "queried" to determine the weight of each connection in the neural network. The
+ * CPPN is an {@link com.anji.nn.AnjiNet}.
  * 
  * @author Oliver Coleman
  */
@@ -29,9 +32,6 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 	public static final String HYPERNEAT_ACTIVATION_FUNCTION_KEY = "ann.hyperneat.activation.function";
 
 	private final static Logger logger = Logger.getLogger(HyperNEATTranscriberGridNet.class);
-
-	private AnjiNetTranscriber cppnTranscriber; // creates AnjiNets from
-												// chromosomes
 
 	private ActivationFunction activationFunction;
 	private boolean layerEncodingIsInput = false;
@@ -76,8 +76,7 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 	 * @throws TranscriberException
 	 */
 	public GridNet newGridNet(Chromosome genotype, GridNet phenotype) throws TranscriberException {
-		AnjiActivator cppnActivator = cppnTranscriber.transcribe(genotype);
-		AnjiNet cppn = cppnActivator.getAnjiNet();
+		CPPN cppn = new CPPN(genotype);
 
 		int connectionRange = this.connectionRange == -1 ? Integer.MAX_VALUE / 4 : this.connectionRange;
 
@@ -92,7 +91,8 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 		cppnIdxTY = cppnInputIdx++;
 		cppnIdxSX = cppnInputIdx++;
 		cppnIdxSY = cppnInputIdx++;
-		if (depth > 2 && layerEncodingIsInput) { // if depth == 2 network necessarily feed forward, and only one layer of connections can exist
+		if (depth > 2 && layerEncodingIsInput) { // if depth == 2 network necessarily feed forward, and only one layer
+													// of connections can exist
 			cppnIdxTZ = cppnInputIdx++;
 			if (!feedForward) {
 				if (includeDelta) {
@@ -147,10 +147,7 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 			bias = phenotype.getBias();
 		}
 
-		double[] cppnInput = new double[cppn.getInputDimension()];
-		cppnInput[0] = 1; // bias
-
-		double cppnTZ, cppnTY, cppnTX, cppnSZ, cppnSY, cppnSX;
+		double cppnTZ = 0, cppnTY, cppnTX, cppnSZ, cppnSY, cppnSX;
 
 		if (feedForward) {
 			if (createNewPhenotype) {
@@ -166,7 +163,6 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 				if (depth > 2 && layerEncodingIsInput) {
 					// double cppnTZ =((double) tz*2) / (depth-1) - 1;
 					cppnTZ = ((double) tz) / (depth - 1);
-					cppnInput[cppnIdxTZ] = cppnTZ;
 				}
 
 				for (int ty = 0; ty < height[tz]; ty++) {
@@ -175,7 +171,6 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 						cppnTY = ((double) ty) / (height[tz] - 1);
 					else
 						cppnTY = 0.5f;
-					cppnInput[cppnIdxTY] = cppnTY;
 
 					for (int tx = 0; tx < width[tz]; tx++) {
 						// double cppnTX = ((double) tx*2) / (width-1) - 1;
@@ -183,7 +178,8 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 							cppnTX = ((double) tx) / (width[tz] - 1);
 						else
 							cppnTX = 0.5f;
-						cppnInput[cppnIdxTX] = cppnTX;
+
+						cppn.setTargetCoordinates(cppnTX, cppnTY, cppnTZ);
 
 						// calculate dimensions of this weight target matrix
 						// (bounded by grid edges)
@@ -211,8 +207,6 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 							else
 								cppnSY = 0.5f;
 
-							cppnInput[cppnIdxSY] = cppnSY;
-
 							for (int wx = 0, sx = Math.max(0, tx - connectionRange); wx < dx; wx++, sx++) {
 								// double cppnSX = ((double) sx * 2) / (width-1) - 1;
 								if (width[tz - 1] > 1)
@@ -220,34 +214,16 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 								else
 									cppnSX = 0.5f;
 
-								cppnInput[cppnIdxSX] = cppnSX;
+								cppn.setSourceCoordinates(cppnSX, cppnSY);
 
-								// System.out.println(tx + "," + ty + " - " + sx + "," + sy + "  (" + cppnTX + "," + cppnTY + " - " + cppnSX + "," + cppnSY +
-								// ")");
-
-								// delta
-								if (includeDelta) {
-									cppnInput[cppnIdxDY] = cppnSY - cppnTY;
-									cppnInput[cppnIdxDX] = cppnSX - cppnTX;
-								}
-								if (includeAngle) {
-									double angle = (double) Math.atan2(cppnSY - cppnTY, cppnSX - cppnTX);
-									angle /= 2 * (double) Math.PI;
-									if (angle < 0)
-										angle += 1;
-									cppnInput[cppnIdxAn] = angle;
-									// System.out.println(tx + "," + ty + " - " + sx + "," + sy + " : " + Math.toDegrees(angle*Math.PI*2));
-								}
-
-								cppnActivator.reset();
-								double[] cppnOutput = cppnActivator.next(cppnInput);
+								cppn.query();
 
 								// weights
 								double weightVal;
 								if (layerEncodingIsInput)
-									weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppnOutput[cppnIdxW[0]]));
+									weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getWeight()));
 								else
-									weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppnOutput[cppnIdxW[tz - 1]]));
+									weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getWeight(tz - 1)));
 								if (Math.abs(weightVal) > connectionExprThresh) {
 									if (weightVal > 0)
 										weightVal = (weightVal - connectionExprThresh) * (connectionWeightMax / (connectionWeightMax - connectionExprThresh));
@@ -263,9 +239,9 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 								if (enableBias && sy == ty && sx == tx) {
 									double biasVal;
 									if (layerEncodingIsInput)
-										biasVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppnOutput[cppnIdxB[0]]));
+										biasVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getBiasWeight()));
 									else
-										biasVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppnOutput[cppnIdxB[tz - 1]]));
+										biasVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getBiasWeight(tz - 1)));
 									if (Math.abs(biasVal) > connectionExprThresh) {
 										if (biasVal > 0)
 											biasVal = (biasVal - connectionExprThresh) * (connectionWeightMax / (connectionWeightMax - connectionExprThresh));
@@ -323,24 +299,27 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 			// query CPPN for substrate connection weights
 			for (int tz = 1; tz < depth; tz++) {
 				cppnTZ = ((double) tz) / (depth - 1);
-				cppnInput[1] = cppnTZ;
 
 				for (int ty = 0; ty < height[tz]; ty++) {
 					if (height[tz] > 1)
 						cppnTY = ((double) ty) / (height[tz] - 1);
 					else
 						cppnTY = 0.5f;
-					cppnInput[2] = cppnTY;
 
 					for (int tx = 0; tx < width[tz]; tx++) {
 						if (width[tz] > 1)
 							cppnTX = ((double) tx) / (width[tz] - 1);
 						else
 							cppnTX = 0.5f;
-						cppnInput[3] = cppnTX;
+
+						cppn.setTargetCoordinates(cppnTX, cppnTY, cppnTZ);
 
 						// calculate dimensions of this weight matrix (bounded by grid edges)
-						int dz = Math.min(depth - 1, tz + connectionRange) - Math.max(1, tz - connectionRange) + 1; // no connections to input layer
+						int dz = Math.min(depth - 1, tz + connectionRange) - Math.max(1, tz - connectionRange) + 1; // no
+																													// connections
+																													// to
+																													// input
+																													// layer
 						int dy = Math.min(height[tz] - 1, ty + connectionRange) - Math.max(0, ty - connectionRange) + 1;
 						int dx = Math.min(width[tz] - 1, tx + connectionRange) - Math.max(0, tx - connectionRange) + 1;
 
@@ -355,34 +334,25 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 						// s{z,y,x} is index of source neuron
 						for (int wz = 0, sz = Math.max(1, tz - connectionRange); wz < dz; wz++, sz++) {
 							cppnSZ = ((double) sz) / (depth - 1);
-							cppnInput[4] = cppnSZ;
 
 							for (int wy = 0, sy = Math.max(0, ty - connectionRange); wy < dy; wy++, sy++) {
 								if (height[tz] > 1)
 									cppnSY = ((double) sy) / (height[tz] - 1);
 								else
 									cppnSY = 0.5f;
-								cppnInput[5] = cppnSY;
 
 								for (int wx = 0, sx = Math.max(0, tx - connectionRange); wx < dx; wx++, sx++) {
 									if (width[tz] > 1)
 										cppnSX = ((double) sx) / (width[tz] - 1);
 									else
 										cppnSX = 0.5f;
-									cppnInput[6] = cppnSX;
 
-									// delta
-									if (includeDelta) {
-										cppnInput[7] = cppnSZ - cppnTZ;
-										cppnInput[8] = cppnSY - cppnTY;
-										cppnInput[9] = cppnSX - cppnTX;
-									}
+									cppn.setSourceCoordinates(cppnSX, cppnSY, cppnSZ);
 
-									cppnActivator.reset();
-									double[] cppnOutput = cppnActivator.next(cppnInput);
+									cppn.query();
 
 									// weight
-									double weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppnOutput[0]));
+									double weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getWeight()));
 									if (Math.abs(weightVal) > connectionExprThresh) {
 										if (weightVal > 0)
 											weightVal = (weightVal - connectionExprThresh) * (connectionWeightMax / (connectionWeightMax - connectionExprThresh));
@@ -396,7 +366,7 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 
 									// bias
 									if (enableBias && wz == 0 && wy == 0 && wx == 0) {
-										double biasVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppnOutput[1]));
+										double biasVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getBiasWeight()));
 										if (Math.abs(biasVal) > connectionExprThresh) {
 											if (biasVal > 0)
 												biasVal = (biasVal - connectionExprThresh) * (connectionWeightMax / (connectionWeightMax - connectionExprThresh));
@@ -443,12 +413,13 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 	}
 
 	/*
-	 * public static void main(String[] args) { Point2D.Double p1 = new Point2D.Double(1, 1); Point2D.Double p2 = new Point2D.Double(1, 2); for (double a = 0; a
-	 * < Math.PI*2; a += Math.PI * 0.1) { p2.x = p1.x + Math.cos(a); p2.y = p1.y + Math.sin(a);
+	 * public static void main(String[] args) { Point2D.Double p1 = new Point2D.Double(1, 1); Point2D.Double p2 = new
+	 * Point2D.Double(1, 2); for (double a = 0; a < Math.PI*2; a += Math.PI * 0.1) { p2.x = p1.x + Math.cos(a); p2.y =
+	 * p1.y + Math.sin(a);
 	 * 
 	 * double angle = Math.atan2(p2.y-p1.y, p2.x-p1.x); if (angle < 0) angle += 2*Math.PI;
 	 * 
-	 * System.out.println(p1.x + "," + p1.y + " - " + (double)p2.x + "," + (double)p2.y + " - " + (double) Math.toDegrees(a) + " - " + (double)
-	 * Math.toDegrees(angle) + " - " + (double) (angle / (2*Math.PI))); } }
+	 * System.out.println(p1.x + "," + p1.y + " - " + (double)p2.x + "," + (double)p2.y + " - " + (double)
+	 * Math.toDegrees(a) + " - " + (double) Math.toDegrees(angle) + " - " + (double) (angle / (2*Math.PI))); } }
 	 */
 }

@@ -38,94 +38,90 @@ import com.anji.util.Properties;
  */
 public class HibernatePersistence implements Persistence {
 
-private final static Logger logger = Logger.getLogger( HibernatePersistence.class );
+	private final static Logger logger = Logger.getLogger(HibernatePersistence.class);
 
-private Connection conn = null;
+	private Connection conn = null;
 
-private String runName;
+	private String runName;
 
-/**
- * default ctor; must call <code>init()</code> before using this object
- */
-public HibernatePersistence() {
-	super();
-}
-
-/**
- * @see com.anji.util.Configurable#init(com.anji.util.Properties)
- */
-public void init( Properties props ) {
-	try {
+	/**
+	 * default ctor; must call <code>init()</code> before using this object
+	 */
+	public HibernatePersistence() {
+		super();
 	}
-	catch ( Exception e ) {
-		String msg = "error initializing hibernate";
-		logger.error( msg, e );
-		throw new IllegalArgumentException( msg + ": " + e );
-	}
-}
 
-/**
- * @see com.anji.persistence.Persistence#reset()
- */
-public void reset() {
-	try {
-	}
-	catch ( Throwable th ) {
-		String msg = "error resetting run " + runName;
-		logger.error( msg, th );
+	/**
+	 * @see com.anji.util.Configurable#init(com.anji.util.Properties)
+	 */
+	public void init(Properties props) {
 		try {
-			conn.rollback();
+		} catch (Exception e) {
+			String msg = "error initializing hibernate";
+			logger.error(msg, e);
+			throw new IllegalArgumentException(msg + ": " + e);
 		}
-		catch ( SQLException e ) {
-			logger.error( "error on rollback", e );
-		}
-		throw new IllegalStateException( msg + ": " + th );
 	}
-}
 
-/**
- * @see com.anji.persistence.Persistence#store(org.jgapcustomised.Chromosome)
- */
-public void store( Chromosome c ) throws Exception {
-}
+	/**
+	 * @see com.anji.persistence.Persistence#reset()
+	 */
+	public void reset() {
+		try {
+		} catch (Throwable th) {
+			String msg = "error resetting run " + runName;
+			logger.error(msg, th);
+			try {
+				conn.rollback();
+			} catch (SQLException e) {
+				logger.error("error on rollback", e);
+			}
+			throw new IllegalStateException(msg + ": " + th);
+		}
+	}
 
-/**
- * @see com.anji.persistence.Persistence#store(com.anji.integration.Activator)
- */
-public void store( Activator a ) throws Exception {
-}
+	/**
+	 * @see com.anji.persistence.Persistence#store(org.jgapcustomised.Chromosome)
+	 */
+	public void store(Chromosome c) throws Exception {
+	}
 
-/**
- * @see com.anji.persistence.Persistence#store(com.anji.run.Run)
- */
-public void store( Run r ) throws Exception {
-}
+	/**
+	 * @see com.anji.persistence.Persistence#store(com.anji.integration.Activator)
+	 */
+	public void store(Activator a) throws Exception {
+	}
 
-/**
- * @see com.anji.persistence.Persistence#loadChromosome(java.lang.String,
- * org.jgapcustomised.Configuration)
- */
-public Chromosome loadChromosome( String id, Configuration config ) {
-	return null;
-}
+	/**
+	 * @see com.anji.persistence.Persistence#store(com.anji.run.Run)
+	 */
+	public void store(Run r) throws Exception {
+	}
 
-/**
- * @see com.anji.persistence.Persistence#deleteChromosome(java.lang.String)
- */
-public void deleteChromosome( String id ) throws Exception {
-}
+	/**
+	 * @see com.anji.persistence.Persistence#loadChromosome(java.lang.String, org.jgapcustomised.Configuration)
+	 */
+	public Chromosome loadChromosome(String id, Configuration config) {
+		return null;
+	}
 
-/**
- * @see com.anji.persistence.Persistence#loadGenotype(org.jgapcustomised.Configuration)
- */
-public Genotype loadGenotype( Configuration aConfig ) {
-	return null;
-}
+	/**
+	 * @see com.anji.persistence.Persistence#deleteChromosome(java.lang.String)
+	 */
+	public void deleteChromosome(String id) throws Exception {
+	}
 
-/**
- * @see com.anji.persistence.Persistence#startRun(java.lang.String)
- */
-public void startRun( String aRunId ) {
-}
+	/**
+	 * @see com.anji.persistence.Persistence#loadGenotype(org.jgapcustomised.Configuration)
+	 */
+	public Genotype loadGenotype(Configuration aConfig) {
+		return null;
+	}
+
+	/**
+	 * @see com.anji.persistence.Persistence#startRun(java.lang.String)
+	 */
+	public void startRun(String aRunId) {
+	}
 
 }

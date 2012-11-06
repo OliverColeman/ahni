@@ -19,10 +19,8 @@
  */
 package com.anji.nn.activationfunction;
 
-
 /**
- * Modified classic sigmoid. Copied from <a href="http://www.jooneworld.com/">JOONE</a>
- * <code>SigmoidLayer</code>.
+ * Modified classic sigmoid. Copied from <a href="http://www.jooneworld.com/">JOONE</a> <code>SigmoidLayer</code>.
  * 
  * @author Philip Tucker
  */
@@ -54,8 +52,8 @@ public class BipolarSigmoidActivationFunction implements ActivationFunction {
 	 * 
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public double apply( double input ) {
-		return 2.0f / ( 1.0f + (double) Math.exp( -( input * SLOPE ) ) ) - 1;
+	public double apply(double input) {
+		return 2.0f / (1.0f + (double) Math.exp(-(input * SLOPE))) - 1;
 	}
 
 	/**
@@ -64,7 +62,7 @@ public class BipolarSigmoidActivationFunction implements ActivationFunction {
 	public double getMaxValue() {
 		return 1;
 	}
-	
+
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */

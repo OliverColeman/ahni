@@ -49,8 +49,8 @@ public class StepActivationFunction implements ActivationFunction {
 	 * @return 0 if <code>input</code>< 0, 1 otherwise
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public double apply( double input ) {
-		return ( input <= 0 ) ? 0 : 1;
+	public double apply(double input) {
+		return (input <= 0) ? 0 : 1;
 	}
 
 	/**

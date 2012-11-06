@@ -19,26 +19,18 @@
  */
 package org.jgapcustomised;
 
-
 /**
- * This exception is typically thrown when the
- * setValueFromPersistentRepresentation() method of a Gene class is unable
- * to process the string representation it has been given, either because that
- * representation is not supported by that Gene implementation or because
- * the representation is corrupt.
+ * This exception is typically thrown when the setValueFromPersistentRepresentation() method of a Gene class is unable
+ * to process the string representation it has been given, either because that representation is not supported by that
+ * Gene implementation or because the representation is corrupt.
  */
-public class UnsupportedRepresentationException extends Exception
-{
-    /**
-     * Constructs a new UnsupportedRepresentationException instance with the
-     * given error message.
-     *
-     * @param a_message An error message describing the reason this exception
-     *                  is being thrown.
-     */
-    public UnsupportedRepresentationException( String a_message )
-    {
-        super( a_message );
-    }
+public class UnsupportedRepresentationException extends Exception {
+	/**
+	 * Constructs a new UnsupportedRepresentationException instance with the given error message.
+	 * 
+	 * @param a_message An error message describing the reason this exception is being thrown.
+	 */
+	public UnsupportedRepresentationException(String a_message) {
+		super(a_message);
+	}
 }
-

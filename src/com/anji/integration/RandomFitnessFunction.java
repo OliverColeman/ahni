@@ -23,6 +23,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
+import ojc.ahni.hyperneat.HyperNEATEvolver;
+
 import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.Chromosome;
 
@@ -31,8 +33,7 @@ import com.anji.util.Properties;
 import com.anji.util.Randomizer;
 
 /**
- * Assigns random fitness for each chromosome. This can be used for, among other things,
- * modeling genetic drift.
+ * Assigns random fitness for each chromosome. This can be used for, among other things, modeling genetic drift.
  * 
  * @author Derek James
  */
@@ -41,7 +42,7 @@ public class RandomFitnessFunction implements BulkFitnessFunction, Configurable 
 	private final static int MAX_FITNESS = 1000000;
 
 	private Random rand;
-	
+
 	/**
 	 * @return max fitness value
 	 * @see BulkFitnessFunction#getMaxFitnessValue()
@@ -49,39 +50,42 @@ public class RandomFitnessFunction implements BulkFitnessFunction, Configurable 
 	public int getMaxFitnessValue() {
 		return MAX_FITNESS;
 	}
-	
 
 	public double getPerformanceFromFitnessValue(int fitness) {
 		return (double) fitness / MAX_FITNESS;
 	}
 
 	/**
-	 * Assigns random fitness for each chromosome between 1 and <code>MAX_FITNESS</code>
-	 * inclusive.
+	 * Assigns random fitness for each chromosome between 1 and <code>MAX_FITNESS</code> inclusive.
 	 * 
 	 * @param genotypes <code>List</code> contains <code>Chromosome</code> objects
 	 */
-	final public void evaluate( List genotypes ) {
+	final public void evaluate(List genotypes) {
 		Iterator it = genotypes.iterator();
-		while ( it.hasNext() ) {
+		while (it.hasNext()) {
 			Chromosome chrom = (Chromosome) it.next();
-			int randomFitness = rand.nextInt( MAX_FITNESS );
-			chrom.setFitnessValue( randomFitness + 1 );
+			int randomFitness = rand.nextInt(MAX_FITNESS);
+			chrom.setFitnessValue(randomFitness + 1);
 		}
 	}
 
 	/**
 	 * @see com.anji.util.Configurable#init(com.anji.util.Properties)
 	 */
-	public void init( Properties props ) throws Exception {
-		Randomizer r = (Randomizer) props.singletonObjectProperty( Randomizer.class );
+	public void init(Properties props) throws Exception {
+		Randomizer r = (Randomizer) props.singletonObjectProperty(Randomizer.class);
 		rand = r.getRand();
 	}
-	
+
 	public boolean endRun() {
-    	return false;
-    }
+		return false;
+	}
+
 	@Override
-    public void dispose() {
+	public void dispose() {
+	}
+	
+	@Override
+	public void evolutionFinished(HyperNEATEvolver evolver) {
 	}
 }

@@ -22,8 +22,9 @@
 package org.jgapcustomised;
 
 /**
- * Similar to <code>InvalidConfigurationException</code>, but in runtime form so it can be thrown from
- * methods that do not throw exceptions.
+ * Similar to <code>InvalidConfigurationException</code>, but in runtime form so it can be thrown from methods that do
+ * not throw exceptions.
+ * 
  * @author Philip Tucker
  * @see org.jgapcustomised.InvalidConfigurationException
  */
@@ -41,7 +42,7 @@ public class InvalidConfigurationRuntimeException extends RuntimeException {
 	 * @see RuntimeException#RuntimeException(java.lang.String)
 	 */
 	public InvalidConfigurationRuntimeException(String message) {
-		super( "InvalidConfigurationRuntimeException: " + message );
+		super("InvalidConfigurationRuntimeException: " + message);
 	}
 
 	/**
@@ -49,17 +50,16 @@ public class InvalidConfigurationRuntimeException extends RuntimeException {
 	 * @param cause
 	 * @see RuntimeException#RuntimeException(java.lang.String, java.lang.Throwable)
 	 */
-	public InvalidConfigurationRuntimeException( String message, Throwable cause ) {
-		super( "InvalidConfigurationRuntimeException: " + message, cause );
+	public InvalidConfigurationRuntimeException(String message, Throwable cause) {
+		super("InvalidConfigurationRuntimeException: " + message, cause);
 	}
 
 	/**
 	 * @param cause
 	 * @see InvalidConfigurationRuntimeException#InvalidConfigurationRuntimeException(String, Throwable)
 	 */
-	public InvalidConfigurationRuntimeException( Throwable cause ) {
-		this( "", cause );
+	public InvalidConfigurationRuntimeException(Throwable cause) {
+		this("", cause);
 	}
 
 }
-

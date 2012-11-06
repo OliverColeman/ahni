@@ -38,51 +38,49 @@ import com.anji.util.Properties;
  */
 public class Evaluator {
 
-private final static Logger logger = Logger.getLogger( Evaluator.class );
+	private final static Logger logger = Logger.getLogger(Evaluator.class);
 
-private Evaluator() {
-	super();
-}
-
-/**
- * main method
- * @param args
- * @throws Exception
- */
-public static void main( String[] args ) throws Exception {
-	System.out.println( Copyright.STRING );
-	if ( args.length < 2 ) {
-		System.err
-				.println( "usage: <cmd> <properties-file> <chromosome-id1> [<chromosome-id2> <chromosome-id3> ...]" );
-		System.exit( -1 );
+	private Evaluator() {
+		super();
 	}
 
-	// load fitness function from properties
-	Properties props = new Properties();
-	props.loadFromResource( args[ 0 ] );
-	BulkFitnessFunction fitnessFunc = (BulkFitnessFunction) props
-			.singletonObjectProperty( Evolver.FITNESS_FUNCTION_CLASS_KEY );
+	/**
+	 * main method
+	 * 
+	 * @param args
+	 * @throws Exception
+	 */
+	public static void main(String[] args) throws Exception {
+		System.out.println(Copyright.STRING);
+		if (args.length < 2) {
+			System.err.println("usage: <cmd> <properties-file> <chromosome-id1> [<chromosome-id2> <chromosome-id3> ...]");
+			System.exit(-1);
+		}
 
-	// load chromosomes
-	Persistence db = (Persistence) props.newObjectProperty( Persistence.PERSISTENCE_CLASS_KEY );
-	Configuration config = new DummyConfiguration();
-	ArrayList chroms = new ArrayList();
-	for ( int i = 1; i < args.length; ++i ) {
-		Chromosome chrom = db.loadChromosome( args[ i ], config );
-		if ( chrom == null )
-			throw new IllegalArgumentException( "no chromosome found: " + args[ i ] );
-		chroms.add( chrom );
+		// load fitness function from properties
+		Properties props = new Properties();
+		props.loadFromResource(args[0]);
+		BulkFitnessFunction fitnessFunc = (BulkFitnessFunction) props.singletonObjectProperty(Evolver.FITNESS_FUNCTION_CLASS_KEY);
+
+		// load chromosomes
+		Persistence db = (Persistence) props.newObjectProperty(Persistence.PERSISTENCE_CLASS_KEY);
+		Configuration config = new DummyConfiguration();
+		ArrayList chroms = new ArrayList();
+		for (int i = 1; i < args.length; ++i) {
+			Chromosome chrom = db.loadChromosome(args[i], config);
+			if (chrom == null)
+				throw new IllegalArgumentException("no chromosome found: " + args[i]);
+			chroms.add(chrom);
+		}
+
+		// evaluate
+		fitnessFunc.evaluate(chroms);
+
+		Iterator it = chroms.iterator();
+		while (it.hasNext()) {
+			Chromosome chrom = (Chromosome) it.next();
+			logger.info(chrom.toString() + ": fitness = " + chrom.getFitnessValue() + "/" + fitnessFunc.getMaxFitnessValue());
+		}
 	}
-
-	// evaluate
-	fitnessFunc.evaluate( chroms );
-
-	Iterator it = chroms.iterator();
-	while ( it.hasNext() ) {
-		Chromosome chrom = (Chromosome) it.next();
-		logger.info( chrom.toString() + ": fitness = " + chrom.getFitnessValue() + "/"
-				+ fitnessFunc.getMaxFitnessValue() );
-	}
-}
 
 }

@@ -22,79 +22,81 @@ package com.anji.integration;
 import com.anji.util.XmlPersistable;
 
 /**
- * Although any object taking and returning double arrays can implement this, it is meant to be
- * a simple neural net interface where the arrays are input and output activation patterns.
+ * Although any object taking and returning double arrays can implement this, it is meant to be a simple neural net
+ * interface where the arrays are input and output activation patterns.
+ * 
  * @author Philip Tucker
  */
 public interface Activator extends XmlPersistable {
 
-/**
- * @return Object output array of type double with dimensions dependent on
- * implementation, given last provided input activation via
- * <code>nextSequence(double[])</code> or <code>nextSequence(double[][])</code>.
- * @see Activator#nextSequence(double[][])
- * @see Activator#nextSequence(double[][][])
- */
-public Object next();
+	/**
+	 * @return Object output array of type double with dimensions dependent on implementation, given last provided input
+	 *         activation via <code>nextSequence(double[])</code> or <code>nextSequence(double[][])</code>.
+	 * @see Activator#nextSequence(double[][])
+	 * @see Activator#nextSequence(double[][][])
+	 */
+	public Object next();
 
-/**
- * @param stimuli
- * @return double[] output array given input <code>stimuli</code>.
- */
-public double[] next( double[] stimuli );
+	/**
+	 * @param stimuli
+	 * @return double[] output array given input <code>stimuli</code>.
+	 */
+	public double[] next(double[] stimuli);
 
-/**
- * @param stimuli
- * @return double[][] sequence of output arrays given input sequence <code>stimult</code>.
- */
-public double[][] nextSequence( double[][] stimuli );
+	/**
+	 * @param stimuli
+	 * @return double[][] sequence of output arrays given input sequence <code>stimult</code>.
+	 */
+	public double[][] nextSequence(double[][] stimuli);
 
-/**
- * @param stimuli
- * @return double[][] output array given input <code>stimuli</code>.
- */
-public double[][] next( double[][] stimuli );
+	/**
+	 * @param stimuli
+	 * @return double[][] output array given input <code>stimuli</code>.
+	 */
+	public double[][] next(double[][] stimuli);
 
-/**
- * @param stimuli
- * @return double[][][] sequence of output arrays given input sequence <code>stimult</code>.
- */
-public double[][][] nextSequence( double[][][] stimuli );
+	/**
+	 * @param stimuli
+	 * @return double[][][] sequence of output arrays given input sequence <code>stimult</code>.
+	 */
+	public double[][][] nextSequence(double[][][] stimuli);
 
-/**
- * @return String XML representation of object.
- */
-public String toXml();
+	/**
+	 * @return String XML representation of object.
+	 */
+	public String toXml();
 
-/**
- * reset object to initial state
- */
-public void reset();
+	/**
+	 * reset object to initial state
+	 */
+	public void reset();
 
-/**
- * @return String identifier, preferably unique, of object.
- */
-public String getName();
+	/**
+	 * @return String identifier, preferably unique, of object.
+	 */
+	public String getName();
 
-/**
- * @return min response value
- */
-public double getMinResponse();
+	/**
+	 * @return min response value
+	 */
+	public double getMinResponse();
 
-/**
- * @return max response value
- */
-public double getMaxResponse();
+	/**
+	 * @return max response value
+	 */
+	public double getMaxResponse();
 
-/**
- * @return dimension(s) of input array. If the input array is a single dimension vector then the returned array will have length 1; in general the returned array will have as many elements as there are dimensions in the input vector. 
- */
-public int[] getInputDimension();
+	/**
+	 * @return dimension(s) of input array. If the input array is a single dimension vector then the returned array will
+	 *         have length 1; in general the returned array will have as many elements as there are dimensions in the
+	 *         input vector.
+	 */
+	public int[] getInputDimension();
 
-/**
- * @return dimension(s) of output array. If the output array is a single dimension vector then the returned array will have length 1; in general the returned array will have as many elements as there are dimensions in the output vector.
- */
-public int[] getOutputDimension();
+	/**
+	 * @return dimension(s) of output array. If the output array is a single dimension vector then the returned array
+	 *         will have length 1; in general the returned array will have as many elements as there are dimensions in
+	 *         the output vector.
+	 */
+	public int[] getOutputDimension();
 }
-
-

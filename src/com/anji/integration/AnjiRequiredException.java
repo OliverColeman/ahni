@@ -23,10 +23,11 @@ package com.anji.integration;
 
 /**
  * Thrown if ANJI-specific JGAP objects receive a non-ANJI configuration.
+ * 
  * @author Philip Tucker
  */
 public class AnjiRequiredException extends RuntimeException {
-	
+
 	/**
 	 * @see AnjiRequiredException#AnjiRequiredException(String)
 	 */
@@ -59,4 +60,3 @@ public class AnjiRequiredException extends RuntimeException {
 		this("", cause);
 	}
 }
-

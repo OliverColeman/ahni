@@ -21,16 +21,16 @@
 package com.anji.util;
 
 /**
- * All classes implementing this interface must have a public no-argument constructor. All
- * initialization must be done in <code>init()</code>.
+ * All classes implementing this interface must have a public no-argument constructor. All initialization must be done
+ * in <code>init()</code>.
+ * 
  * @author Philip Tucker
  */
 public interface Configurable {
 
-/**
- * @param props configuration parameters
- * @throws Exception
- */
-public void init( Properties props ) throws Exception;
+	/**
+	 * @param props configuration parameters
+	 * @throws Exception
+	 */
+	public void init(Properties props) throws Exception;
 }
-

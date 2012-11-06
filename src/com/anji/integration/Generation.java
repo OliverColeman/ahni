@@ -34,146 +34,147 @@ import com.anji.util.XmlPersistable;
  */
 public class Generation implements XmlPersistable {
 
-/**
- * XML base tag
- */
-public final static String GENERATION_TAG = "generation";
+	/**
+	 * XML base tag
+	 */
+	public final static String GENERATION_TAG = "generation";
 
-private Genotype genotype;
+	private Genotype genotype;
 
-private Long id;
+	private Long id;
 
-private String cachedXml;
+	private String cachedXml;
 
-/**
- * @see java.lang.Object#hashCode()
- */
-public int hashCode() {
-	return id.hashCode();
-}
-
-/**
- * @see java.lang.Object#equals(java.lang.Object)
- */
-public boolean equals( Object o ) {
-	Generation other = (Generation) o;
-	return id.equals( other.id );
-}
-
-/**
- * for hibernate
- */
-private Generation() {
-	super();
-}
-
-/**
- * @param aGenotype chromosomes from this object make up generation.
- * @param anId of generation
- */
-public Generation( Genotype aGenotype, long anId ) {
-	genotype = aGenotype;
-	id = new Long( anId );
-	cacheXml();
-}
-
-/**
- * @see com.anji.util.XmlPersistable#toXml()
- */
-public String toXml() {
-	return cachedXml;
-}
-
-private void cacheXml() {
-	int maxFitness = Integer.MIN_VALUE;
-	int minFitness = Integer.MAX_VALUE;
-	int maxComplexity = Integer.MIN_VALUE;
-	int minComplexity = Integer.MAX_VALUE;
-
-	StringBuffer result = new StringBuffer();
-	result.append( "<" ).append( GENERATION_TAG ).append( " id=\"" ).append( id ).append(
-			"\" >\n" );
-
-	Iterator iter = genotype.getChromosomes().iterator();
-	long runningFitnessTotal = 0;
-	int popSize = 0;
-	long runningComplexityTotal = 0;
-
-	while ( iter.hasNext() ) {
-		Chromosome chrom = (Chromosome) iter.next();
-		int thisChromFitness = chrom.getFitnessValue();
-		runningFitnessTotal += thisChromFitness;
-		int thisChromComplexity = chrom.size();
-		runningComplexityTotal += thisChromComplexity;
-		popSize++;
-		if ( thisChromFitness > maxFitness )
-			maxFitness = thisChromFitness;
-		if ( thisChromFitness < minFitness )
-			minFitness = thisChromFitness;
-		if ( thisChromComplexity > maxComplexity )
-			maxComplexity = thisChromComplexity;
-		if ( thisChromComplexity < minComplexity )
-			minComplexity = thisChromComplexity;
+	/**
+	 * @see java.lang.Object#hashCode()
+	 */
+	public int hashCode() {
+		return id.hashCode();
 	}
-	result.append( "<fitness>\n" );
-	result.append( "<max>" ).append( maxFitness );
-	result.append( "</max>\n" );
-	result.append( "<min>" ).append( minFitness );
-	result.append( "</min>\n" );
-	result.append( "<avg>" );
-	result.append( runningFitnessTotal / popSize );
-	result.append( "</avg>\n" );
-	result.append( "</fitness>\n" );
 
-	result.append( "<complexity>\n" );
-	result.append( "<champ>" ).append( genotype.getFittestChromosome().size() );
-	result.append( "</champ>\n" );
-	result.append( "<max>" ).append( maxComplexity );
-	result.append( "</max>\n" );
-	result.append( "<min>" ).append( minComplexity );
-	result.append( "</min>\n" );
-	result.append( "<avg>" );
-	result.append( (double) runningComplexityTotal / popSize );
-	result.append( "</avg>\n" );
-	result.append( "</complexity>\n" );
-
-	Iterator speciesIter = genotype.getSpecies().iterator();
-	while ( speciesIter.hasNext() ) {
-		Species specie = (Species) speciesIter.next();
-		result.append( specie.toXml() );
+	/**
+	 * @see java.lang.Object#equals(java.lang.Object)
+	 */
+	public boolean equals(Object o) {
+		Generation other = (Generation) o;
+		return id.equals(other.id);
 	}
-	result.append( "</" ).append( GENERATION_TAG ).append( ">\n" );
 
-	cachedXml = result.toString();
-}
+	/**
+	 * for hibernate
+	 */
+	private Generation() {
+		super();
+	}
 
-/**
- * @see com.anji.util.XmlPersistable#getXmlRootTag()
- */
-public String getXmlRootTag() {
-	return GENERATION_TAG;
-}
+	/**
+	 * @param aGenotype chromosomes from this object make up generation.
+	 * @param anId of generation
+	 */
+	public Generation(Genotype aGenotype, long anId) {
+		genotype = aGenotype;
+		id = new Long(anId);
+		cacheXml();
+	}
 
-/**
- * @see com.anji.util.XmlPersistable#getXmld()
- */
-public String getXmld() {
-	return null;
-}
+	/**
+	 * @see com.anji.util.XmlPersistable#toXml()
+	 */
+	public String toXml() {
+		return cachedXml;
+	}
 
-/**
- * for hibernate
- * @return unique id
- */
-private Long getId() {
-	return id;
-}
+	private void cacheXml() {
+		int maxFitness = Integer.MIN_VALUE;
+		int minFitness = Integer.MAX_VALUE;
+		int maxComplexity = Integer.MIN_VALUE;
+		int minComplexity = Integer.MAX_VALUE;
 
-/**
- * for hibernate
- * @param aId
- */
-private void setId( Long aId ) {
-	id = aId;
-}
+		StringBuffer result = new StringBuffer();
+		result.append("<").append(GENERATION_TAG).append(" id=\"").append(id).append("\" >\n");
+
+		Iterator iter = genotype.getChromosomes().iterator();
+		long runningFitnessTotal = 0;
+		int popSize = 0;
+		long runningComplexityTotal = 0;
+
+		while (iter.hasNext()) {
+			Chromosome chrom = (Chromosome) iter.next();
+			int thisChromFitness = chrom.getFitnessValue();
+			runningFitnessTotal += thisChromFitness;
+			int thisChromComplexity = chrom.size();
+			runningComplexityTotal += thisChromComplexity;
+			popSize++;
+			if (thisChromFitness > maxFitness)
+				maxFitness = thisChromFitness;
+			if (thisChromFitness < minFitness)
+				minFitness = thisChromFitness;
+			if (thisChromComplexity > maxComplexity)
+				maxComplexity = thisChromComplexity;
+			if (thisChromComplexity < minComplexity)
+				minComplexity = thisChromComplexity;
+		}
+		result.append("<fitness>\n");
+		result.append("<max>").append(maxFitness);
+		result.append("</max>\n");
+		result.append("<min>").append(minFitness);
+		result.append("</min>\n");
+		result.append("<avg>");
+		result.append(runningFitnessTotal / popSize);
+		result.append("</avg>\n");
+		result.append("</fitness>\n");
+
+		result.append("<complexity>\n");
+		result.append("<champ>").append(genotype.getFittestChromosome().size());
+		result.append("</champ>\n");
+		result.append("<max>").append(maxComplexity);
+		result.append("</max>\n");
+		result.append("<min>").append(minComplexity);
+		result.append("</min>\n");
+		result.append("<avg>");
+		result.append((double) runningComplexityTotal / popSize);
+		result.append("</avg>\n");
+		result.append("</complexity>\n");
+
+		Iterator speciesIter = genotype.getSpecies().iterator();
+		while (speciesIter.hasNext()) {
+			Species specie = (Species) speciesIter.next();
+			result.append(specie.toXml());
+		}
+		result.append("</").append(GENERATION_TAG).append(">\n");
+
+		cachedXml = result.toString();
+	}
+
+	/**
+	 * @see com.anji.util.XmlPersistable#getXmlRootTag()
+	 */
+	public String getXmlRootTag() {
+		return GENERATION_TAG;
+	}
+
+	/**
+	 * @see com.anji.util.XmlPersistable#getXmld()
+	 */
+	public String getXmld() {
+		return null;
+	}
+
+	/**
+	 * for hibernate
+	 * 
+	 * @return unique id
+	 */
+	private Long getId() {
+		return id;
+	}
+
+	/**
+	 * for hibernate
+	 * 
+	 * @param aId
+	 */
+	private void setId(Long aId) {
+		id = aId;
+	}
 }

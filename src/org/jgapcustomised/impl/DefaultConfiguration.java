@@ -25,40 +25,27 @@ import org.jgapcustomised.Configuration;
 import org.jgapcustomised.InvalidConfigurationException;
 import org.jgapcustomised.event.EventManager;
 
-
 /**
- * The DefaultConfiguration class simplifies the JGAP configuration
- * process by providing default configuration values for many of the
- * configuration settings. The following values must still be provided:
- * the sample Chromosome, population size, and desired fitness function.
- * All other settings may also be changed in the normal fashion for
- * those who wish to specify other custom values.
+ * The DefaultConfiguration class simplifies the JGAP configuration process by providing default configuration values
+ * for many of the configuration settings. The following values must still be provided: the sample Chromosome,
+ * population size, and desired fitness function. All other settings may also be changed in the normal fashion for those
+ * who wish to specify other custom values.
  */
-public class DefaultConfiguration extends Configuration
-{
-    /**
-     * Constructs a new DefaultConfiguration instance with a number of
-     * Configuration settings set to default values. It is still necessary
-     * to set the sample Chromosome, population size, and desired fitness
-     * function. Other settings may optionally be altered as desired.
-     */
-    public DefaultConfiguration()
-    {
-        super();
+public class DefaultConfiguration extends Configuration {
+	/**
+	 * Constructs a new DefaultConfiguration instance with a number of Configuration settings set to default values. It
+	 * is still necessary to set the sample Chromosome, population size, and desired fitness function. Other settings
+	 * may optionally be altered as desired.
+	 */
+	public DefaultConfiguration() {
+		super();
 
-        try
-        {
-            setNaturalSelector( new WeightedRouletteSelector() );
-            setRandomGenerator( new Random() );
-            setEventManager( new EventManager() );
-        }
-        catch ( InvalidConfigurationException e )
-        {
-            throw new RuntimeException(
-                "Fatal error: DefaultConfiguration class could not use its " +
-                "own stock configuration values. This should never happen. " +
-                "Please report this as a bug to the JGAP team." );
-        }
-    }
+		try {
+			setNaturalSelector(new WeightedRouletteSelector());
+			setRandomGenerator(new Random());
+			setEventManager(new EventManager());
+		} catch (InvalidConfigurationException e) {
+			throw new RuntimeException("Fatal error: DefaultConfiguration class could not use its " + "own stock configuration values. This should never happen. " + "Please report this as a bug to the JGAP team.");
+		}
+	}
 }
-

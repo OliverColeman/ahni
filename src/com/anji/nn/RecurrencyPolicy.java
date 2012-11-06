@@ -43,24 +43,24 @@ public class RecurrencyPolicy {
 	/**
 	 * no recurrency allowed; no loops in network
 	 */
-	public final static RecurrencyPolicy DISALLOWED = new RecurrencyPolicy( "disallowed" );
+	public final static RecurrencyPolicy DISALLOWED = new RecurrencyPolicy("disallowed");
 
 	// TODO
 	// recurrency allowed; recurrent connections only where required, to break a potential
-	// deadlock loop in network 
+	// deadlock loop in network
 	// public final static RecurrencyPolicy MINIMUM = new RecurrencyPolicy( "minimum" );
 
 	/**
 	 * recurrency allowed; recurrent connections where it seems they might be necessary
 	 */
-	public final static RecurrencyPolicy BEST_GUESS = new RecurrencyPolicy( "best_guess" );
+	public final static RecurrencyPolicy BEST_GUESS = new RecurrencyPolicy("best_guess");
 
 	/**
 	 * recurrency allowed; treat all connections as if they might be recurrent
 	 */
-	public final static RecurrencyPolicy LAZY = new RecurrencyPolicy( "lazy" );
+	public final static RecurrencyPolicy LAZY = new RecurrencyPolicy("lazy");
 
-	private RecurrencyPolicy( String newName ) {
+	private RecurrencyPolicy(String newName) {
 		name = newName;
 	}
 
@@ -68,32 +68,33 @@ public class RecurrencyPolicy {
 	 * @param name
 	 * @return RecurrencyPolicy corresponding to <code>name</code>
 	 */
-	public static RecurrencyPolicy valueOf( String name ) {
-		if ( policies == null ) {
+	public static RecurrencyPolicy valueOf(String name) {
+		if (policies == null) {
 			policies = new HashMap();
-			policies.put( RecurrencyPolicy.DISALLOWED.toString(), RecurrencyPolicy.DISALLOWED );
+			policies.put(RecurrencyPolicy.DISALLOWED.toString(), RecurrencyPolicy.DISALLOWED);
 			// TODO policies.put( RecurrencyPolicy.MINIMUM.toString(), RecurrencyPolicy.MINIMUM );
-			policies.put( RecurrencyPolicy.BEST_GUESS.toString(), RecurrencyPolicy.BEST_GUESS );
-			policies.put( RecurrencyPolicy.LAZY.toString(), RecurrencyPolicy.LAZY );
+			policies.put(RecurrencyPolicy.BEST_GUESS.toString(), RecurrencyPolicy.BEST_GUESS);
+			policies.put(RecurrencyPolicy.LAZY.toString(), RecurrencyPolicy.LAZY);
 		}
-		return (RecurrencyPolicy) policies.get( name );
+		return (RecurrencyPolicy) policies.get(name);
 	}
 
 	/**
-	 * See <a href=" {@docRoot}/params.htm" target="anji_params">Parameter Details </a> for
-	 * <code>recurrent</code> property settings.
+	 * See <a href=" {@docRoot} /params.htm" target="anji_params">Parameter Details </a> for <code>recurrent</code>
+	 * property settings.
+	 * 
 	 * @param props configuration parameter
 	 * @return policy specified by <code>props</code>
 	 */
-	public static RecurrencyPolicy load( Properties props ) {
-		String value = props.getProperty( KEY, RecurrencyPolicy.BEST_GUESS.toString() );
-		return valueOf( value );
+	public static RecurrencyPolicy load(Properties props) {
+		String value = props.getProperty(KEY, RecurrencyPolicy.BEST_GUESS.toString());
+		return valueOf(value);
 	}
 
 	/**
 	 * @see Object#equals(java.lang.Object)
 	 */
-	public boolean equals( Object o ) {
+	public boolean equals(Object o) {
 		return this == o;
 	}
 

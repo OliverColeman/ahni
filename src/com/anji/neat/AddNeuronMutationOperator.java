@@ -34,13 +34,10 @@ import com.anji.util.Configurable;
 import com.anji.util.Properties;
 
 /**
- * Implements NEAT add node mutation inspired by <a
- * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf"> Evolving
- * Neural Networks through Augmenting Topologies </a>. In ANJI, mutation rate
- * refers to the likelihood of a new node being created on any existing
- * connection. In traditional NEAT, it is the likelihood of a chromosome
- * experiencing a mutation, and each chromosome can not have more than one
- * topological mutation per generation.
+ * Implements NEAT add node mutation inspired by <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">
+ * Evolving Neural Networks through Augmenting Topologies </a>. In ANJI, mutation rate refers to the likelihood of a new
+ * node being created on any existing connection. In traditional NEAT, it is the likelihood of a chromosome experiencing
+ * a mutation, and each chromosome can not have more than one topological mutation per generation.
  * 
  * @author Philip Tucker
  */
@@ -78,9 +75,8 @@ public class AddNeuronMutationOperator extends MutationOperator implements Confi
 	}
 
 	/**
-	 * Adds connections according to <a
-	 * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">NEAT
-	 * </a> add node mutation.
+	 * Adds connections according to <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">NEAT </a> add
+	 * node mutation.
 	 * 
 	 * @see org.jgapcustomised.MutationOperator#mutate(org.jgapcustomised.Configuration,
 	 *      org.jgapcustomised.ChromosomeMaterial, java.util.Set, java.util.Set)
@@ -107,14 +103,10 @@ public class AddNeuronMutationOperator extends MutationOperator implements Confi
 
 	/**
 	 * @param config
-	 * @param neurons
-	 *            <code>Map</code> contains <code>NeuronAllele</code> objects
-	 * @param oldConnectAllele
-	 *            connection allele to be replaced by neuron
-	 * @param allelesToAdd
-	 *            <code>Set</code> contains <code>Allele</code> objects
-	 * @param allelesToRemove
-	 *            <code>Set</code> contains <code>Allele</code> objects
+	 * @param neurons <code>Map</code> contains <code>NeuronAllele</code> objects
+	 * @param oldConnectAllele connection allele to be replaced by neuron
+	 * @param allelesToAdd <code>Set</code> contains <code>Allele</code> objects
+	 * @param allelesToRemove <code>Set</code> contains <code>Allele</code> objects
 	 * @return true iff neuron added
 	 */
 	public boolean addNeuronAtConnection(NeatConfiguration config, Map neurons, ConnectionAllele oldConnectAllele, Set allelesToAdd, Set allelesToRemove) {

@@ -27,77 +27,76 @@ import com.anji.nn.activationfunction.ActivationFunction;
 
 /**
  * Gene corresponding to NEAT node gene according to <a
- * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf"> Evolving Neural Networks
- * through Augmenting Topologies </a>
+ * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf"> Evolving Neural Networks through Augmenting
+ * Topologies </a>
  * 
  * @author Philip Tucker
  */
 public class NeuronAllele extends Allele {
-	
-private NeuronGene neuronGene;
 
-/**
- * for hibernate
- */
-private NeuronAllele() {
-	super();
-}
+	private NeuronGene neuronGene;
 
-/**
- * @param aNeuronGene
- */
-public NeuronAllele( NeuronGene aNeuronGene ) {
-	super( aNeuronGene );
+	/**
+	 * for hibernate
+	 */
+	private NeuronAllele() {
+		super();
+	}
 
-    neuronGene = aNeuronGene;
-}
+	/**
+	 * @param aNeuronGene
+	 */
+	public NeuronAllele(NeuronGene aNeuronGene) {
+		super(aNeuronGene);
 
-/**
- * @see org.jgapcustomised.Allele#cloneAllele()
- */
-public Allele cloneAllele() {
-	return new NeuronAllele( neuronGene );
-}
+		neuronGene = aNeuronGene;
+	}
 
-/**
- * @see Allele#setToRandomValue(Random)
- */
-public void setToRandomValue( Random a_numberGenerator ) {
-	// noop
-}
+	/**
+	 * @see org.jgapcustomised.Allele#cloneAllele()
+	 */
+	public Allele cloneAllele() {
+		return new NeuronAllele(neuronGene);
+	}
 
-/**
- * @param aTarget should be <code>NeuronAllele</code> with same gene 
- * TODO - activation type and slope
- * @see org.jgapcustomised.Allele#distance(org.jgapcustomised.Allele)
- */
-public double distance( Allele aTarget ) {
-	return 0;
-}
+	/**
+	 * @see Allele#setToRandomValue(Random)
+	 */
+	public void setToRandomValue(Random a_numberGenerator) {
+		// noop
+	}
 
-/**
- * @return neuron type
- * @see NeuronGene#getType()
- */
-public NeuronType getType() {
-	return neuronGene.getType();
-}
+	/**
+	 * @param aTarget should be <code>NeuronAllele</code> with same gene TODO - activation type and slope
+	 * @see org.jgapcustomised.Allele#distance(org.jgapcustomised.Allele)
+	 */
+	public double distance(Allele aTarget) {
+		return 0;
+	}
 
-/**
- * @param aType
- * @return true if <code>aType</code> matches
- * @see NeuronGene#isType(NeuronType)
- */
-public boolean isType( NeuronType aType ) {
-	return neuronGene.isType( aType );
-}
+	/**
+	 * @return neuron type
+	 * @see NeuronGene#getType()
+	 */
+	public NeuronType getType() {
+		return neuronGene.getType();
+	}
 
-/**
- * @return activation type
- * @see NeuronGene#getActivationType()
- */
-public String getActivationType() {
-	return neuronGene.getActivationType();
-}
+	/**
+	 * @param aType
+	 * @return true if <code>aType</code> matches
+	 * @see NeuronGene#isType(NeuronType)
+	 */
+	public boolean isType(NeuronType aType) {
+		return neuronGene.isType(aType);
+	}
+
+	/**
+	 * @return activation type
+	 * @see NeuronGene#getActivationType()
+	 */
+	public String getActivationType() {
+		return neuronGene.getActivationType();
+	}
 
 }

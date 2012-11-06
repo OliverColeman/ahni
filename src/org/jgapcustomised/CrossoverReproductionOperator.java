@@ -24,9 +24,8 @@ import java.util.List;
 import org.jgapcustomised.impl.CloneReproductionOperator;
 
 /**
- * Abstract crossover reporduction operator handles iteration over population to
- * determine pairs of parent chromosomes. Subclass determines specific crossover
- * logic by implementing <code>reproduce(Configuration config, 
+ * Abstract crossover reporduction operator handles iteration over population to determine pairs of parent chromosomes.
+ * Subclass determines specific crossover logic by implementing <code>reproduce(Configuration config, 
  * Chromosome dominantChrom, Chromosome recessiveChrom)</code>.
  * 
  * @author Philip Tucker
@@ -40,25 +39,19 @@ public abstract class CrossoverReproductionOperator extends ReproductionOperator
 	 * @param config
 	 * @param dominantChrom
 	 * @param recessiveChrom
-	 * @return offspring of <code>dominantChrom</code> and
-	 *         <code>recessiveChrom</code>
+	 * @return offspring of <code>dominantChrom</code> and <code>recessiveChrom</code>
 	 */
 	protected abstract ChromosomeMaterial reproduce(Configuration config, Chromosome dominantChrom, Chromosome recessiveChrom);
 
 	/**
-	 * Adds new children of <code>parents</code> to <code>offspring</code>.
-	 * Chromosomes "mate" only within their species, and the number of offspring
-	 * for each specie is determined by the size and average fitness of that
-	 * specie. Species containing only 1 chromosome generate offspring via
-	 * cloning.
+	 * Adds new children of <code>parents</code> to <code>offspring</code>. Chromosomes "mate" only within their
+	 * species, and the number of offspring for each specie is determined by the size and average fitness of that
+	 * specie. Species containing only 1 chromosome generate offspring via cloning.
 	 * 
 	 * @param config
-	 * @param parentChroms
-	 *            <code>List</code> contains <code>Chromosome</code> objects
-	 * @param offspring
-	 *            <code>List</code> contains <code>ChromosomeMaterial</code>
-	 *            objects, offspring of parents; total number of chromosomes in
-	 *            parents and offspring should equal config.getPopulationSize()
+	 * @param parentChroms <code>List</code> contains <code>Chromosome</code> objects
+	 * @param offspring <code>List</code> contains <code>ChromosomeMaterial</code> objects, offspring of parents; total
+	 *            number of chromosomes in parents and offspring should equal config.getPopulationSize()
 	 * @see ReproductionOperator#reproduce(Configuration, List, int, List)
 	 */
 	final protected void reproduce(final Configuration config, final List parentChroms, int numOffspring, List offspring) {

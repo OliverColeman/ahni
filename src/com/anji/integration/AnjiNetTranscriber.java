@@ -48,10 +48,9 @@ import com.anji.util.Configurable;
 import com.anji.util.Properties;
 
 /**
- * The purpose of this class is to construct a neural net object (<code>AnjiNet</code>) from
- * a chromosome. <code>TranscriberFactory</code> should be used to construct an
- * <code>AnjiNetTranscriber</code>, given a chromosome. <code>getNet()</code> or
- * <code>getPhenotype()</code> returns the resulting network.
+ * The purpose of this class is to construct a neural net object (<code>AnjiNet</code>) from a chromosome.
+ * <code>TranscriberFactory</code> should be used to construct an <code>AnjiNetTranscriber</code>, given a chromosome.
+ * <code>getNet()</code> or <code>getPhenotype()</code> returns the resulting network.
  * 
  * @see com.anji.nn.AnjiNet
  * @author Philip Tucker
@@ -64,182 +63,172 @@ public class AnjiNetTranscriber implements Transcriber<AnjiActivator> {
 
 	private int recurrentCycles;
 
-	private final static Logger logger = Logger.getLogger( AnjiNetTranscriber.class );
+	private final static Logger logger = Logger.getLogger(AnjiNetTranscriber.class);
 
 	private RecurrencyPolicy recurrencyPolicy = RecurrencyPolicy.BEST_GUESS;
 
-
-
-/**
- * ctor
- */
-public AnjiNetTranscriber() {
-	this( RecurrencyPolicy.BEST_GUESS );
-}
-
-/**
- * ctor
- * @param aPolicy
- */
-public AnjiNetTranscriber( RecurrencyPolicy aPolicy ) {
-	recurrencyPolicy = aPolicy;
-}
-
-/**
- * @see Configurable#init(Properties)
- */
-public void init( Properties props ) {
-	recurrencyPolicy = RecurrencyPolicy.load( props );
-	recurrentCycles = props.getIntProperty(RECURRENT_CYCLES_KEY, 1);
-}
-
-/**
- * @see Transcriber#transcribe(Chromosome)
- */
-public AnjiActivator transcribe(Chromosome genotype) throws TranscriberException {
-	return new AnjiActivator(newAnjiNet(genotype), recurrentCycles);
-}
-
-/**
- * @see Transcriber#transcribe(Chromosome, Activator)
- * Note: this method has been added to conform with the Transcriber interface, 
- * but does not use the substrate argument for performance gains.
- */
-public AnjiActivator transcribe(Chromosome genotype, AnjiActivator substrate) throws TranscriberException {
-	return new AnjiActivator(newAnjiNet(genotype), recurrentCycles);
-}
-
-
-/**
- * create new <code>AnjiNet</code> from <code>genotype</code>
- * 
- * @param genotype chromosome to transcribe
- * @return phenotype
- * @throws TranscriberException
- */
-public AnjiNet newAnjiNet( Chromosome genotype ) throws TranscriberException {
-	Map allNeurons = new HashMap();
-
-    //System.out.println("ID: " + genotype.getId());
-
-	// input neurons
-	SortedMap inNeuronAlleles = NeatChromosomeUtility.getNeuronMap( genotype.getAlleles(),
-			NeuronType.INPUT );
-	List inNeurons = new ArrayList();
-	Iterator it = inNeuronAlleles.values().iterator();
-	while ( it.hasNext() ) {
-		NeuronAllele neuronAllele = (NeuronAllele) it.next();
-		Neuron n = new Neuron( ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType() ) );
-        n.setId( neuronAllele.getInnovationId().longValue() );
-		inNeurons.add( n );
-		allNeurons.put( neuronAllele.getInnovationId(), n );
+	/**
+	 * ctor
+	 */
+	public AnjiNetTranscriber() {
+		this(RecurrencyPolicy.BEST_GUESS);
 	}
 
-	// output neurons
-	SortedMap outNeuronAlleles = NeatChromosomeUtility.getNeuronMap( genotype.getAlleles(),
-			NeuronType.OUTPUT );
-	List outNeurons = new ArrayList();
-	it = outNeuronAlleles.values().iterator();
-	while ( it.hasNext() ) {
-		NeuronAllele neuronAllele = (NeuronAllele) it.next();
-
-        Neuron n = new Neuron( ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType() ) );
-        
-        n.setId( neuronAllele.getInnovationId().longValue() );
-		outNeurons.add( n );
-		allNeurons.put( neuronAllele.getInnovationId(), n );
+	/**
+	 * ctor
+	 * 
+	 * @param aPolicy
+	 */
+	public AnjiNetTranscriber(RecurrencyPolicy aPolicy) {
+		recurrencyPolicy = aPolicy;
 	}
 
-	// hidden neurons
-	SortedMap hiddenNeuronAlleles = NeatChromosomeUtility.getNeuronMap( genotype.getAlleles(),
-			NeuronType.HIDDEN );
-	it = hiddenNeuronAlleles.values().iterator();
-	while ( it.hasNext() ) {
-		NeuronAllele neuronAllele = (NeuronAllele) it.next();
-        Neuron n = new Neuron( ActivationFunctionFactory.valueOf(neuronAllele.getActivationType() ) );
-		n.setId( neuronAllele.getInnovationId().longValue() );
-		allNeurons.put( neuronAllele.getInnovationId(), n );
+	/**
+	 * @see Configurable#init(Properties)
+	 */
+	public void init(Properties props) {
+		recurrencyPolicy = RecurrencyPolicy.load(props);
+		recurrentCycles = props.getIntProperty(RECURRENT_CYCLES_KEY, 1);
 	}
 
-	// connections
-	// 
-	// Starting with output layer, gather connections and neurons to which it is immediately
-	// connected, creating a logical layer of neurons. Assign each connection its input (source)
-	// neuron, and each destination neuron its input connections. Recurrency is handled depending
-	// on policy:
-	//
-	// RecurrencyPolicy.LAZY - all connections CacheNeuronConnection
-	//
-	// RecurrencyPolicy.DISALLOWED - no connections CacheNeuronConnection (assumes topology sans
-	// loops)
-	//
-	// RecurrencyPolicy.BEST_GUESS - any connection where the source neuron is in the same or
-	// later (i.e., nearer output layer) as the destination is a CacheNeuronConnection
-	Collection recurrentConns = new ArrayList();
-	List remainingConnAlleles = NeatChromosomeUtility.getConnectionList( genotype.getAlleles() );
-	Set currentNeuronInnovationIds = new HashSet( outNeuronAlleles.keySet() );
-	Set traversedNeuronInnovationIds = new HashSet( currentNeuronInnovationIds );
-	Set nextNeuronInnovationIds = new HashSet();
-	while ( !remainingConnAlleles.isEmpty() && !currentNeuronInnovationIds.isEmpty() ) {
-		nextNeuronInnovationIds.clear();
-		Collection connAlleles = NeatChromosomeUtility.extractConnectionAllelesForDestNeurons(
-				remainingConnAlleles, currentNeuronInnovationIds );
-		it = connAlleles.iterator();
-		while ( it.hasNext() ) {
-			ConnectionAllele connAllele = (ConnectionAllele) it.next();
-			Neuron src = (Neuron) allNeurons.get( connAllele.getSrcNeuronId() );
-			Neuron dest = (Neuron) allNeurons.get( connAllele.getDestNeuronId() );
-			if ( src == null || dest == null )
-				throw new TranscriberException( "connection with missing src or dest neuron: "
-						+ connAllele.toString() );
+	/**
+	 * @see Transcriber#transcribe(Chromosome)
+	 */
+	public AnjiActivator transcribe(Chromosome genotype) throws TranscriberException {
+		return new AnjiActivator(newAnjiNet(genotype), recurrentCycles);
+	}
 
-			// handle recurrency processing
-			boolean cached = false;
-			if ( RecurrencyPolicy.LAZY.equals( recurrencyPolicy ) )
-				cached = true;
-			else if ( RecurrencyPolicy.BEST_GUESS.equals( recurrencyPolicy ) ) {
-				boolean maybeRecurrent = ( traversedNeuronInnovationIds.contains( connAllele
-						.getSrcNeuronId() ) );
-				cached = maybeRecurrent || recurrencyPolicy.equals( RecurrencyPolicy.LAZY );
-			}
-			NeuronConnection conn = null;
-			if ( cached ) {
-				conn = new CacheNeuronConnection( src, connAllele.getWeight() );
-				recurrentConns.add( conn );
-			}
-			else
-				conn = new NeuronConnection( src, connAllele.getWeight() );
+	/**
+	 * @see Transcriber#transcribe(Chromosome, Activator) Note: this method has been added to conform with the
+	 *      Transcriber interface, but does not use the substrate argument for performance gains.
+	 */
+	public AnjiActivator transcribe(Chromosome genotype, AnjiActivator substrate) throws TranscriberException {
+		return new AnjiActivator(newAnjiNet(genotype), recurrentCycles);
+	}
 
-			conn.setId( connAllele.getInnovationId().longValue() );
-			dest.addIncomingConnection( conn );
-			nextNeuronInnovationIds.add( connAllele.getSrcNeuronId() );
+	/**
+	 * create new <code>AnjiNet</code> from <code>genotype</code>
+	 * 
+	 * @param genotype chromosome to transcribe
+	 * @return phenotype
+	 * @throws TranscriberException
+	 */
+	public AnjiNet newAnjiNet(Chromosome genotype) throws TranscriberException {
+		Map allNeurons = new HashMap();
+
+		// System.out.println("ID: " + genotype.getId());
+
+		// input neurons
+		SortedMap inNeuronAlleles = NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.INPUT);
+		List inNeurons = new ArrayList();
+		Iterator it = inNeuronAlleles.values().iterator();
+		while (it.hasNext()) {
+			NeuronAllele neuronAllele = (NeuronAllele) it.next();
+			Neuron n = new Neuron(ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType()));
+			n.setId(neuronAllele.getInnovationId().longValue());
+			inNeurons.add(n);
+			allNeurons.put(neuronAllele.getInnovationId(), n);
 		}
-		traversedNeuronInnovationIds.addAll( nextNeuronInnovationIds );
-		currentNeuronInnovationIds.clear();
-		currentNeuronInnovationIds.addAll( nextNeuronInnovationIds );
-		remainingConnAlleles.removeAll( connAlleles );
+
+		// output neurons
+		SortedMap outNeuronAlleles = NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.OUTPUT);
+		List outNeurons = new ArrayList();
+		it = outNeuronAlleles.values().iterator();
+		while (it.hasNext()) {
+			NeuronAllele neuronAllele = (NeuronAllele) it.next();
+
+			Neuron n = new Neuron(ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType()));
+
+			n.setId(neuronAllele.getInnovationId().longValue());
+			outNeurons.add(n);
+			allNeurons.put(neuronAllele.getInnovationId(), n);
+		}
+
+		// hidden neurons
+		SortedMap hiddenNeuronAlleles = NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.HIDDEN);
+		it = hiddenNeuronAlleles.values().iterator();
+		while (it.hasNext()) {
+			NeuronAllele neuronAllele = (NeuronAllele) it.next();
+			Neuron n = new Neuron(ActivationFunctionFactory.valueOf(neuronAllele.getActivationType()));
+			n.setId(neuronAllele.getInnovationId().longValue());
+			allNeurons.put(neuronAllele.getInnovationId(), n);
+		}
+
+		// connections
+		//
+		// Starting with output layer, gather connections and neurons to which it is immediately
+		// connected, creating a logical layer of neurons. Assign each connection its input (source)
+		// neuron, and each destination neuron its input connections. Recurrency is handled depending
+		// on policy:
+		//
+		// RecurrencyPolicy.LAZY - all connections CacheNeuronConnection
+		//
+		// RecurrencyPolicy.DISALLOWED - no connections CacheNeuronConnection (assumes topology sans
+		// loops)
+		//
+		// RecurrencyPolicy.BEST_GUESS - any connection where the source neuron is in the same or
+		// later (i.e., nearer output layer) as the destination is a CacheNeuronConnection
+		Collection recurrentConns = new ArrayList();
+		List remainingConnAlleles = NeatChromosomeUtility.getConnectionList(genotype.getAlleles());
+		Set currentNeuronInnovationIds = new HashSet(outNeuronAlleles.keySet());
+		Set traversedNeuronInnovationIds = new HashSet(currentNeuronInnovationIds);
+		Set nextNeuronInnovationIds = new HashSet();
+		while (!remainingConnAlleles.isEmpty() && !currentNeuronInnovationIds.isEmpty()) {
+			nextNeuronInnovationIds.clear();
+			Collection connAlleles = NeatChromosomeUtility.extractConnectionAllelesForDestNeurons(remainingConnAlleles, currentNeuronInnovationIds);
+			it = connAlleles.iterator();
+			while (it.hasNext()) {
+				ConnectionAllele connAllele = (ConnectionAllele) it.next();
+				Neuron src = (Neuron) allNeurons.get(connAllele.getSrcNeuronId());
+				Neuron dest = (Neuron) allNeurons.get(connAllele.getDestNeuronId());
+				if (src == null || dest == null)
+					throw new TranscriberException("connection with missing src or dest neuron: " + connAllele.toString());
+
+				// handle recurrency processing
+				boolean cached = false;
+				if (RecurrencyPolicy.LAZY.equals(recurrencyPolicy))
+					cached = true;
+				else if (RecurrencyPolicy.BEST_GUESS.equals(recurrencyPolicy)) {
+					boolean maybeRecurrent = (traversedNeuronInnovationIds.contains(connAllele.getSrcNeuronId()));
+					cached = maybeRecurrent || recurrencyPolicy.equals(RecurrencyPolicy.LAZY);
+				}
+				NeuronConnection conn = null;
+				if (cached) {
+					conn = new CacheNeuronConnection(src, connAllele.getWeight());
+					recurrentConns.add(conn);
+				} else
+					conn = new NeuronConnection(src, connAllele.getWeight());
+
+				conn.setId(connAllele.getInnovationId().longValue());
+				dest.addIncomingConnection(conn);
+				nextNeuronInnovationIds.add(connAllele.getSrcNeuronId());
+			}
+			traversedNeuronInnovationIds.addAll(nextNeuronInnovationIds);
+			currentNeuronInnovationIds.clear();
+			currentNeuronInnovationIds.addAll(nextNeuronInnovationIds);
+			remainingConnAlleles.removeAll(connAlleles);
+		}
+
+		// make sure we traversed all connections and nodes; input neurons are automatically
+		// considered "traversed" since they should be realized regardless of their connectivity to
+		// the rest of the network
+		if (!remainingConnAlleles.isEmpty())
+			logger.warn("not all connection genes handled: " + genotype.toString());
+		traversedNeuronInnovationIds.addAll(inNeuronAlleles.keySet());
+		if (traversedNeuronInnovationIds.size() != allNeurons.size())
+			logger.warn("did not traverse all neurons: " + genotype.toString());
+
+		// build network
+
+		Collection allNeuronsCol = allNeurons.values();
+		String id = genotype.getId().toString();
+		return new AnjiNet(allNeuronsCol, inNeurons, outNeurons, recurrentConns, id);
 	}
 
-	// make sure we traversed all connections and nodes; input neurons are automatically
-	// considered "traversed" since they should be realized regardless of their connectivity to
-	// the rest of the network
-	if ( !remainingConnAlleles.isEmpty() )
-		logger.warn( "not all connection genes handled: " + genotype.toString() );
-	traversedNeuronInnovationIds.addAll( inNeuronAlleles.keySet() );
-	if ( traversedNeuronInnovationIds.size() != allNeurons.size() )
-		logger.warn( "did not traverse all neurons: " + genotype.toString() );
-
-	// build network
-
-    Collection allNeuronsCol = allNeurons.values();
-    String id = genotype.getId().toString();
-	return new AnjiNet(allNeuronsCol, inNeurons, outNeurons, recurrentConns, id);
-}
-
-/**
- * @see com.anji.integration.Transcriber#getPhenotypeClass()
- */
-public Class getPhenotypeClass() {
-	return AnjiNet.class;
-}
+	/**
+	 * @see com.anji.integration.Transcriber#getPhenotypeClass()
+	 */
+	public Class getPhenotypeClass() {
+		return AnjiNet.class;
+	}
 }

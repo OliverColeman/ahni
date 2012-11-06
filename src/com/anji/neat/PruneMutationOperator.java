@@ -36,126 +36,114 @@ import com.anji.util.Configurable;
 import com.anji.util.Properties;
 
 /**
- * Removes neurons and connections that do not affect the activation of the network. This
- * includes hidden neurons without inputs or outputs, connections missing source or destination
- * neurons, or sub-structures of neurons and connections that are stranded. Allows additive and
- * subtractive mutation operators to be less careful about what they do and require less
- * coordination among them, since this operator can follow them and "clean up the mess". For
- * this reason, this operator generally should be the last executed in the sequence of mutation
- * operators. This operator was necessary with the addition of simplification dynamics for James
- * and Tucker's "A Comparative Analysis of Simplification and Complexification in the Evolution
- * of Neural Network Topologies" paper for <a
+ * Removes neurons and connections that do not affect the activation of the network. This includes hidden neurons
+ * without inputs or outputs, connections missing source or destination neurons, or sub-structures of neurons and
+ * connections that are stranded. Allows additive and subtractive mutation operators to be less careful about what they
+ * do and require less coordination among them, since this operator can follow them and "clean up the mess". For this
+ * reason, this operator generally should be the last executed in the sequence of mutation operators. This operator was
+ * necessary with the addition of simplification dynamics for James and Tucker's "A Comparative Analysis of
+ * Simplification and Complexification in the Evolution of Neural Network Topologies" paper for <a
  * href="http://gal4.ge.uiuc.edu:8080/GECCO-2004/">GECCO 2004 </a>.
  * 
- * TODO - mutation rate less than 1.0 might yield unexpected results - maybe should handle nodes
- * and connections differently in that case
+ * TODO - mutation rate less than 1.0 might yield unexpected results - maybe should handle nodes and connections
+ * differently in that case
  * 
  * @author Philip Tucker
  */
 public class PruneMutationOperator extends MutationOperator implements Configurable {
 
-/**
- * properties key, prune network mutation rate
- */
-private static final String PRUNE_MUTATE_RATE_KEY = "prune.mutation.rate";
+	/**
+	 * properties key, prune network mutation rate
+	 */
+	private static final String PRUNE_MUTATE_RATE_KEY = "prune.mutation.rate";
 
-/**
- * default mutation rate
- */
-public final static double DEFAULT_MUTATE_RATE = 1.00f;
+	/**
+	 * default mutation rate
+	 */
+	public final static double DEFAULT_MUTATE_RATE = 1.00f;
 
-/**
- * @see com.anji.util.Configurable#init(com.anji.util.Properties)
- */
-public void init( Properties props ) throws Exception {
-	setMutationRate( props.getDoubleProperty( PRUNE_MUTATE_RATE_KEY, DEFAULT_MUTATE_RATE ) );
-}
+	/**
+	 * @see com.anji.util.Configurable#init(com.anji.util.Properties)
+	 */
+	public void init(Properties props) throws Exception {
+		setMutationRate(props.getDoubleProperty(PRUNE_MUTATE_RATE_KEY, DEFAULT_MUTATE_RATE));
+	}
 
-/**
- * @see PruneMutationOperator#PruneMutationOperator(double)
- */
-public PruneMutationOperator() {
-	this( DEFAULT_MUTATE_RATE );
-}
+	/**
+	 * @see PruneMutationOperator#PruneMutationOperator(double)
+	 */
+	public PruneMutationOperator() {
+		this(DEFAULT_MUTATE_RATE);
+	}
 
-/**
- * @see MutationOperator#MutationOperator(double)
- */
-public PruneMutationOperator( double newMutationRate ) {
-	super( newMutationRate );
-}
+	/**
+	 * @see MutationOperator#MutationOperator(double)
+	 */
+	public PruneMutationOperator(double newMutationRate) {
+		super(newMutationRate);
+	}
 
-/**
- * Traverse network flowing forward and backward to identify unvisited connections and neurons.
- * Then, remove a number of those depending on mutation rate.
- * 
- * @param config
- * @param target chromosome material to mutate
- * @param genesToAdd <code>Set</code> contains <code>Gene</code> objects
- * @param genesToRemove <code>Set</code> contains <code>Gene</code> objects
- * @see org.jgapcustomised.MutationOperator#mutate(org.jgapcustomised.Configuration, org.jgapcustomised.ChromosomeMaterial,
- * java.util.Set, java.util.Set)
- */
-protected void mutate( Configuration config, ChromosomeMaterial target, Set genesToAdd,
-		Set genesToRemove ) {
-	List candidatesToRemove = new ArrayList();
-	findUnvisitedAlleles( target, candidatesToRemove, true );
-	findUnvisitedAlleles( target, candidatesToRemove, false );
-	Collections.shuffle( candidatesToRemove, config.getRandomGenerator() );
-	for ( int i = 0; i < numMutations( config.getRandomGenerator(), candidatesToRemove.size() ); ++i )
-		genesToRemove.add( candidatesToRemove.get( i ) );
-}
+	/**
+	 * Traverse network flowing forward and backward to identify unvisited connections and neurons. Then, remove a
+	 * number of those depending on mutation rate.
+	 * 
+	 * @param config
+	 * @param target chromosome material to mutate
+	 * @param genesToAdd <code>Set</code> contains <code>Gene</code> objects
+	 * @param genesToRemove <code>Set</code> contains <code>Gene</code> objects
+	 * @see org.jgapcustomised.MutationOperator#mutate(org.jgapcustomised.Configuration,
+	 *      org.jgapcustomised.ChromosomeMaterial, java.util.Set, java.util.Set)
+	 */
+	protected void mutate(Configuration config, ChromosomeMaterial target, Set genesToAdd, Set genesToRemove) {
+		List candidatesToRemove = new ArrayList();
+		findUnvisitedAlleles(target, candidatesToRemove, true);
+		findUnvisitedAlleles(target, candidatesToRemove, false);
+		Collections.shuffle(candidatesToRemove, config.getRandomGenerator());
+		for (int i = 0; i < numMutations(config.getRandomGenerator(), candidatesToRemove.size()); ++i)
+			genesToRemove.add(candidatesToRemove.get(i));
+	}
 
-/**
- * @param material target from which to remove stranded nodes and connections
- * @param unvisitedAlleles <code>List</code> contains <code>Gene</code> objects, unvisited
- * nodes and connections
- * @param isForward traverse the network from input to output if true, output to input if false
- */
-private void findUnvisitedAlleles( ChromosomeMaterial material, List unvisitedAlleles,
-		boolean isForward ) {
-	// initialize unvisited connections
-	List unvisitedConnAlleles = NeatChromosomeUtility.getConnectionList( material.getAlleles() );
+	/**
+	 * @param material target from which to remove stranded nodes and connections
+	 * @param unvisitedAlleles <code>List</code> contains <code>Gene</code> objects, unvisited nodes and connections
+	 * @param isForward traverse the network from input to output if true, output to input if false
+	 */
+	private void findUnvisitedAlleles(ChromosomeMaterial material, List unvisitedAlleles, boolean isForward) {
+		// initialize unvisited connections
+		List unvisitedConnAlleles = NeatChromosomeUtility.getConnectionList(material.getAlleles());
 
-	// initialize unvisited neurons (input and output neurons are always part of the activation,
-	// and therefore considered "visited")
-	Map hiddenNeuronAlleles = NeatChromosomeUtility.getNeuronMap( material.getAlleles(),
-			NeuronType.HIDDEN );
-	Set unvisitedNeuronInnovationIds = new HashSet( hiddenNeuronAlleles.keySet() );
+		// initialize unvisited neurons (input and output neurons are always part of the activation,
+		// and therefore considered "visited")
+		Map hiddenNeuronAlleles = NeatChromosomeUtility.getNeuronMap(material.getAlleles(), NeuronType.HIDDEN);
+		Set unvisitedNeuronInnovationIds = new HashSet(hiddenNeuronAlleles.keySet());
 
-	// currentNeuronInnovationIds and nextNeuronInnovationIds keep track of where we are as we
-	// traverse the network
-	Map initialNeuronAlleles = NeatChromosomeUtility.getNeuronMap( material.getAlleles(),
-			( isForward ? NeuronType.INPUT : NeuronType.OUTPUT ) );
-	Set currentNeuronInnovationIds = new HashSet( initialNeuronAlleles.keySet() );
-	Set nextNeuronInnovationIds = new HashSet();
-	while ( !unvisitedConnAlleles.isEmpty() && !currentNeuronInnovationIds.isEmpty() ) {
-		nextNeuronInnovationIds.clear();
-		Collection connAlleles = isForward ? NeatChromosomeUtility
-				.extractConnectionAllelesForSrcNeurons( unvisitedConnAlleles,
-						currentNeuronInnovationIds ) : NeatChromosomeUtility
-				.extractConnectionAllelesForDestNeurons( unvisitedConnAlleles,
-						currentNeuronInnovationIds );
-		Iterator it = connAlleles.iterator();
-		while ( it.hasNext() ) {
-			ConnectionAllele connAllele = (ConnectionAllele) it.next();
-			nextNeuronInnovationIds.add( isForward ? connAllele.getDestNeuronId() : connAllele
-					.getSrcNeuronId() );
+		// currentNeuronInnovationIds and nextNeuronInnovationIds keep track of where we are as we
+		// traverse the network
+		Map initialNeuronAlleles = NeatChromosomeUtility.getNeuronMap(material.getAlleles(), (isForward ? NeuronType.INPUT : NeuronType.OUTPUT));
+		Set currentNeuronInnovationIds = new HashSet(initialNeuronAlleles.keySet());
+		Set nextNeuronInnovationIds = new HashSet();
+		while (!unvisitedConnAlleles.isEmpty() && !currentNeuronInnovationIds.isEmpty()) {
+			nextNeuronInnovationIds.clear();
+			Collection connAlleles = isForward ? NeatChromosomeUtility.extractConnectionAllelesForSrcNeurons(unvisitedConnAlleles, currentNeuronInnovationIds) : NeatChromosomeUtility.extractConnectionAllelesForDestNeurons(unvisitedConnAlleles, currentNeuronInnovationIds);
+			Iterator it = connAlleles.iterator();
+			while (it.hasNext()) {
+				ConnectionAllele connAllele = (ConnectionAllele) it.next();
+				nextNeuronInnovationIds.add(isForward ? connAllele.getDestNeuronId() : connAllele.getSrcNeuronId());
+			}
+			unvisitedNeuronInnovationIds.removeAll(nextNeuronInnovationIds);
+			currentNeuronInnovationIds.clear();
+			currentNeuronInnovationIds.addAll(nextNeuronInnovationIds);
+			unvisitedConnAlleles.removeAll(connAlleles);
 		}
-		unvisitedNeuronInnovationIds.removeAll( nextNeuronInnovationIds );
-		currentNeuronInnovationIds.clear();
-		currentNeuronInnovationIds.addAll( nextNeuronInnovationIds );
-		unvisitedConnAlleles.removeAll( connAlleles );
-	}
 
-	// return all unvisited neurons and connections
-	unvisitedAlleles.addAll( unvisitedConnAlleles );
-	Iterator it = unvisitedNeuronInnovationIds.iterator();
-	while ( it.hasNext() ) {
-		Long id = (Long) it.next();
-		NeuronAllele neuronAllele = (NeuronAllele) hiddenNeuronAlleles.get( id );
-		unvisitedAlleles.add( neuronAllele );
+		// return all unvisited neurons and connections
+		unvisitedAlleles.addAll(unvisitedConnAlleles);
+		Iterator it = unvisitedNeuronInnovationIds.iterator();
+		while (it.hasNext()) {
+			Long id = (Long) it.next();
+			NeuronAllele neuronAllele = (NeuronAllele) hiddenNeuronAlleles.get(id);
+			unvisitedAlleles.add(neuronAllele);
+		}
 	}
-}
 
 }

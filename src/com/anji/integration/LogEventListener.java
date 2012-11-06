@@ -34,56 +34,55 @@ import com.anji.util.Properties;
 
 /**
  * Writes log events to log4j framework.
+ * 
  * @author Philip Tucker
  */
 public class LogEventListener implements GeneticEventListener, Configurable {
 
-private static Logger logger = Logger.getLogger( LogEventListener.class );
+	private static Logger logger = Logger.getLogger(LogEventListener.class);
 
-private Configuration config = null;
+	private Configuration config = null;
 
-/**
- * @param newConfig JGAP configuration.
- */
-public LogEventListener( Configuration newConfig ) {
-	config = newConfig;
-}
-
-/**
- * no initialization parameters
- * @param p
- */
-public void init( Properties p ) {
-	// noop
-}
-
-/**
- * @param event <code>GeneticEvent.GENOTYPE_EVOLVED_EVENT</code> is the only event handled;
- * writes species count and stats of all fittest chromosomes.
- */
-public void geneticEventFired( GeneticEvent event ) {
-	if ( GeneticEvent.GENOTYPE_EVOLVED_EVENT.equals( event.getEventName() ) ) {
-		Genotype genotype = (Genotype) event.getSource();
-		Chromosome fittest = genotype.getFittestChromosome();
-		double maxFitnessValue = ( config.getBulkFitnessFunction() != null ) ? config
-				.getBulkFitnessFunction().getMaxFitnessValue() : config.getFitnessFunction()
-				.getMaxFitnessValue();
-		double fitness = ( maxFitnessValue == 0 ) ? fittest.getFitnessValue() : ( fittest
-				.getFitnessValue() / maxFitnessValue );
-		//logger.info( "species count: " + genotype.getSpecies().size() );
-		List chroms = genotype.getChromosomes();
-		Iterator iter = chroms.iterator();
-		int maxFitnessCount = 0;
-		while ( iter.hasNext() ) {
-			Chromosome c = (Chromosome) iter.next();
-			if ( c.getFitnessValue() == maxFitnessValue ) {
-				//logger.info( "max: id=" + c.getId() + " score=" + fitness + " size=" + c.size() );
-				++maxFitnessCount;
-			}
-		}
-// TODO		if ( maxFitnessCount > 0 )
-			//logger.info( "# chromosomes with max fitness: " + maxFitnessCount );
-		//logger.info( "champ: id=" + fittest.getId() + " score=" + fitness + " size=" + fittest.size() );
+	/**
+	 * @param newConfig JGAP configuration.
+	 */
+	public LogEventListener(Configuration newConfig) {
+		config = newConfig;
 	}
-}
+
+	/**
+	 * no initialization parameters
+	 * 
+	 * @param p
+	 */
+	public void init(Properties p) {
+		// noop
+	}
+
+	/**
+	 * @param event <code>GeneticEvent.GENOTYPE_EVOLVED_EVENT</code> is the only event handled; writes species count and
+	 *            stats of all fittest chromosomes.
+	 */
+	public void geneticEventFired(GeneticEvent event) {
+		if (GeneticEvent.GENOTYPE_EVOLVED_EVENT.equals(event.getEventName())) {
+			Genotype genotype = (Genotype) event.getSource();
+			Chromosome fittest = genotype.getFittestChromosome();
+			double maxFitnessValue = (config.getBulkFitnessFunction() != null) ? config.getBulkFitnessFunction().getMaxFitnessValue() : config.getFitnessFunction().getMaxFitnessValue();
+			double fitness = (maxFitnessValue == 0) ? fittest.getFitnessValue() : (fittest.getFitnessValue() / maxFitnessValue);
+			// logger.info( "species count: " + genotype.getSpecies().size() );
+			List chroms = genotype.getChromosomes();
+			Iterator iter = chroms.iterator();
+			int maxFitnessCount = 0;
+			while (iter.hasNext()) {
+				Chromosome c = (Chromosome) iter.next();
+				if (c.getFitnessValue() == maxFitnessValue) {
+					// logger.info( "max: id=" + c.getId() + " score=" + fitness + " size=" + c.size() );
+					++maxFitnessCount;
+				}
+			}
+			// TODO if ( maxFitnessCount > 0 )
+			// logger.info( "# chromosomes with max fitness: " + maxFitnessCount );
+			// logger.info( "champ: id=" + fittest.getId() + " score=" + fitness + " size=" + fittest.size() );
+		}
+	}
 }

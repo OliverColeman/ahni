@@ -1,6 +1,5 @@
 package com.anji.nn.activationfunction;
 
-
 /**
  * @author Oliver Coleman
  */
@@ -21,7 +20,7 @@ public class ConvertToSignedActivationFunction implements ActivationFunction {
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
-	public double apply( double input ) {
+	public double apply(double input) {
 		if (input <= 0)
 			input = 0;
 		else if (input >= 1)

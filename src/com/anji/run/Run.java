@@ -33,148 +33,153 @@ import com.anji.util.Properties;
 
 /**
  * Hibernate-able run object.
+ * 
  * @author Philip Tucker
  */
 public class Run implements GeneticEventListener, Configurable {
 
-private static final String RUN_KEY = "run.name";
+	private static final String RUN_KEY = "run.name";
 
-private int currentGenerationNumber = 1;
+	private int currentGenerationNumber = 1;
 
-/**
- * for hibernate
- */
-private Long id;
+	/**
+	 * for hibernate
+	 */
+	private Long id;
 
-private String name;
+	private String name;
 
-private List generations = new ArrayList();
+	private List generations = new ArrayList();
 
-private Properties props;
+	private Properties props;
 
-private Calendar startTime = Calendar.getInstance();
+	private Calendar startTime = Calendar.getInstance();
 
-// TODO population
+	// TODO population
 
-/**
- * @see java.lang.Object#hashCode()
- */
-public int hashCode() {
-	return id.hashCode();
-}
+	/**
+	 * @see java.lang.Object#hashCode()
+	 */
+	public int hashCode() {
+		return id.hashCode();
+	}
 
-/**
- * @see java.lang.Object#equals(java.lang.Object)
- */
-public boolean equals( Object o ) {
-	Run other = (Run) o;
-	return id.equals( other.id );
-}
+	/**
+	 * @see java.lang.Object#equals(java.lang.Object)
+	 */
+	public boolean equals(Object o) {
+		Run other = (Run) o;
+		return id.equals(other.id);
+	}
 
-/**
- * should call <code>init()</code> after this ctor, unless it's called from hibernate
- */
-public Run() {
-	// no-op
-}
+	/**
+	 * should call <code>init()</code> after this ctor, unless it's called from hibernate
+	 */
+	public Run() {
+		// no-op
+	}
 
-/**
- * @param aName
- */
-public Run( String aName ) {
-	name = aName;
-}
+	/**
+	 * @param aName
+	 */
+	public Run(String aName) {
+		name = aName;
+	}
 
-/**
- * Add new generation to run.
- * 
- * @param genotype
- */
-public void addGeneration( Genotype genotype ) {
-	generations.add( new Generation( genotype, currentGenerationNumber++ ) );
-}
+	/**
+	 * Add new generation to run.
+	 * 
+	 * @param genotype
+	 */
+	public void addGeneration(Genotype genotype) {
+		generations.add(new Generation(genotype, currentGenerationNumber++));
+	}
 
-/**
- * @see java.lang.Object#toString()
- */
-public String toString() {
-	return name;
-}
+	/**
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+		return name;
+	}
 
-/**
- * @see org.jgapcustomised.event.GeneticEventListener#geneticEventFired(org.jgapcustomised.event.GeneticEvent)
- */
-public void geneticEventFired( GeneticEvent event ) {
-	Genotype genotype = (Genotype) event.getSource();
-	if ( GeneticEvent.GENOTYPE_EVALUATED_EVENT.equals( event.getEventName() ) )
-		addGeneration( genotype );
-}
+	/**
+	 * @see org.jgapcustomised.event.GeneticEventListener#geneticEventFired(org.jgapcustomised.event.GeneticEvent)
+	 */
+	public void geneticEventFired(GeneticEvent event) {
+		Genotype genotype = (Genotype) event.getSource();
+		if (GeneticEvent.GENOTYPE_EVALUATED_EVENT.equals(event.getEventName()))
+			addGeneration(genotype);
+	}
 
-/**
- * @return unique run ID
- */
-public String getName() {
-	return name;
-}
+	/**
+	 * @return unique run ID
+	 */
+	public String getName() {
+		return name;
+	}
 
-/**
- * @return generations orderd by generation number
- */
-public List getGenerations() {
-	return generations;
-}
+	/**
+	 * @return generations orderd by generation number
+	 */
+	public List getGenerations() {
+		return generations;
+	}
 
-/**
- * for hibernate
- * @param aGenerations
- */
-private void setGenerations( List aGenerations ) {
-	generations = aGenerations;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param aGenerations
+	 */
+	private void setGenerations(List aGenerations) {
+		generations = aGenerations;
+	}
 
-/**
- * for hibernate
- * @param aName
- */
-private void setName( String aName ) {
-	name = aName;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param aName
+	 */
+	private void setName(String aName) {
+		name = aName;
+	}
 
-/**
- * for hibernate
- * @return unique id
- */
-private Long getId() {
-	return id;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @return unique id
+	 */
+	private Long getId() {
+		return id;
+	}
 
-/**
- * for hibernate
- * @param aId
- */
-private void setId( Long aId ) {
-	id = aId;
-}
+	/**
+	 * for hibernate
+	 * 
+	 * @param aId
+	 */
+	private void setId(Long aId) {
+		id = aId;
+	}
 
-/**
- * @see com.anji.util.Configurable#init(com.anji.util.Properties)
- */
-public void init( Properties aProps ) throws Exception {
-	props = aProps;
-	name = props.getProperty( RUN_KEY );
-}
+	/**
+	 * @see com.anji.util.Configurable#init(com.anji.util.Properties)
+	 */
+	public void init(Properties aProps) throws Exception {
+		props = aProps;
+		name = props.getProperty(RUN_KEY);
+	}
 
-/**
- * @return properties
- */
-public Properties getProps() {
-	return props;
-}
+	/**
+	 * @return properties
+	 */
+	public Properties getProps() {
+		return props;
+	}
 
-/**
- * @return time when this object was created
- */
-public Calendar getStartTime() {
-	return startTime;
-}
+	/**
+	 * @return time when this object was created
+	 */
+	public Calendar getStartTime() {
+		return startTime;
+	}
 }
