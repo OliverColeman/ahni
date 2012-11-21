@@ -23,10 +23,6 @@ import com.anji.util.Properties;
  * (desired) output pattern pairs, determines fitness based on how close the output of the network encoded by each
  * genome is to the target output given some input.</p>
  * 
- * <p>Subclasses may wish to override {@link #evolutionFinished(ojc.ahni.hyperneat.HyperNEATEvolver)} to perform testing or other analysis
- * on the fittest and/or best performing Chromosomes evolved during the run; the method
- * {@link #generateSubstrate(Chromosome, Activator)} may be used to create substrates for a Chromosome.</p>
- * 
  * <p>See {@link ojc.ahni.util.TargetFitnessCalculator} for a list of property keys to specify how the error and fitness calculations are performed.</p>
  * 
  * @author Oliver Coleman

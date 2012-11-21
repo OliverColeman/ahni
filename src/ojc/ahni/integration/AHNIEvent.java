@@ -61,7 +61,7 @@ public class AHNIEvent {
   }
   
   /**
-   * Returns the {@link #Type} of this event.
+   * Returns the {@link AHNIEvent.Type} of this event.
    */
   public Type getType() {
 	  return type;

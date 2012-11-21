@@ -659,8 +659,6 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 	 * @param cppn The CPPN to use.
 	 * @param n The source or target neuron position.
 	 * @param outgoing Specifies whether the connection is for a source (outgoing = true) or target node (outgoing = false).
-	 * @param initalDepth The minimum depth of the tree, this specifies the minimum resolution.
-	 * @param maxDepth The maximum depth of the tree, this specifies the maximum resolution.
 	 * @param tempStorageForCPPNValues A list store the CPPN value for each node in the quadtree. Allows reuse of same list for performance reasons.
 	 * @return The root of the generated quadtree, each QuadPoint stores CPPN activation level for its position.
 	 */

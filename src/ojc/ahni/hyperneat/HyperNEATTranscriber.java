@@ -156,7 +156,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	protected short cppnOutputCount;
 
 	/**
-	 * Transcriber for network for use as a CPPN. Not usually accessed directly, see {@link #CPPN}.
+	 * Transcriber for network for use as a CPPN. Not usually accessed directly, see {@link HyperNEATTranscriber.CPPN}.
 	 */
 	protected Transcriber cppnTranscriber;
 
@@ -170,7 +170,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	int[] cppnIdxL; // link expression (either a single output for all layers or one output per layer)
 	
 	/**
-	 * Subclasses may set this to "force" or "prevent" before calling {@link #super.init(Properties)} to either force or prevent the use of Z coordinate inputs for the CPPN (both source and target neuron Z coordinates will be affected).
+	 * Subclasses may set this to "force" or "prevent" before calling super.init(Properties) to either force or prevent the use of Z coordinate inputs for the CPPN (both source and target neuron Z coordinates will be affected).
 	 */
 	protected String zCoordsForCPPN = "";
 

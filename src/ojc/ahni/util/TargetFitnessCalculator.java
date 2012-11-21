@@ -23,7 +23,7 @@ import com.anji.util.Properties;
  * <p>Utility class to perform target fitness function calculations.</p>
  * 
  * @see ojc.ahni.integration.TargetFitnessFunctionMT
- * @see ojc.ahni.hyperneat.HyperNEATTTargetFitnessFunction
+ * @see ojc.ahni.hyperneat.HyperNEATTargetFitnessFunction
  * @author Oliver Coleman
  */
 public class TargetFitnessCalculator implements Configurable {
@@ -47,7 +47,7 @@ public class TargetFitnessCalculator implements Configurable {
 	 * The type of error calculation to perform over the error of each trial. 
 	 * Any type in {@link TargetFitnessCalculator.ErrorType} may be used.
 	 * The default is RMSE.
-	 * @see  {@link #ERROR_TYPE_OUTPUT_KEY}
+	 * @see #ERROR_TYPE_OUTPUT_KEY
 	 */
 	public static final String ERROR_TYPE_TRIAL_KEY = "fitness.function.error.type.trial";
 	
@@ -55,7 +55,7 @@ public class TargetFitnessCalculator implements Configurable {
 	 * The type of error calculation to perform over the error of each output.
 	 * Any type in {@link TargetFitnessCalculator.ErrorType} may be used.
 	 * The default is SAE.
-	 * @see  {@link #ERROR_TYPE_TRIAL_KEY}
+	 * @see #ERROR_TYPE_TRIAL_KEY
 	 */
 	public static final String ERROR_TYPE_OUTPUT_KEY = "fitness.function.error.type.output";
 	

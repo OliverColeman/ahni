@@ -44,6 +44,7 @@ import com.anji.nn.*;
 
 /**
  * Configures and performs an AHNI evolutionary run.
+ * @see Run
  * 
  * @author Oliver Coleman
  */
@@ -203,8 +204,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 	}
 	
 	/**
-	 * Get the configuration object used by this evolver. 
-	 * The configuration can be used to register for genetic events fired by JGAP.
+	 * Get the configuration object, primarily used by JGAP and ANJI. 
 	 * @see org.jgapcustomised.Configuration
 	 */
 	public HyperNEATConfiguration getConfig() {
@@ -233,8 +233,8 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 
 	/**
 	 * Perform a single run. This is synchronised as the object contains 
-	 * state variables (other than configurable properties) as so multiple runs should not be performed in parallel.
-	 * This is in contrast to most Configurable objects that do not contain state variables other than configurable properties.
+	 * state variables (other than configurable properties) and so multiple runs should not be performed in parallel.
+	 * This is in contrast to most {@link com.anji.util.Configurable} objects that do not contain state variables other than configurable properties.
 	 * @return An array containing the best performance achieved in each generation.
 	 * @throws Exception
 	 */

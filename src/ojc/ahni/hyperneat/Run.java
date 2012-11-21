@@ -17,7 +17,12 @@ import com.anji.util.Misc;
 import com.anji.util.Properties;
 
 /**
- * This is the main class from which experiment runs are performed.
+ * <p>This is the main class from which experiment runs are performed.
+ * The main purpose of this class is to allow performing multiple evolutionary runs and aggregating the result </p>
+ * <p>For each run a new {@link AHNIRunProperties} object is generated from the properties file specified on the command line. The AHNIRunProperties
+ * object encapsulates all the configuration parameters for a run, and can be used to retrieve these properties as well as generate and retrieve 
+ * singletons of most components used in a run (e.g. the {@link HyperNEATEvolver}, {@link org.jgapcustomised.BulkFitnessFunction} and 
+ * {@link com.anji.integration.Transcriber}).</p> 
  */
 public class Run {
 	private static Logger logger = Logger.getLogger(Run.class);
