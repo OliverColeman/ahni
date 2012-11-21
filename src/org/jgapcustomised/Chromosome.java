@@ -204,9 +204,6 @@ public class Chromosome implements Comparable, Serializable {
 			m_fitnessValue = a_newFitnessValue;
 		else
 			m_fitnessValue = 1;
-
-		// Reset performance.
-		m_performanceValue = -1;
 	}
 
 	public double getPerformanceValue() {

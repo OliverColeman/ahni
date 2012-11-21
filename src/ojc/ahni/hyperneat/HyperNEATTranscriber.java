@@ -20,21 +20,66 @@ import com.anji.util.Properties;
 public abstract class HyperNEATTranscriber<T extends Activator> implements Transcriber<T>, Configurable {
 	private final static Logger logger = Logger.getLogger(HyperNEATTranscriber.class);
 
+	/**
+	 * Set to true to restrict the substrate network to a strictly feed-forward topology.
+	 */
 	public static final String HYPERNEAT_FEED_FORWARD = "ann.hyperneat.feedforward";
+	/**
+	 * Enable bias connections in the substrate network.
+	 */
 	public static final String HYPERNEAT_ENABLE_BIAS = "ann.hyperneat.enablebias";
+	/**
+	 * If true indicates that the CPPN should receive the delta value for each axis between the source and target neuron coordinates.
+	 */
 	public static final String HYPERNEAT_INCLUDE_DELTA = "ann.hyperneat.includedelta";
+	/**
+	 * If true indicates that the CPPN should receive the angle in the XY plane between the source and target neuron coordinates 
+	 * (relative to the line X axis).
+	 */
 	public static final String HYPERNEAT_INCLUDE_ANGLE = "ann.hyperneat.includeangle";
+	/**
+	 * If true indicates that instead of using a separate output from the CPPN to specify weight values for each weight layer in a feed-forward network, the layer coordinate is input to the CPPN and only a single output from CPPN is used to specify weight values for all weight layers.
+	 */
 	public static final String HYPERNEAT_LAYER_ENCODING = "ann.hyperneat.useinputlayerencoding";
+	/**
+	 * The minimum CPPN output required to produce a non-zero weight in the substrate network. 
+	 */
 	public static final String HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD = "ann.hyperneat.connection.expression.threshold";
+	/**
+	 * The minimum weight values in the substrate network.
+	 */
 	public static final String HYPERNEAT_CONNECTION_WEIGHT_MIN = "ann.hyperneat.connection.weight.min";
+	/**
+	 * The maximum weight values in the substrate network.
+	 */
 	public static final String HYPERNEAT_CONNECTION_WEIGHT_MAX = "ann.hyperneat.connection.weight.max";
+	/**
+	 * Limits the incoming connections to a target neuron to include those from source neurons within the specified range of the target neuron. Set this to -1 to disable it.
+	 */
 	public static final String HYPERNEAT_CONNECTION_RANGE = "ann.hyperneat.connection.range";
-
+	/**
+	 * The number of layers in the substrate network.
+	 */
 	public static final String SUBSTRATE_DEPTH = "ann.hyperneat.depth";
+	/**
+	 * Comma separated list of the height of each layer in the network, including input and output layers and starting with the input layer.
+	 */
 	public static final String SUBSTRATE_HEIGHT = "ann.hyperneat.height";
+	/**
+	 * Comma separated list of the width of each layer in the network, including input and output layers and starting with the input layer.
+	 */
 	public static final String SUBSTRATE_WIDTH = "ann.hyperneat.width";
+	/**
+	 * For recurrent networks, the number of activation cycles to perform each time the substrate network is presented with new input and queried for its output.
+	 */
 	public static final String SUBSTRATE_CYCLES_PER_STEP = "ann.hyperneat.cyclesperstep";
-
+	/**
+	 * Enable or disable Link Expression Output (LEO). See P. Verbancsics and K. O. Stanley (2011) Constraining Connectivity to Encourage Modularity in 
+	 * HyperNEAT. In Proceedings of the Genetic and Evolutionary Computation Conference (GECCO 2011). Default is "false".
+	 */
+	public static final String HYPERNEAT_LEO = "ann.hyperneat.leo";
+	
+	
 	/**
 	 * The width of each layer in the substrate.
 	 */
@@ -94,6 +139,10 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 */
 	protected int cyclesPerStep;
 	/**
+	 * If true indicates that Link Expression Output is enabled.
+	 */
+	protected boolean enableLEO = false;
+	/**
 	 * The number of inputs to the CPPN.
 	 * 
 	 * @see #getCPPNInputCount()
@@ -118,6 +167,12 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	// Index of output signals in CPPN output vector.
 	int[] cppnIdxW; // weights (either a single output for all layers or one output per layer)
 	int[] cppnIdxB = new int[0]; // bias (either a single output for all layers or one output per layer)
+	int[] cppnIdxL; // link expression (either a single output for all layers or one output per layer)
+	
+	/**
+	 * Subclasses may set this to "force" or "prevent" before calling {@link #super.init(Properties)} to either force or prevent the use of Z coordinate inputs for the CPPN (both source and target neuron Z coordinates will be affected).
+	 */
+	protected String zCoordsForCPPN = "";
 
 	/**
 	 * This method should be called from overriding methods.
@@ -138,6 +193,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		connectionRange = props.getIntProperty(HYPERNEAT_CONNECTION_RANGE, -1);
 		depth = props.getIntProperty(SUBSTRATE_DEPTH);
 		cyclesPerStep = feedForward ? depth - 1 : props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP, 1);
+		enableLEO = props.getBooleanProperty(HYPERNEAT_LEO, enableLEO);
 
 		String[] heightStr = props.getProperty(SUBSTRATE_HEIGHT).split(",");
 		String[] widthStr = props.getProperty(SUBSTRATE_WIDTH).split(",");
@@ -147,8 +203,8 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 			throw new IllegalArgumentException("Number of comma-separated layer dimensions in " + SUBSTRATE_HEIGHT + " or " + SUBSTRATE_WIDTH + " does not match " + SUBSTRATE_DEPTH + ".");
 		}
 		for (int l = 0; l < depth; l++) {
-			height[l] = Integer.parseInt(heightStr[l]);
-			width[l] = Integer.parseInt(widthStr[l]);
+			height[l] = Integer.parseInt(heightStr[l].trim());
+			width[l] = Integer.parseInt(widthStr[l].trim());
 		}
 
 		// Determine CPPN input size and mapping.
@@ -157,22 +213,28 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		cppnIdxTY = cppnInputCount++;
 		cppnIdxSX = cppnInputCount++;
 		cppnIdxSY = cppnInputCount++;
-		if (feedForward && layerEncodingIsInput && depth > 2 || !feedForward && depth > 1) {
+		logger.info("CPPN: Added bias, tx, ty, sx, sy inputs.");
+		if (zCoordsForCPPN.equals("force") || (!zCoordsForCPPN.equals("prevent") && (feedForward && layerEncodingIsInput && depth > 2 || !feedForward && depth > 1))) {
 			cppnIdxTZ = cppnInputCount++;
+			logger.info("CPPN: Added tz input.");
 
-			if (!feedForward) {
+			if (zCoordsForCPPN.equals("force") || !feedForward) {
 				cppnIdxSZ = cppnInputCount++;
+				logger.info("CPPN: Added sz input.");
 				if (includeDelta) {
 					cppnIdxDZ = cppnInputCount++; // z delta
+					logger.info("CPPN: Added delta z input.");
 				}
 			}
 		}
 		if (includeDelta) {
 			cppnIdxDY = cppnInputCount++; // y delta
 			cppnIdxDX = cppnInputCount++; // x delta
+			logger.info("CPPN: Added delta x and y inputs.");
 		}
 		if (includeAngle) {
 			cppnIdxAn = cppnInputCount++; // angle
+			logger.info("CPPN: Added angle input.");
 		}
 
 		// Determine CPPN output size and mapping.
@@ -180,22 +242,38 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		if (layerEncodingIsInput) { // same output for all layers
 			cppnIdxW = new int[1];
 			cppnIdxW[0] = cppnOutputCount++; // weight value
+			logger.info("CPPN: Added single weight output.");
 
 			if (enableBias) {
 				cppnIdxB = new int[1];
 				cppnIdxB[0] = cppnOutputCount++; // bias value
+				logger.info("CPPN: Added single bias output.");
+			}
+			
+			if (enableLEO) {
+				cppnIdxL = new int[1];
+				cppnIdxL[0] = cppnOutputCount++; // bias value
+				logger.info("CPPN: Added single link expression output.");
 			}
 		} else { // one output per layer
-			int layerOutputCount = Math.max(1, depth - 1); // Allow for depth of 1 (2D horizontal substrate, eg for
-															// ES-HypernEAT).
+			int layerOutputCount = Math.max(1, depth - 1); // Allow for depth of 1 (2D horizontal substrate)
 			cppnIdxW = new int[layerOutputCount];
 			for (int w = 0; w < layerOutputCount; w++)
 				cppnIdxW[w] = cppnOutputCount++; // weight value
+			logger.info("CPPN: Added " + layerOutputCount + " weight outputs.");
 
 			if (enableBias) {
 				cppnIdxB = new int[layerOutputCount];
 				for (int w = 0; w < layerOutputCount; w++)
 					cppnIdxB[w] = cppnOutputCount++; // bias value
+				logger.info("CPPN: Added " + layerOutputCount + " bias outputs.");
+			}
+			
+			if (enableLEO) {
+				cppnIdxL = new int[layerOutputCount];
+				for (int w = 0; w < layerOutputCount; w++)
+					cppnIdxL[w] = cppnOutputCount++; // leo value
+				logger.info("CPPN: Added " + layerOutputCount + " link expression outputs.");
 			}
 		}
 
@@ -399,6 +477,21 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		 */
 		public double getBiasWeight(int sourceLayerIndex) {
 			return cppnOutput[cppnIdxB[sourceLayerIndex]];
+		}
+		
+		/**
+		 * Get the value of the link expression output (see {@link #HYPERNEAT_LEO}). Should be called after calling {@link #query()}.
+		 */
+		public double getLEO() {
+			return cppnOutput[cppnIdxL[0]];
+		}
+
+		/**
+		 * Get the value of the link expression output (see {@link #HYPERNEAT_LEO}) for the specified layer in a layered feed-forward network
+		 * encoded with {@link #HYPERNEAT_LAYER_ENCODING} set to false. Should be called after calling {@link #query()}.
+		 */
+		public double getLEO(int sourceLayerIndex) {
+			return cppnOutput[cppnIdxL[sourceLayerIndex]];
 		}
 	}
 }

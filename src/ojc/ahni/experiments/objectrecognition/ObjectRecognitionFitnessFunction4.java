@@ -16,6 +16,7 @@ import ojc.ahni.hyperneat.GridNet;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
 import ojc.ahni.hyperneat.HyperNEATFitnessFunction;
 import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
+import ojc.ahni.integration.AHNIRunProperties;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
@@ -48,6 +49,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 	private static int maxFitnessValue = 1000000;
 	private static int numTrials = 200;
 
+	private AHNIRunProperties properties;
 	private double bestPerformanceSoFar = 0;
 	private double bestFitnessSoFar = 0;
 	public double bestPCSoFar = 0;
@@ -89,6 +91,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 	double connectionWeightMax;
 
 	public void init(com.anji.util.Properties props) {
+		this.properties = (AHNIRunProperties) props;
 		super.init(props);
 
 		shapeSize = props.getIntProperty(SHAPE_SIZE_KEY, shapeSize);
@@ -499,7 +502,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 				yOffset += weightImage[layer].getHeight() + imageSpacing;
 			}
 
-			writeImage(output, imageDir + "networks" + File.separatorChar + generation + "-" + scaleCount + "-" + genotype.getId() + "-" + percentCorrect, "weights");
+			writeImage(output, imageDir + "networks" + File.separatorChar + properties.getEvolver().getGeneration() + "-" + scaleCount + "-" + genotype.getId() + "-" + percentCorrect, "weights");
 
 			// Generate image for activation levels for some trials
 			for (int t = 0; t < 25; t++) {
@@ -544,7 +547,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 					yOffset += activationImage[layer].getHeight() + imageSpacing;
 				}
 
-				writeImage(output, imageDir + "networks" + File.separatorChar + generation + "-" + scaleCount + "-" + genotype.getId() + "-" + percentCorrect, "activation-" + t);
+				writeImage(output, imageDir + "networks" + File.separatorChar + properties.getEvolver().getGeneration() + "-" + scaleCount + "-" + genotype.getId() + "-" + percentCorrect, "activation-" + t);
 			}
 		}
 

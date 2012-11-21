@@ -19,6 +19,8 @@
  */
 package com.anji.integration;
 
+import ojc.ahni.integration.BainNN;
+
 import com.anji.util.XmlPersistable;
 
 /**
@@ -99,4 +101,14 @@ public interface Activator extends XmlPersistable {
 	 *         the output vector.
 	 */
 	public int[] getOutputDimension();
+	
+	/**
+	 * @return the total number of inputs.
+	 */
+	public int getInputCount();
+	
+	/**
+	 * @return the total number of outputs.
+	 */
+	public int getOutputCount();
 }

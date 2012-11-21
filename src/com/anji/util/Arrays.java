@@ -43,6 +43,21 @@ public class Arrays {
 	 * @param a
 	 * @return <code>String</code> representation of array, in brackets with comma separators
 	 */
+	public static String toString(float[] a) {
+		StringBuffer result = new StringBuffer();
+		result.append("[");
+		if (a.length > 0)
+			result.append(a[0]);
+		for (int i = 1; i < a.length; ++i)
+			result.append(",").append(a[0]);
+		result.append("]");
+		return result.toString();
+	}
+
+	/**
+	 * @param a
+	 * @return <code>String</code> representation of array, in brackets with comma separators
+	 */
 	public static String toString(double[] a) {
 		StringBuffer result = new StringBuffer();
 		result.append("[");

@@ -2,19 +2,22 @@ package ojc.ahni.hyperneat;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
-import ojc.ahni.integration.BainNN;
+import ojc.ahni.integration.*;
 import ojc.bain.NeuralNetwork;
 import ojc.bain.base.ComponentCollection;
 import ojc.bain.base.NeuronCollection;
@@ -25,7 +28,6 @@ import org.apache.log4j.Logger;
 import org.jgapcustomised.Chromosome;
 
 import com.amd.aparapi.Kernel;
-import com.anji.integration.AnjiNetTranscriber;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
 import com.anji.util.Configurable;
@@ -46,7 +48,7 @@ import com.anji.util.Properties;
  * 
  * @author Oliver Coleman
  */
-public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
+public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> implements AHNIEventListener {
 	private final static Logger logger = Logger.getLogger(ESHyperNEATTranscriberBain.class);
 
 	public static final String ES_HYPERNEAT_ITERATIONS = "ann.eshyperneat.iterations";
@@ -58,17 +60,36 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 	public static final String ES_HYPERNEAT_INPUT_POSITIONS = "ann.eshyperneat.input.positions";
 	public static final String ES_HYPERNEAT_OUTPUT_POSITIONS = "ann.eshyperneat.output.positions";
 	public static final String ES_HYPERNEAT_RECORD_COORDINATES = "ann.eshyperneat.record.coordinates";
+	/**
+	 * If true then the substrate is considered as occupying a 3D space, with the 
+	 * input and outputs located on the XY plane at z=-1 and z=1 respectively, and
+	 * hidden neurons located on the ZX plane at y=0.
+	 * If false then all neurons are located in a 2D plane with X-Y axes.
+	 */
+	public static final String ES_HYPERNEAT_3D_PSEUDO = "ann.eshyperneat.3D.pseudo";
 
 	private Properties properties;
 
-	List<TempNeuron> inputNeuronPositions;
-	List<TempNeuron> outputNeuronPositions;
+	List<Neuron> inputNeuronPositions;
+	List<Neuron> outputNeuronPositions;
 	int esIterations = 1;
 	int initialDepth = 3;
 	int maxDepth = 3;
 	double divisionThreshold = 0.03;
 	double varianceThreshold = 0.03;
 	double bandThrehold = 0.3;
+	boolean pseudo3D = false;
+	
+	double runningAvgHiddenNeuronCount = 16;
+	double runningAvgSynapseCount = 160;
+	int maxQuadTreeSize = 1;
+	
+	int maxNeuronCount = 0;
+	int maxSynapseCount = 0;
+	int avgNeuronCount = 0;
+	int avgSynapseCount = 0;
+	int noPathFromInputToOutputCount = 0;
+	int popSize = 0;
 
 	public ESHyperNEATTranscriberBain() {
 	}
@@ -82,15 +103,65 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 	 */
 	@Override
 	public void init(Properties props) {
-		inputNeuronPositions = extractCoords(props.getProperty(ES_HYPERNEAT_INPUT_POSITIONS).trim(), TempNeuron.INPUT);
-		outputNeuronPositions = extractCoords(props.getProperty(ES_HYPERNEAT_OUTPUT_POSITIONS).trim(), TempNeuron.OUTPUT);
-
+		pseudo3D = props.getBooleanProperty(ES_HYPERNEAT_3D_PSEUDO, pseudo3D);
+		
+		if (props.containsKey(ES_HYPERNEAT_INPUT_POSITIONS)) {
+			inputNeuronPositions = extractCoords(props.getProperty(ES_HYPERNEAT_INPUT_POSITIONS).trim(), Neuron.INPUT);
+		}
+		if (props.containsKey(ES_HYPERNEAT_OUTPUT_POSITIONS)) {
+			outputNeuronPositions = extractCoords(props.getProperty(ES_HYPERNEAT_OUTPUT_POSITIONS).trim(), Neuron.OUTPUT);
+		}
+		
+		zCoordsForCPPN = pseudo3D ? "force" : "prevent";
 		// Set substrate dimensions to prevent HyperNEATTranscriber.init() throwing an error.
-		props.put(SUBSTRATE_DEPTH, "1");
-		props.put(SUBSTRATE_HEIGHT, "1");
-		props.put(SUBSTRATE_WIDTH, ""+inputNeuronPositions.size()); // Not necessarily accurate but allows some classes to function properly (eg TestTargetFitnessFunction).
-
+		if (!props.containsKey(SUBSTRATE_DEPTH)) {
+			// If depth not specified then use a default depth of 2 (input and output layer), hidden neurons do not exist in a conventional layer.
+			props.put(SUBSTRATE_DEPTH, "2");
+		}
+		// Allow specifying substrate input and/or output layer dimensions in case 2D layers are important. 
+		if (!props.containsKey(SUBSTRATE_HEIGHT) || !props.containsKey(SUBSTRATE_WIDTH)) {
+			// Otherwise just configure as 1D vectors.
+			if (inputNeuronPositions != null && outputNeuronPositions != null) {
+				String width = ""+inputNeuronPositions.size(), height = "1";
+				// There are no real hidden layers, just set minimal dimensions for them.
+				for (int d = 1; d < depth-1; d++) {
+					width += ", 1";
+					height += ", 1";
+				}
+				width += ", " + outputNeuronPositions.size();
+				height += ", 1";
+				props.put(SUBSTRATE_WIDTH, width);
+				props.put(SUBSTRATE_HEIGHT, height);
+			}
+			else {
+				throw new IllegalArgumentException("Neither input and output layer dimensions or input and output neuron coordinates have been specified.");
+			}
+		}
+		
+		// There are no real layers.
+		boolean warn = props.getBooleanProperty(HYPERNEAT_LAYER_ENCODING, false);
+		props.put(HYPERNEAT_LAYER_ENCODING, "true");
+		if (warn) {
+			logger.info("Forcing " + HYPERNEAT_LAYER_ENCODING + " to true (there are no real layers in ES-HyperNEAT substrate).");
+		}
+		
 		super.init(props);
+		
+		// Automatically generate input neuron coordinates if they were not specified.
+		if (inputNeuronPositions == null) {
+			inputNeuronPositions = generateCoords(width[0], height[0], Neuron.INPUT);
+			logger.info("Input coordinates are: " + inputNeuronPositions);
+		}
+		else if (inputNeuronPositions.size() != width[0] * height[0]) {
+			throw new IllegalArgumentException("Input layer size does not match number of input neurons specified by " + ES_HYPERNEAT_INPUT_POSITIONS + ".");
+		}
+
+		// Automatically generate output neuron coordinates if they were not specified.
+		if (outputNeuronPositions == null) {
+			outputNeuronPositions = generateCoords(width[depth-1], height[depth-1], Neuron.OUTPUT);
+			logger.info("Output coordinates are: " + outputNeuronPositions);
+		}
+
 		this.properties = props;
 		esIterations = props.getIntProperty(ES_HYPERNEAT_ITERATIONS, esIterations);
 		initialDepth = props.getIntProperty(ES_HYPERNEAT_INITIAL_DEPTH, initialDepth);
@@ -98,19 +169,51 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		divisionThreshold = props.getDoubleProperty(ES_HYPERNEAT_DIVISION_THRESHOLD, divisionThreshold);
 		varianceThreshold = props.getDoubleProperty(ES_HYPERNEAT_VARIANCE_THRESHOLD, varianceThreshold);
 		bandThrehold = props.getDoubleProperty(ES_HYPERNEAT_BAND_THRESHOLD, bandThrehold);
-
+		
 		// Override setting of cycles per step based on depth for feed-forward networks.
 		cyclesPerStep = props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP, 1);
+		
+		maxQuadTreeSize = (int) Math.pow(4, maxDepth+0.25);
+		
+		((AHNIRunProperties) props).getEvolver().addEventListener(this);
 	}
 
-	private ArrayList<TempNeuron> extractCoords(String positions, int type) {
+	private ArrayList<Neuron> extractCoords(String positions, int type) {
 		Pattern coordPattern = Pattern.compile("(\\(\\s*-?\\d+\\.?\\d*\\s*,\\s*-?\\d+\\.?\\d*\\s*\\)\\s*)+");
 		Matcher positionsMatcher = coordPattern.matcher(positions);
-		ArrayList<TempNeuron> points = new ArrayList<TempNeuron>(positionsMatcher.groupCount());
+		ArrayList<Neuron> points = new ArrayList<Neuron>(positionsMatcher.groupCount());
+		double z = pseudo3D ? (type == Neuron.INPUT ? -1 : 1) : 0;
 		while (positionsMatcher.find()) {
 			String[] coords = positionsMatcher.group(1).replaceAll("[\\(\\)]", "").split(",");
-			TempNeuron p = new TempNeuron(Double.parseDouble(coords[0].trim()), Double.parseDouble(coords[1].trim()), type);
+			Neuron p = new Neuron(Double.parseDouble(coords[0].trim()), Double.parseDouble(coords[1].trim()), z, type);
 			points.add(p);
+		}
+		return points;
+	}
+	
+	private ArrayList<Neuron> generateCoords(int width, int height, int type) {
+		ArrayList<Neuron> points = new ArrayList<Neuron>(width * height);
+		if (pseudo3D) {
+			double z = type == Neuron.INPUT ? -1 : 1;
+			for (int yi = 0; yi < height; yi++) {
+				double y = height > 1 ? (yi / (height - 1d)) * 2 - 1 : 0;
+				for (int xi = 0; xi < width; xi++) {
+					double x = width > 1 ? (xi / (width - 1d)) * 2 - 1 : 0;
+					Neuron p = new Neuron(x, y, z, type);
+					points.add(p);
+				}
+			}
+		}
+		else {
+			if (height > 1) {
+				throw new IllegalArgumentException("Either the input or output layer height is greater 1 for a 2D substrate.");
+			}
+			double y = type == Neuron.INPUT ? -1 : 1;
+			for (int xi = 0; xi < width; xi++) {
+				double x = width > 1 ? (xi / (width - 1d)) * 2 - 1 : 0;
+				Neuron p = new Neuron(x, y, 0, type);
+				points.add(p);
+			}
 		}
 		return points;
 	}
@@ -128,9 +231,9 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		return generateSubstrate(genotype);
 	}
 
-	/*
-	 * The main method that generations a list of ANN connections based on the information in the underlying hypercube.
-	 * Input : CPPN, InputPositions, OutputPositions, ES-HyperNEAT parameters Output: Connections, HiddenNodes
+	/**
+	 * Generate a substrate from a Chromosome according to the ES-HyperNEAT algorithm.
+	 * @param genotype The genotype from which to generate a substrate.
 	 */
 	public BainNN generateSubstrate(Chromosome genotype) throws TranscriberException {
 		long startTime = System.currentTimeMillis();
@@ -138,109 +241,112 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 
 		int inputCount = inputNeuronPositions.size();
 		int outputCount = outputNeuronPositions.size();
-		List<TempNeuron> inputNeuronPositionsCopy = new ArrayList<TempNeuron>(inputCount);
-		for (TempNeuron input : inputNeuronPositions) {
-			inputNeuronPositionsCopy.add(new TempNeuron(input.x, input.y, input.type));
+		List<Neuron> inputNeuronPositionsCopy = new ArrayList<Neuron>(inputCount);
+		for (Neuron input : inputNeuronPositions) {
+			inputNeuronPositionsCopy.add(new Neuron(input.x, input.y, input.z, input.type));
 		}
-		List<TempNeuron> outputNeuronPositionsCopy = new ArrayList<TempNeuron>(outputCount);
-		for (TempNeuron output : outputNeuronPositions) {
-			outputNeuronPositionsCopy.add(new TempNeuron(output.x, output.y, output.type));
+		List<Neuron> outputNeuronPositionsCopy = new ArrayList<Neuron>(outputCount);
+		for (Neuron output : outputNeuronPositions) {
+			outputNeuronPositionsCopy.add(new Neuron(output.x, output.y, output.z, output.type));
 		}
 		
-		List<TempNeuron> hiddenNeurons = new LinkedList<TempNeuron>();
-		List<Connection> connections = new ArrayList<Connection>();
-		List<TempConnection> tempConnections = new LinkedList<TempConnection>();
-
+		// Use a hash map to be able to quickly find if a node already exists at a given location.
+		Map<Neuron, Neuron> hiddenNeurons = new HashMap<Neuron, Neuron>((int) runningAvgHiddenNeuronCount);
+		List<Connection> connections = new ArrayList<Connection>((int) runningAvgSynapseCount);
+		List<TempConnection> tempConnections = new ArrayList<TempConnection>((int) runningAvgSynapseCount);
+		
+		// This list is passed to the quadTreeInitialisation and pruneAndExpress methods to be reused for performance reasons.
+		double[] tempStorageForCPPNValues = new double[maxQuadTreeSize];
+		
 		// Generate connections from input nodes.
-		for (TempNeuron input : inputNeuronPositionsCopy) {
-			// Analyse outgoing connectivity pattern from this input
-			QuadPoint root = quadTreeInitialisation(cppn, input.x, input.y, true, initialDepth, maxDepth);
+		for (Neuron input : inputNeuronPositionsCopy) {
+			// Analyse outgoing connectivity pattern from this input.		
+			QuadPoint root = quadTreeInitialisation(cppn, input, true, tempStorageForCPPNValues);
+			
+			// Traverse quad tree and retrieve connections.
 			tempConnections.clear();
-			// Traverse quad tree and add connections to list
-			pruneAndExpress(cppn, input.x, input.y, tempConnections, root, true, maxDepth);
-
+			pruneAndExpress(cppn, input, tempConnections, root, true, tempStorageForCPPNValues);
+			
 			for (TempConnection tempCon : tempConnections) {
-				TempNeuron newHidden = new TempNeuron(tempCon.x2, tempCon.y2, TempNeuron.HIDDEN);
-				int targetIndex = hiddenNeurons.indexOf(newHidden);
-				if (targetIndex == -1) {
-					hiddenNeurons.add(newHidden);
+				Neuron newHidden = new Neuron(tempCon.targetPoint.x, tempCon.targetPoint.y, tempCon.targetPoint.z, Neuron.HIDDEN);
+				if (hiddenNeurons.containsKey(newHidden)) {
+					newHidden = hiddenNeurons.get(newHidden);
 				} else {
-					newHidden = hiddenNeurons.get(targetIndex);
+					hiddenNeurons.put(newHidden, newHidden);
 				}
 				double weight = tempCon.weight < 0 ? tempCon.weight * connectionWeightMin : tempCon.weight * connectionWeightMax;
 				connections.add(new Connection(input, newHidden, weight));
 			}
 		}
-
 		tempConnections.clear();
-
-		List<TempNeuron> unexploredHiddenNodes = new LinkedList<TempNeuron>();
-		unexploredHiddenNodes.addAll(hiddenNeurons);
-
+		
+		// Iteratively search for hidden nodes from those already found.
+		Map<Neuron, Neuron> unexploredHiddenNodes = new HashMap<Neuron, Neuron>(hiddenNeurons); // Use a hash map to quickly be able to find and remove a node.
 		for (int step = 0; step < esIterations; step++) {
-			for (TempNeuron hiddenPoint : unexploredHiddenNodes) {
+			for (Neuron hiddenNeuron : unexploredHiddenNodes.values()) {
+				// Analyse outgoing connectivity pattern from hidden neuron.
+				QuadPoint root = quadTreeInitialisation(cppn, hiddenNeuron, true, tempStorageForCPPNValues);
+				
+				// Traverse quad tree and retrieve connections.
 				tempConnections.clear();
-				QuadPoint root = quadTreeInitialisation(cppn, hiddenPoint.x, hiddenPoint.y, true, initialDepth, maxDepth);
-				pruneAndExpress(cppn, hiddenPoint.x, hiddenPoint.y, tempConnections, root, true, maxDepth);
-
+				pruneAndExpress(cppn, hiddenNeuron, tempConnections, root, true, tempStorageForCPPNValues);
+				
 				for (TempConnection tempCon : tempConnections) {
-					TempNeuron newHidden = new TempNeuron(tempCon.x2, tempCon.y2, TempNeuron.HIDDEN);
-					int targetIndex = hiddenNeurons.indexOf(newHidden);
-					if (targetIndex == -1) {
-						hiddenNeurons.add(newHidden);
+					Neuron newHidden = new Neuron(tempCon.targetPoint.x, tempCon.targetPoint.y, tempCon.targetPoint.z, Neuron.HIDDEN);
+					if (hiddenNeurons.containsKey(newHidden)) {
+						newHidden = hiddenNeurons.get(newHidden);
 					} else {
-						newHidden = hiddenNeurons.get(targetIndex);
+						hiddenNeurons.put(newHidden, newHidden);
 					}
 					double weight = tempCon.weight < 0 ? tempCon.weight * connectionWeightMin : tempCon.weight * connectionWeightMax;
-					connections.add(new Connection(hiddenPoint, newHidden, weight));
+					connections.add(new Connection(hiddenNeuron, newHidden, weight));
 				}
 			}
 			// Remove the just explored nodes.
-			List<TempNeuron> temp = new LinkedList<TempNeuron>();
-			temp.addAll(hiddenNeurons);
-			for (TempNeuron f : unexploredHiddenNodes)
+			Map<Neuron, Neuron> temp = new HashMap<Neuron, Neuron>(hiddenNeurons);
+			for (Neuron f : unexploredHiddenNodes.values())
 				temp.remove(f);
 
 			unexploredHiddenNodes = temp;
-
 		}
-
 		tempConnections.clear();
-
+		
 		// Connect discovered hidden neurons to output neurons.
-		for (TempNeuron outputPos : outputNeuronPositionsCopy) {
+		for (Neuron outputPos : outputNeuronPositionsCopy) {
 			// Analyse incoming connectivity pattern to this output
-			QuadPoint root = quadTreeInitialisation(cppn, outputPos.x, outputPos.y, false, initialDepth, maxDepth);
+			QuadPoint root = quadTreeInitialisation(cppn, outputPos, false, tempStorageForCPPNValues);
 			tempConnections.clear();
-			pruneAndExpress(cppn, outputPos.x, outputPos.y, tempConnections, root, false, maxDepth);
+			pruneAndExpress(cppn, outputPos, tempConnections, root, false, tempStorageForCPPNValues);
 
-			for (TempConnection t : tempConnections) {
-				TempNeuron source = new TempNeuron(t.x1, t.y1, TempNeuron.HIDDEN);
-				int sourceIndex = hiddenNeurons.indexOf(source);
-				//New nodes not created here because all the hidden nodes that are connected to an input/hidden node
+			for (TempConnection tempCon : tempConnections) {
+				Neuron source = new Neuron(tempCon.sourcePoint.x, tempCon.sourcePoint.y, tempCon.sourcePoint.z, Neuron.HIDDEN);
+				// New nodes not created here because all the hidden nodes that are connected to an input/hidden node
 				// are already expressed.
-				if (sourceIndex != -1) { // only connect if hidden neuron already exists
-					double weight = t.weight < 0 ? t.weight * connectionWeightMin : t.weight * connectionWeightMax;
-					connections.add(new Connection(hiddenNeurons.get(sourceIndex), outputPos, weight));
+				if (hiddenNeurons.containsKey(source)) { // only connect if hidden neuron already exists
+					double weight = tempCon.weight < 0 ? tempCon.weight * connectionWeightMin : tempCon.weight * connectionWeightMax;
+					connections.add(new Connection(hiddenNeurons.get(source), outputPos, weight));
 				}
 			}
 		}
-
+		runningAvgHiddenNeuronCount = runningAvgHiddenNeuronCount * 0.9 + hiddenNeurons.size() * 0.1;
+		runningAvgSynapseCount = runningAvgSynapseCount * 0.9 + connections.size() * 0.1;
+		
 		// Find hidden neurons with only incoming connections. We leave hidden neurons with only outgoing connections as
 		// they can still have an influence (in the original ES-HyperNEAT all hidden nodes without a path to an input
 		// and output neuron are removed).
 		boolean removedAllDeadEnds = false;
 		while (!removedAllDeadEnds) {
-			for (TempNeuron hidden : hiddenNeurons) {
+			// Reset marker for each hidden neuron.
+			for (Neuron hidden : hiddenNeurons.values()) {
 				hidden.hasOutgoingConnection = false;
 			}
+			// Mark the source neuron for each connection as having an outgoing connection.
 			for (Connection c : connections) {
-				// Mark the hidden neuron as having an outgoing connection.
 				c.source.hasOutgoingConnection = true;
 			}
 			removedAllDeadEnds = true;
-			// Remove hidden neurons with only incoming connections.
-			Iterator<TempNeuron> hiddenNeuronsIterator = hiddenNeurons.iterator();
+			// Remove hidden neurons with no outgoing connections.
+			Iterator<Neuron> hiddenNeuronsIterator = hiddenNeurons.values().iterator();
 			while (hiddenNeuronsIterator.hasNext()) {
 				if (!hiddenNeuronsIterator.next().hasOutgoingConnection) {
 					hiddenNeuronsIterator.remove();
@@ -248,11 +354,81 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 				}
 			}
 		}
-
-		// Create Bain NeuralNetwork.
+		
+		// Find hidden neurons with only incoming connections. We leave hidden neurons with only outgoing connections as
+		// they can still have an influence (in the original ES-HyperNEAT all hidden nodes without a path to an input
+		// and output neuron are removed).
+		/*removedAllDeadEnds = false;
+		while (!removedAllDeadEnds) {
+			// Reset marker for each hidden neuron.
+			for (Neuron hidden : hiddenNeurons.values()) {
+				hidden.hasIncomingConnection = false;
+			}
+			// Mark the source neuron for each connection as having an outgoing connection.
+			for (Connection c : connections) {
+				c.target.hasIncomingConnection = true;
+			}
+			removedAllDeadEnds = true;
+			// Remove hidden neurons with no outgoing connections.
+			Iterator<Neuron> hiddenNeuronsIterator = hiddenNeurons.values().iterator();
+			while (hiddenNeuronsIterator.hasNext()) {
+				if (!hiddenNeuronsIterator.next().hasIncomingConnection) {
+					hiddenNeuronsIterator.remove();
+					removedAllDeadEnds = false; // We might need to do another iteration to remove dead-end chains.
+				}
+			}
+		}*/
+		
 		int hiddenCount = hiddenNeurons.size();
 		int neuronCount = inputCount + hiddenCount + outputCount;
 		int synapseCount = connections.size();
+		synchronized (this) {
+			maxNeuronCount = Math.max(maxNeuronCount, neuronCount);
+			maxSynapseCount = Math.max(maxSynapseCount, synapseCount);
+			avgNeuronCount += neuronCount;
+			avgSynapseCount += synapseCount;
+			popSize++;
+		}
+		
+		// Make sure there's a path from at least one input to one output.
+		for (Connection c : connections) {
+			c.source.targets.add(c.target);
+		}
+		Set<Neuron> covered = new HashSet<Neuron>(inputNeuronPositionsCopy);
+		Set<Neuron> current = new HashSet<Neuron>(inputNeuronPositionsCopy);
+		Set<Neuron> next = new HashSet<Neuron>();
+		boolean foundOutput = false, foundNew;
+		do {
+			foundNew = false;
+			for (Neuron n : current) {
+				for (Neuron t : n.targets) {
+					if (t.type == Neuron.OUTPUT) {
+						foundOutput = true;
+						break;
+					}
+					else if (!covered.contains(t)) {
+						foundNew = true;
+						next.add(t);
+					}
+				}
+				if (foundOutput) {
+					break;
+				}
+			}
+			covered.addAll(next);
+			Set<Neuron> temp = current;
+			current = next;
+			next = temp;
+			next.clear();
+		} while (!foundOutput && foundNew);
+		if (!foundOutput) {
+			logger.debug("Inputs not connected to outputs!");
+			noPathFromInputToOutputCount++;
+			return null; // Indicate that this substrate is should have zero fitness.
+		}
+		
+
+		// Create Bain NeuralNetwork.
 		NeuronCollection neurons = null;
 		SynapseCollection synapses = null;
 		String neuronModelClass = properties.getProperty(HyperNEATTranscriberBain.SUBSTRATE_NEURON_MODEL, "ojc.bain.neuron.rate.SigmoidNeuronCollection");
@@ -279,37 +455,38 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 			throw new TranscriberException("Error creating synapses for Bain neural network. Have you specified the name of the synapse collection class correctly, including the containing packages?", e);
 		}
 
-		// Set index in Bain NN for input neurons.
+		// Determine index in Bain NN for all neurons (Bain NNs connectivity is specified by indices rather than object references).
 		int indexInBainNN = 0;
-		for (int i = 0; i < inputNeuronPositionsCopy.size(); i++, indexInBainNN++) {
-			inputNeuronPositionsCopy.get(i).indexInBainNN = indexInBainNN;
+		for (Neuron point : inputNeuronPositionsCopy) {
+			point.indexInBainNN = indexInBainNN++;
 		}
-		for (int i = 0; i < hiddenNeurons.size(); i++, indexInBainNN++) {
-			TempNeuron point = hiddenNeurons.get(i);
+		for (Neuron point : hiddenNeurons.values()) {
 			point.indexInBainNN = indexInBainNN;
 			if (enableBias) {
 				cppn.query(0, 0, point.x, point.y);
 				((NeuronCollectionWithBias) neurons).setBias(indexInBainNN, cppn.getBiasWeight());
 			}
+			indexInBainNN++;
 		}
-		for (int i = 0; i < outputCount; i++, indexInBainNN++) {
-			TempNeuron point = outputNeuronPositionsCopy.get(i);
+		for (Neuron point : outputNeuronPositionsCopy) {
 			point.indexInBainNN = indexInBainNN;
 			if (enableBias) {
 				cppn.query(0, 0, point.x, point.y);
 				((NeuronCollectionWithBias) neurons).setBias(indexInBainNN, cppn.getBiasWeight());
 			}
+			indexInBainNN++;
 		}
 		assert (indexInBainNN == neuronCount);
 
 		// Set pre and post neuron indexes and weight value for each connection.
 		double[] synapseWeights = synapses.getEfficacies();
-		for (int i = 0; i < synapseCount; i++) {
-			Connection c = connections.get(i);
+		int ci = 0;
+		for (Connection c : connections) {
 			assert (c.source.indexInBainNN < neuronCount);
 			assert (c.target.indexInBainNN < neuronCount);
-			synapses.setPreAndPostNeurons(i, c.source.indexInBainNN, c.target.indexInBainNN);
-			synapseWeights[i] = c.weight;
+			synapses.setPreAndPostNeurons(ci, c.source.indexInBainNN, c.target.indexInBainNN);
+			synapseWeights[ci] = c.weight;
+			ci++;
 		}
 		synapses.setEfficaciesModified();
 
@@ -319,18 +496,40 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		NeuralNetwork nn = new NeuralNetwork(simRes, neurons, synapses, execMode);
 		int[] inputDims = new int[] { inputCount, 1 };
 		int[] outputDims = new int[] { outputCount, 1 };
+		int maxRecurrentCycles = properties.getIntProperty(HyperNEATTranscriberBain.SUBSTRATE_MAX_RECURRENT_CYCLE, 1000000);
 		try {
-			BainNN network = new BainNN(nn, inputDims, outputDims, cyclesPerStep, feedForward ? BainNN.Topology.FEED_FORWARD_NONLAYERED : BainNN.Topology.RECURRENT, "network " + genotype.getId());
+			BainNN network = new BainNN(nn, inputDims, outputDims, cyclesPerStep, feedForward ? BainNN.Topology.FEED_FORWARD_NONLAYERED : BainNN.Topology.RECURRENT, "network " + genotype.getId(), maxRecurrentCycles);
 			if (properties.getBooleanProperty(ES_HYPERNEAT_RECORD_COORDINATES, false)) {
 				network.enableCoords();
 				int neuronIndex = 0;
-				for (int i = 0; i < inputCount; i++, neuronIndex++) {
-					network.setCoords(neuronIndex, inputNeuronPositionsCopy.get(i).x, inputNeuronPositionsCopy.get(i).y);
+				if (pseudo3D) {
+					for (Neuron point : inputNeuronPositionsCopy) {
+						network.setCoords(neuronIndex, point.x, point.z, point.y);
+						neuronIndex++;
+					}
+					for (Neuron point : hiddenNeurons.values()) {
+						network.setCoords(neuronIndex, point.x, point.z, point.y);
+						neuronIndex++;
+					}
+					for (Neuron point : outputNeuronPositionsCopy) {
+						network.setCoords(neuronIndex, point.x, point.z, point.y);
+						neuronIndex++;
+					}
 				}
-				for (int i = 0; i < hiddenNeurons.size(); i++, neuronIndex++)
-					network.setCoords(neuronIndex, hiddenNeurons.get(i).x, hiddenNeurons.get(i).y);
-				for (int i = 0; i < outputCount; i++, neuronIndex++)
-					network.setCoords(neuronIndex, outputNeuronPositionsCopy.get(i).x, outputNeuronPositionsCopy.get(i).y);
+				else {
+					for (Neuron point : inputNeuronPositionsCopy) {
+						network.setCoords(neuronIndex, point.x, point.y);
+						neuronIndex++;
+					}
+					for (Neuron point : hiddenNeurons.values()) {
+						network.setCoords(neuronIndex, point.x, point.y);
+						neuronIndex++;
+					}
+					for (Neuron point : outputNeuronPositionsCopy) {
+						network.setCoords(neuronIndex, point.x, point.y);
+						neuronIndex++;
+					}
+				}
 			}
 
 			if (logger.isDebugEnabled()) {
@@ -344,7 +543,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 					ImageIO.write(image, "png", outputfile);
 				}
 			}
-
+			
 			return network;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -352,152 +551,225 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		}
 	}
 
-	private static int imageCount = 0;
-
-	public class TempNeuron {
+	private class Neuron extends Point {
 		public static final int INPUT = 1, HIDDEN = 2, OUTPUT = 3;
-		public double x, y;
 		public int type;
 		public int indexInBainNN;
 		public boolean hasOutgoingConnection;
+		public boolean hasIncomingConnection;
+		public List<Neuron> targets = new ArrayList<Neuron>();
 
-		public TempNeuron(double x, double y, int type) {
-			this.x = x;
-			this.y = y;
+		public Neuron(double x, double y, double z, int type) {
+			super(x, y, z);
 			this.type = type;
-		}
-
-		@Override
-		public boolean equals(Object o) {
-			return ((o instanceof TempNeuron) && ((TempNeuron) o).x == this.x && ((TempNeuron) o).y == this.y);
-		}
-
-		@Override
-		public String toString() {
-			return "(" + x + "," + y + ")";
 		}
 	}
 
-	public class QuadPoint {
-		public double x, y;
+	public class QuadPoint extends Point {
 		public double w; // stores the CPPN value
+		public double leo; // stores the CPPN LEO output value (if LEO enabled). 
 		public double width; // width of this quad tree square
-		public List<QuadPoint> children;
+		public QuadPoint[] children;
 		public int level; // the level in the quad tree
 
-		public QuadPoint(double _x, double _y, double _w, int _level) {
-			level = _level;
-			w = 0;
-			x = _x;
-			y = _y;
-			width = _w;
-			children = new ArrayList<QuadPoint>();
+		public QuadPoint(double x, double y, double z, double width, int level) {
+			super (x, y, z);
+			this.width = width;
+			this.level = level;
+			children = new QuadPoint[4];
+		}
+		
+		public String toString() {
+			return super.toString() + ": " + (float) w;
+		}
+
+		public String toStringDeep() {
+			String s = "";
+			for (int i = 0; i < level; i++) s += "\t";
+			s += toString() + "\n";
+			if (children[0] != null) {
+				for (int i = 0; i < 4; i++) 
+					s += children[i].toStringDeep();
+			}
+			return s;
+		}
+	}
+	
+	private class Point {
+		public double x, y, z;
+		public Point(double x, double y, double z) {
+			this.x = x;
+			this.y = y;
+			this.z = z;
+		}
+		@Override
+		public boolean equals(Object o) {
+			if (o instanceof Point) {
+				Point p = (Point) o;
+				return p.x == this.x && p.y == this.y && p.z == this.z;
+			}
+			return false;
+		}
+		@Override
+		public int hashCode() {
+			// x, y and z should be between -1 and 1.
+			return (int) ((x + y + z) * (Integer.MAX_VALUE/3));
+		}
+		@Override
+		public String toString() {
+			return "(" + (float) x + "," + (float) y + "," + (float) z + ")";
 		}
 	}
 
 	public class Connection {
-		public TempNeuron source, target;
+		public Neuron source, target;
 		double weight;
 
-		public Connection(TempNeuron source, TempNeuron target, double weight) {
+		public Connection(Neuron source, Neuron target, double weight) {
 			this.source = source;
 			this.target = target;
 			this.weight = weight;
 		}
-	}
-
-	public class TempConnection {
-		public double x1, y1, x2, y2;
-		// public PointF start, end;
-		public double weight;
-
-		public TempConnection(double x1, double y1, double x2, double y2, double weight) {
-			this.x1 = x1;
-			this.y1 = y1;
-			this.x2 = x2;
-			this.y2 = y2;
-			this.weight = weight;
+		
+		public String toString() {
+			return source + " -> " + target;
 		}
 	}
 
-	/*
-	 * Input: Coordinates of source (outgoing = true) or target node (outgoing = false) at (a,b) Output: Quadtree, in
-	 * which each quadnode at (x,y) stores CPPN activation level for its position. The initialized quadtree is used in
-	 * the PruningAndExtraction phase to generate the actual ANN connections.
+	public class TempConnection {
+		public Point sourcePoint, targetPoint;
+		public double weight;
+
+		public TempConnection(Point p1, Point p2, double weight) {
+			this.sourcePoint = p1;
+			this.targetPoint = p2;
+			this.weight = weight;
+		}
+		
+		public String toString() {
+			return sourcePoint + " -> " + targetPoint;
+		}
+	}
+
+	/**
+	 * Creates a quadtree by recursively subdividing the initial square, which spans the space from (-1, -1) to (1, 1), 
+	 * until a desired initial resolution is reached. For every quadtree square with centre (x, y) the CPPN is queried 
+	 * with arguments (a, b, x, y) and the resulting connection weight value w is stored.
+	 * 
+	 * @param cppn The CPPN to use.
+	 * @param n The source or target neuron position.
+	 * @param outgoing Specifies whether the connection is for a source (outgoing = true) or target node (outgoing = false).
+	 * @param initalDepth The minimum depth of the tree, this specifies the minimum resolution.
+	 * @param maxDepth The maximum depth of the tree, this specifies the maximum resolution.
+	 * @param tempStorageForCPPNValues A list store the CPPN value for each node in the quadtree. Allows reuse of same list for performance reasons.
+	 * @return The root of the generated quadtree, each QuadPoint stores CPPN activation level for its position.
 	 */
-	public QuadPoint quadTreeInitialisation(CPPN cppn, double a, double b, boolean outgoing, int initialDepth, int maxDepth) {
-		QuadPoint root = new QuadPoint(0, 0, 1.0f, 1); // x, y, width, level
-		LinkedList<QuadPoint> queue = new LinkedList<QuadPoint>();
+	public QuadPoint quadTreeInitialisation(CPPN cppn, Point n, boolean outgoing, double[] tempStorageForCPPNValues) {
+		QuadPoint root = new QuadPoint(0, 0, 0, 1, 1); // x, y, z, width, level
+		ArrayDeque<QuadPoint> queue = new ArrayDeque<QuadPoint>(maxQuadTreeSize);
 		queue.add(root);
 
 		while (!queue.isEmpty()) {
-			QuadPoint p = queue.removeFirst();// dequeue
+			QuadPoint p = queue.removeFirst();
 
-			// Divide into sub-regions and assign children to parent
-			p.children.add(new QuadPoint(p.x - p.width / 2, p.y - p.width / 2, p.width / 2, p.level + 1));
-			p.children.add(new QuadPoint(p.x - p.width / 2, p.y + p.width / 2, p.width / 2, p.level + 1));
-			p.children.add(new QuadPoint(p.x + p.width / 2, p.y - p.width / 2, p.width / 2, p.level + 1));
-			p.children.add(new QuadPoint(p.x + p.width / 2, p.y + p.width / 2, p.width / 2, p.level + 1));
-
-			for (QuadPoint c : p.children) {
-				if (outgoing) // Querying connection from input or hidden node
-				{
-					c.w = cppn.query(a, b, c.x, c.y); // Outgoing connectivity pattern
-				} else // Querying connection to output node
-				{
-					c.w = cppn.query(c.x, c.y, a, b); // Incoming connectivity pattern
-				}
+			// Divide into sub-regions and assign children to parent.
+			double hw = p.width/2;
+			int level = p.level+1;
+			if (pseudo3D ) {
+				// Hidden nodes located on XZ plane at y = 0.
+				p.children[0] = new QuadPoint(p.x - hw, 0, p.z - hw, hw, level);
+				p.children[1] = new QuadPoint(p.x - hw, 0, p.z + hw, hw, level);
+				p.children[2] = new QuadPoint(p.x + hw, 0, p.z - hw, hw, level);
+				p.children[3] = new QuadPoint(p.x + hw, 0, p.z + hw, hw, level);
+			}
+			else {
+				// Hidden nodes located on XY plane at z = 0.
+				p.children[0] = new QuadPoint(p.x - hw, p.y - hw, 0, hw, level);
+				p.children[1] = new QuadPoint(p.x - hw, p.y + hw, 0, hw, level);
+				p.children[2] = new QuadPoint(p.x + hw, p.y - hw, 0, hw, level);
+				p.children[3] = new QuadPoint(p.x + hw, p.y + hw, 0, hw, level);
+			}
+			
+			// Get CPPN output for each child.
+			for (int ci = 0; ci < 4; ci++) {
+				QuadPoint child = p.children[ci];
+				if (outgoing) // Querying connection from input or hidden node.
+					child.w = cppn.query(n.x, n.y, n.z, child.x, child.y, child.z); // Outgoing connectivity pattern.
+				else // Querying connection to output node.
+					child.w = cppn.query(child.x, child.y, child.z, n.x, n.y, n.z); // Incoming connectivity pattern.
+				
+				if (enableLEO)
+					child.leo = cppn.getLEO();
 			}
 
-			// Divide until initial resolution or if variance is still high
-			if (p.level < initialDepth || (p.level < maxDepth && variance(p) > divisionThreshold)) {
-				for (QuadPoint c : p.children) {
-					queue.add(c);
+			// Divide if minimum resolution hasn't been reached or variance is above threshold and maximum resolution hasn't been reached.
+			if (p.level < initialDepth || (p.level < maxDepth && variance(p, tempStorageForCPPNValues) > divisionThreshold)) {
+				for (int ci = 0; ci < 4; ci++) {
+					queue.add(p.children[ci]);
 				}
 			}
 		}
 		return root;
 	}
 
-	/*
-	 * Input : Coordinates of source (outgoing = true) or target node (outgoing = false) at (a,b) and initialized
-	 * quadtree p. Output: Adds the connections that are in bands of the two-dimensional cross-section of the hypercube
-	 * containing the source or target node to the connections list.
+	/**
+	 * The given quadtree is traversed depth-first until the current node's variance is smaller than the variance threshold
+	 * or until the node has no children (which means that the variance is zero). Subsequently, a connection (a, b, x, y) is 
+	 * created for each qualifying node with centre (x, y). Thus adds connections that are in bands of the two-dimensional 
+	 * cross-section of the hypercube containing the source or target node to the connections list.
+	 * 
+	 * @param cppn The CPPN to use.
+	 * @param neuron The source or target neuron (position).
+	 * @param connections The list to add new connections to.
+	 * @param root The root of the quadtree.
+	 * @param outgoing Specifies whether the connection is for a source (outgoing = true) or target node (outgoing = false).
+	 * @param tempStorageForCPPNValues A list store the CPPN value for each node in the quadtree. Allows reuse of same list for performance reasons.
 	 */
-
-	public void pruneAndExpress(CPPN cppn, double a, double b, List<TempConnection> connections, QuadPoint node, boolean outgoing, double maxDepth) {
+	protected void pruneAndExpress(CPPN cppn, Point neuron, List<TempConnection> connections, QuadPoint root, boolean outgoing, double[] tempStorageForCPPNValues) {
 		double left = 0, right = 0, top = 0, bottom = 0;
 
-		if (node.children.get(0) == null)
+		if (root.children[0] == null)
 			return;
 
-		// Traverse quadtree depth-first
-		for (QuadPoint c : node.children) {
-			double childVariance = variance(c);
-
+		// Traverse quadtree depth-first.
+		for (int ci = 0; ci < 4; ci++) {
+			QuadPoint child = root.children[ci];
+			double childVariance = variance(child, tempStorageForCPPNValues);
 			if (childVariance >= varianceThreshold) {
-				pruneAndExpress(cppn, a, b, connections, c, outgoing, maxDepth);
-			} else // this should always happen for at least the leaf nodes because their variance is zero
-			{
-				// Determine if point is in a band by checking neighbor CPPN values
+				pruneAndExpress(cppn, neuron, connections, child, outgoing, tempStorageForCPPNValues);
+			} else if (!enableLEO || child.leo > 0) { // If LEO disabled this should always happen for at least the leaf nodes because their variance is zero.
+				// Determine if point is in a band by checking neighbour CPPN values.
+				double width = root.width;
 				if (outgoing) {
-					left = Math.abs(c.w - cppn.query(a, b, c.x - node.width, c.y));
-					right = Math.abs(c.w - cppn.query(a, b, c.x + node.width, c.y));
-					top = Math.abs(c.w - cppn.query(a, b, c.x, c.y - node.width));
-					bottom = Math.abs(c.w - cppn.query(a, b, c.x, c.y + node.width));
+					left = Math.abs(child.w - cppn.query(neuron.x, neuron.y, neuron.z, child.x - width, child.y, child.z));
+					right = Math.abs(child.w - cppn.query(neuron.x, neuron.y, neuron.z, child.x + width, child.y, child.z));
+					if (pseudo3D) { // Hidden nodes located on XZ plane at y = 0.
+						top = Math.abs(child.w - cppn.query(neuron.x, neuron.y, neuron.z, child.x, child.y, child.z - width));
+						bottom = Math.abs(child.w - cppn.query(neuron.x, neuron.y, neuron.z, child.x, child.y, child.z + width));
+					}
+					else { // Hidden nodes located on XZ plane at y = 0.
+						top = Math.abs(child.w - cppn.query(neuron.x, neuron.y, neuron.z, child.x, child.y - width, child.z));
+						bottom = Math.abs(child.w - cppn.query(neuron.x, neuron.y, neuron.z, child.x, child.y + width, child.z));
+					}
 				} else {
-					left = Math.abs(c.w - cppn.query(c.x - node.width, c.y, a, b));
-					right = Math.abs(c.w - cppn.query(c.x + node.width, c.y, a, b));
-					top = Math.abs(c.w - cppn.query(c.x, c.y - node.width, a, b));
-					bottom = Math.abs(c.w - cppn.query(c.x, c.y + node.width, a, b));
+					left = Math.abs(child.w - cppn.query(child.x - width, child.y, child.z, neuron.x, neuron.y, neuron.z));
+					right = Math.abs(child.w - cppn.query(child.x + width, child.y, child.z, neuron.x, neuron.y, neuron.z));
+					if (pseudo3D) { // Hidden nodes located on XZ plane at y = 0.
+						top = Math.abs(child.w - cppn.query(child.x, child.y, child.z - width, neuron.x, neuron.y, neuron.z));
+						bottom = Math.abs(child.w - cppn.query(child.x, child.y, child.z + width, neuron.x, neuron.y, neuron.z));
+					}
+					else { // Hidden nodes located on XZ plane at y = 0.
+						top = Math.abs(child.w - cppn.query(child.x, child.y - width, child.z, neuron.x, neuron.y, neuron.z));
+						bottom = Math.abs(child.w - cppn.query(child.x, child.y + width, child.z, neuron.x, neuron.y, neuron.z));
+					}
 				}
-
+				
 				if (Math.max(Math.min(top, bottom), Math.min(left, right)) > bandThrehold) {
 					TempConnection tc;
 					if (outgoing) {
-						tc = new TempConnection(a, b, c.x, c.y, c.w);
+						tc = new TempConnection(neuron, child, child.w);
 					} else {
-						tc = new TempConnection(c.x, c.y, a, b, c.w);
+						tc = new TempConnection(child, neuron, child.w);
 					}
 					connections.add(tc);
 				}
@@ -506,41 +778,90 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		}
 	}
 
-	// Collect the CPPN values stored in a given quadtree p
-	// Used to estimate the variance in a certain region in space
-	private void getCPPNValues(List<Double> l, QuadPoint p) {
-		if (p != null && !p.children.isEmpty()) {
-			for (int i = 0; i < 4; i++) {
-				getCPPNValues(l, p.children.get(i));
+	/**
+	 * Determine the variance of a given region.
+	 * @param p The root of the quadtree.  
+	 * @param tempStorageForCPPNValues A list store the CPPN value for each node in the quadtree. Allows reuse of same list for performance reasons. This list will be cleared.
+	 */
+	protected double variance(QuadPoint p, double[] tempStorageForCPPNValues) {
+		if (p.children[0] == null) {
+			return 0;
+		}
+		
+		int size = getCPPNValues(p, tempStorageForCPPNValues, 0);
+		double avg = 0, variance = 0;
+		for (int i = 0 ; i < size; i++) {
+			avg += tempStorageForCPPNValues[i];
+		}
+		avg /= size;
+		for (int i = 0 ; i < size; i++) {
+			double d = tempStorageForCPPNValues[i] - avg;
+			variance += d*d;
+		}
+		variance /= size;
+		return variance;
+	}
+
+	/**
+	 *  Collect the CPPN values for each leaf node in a quadtree.
+	 *  Used to estimate the variance in a certain region in space.
+	 *  @param p The root of the quadtree.
+	 *  @param tempStorageForCPPNValues The list to store the CPPN values in.
+	 *  @param index The current index into tempStorageForCPPNValues.
+	 */
+	private int getCPPNValues(QuadPoint p, double[] tempStorageForCPPNValues, int index) {
+		if (p.children[0] != null) {
+			for (int ci = 0; ci < 4; ci++) {
+				index = getCPPNValues(p.children[ci], tempStorageForCPPNValues, index);
 			}
 		} else {
-			l.add(p.w);
+			tempStorageForCPPNValues[index] = p.w;
+			index++;
 		}
+		return index;
 	}
-
-	// determine the variance of a certain region
-	public double variance(QuadPoint p) {
-		if (p.children.isEmpty()) {
-			return 0.0;
-		}
-
-		List<Double> l = new LinkedList<Double>();
-		getCPPNValues(l, p);
-
-		double m = 0, v = 0.0;
-		for (double f : l) {
-			m += f;
-		}
-		m /= l.size();
-		for (double f : l) {
-			v += Math.pow(f - m, 2);
-		}
-		v /= l.size();
-		return v;
-	}
-
+	
 	@Override
 	public Class getPhenotypeClass() {
 		return BainNN.class;
+	}
+
+	/**
+	 * Listen for the start and end of the population evaluation so we can keep statistics on the the transcribed networks for each generation.
+	 */
+	@Override
+	public void ahniEventOccurred(AHNIEvent event) {
+		if (event.getType() == AHNIEvent.Type.EVALUATION_START) {
+			maxNeuronCount = 0;
+			maxSynapseCount = 0;
+			avgNeuronCount = 0;
+			avgSynapseCount = 0;
+			noPathFromInputToOutputCount = 0;
+			popSize = 0;
+		}
+		else if (event.getType() == AHNIEvent.Type.EVALUATION_END) {
+			avgNeuronCount /= popSize;
+			avgSynapseCount /= popSize;
+			logger.info("Network size (average / maximum) (neurons, synapses): " + avgNeuronCount + ", " + avgSynapseCount + " / " + maxNeuronCount + ", " + maxSynapseCount + ".   " + (noPathFromInputToOutputCount > 0 ? (noPathFromInputToOutputCount + " networks have no path from the input layer to the output layer.") : ""));
+		}
+	}
+	
+	private static String repeat(String s, int n) {
+	    if(s == null) {
+	        return null;
+	    }
+	    final StringBuilder sb = new StringBuilder();
+	    for(int i = 0; i < n; i++) {
+	        sb.append(s);
+	    }
+	    return sb.toString();
+	}
+	
+	private static String colString(Collection c) {
+		StringBuilder s = new StringBuilder();
+		for (Object o : c) {
+			s.append("\n\t\t" + o);
+		}
+		return s.toString();
 	}
 }

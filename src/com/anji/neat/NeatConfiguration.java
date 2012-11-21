@@ -39,6 +39,7 @@ import com.anji.integration.ActivatorTranscriber;
 import com.anji.integration.SimpleSelector;
 import com.anji.nn.activationfunction.ActivationFunction;
 import com.anji.nn.activationfunction.ActivationFunctionFactory;
+import com.anji.util.Configurable;
 import com.anji.util.Properties;
 import com.anji.util.Randomizer;
 
@@ -47,7 +48,7 @@ import com.anji.util.Randomizer;
  * 
  * @author Philip Tucker
  */
-public class NeatConfiguration extends Configuration {
+public class NeatConfiguration extends Configuration implements Configurable {
 	private static final Logger logger = Logger.getLogger(NeatConfiguration.class);
 	protected static final String PERSIST_ENABLE_KEY = "persist.enable";
 	/**
@@ -323,6 +324,13 @@ public class NeatConfiguration extends Configuration {
 
 		// speciation parameters
 		initSpeciationParms();
+	}
+
+	/**
+	 * @see NeatConfiguration#init(Properties)
+	 */
+	public NeatConfiguration() {
+		super();
 	}
 
 	/**

@@ -68,6 +68,7 @@ public class Genotype implements Serializable {
 	protected int targetPerformanceType;
 	protected Chromosome fittest = null;
 	protected Chromosome bestPerforming = null;
+	protected int zeroFitnessCount = 0;
 	protected int eliteCount = 0;
 
 	protected int maxSpeciesSize, minSpeciesSize;
@@ -103,7 +104,7 @@ public class Genotype implements Serializable {
 
 		this.props = props;
 
-		targetPerformanceType = props.getProperty(Evolver.PERFORMANCE_TARGET_TYPE_KEY, "higher").equals("higher") ? 1 : 0;
+		targetPerformanceType = props.getProperty(Evolver.PERFORMANCE_TARGET_TYPE_KEY, "higher").toLowerCase().trim().equals("higher") ? 1 : 0;
 
 		// Lock the settings of the Configuration object so that the cannot
 		// be altered.
@@ -414,8 +415,18 @@ public class Genotype implements Serializable {
 			BulkFitnessFunction bulkFunction = m_activeConfiguration.getBulkFitnessFunction();
 			int maxFitness = bulkFunction.getMaxFitnessValue();
 			Iterator<Chromosome> it;
+			
+			// Reset performance values.
+			it = m_chromosomes.iterator();
+			while (it.hasNext()) {
+				it.next().setPerformanceValue(-1);
+			}
 
 			long startEval = System.currentTimeMillis();
+			
+			// Fire an event to indicate we're now evaluating all chromosomes.
+			// -------------------------------------------------------
+			m_activeConfiguration.getEventManager().fireGeneticEvent(new GeneticEvent(GeneticEvent.GENOTYPE_START_EVALUATION_EVENT, this));
 
 			// If a bulk fitness function has been provided, then convert the
 			// working pool to an array and pass it to the bulk fitness
@@ -443,15 +454,19 @@ public class Genotype implements Serializable {
 			Chromosome oldFittest = fittest;
 			fittest = null;
 			bestPerforming = null;
+			zeroFitnessCount = 0;
 			it = m_chromosomes.iterator();
 			while (it.hasNext()) {
 				Chromosome c = it.next();
 				if (fittest == null || fittest.getFitnessValue() < c.getFitnessValue()) {
 					fittest = c;
 				}
-				if (bestPerforming == null || ((targetPerformanceType == 1 && bestPerforming.getPerformanceValue() > c.getPerformanceValue()) || (targetPerformanceType == 0 && bestPerforming.getPerformanceValue() < c.getPerformanceValue())) || (bestPerforming.getPerformanceValue() == c.getPerformanceValue() && bestPerforming.getFitnessValue() < c.getFitnessValue())) {
+				if (bestPerforming == null || ((targetPerformanceType == 1 && bestPerforming.getPerformanceValue() < c.getPerformanceValue()) || (targetPerformanceType == 0 && bestPerforming.getPerformanceValue() > c.getPerformanceValue())) || (bestPerforming.getPerformanceValue() == c.getPerformanceValue() && bestPerforming.getFitnessValue() < c.getFitnessValue())) {
 					bestPerforming = c;
 					// System.out.println("bpv="+bestPerforming.getPerformanceValue());
+				}
+				if (c.getFitnessValue() == 1) {
+					zeroFitnessCount++;
 				}
 			}
 
@@ -637,6 +652,10 @@ public class Genotype implements Serializable {
 
 	public Chromosome getBestPerforming() {
 		return bestPerforming;
+	}
+	
+	public int getNumberOfChromosomesWithZeroFitnessFromLastGen() {
+		return zeroFitnessCount;
 	}
 
 	public SpeciationParms getParameters() {

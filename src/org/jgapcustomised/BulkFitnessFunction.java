@@ -52,9 +52,12 @@ public interface BulkFitnessFunction extends Serializable {
 	public void dispose();
 
 	/**
-	 * This method is called when an evolutionary run has finished. It can be used to perform testing or other analysis
-	 * on the fittest and/or best performing Chromosomes evolved during the run.
+	 * <p><em>Deprecated in favour of event listeners such as {@link org.jgapcustomised.event.GeneticEventListener}
+	 * or {@link ojc.ahni.integration.AHNIEventListener}.</em></p>
+	 * <p>This method is called when an evolutionary run has finished. It can be used to perform testing or other analysis
+	 * on the fittest and/or best performing Chromosomes evolved during the run.</p>
 	 * @param evolver Methods on this object can be used to obtain the fittest and best performing Chromosomes evolved during the run.
 	 */
+	@Deprecated
 	public void evolutionFinished(HyperNEATEvolver evolver);
 }

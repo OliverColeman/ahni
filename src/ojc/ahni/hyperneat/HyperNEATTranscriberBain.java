@@ -36,6 +36,14 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 	public static final String SUBSTRATE_EXECUTION_MODE = "ann.hyperneat.bain.executionmode";
 	public static final String SUBSTRATE_NEURON_MODEL = "ann.hyperneat.bain.neuron.model";
 	public static final String SUBSTRATE_SYNAPSE_MODEL = "ann.hyperneat.bain.synapse.model";
+	
+	/**
+	 * When determining if the substrate network is recurrent, the maximum cycle length to search for before the 
+	 * network is considered recurrent. Note that whichever is the smallest of this value and the number of 
+	 * neurons in the network is used for any given network.
+	 */
+	public static final String SUBSTRATE_MAX_RECURRENT_CYCLE = "ann.hyperneat.bain.maxrecurrentcyclesearchlength";
+	
 
 	private final static Logger logger = Logger.getLogger(HyperNEATTranscriberBain.class);
 
@@ -179,21 +187,25 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 								synapses.setPreAndPostNeurons(synapseIndex, bainNeuronIndexSource, bainNeuronIndexTarget);
 
 								// Determine weight for synapse from source to target.
-								double weightVal;
-								if (layerEncodingIsInput)
+								double weightVal = 0;
+								if (layerEncodingIsInput) {
 									weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getWeight()));
-								else
+								}
+								else {
 									weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getWeight(sz)));
-								if (Math.abs(weightVal) > connectionExprThresh) {
+								}
+								if (enableLEO) {
+									double leo = layerEncodingIsInput ? cppn.getLEO() : cppn.getLEO(sz);
+									weightVal = leo > 0 ? weightVal : 0; 
+								}
+								// Conventional thresholding.
+								else if (Math.abs(weightVal) > connectionExprThresh) {
 									if (weightVal > 0)
 										weightVal = (weightVal - connectionExprThresh) * (connectionWeightMax / (connectionWeightMax - connectionExprThresh));
 									else
 										weightVal = (weightVal + connectionExprThresh) * (connectionWeightMin / (connectionWeightMin + connectionExprThresh));
-
-									synapseWeights[synapseIndex] = weightVal;
-								} else {
-									synapseWeights[synapseIndex] = 0;
 								}
+								synapseWeights[synapseIndex] = weightVal;
 
 								if (feedForward) {
 									assert synapseIndex == getBainSynapseIndex(tx, ty, tz, sx, sy);
@@ -235,8 +247,9 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 			NeuralNetwork nn = new NeuralNetwork(simRes, neurons, synapses, execMode);
 			int[] outputDims = new int[] { width[depth - 1], height[depth - 1] };
 			int[] inputDims = new int[] { width[0], height[0] };
+			int maxRecurrentCycles = properties.getIntProperty(SUBSTRATE_MAX_RECURRENT_CYCLE, 1000);
 			try {
-				phenotype = new BainNN(nn, inputDims, outputDims, cyclesPerStep, feedForward ? BainNN.Topology.FEED_FORWARD_LAYERED : BainNN.Topology.RECURRENT, "network " + genotype.getId());
+				phenotype = new BainNN(nn, inputDims, outputDims, cyclesPerStep, feedForward ? BainNN.Topology.FEED_FORWARD_LAYERED : BainNN.Topology.RECURRENT, "network " + genotype.getId(), maxRecurrentCycles);
 			} catch (Exception e) {
 				throw new TranscriberException(e);
 			}

@@ -37,13 +37,13 @@ public class AnjiNet {
 	 */
 	public final static String XML_TAG = "network";
 
-	private List allNeurons;
+	private ArrayList<Neuron> allNeurons;
 
-	private List inNeurons;
+	private List<Neuron> inNeurons;
 
-	private List outNeurons;
+	private List<Neuron> outNeurons;
 
-	private Collection recurrentConns;
+	private List<CacheNeuronConnection> recurrentConns;
 
 	private String name;
 
@@ -54,7 +54,7 @@ public class AnjiNet {
 	 * @param someRecurrentConns
 	 * @param aName
 	 */
-	public AnjiNet(Collection someNeurons, List someInNeurons, List someOutNeurons, Collection someRecurrentConns, String aName) {
+	public AnjiNet(Collection<Neuron> someNeurons, List<Neuron> someInNeurons, List<Neuron> someOutNeurons, List<CacheNeuronConnection> someRecurrentConns, String aName) {
 		init(someNeurons, someInNeurons, someOutNeurons, someRecurrentConns, aName);
 	}
 
@@ -87,8 +87,8 @@ public class AnjiNet {
 	 * @param someRecurrentConns recurrent connections
 	 * @param aName
 	 */
-	protected void init(Collection someNeurons, List someInNeurons, List someOutNeurons, Collection someRecurrentConns, String aName) {
-		allNeurons = new ArrayList(someNeurons);
+	protected void init(Collection<Neuron> someNeurons, List<Neuron> someInNeurons, List<Neuron> someOutNeurons, List<CacheNeuronConnection> someRecurrentConns, String aName) {
+		allNeurons = new ArrayList<Neuron>(someNeurons);
 
 		inNeurons = someInNeurons;
 		outNeurons = someOutNeurons;
@@ -101,7 +101,7 @@ public class AnjiNet {
 	 * @return input neuron at position <code>idx</code>
 	 */
 	public Neuron getInputNeuron(int idx) {
-		return (Neuron) inNeurons.get(idx);
+		return inNeurons.get(idx);
 	}
 
 	/**
@@ -123,7 +123,7 @@ public class AnjiNet {
 	 * @return output neuron at position <code>idx</code>
 	 */
 	public Neuron getOutputNeuron(int idx) {
-		return (Neuron) outNeurons.get(idx);
+		return outNeurons.get(idx);
 	}
 
 	/**
@@ -131,7 +131,7 @@ public class AnjiNet {
 	 * @param toIdx
 	 * @return output neurons from position <code>toIdx</code> (inclusive) to <code>fromIdx</code> (exclusive)
 	 */
-	public List getOutputNeurons(int fromIdx, int toIdx) {
+	public List<Neuron> getOutputNeurons(int fromIdx, int toIdx) {
 		return outNeurons.subList(fromIdx, toIdx);
 	}
 
@@ -140,7 +140,7 @@ public class AnjiNet {
 	 * @param toIdx
 	 * @return input neurons from position <code>toIdx</code> (inclusive) to <code>fromIdx</code> (exclusive)
 	 */
-	public List getInputNeurons(int fromIdx, int toIdx) {
+	public List<Neuron> getInputNeurons(int fromIdx, int toIdx) {
 		return inNeurons.subList(fromIdx, toIdx);
 	}
 
@@ -154,7 +154,7 @@ public class AnjiNet {
 	/**
 	 * @return <code>Collection</code> contains recurrent <code>Connection</code> objects
 	 */
-	public Collection getRecurrentConns() {
+	public Collection<CacheNeuronConnection> getRecurrentConns() {
 		return recurrentConns;
 	}
 
@@ -177,17 +177,12 @@ public class AnjiNet {
 	 */
 	public void step() {
 		// populate cache connections with values from previous step
-		Iterator iter = recurrentConns.iterator();
-		while (iter.hasNext()) {
-			CacheNeuronConnection c = (CacheNeuronConnection) iter.next();
-			c.step();
+		// We don't use the Collections iterator functionality because it's slower for small collections.
+		for (int i = 0 ; i < recurrentConns.size(); i++) {
+			recurrentConns.get(i).step();
 		}
-
-		// notify all neurons to recalculate value for current step
-		iter = allNeurons.iterator();
-		while (iter.hasNext()) {
-			Neuron n = (Neuron) iter.next();
-			n.step();
+		for (int i = 0 ; i < allNeurons.size(); i++) {
+			allNeurons.get(i).step();
 		}
 	}
 
@@ -195,10 +190,9 @@ public class AnjiNet {
 	 * make sure all neurons have been activated for the current cycle; this is to catch neurons with no forward outputs
 	 */
 	public void fullyActivate() {
-		Iterator it = allNeurons.iterator();
-		while (it.hasNext()) {
-			Neuron n = (Neuron) it.next();
-			n.getValue();
+		// We don't use the Collections iterator functionality because it's slower for small collections.
+		for (int i = 0 ; i < allNeurons.size(); i++) {
+			allNeurons.get(i).getValue();
 		}
 	}
 
@@ -206,15 +200,12 @@ public class AnjiNet {
 	 * clear all memory in network, including neurons and recurrent connections
 	 */
 	public void reset() {
-		Iterator iter = allNeurons.iterator();
-		while (iter.hasNext()) {
-			Neuron n = (Neuron) iter.next();
-			n.reset();
+		// We don't use the Collections iterator functionality because it's slower for small collections.
+		for (int i = 0 ; i < allNeurons.size(); i++) {
+			allNeurons.get(i).reset();
 		}
-		iter = recurrentConns.iterator();
-		while (iter.hasNext()) {
-			CacheNeuronConnection c = (CacheNeuronConnection) iter.next();
-			c.reset();
+		for (int i = 0 ; i < recurrentConns.size(); i++) {
+			recurrentConns.get(i).reset();
 		}
 	}
 

@@ -52,7 +52,7 @@ public class GaussianActivationFunction implements ActivationFunction {
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
 	public double apply(double input) {
-		return (double) Math.exp(-(input * input * SLOPE));
+		return Math.exp(-(input * input * SLOPE));
 	}
 
 	/**

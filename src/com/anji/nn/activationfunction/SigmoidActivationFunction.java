@@ -28,12 +28,12 @@ public class SigmoidActivationFunction implements ActivationFunction {
 
 	private final static double SLOPE = 4.924273f;
 
-	private final static int LUT_RESOLUTION = 5000;
-	private final static double MAX_LUT_INPUT = 2.5f; // after 2.5 (before -2.5) value is 1 (0) for all practical
+	//private final static int LUT_RESOLUTION = 5000;
+	//private final static double MAX_LUT_INPUT = 2.5f; // after 2.5 (before -2.5) value is 1 (0) for all practical
 														// purposes
-	private final static double MIN_LUT_INPUT = -2.5f;
-	private final static double LUT_INPUT_RANGE = MAX_LUT_INPUT - MIN_LUT_INPUT;
-	private final static double LUT_MULT = LUT_RESOLUTION / LUT_INPUT_RANGE;
+	//private final static double MIN_LUT_INPUT = -2.5f;
+	//private final static double LUT_INPUT_RANGE = MAX_LUT_INPUT - MIN_LUT_INPUT;
+	//private final static double LUT_MULT = LUT_RESOLUTION / LUT_INPUT_RANGE;
 
 	private double[] sigmoid; // lookup table (measured at 150x faster on my Intel(R) Core(TM)2 Duo CPU, but of course
 								// it could cache the entire LUT in the CPU in a simple performance test)
@@ -55,14 +55,14 @@ public class SigmoidActivationFunction implements ActivationFunction {
 	 */
 	SigmoidActivationFunction() {
 		// initialise lookup table
-		sigmoid = new double[LUT_RESOLUTION + 1];
+		//sigmoid = new double[LUT_RESOLUTION + 1];
 		double input = 0;
 		double output = 0;
-		for (int i = 0; i <= LUT_RESOLUTION; i++) {
-			input = (LUT_INPUT_RANGE / LUT_RESOLUTION) * (i + 0.5f) + MIN_LUT_INPUT;
-			output = (double) (1.0 / (1.0 + Math.exp(-(input * SLOPE))));
-			sigmoid[i] = output;
-		}
+		//for (int i = 0; i <= LUT_RESOLUTION; i++) {
+		//	input = (LUT_INPUT_RANGE / LUT_RESOLUTION) * (i + 0.5f) + MIN_LUT_INPUT;
+		//	output = (double) (1.0 / (1.0 + Math.exp(-(input * SLOPE))));
+		//	sigmoid[i] = output;
+		//}
 	}
 
 	/**
@@ -71,13 +71,13 @@ public class SigmoidActivationFunction implements ActivationFunction {
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
 	public double apply(double input) {
-		if (input < MIN_LUT_INPUT)
-			return 0;
-		else if (input > MAX_LUT_INPUT)
-			return 1;
-		return sigmoid[(int) ((input - MIN_LUT_INPUT) * LUT_MULT)];
+		//if (input < MIN_LUT_INPUT)
+		//	return 0;
+		//else if (input > MAX_LUT_INPUT)
+		//	return 1;
+		//return sigmoid[(int) ((input - MIN_LUT_INPUT) * LUT_MULT)];
 
-		// return 1.0 / (1.0 + Math.exp(-(input * SLOPE)));
+		return 1.0 / (1.0 + Math.exp(-(input * SLOPE)));
 	}
 
 	/**

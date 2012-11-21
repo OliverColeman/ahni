@@ -34,6 +34,12 @@ public class GeneticEvent extends EventObject {
 	public static final String GENOTYPE_EVOLVED_EVENT = "genotype_evolved_event";
 
 	/**
+	 * Public constant representing the name of the event that is fired each time a Genotype starts evaluating
+	 * population fitness.
+	 */
+	public static final String GENOTYPE_START_EVALUATION_EVENT = "genotype_start_evaluation_event";
+
+	/**
 	 * Public constant representing the name of the event that is fired each time a Genotype is finished evaluating
 	 * population fitness.
 	 */

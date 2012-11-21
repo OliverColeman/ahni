@@ -1,6 +1,21 @@
 package ojc.ahni.hyperneat;
 
+import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.Arrays;
+
+import javax.imageio.ImageIO;
+
+import ojc.ahni.integration.AHNIEvent;
+import ojc.ahni.integration.AHNIEventListener;
+import ojc.ahni.integration.AHNIRunProperties;
+import ojc.ahni.integration.BainNN;
+import ojc.ahni.util.NiceWriter;
+import ojc.ahni.util.TargetFitnessCalculator;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
@@ -17,39 +32,24 @@ import com.anji.util.Properties;
  * on the fittest and/or best performing Chromosomes evolved during the run; the method
  * {@link #generateSubstrate(Chromosome, Activator) may be used to create substrates for a Chromosome.</p>
  * 
+ * <p>See {@link ojc.ahni.util.TargetFitnessCalculator} for a list of property keys to specify how the error and fitness calculations are performed.</p>
+ * 
  * @author Oliver Coleman
  */
-public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
-	private static final long serialVersionUID = 1L;
+public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction implements AHNIEventListener {
 	private static Logger logger = Logger.getLogger(HyperNEATTargetFitnessFunction.class);
-
-	/**
-	 * The type of error calculation to perform for each input and target output pair. Valid types are:
-	 * <ul>
-	 * <li>sum: the sum of the differences between each target and actual output value.</li>
-	 * <li>sum-squared: the sum of the squared differences between each target and actual output value.</li>
-	 * <li>squared-sum: the squared sum of the differences between each target and actual output value.</li>
-	 * <li>squared-sum-squared: the squared sum of the squared differences between each target and actual output value.</li>
-	 * </ul>
-	 */
-	public static final String ERROR_TYPE_KEY = "fitness.function.error.type";
-
-	/**
-	 * Array containing stimuli (input) examples, in the form [trial][y][x]. The dimensions should match those of the
-	 * input layer of the substrate network.
-	 */
-	protected double[][][] inputPatterns;
-
-	/**
-	 * Array containing target (desired output) examples, in the form [trial][y][x]. The dimensions should match those
-	 * of the output layer of the substrate network.
-	 */
-	protected double[][][] targetOutputPatterns;
-
-	private int maxFitnessValue = 1000000; // The maximum possible fitness value.
-	private String errorType;
-	private boolean squareErrorPerOutput;
-	private boolean squareErrorPerTrial;
+	private static final long serialVersionUID = 1L;
+	
+	public static final String LOG_CHAMP_PERGENS_KEY = "fitness.function.log.champ.evaluation.pergenerations";
+	
+	protected int logChampPerGens = -1;
+	
+	private TargetFitnessCalculator fitnessCalculator;
+	
+	private double[][][] inputPatterns;
+	private double[][][] targetOutputPatterns;
+	private double minTargetOutputValue;
+	private double maxTargetOutputValue;
 
 	protected HyperNEATTargetFitnessFunction() {
 	}
@@ -57,30 +57,32 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 	/**
 	 * Create a HyperNEATTargetFitnessFunction with the specified input and output examples.
 	 * 
-	 * @param inputPatterns Array containing input patterns, in the form [trial][y][x]. The dimensions should match
-	 *            those of the input layer of the substrate network.
-	 * @param targetOutputPatterns Array containing target output patterns, in the form [trial][y][x]. The dimensions
-	 *            should match those of the output layer of the substrate network.
-	 * @param minTargetValue The minimum possible value in the given input patterns.
-	 * @param maxTargetValue The maximum possible value in the given target patterns.
+	 * @param inputPatterns Array containing stimuli (input) examples, in the form [trial][y][x]. The dimensions should match those of the
+	 * input layer of the substrate network.
+	 * @param targetOutputPatterns Array containing target response (output) examples, in the form [trial][y][x]. The dimensions should match those of the
+	 * output layer of the substrate network.
+	 * @param minTargetOutputValue The smallest value that occurs in the target outputs.
+	 * @param maxTargetOutputValue The largest value that occurs in the target outputs.
 	 */
-	public HyperNEATTargetFitnessFunction(double[][][] inputPatterns, double[][][] targetOutputPatterns, double minTargetValue, double maxTargetValue) {
+	public HyperNEATTargetFitnessFunction(double[][][] inputPatterns, double[][][] targetOutputPatterns, double minTargetOutputValue, double maxTargetOutputValue) {
 		this.inputPatterns = inputPatterns;
 		this.targetOutputPatterns = targetOutputPatterns;
+		this.minTargetOutputValue = minTargetOutputValue;
+		this.maxTargetOutputValue = maxTargetOutputValue;
 	}
 
 	public void init(Properties props) {
 		super.init(props);
-		errorType = props.getProperty(ERROR_TYPE_KEY, "squared-sum-squared");
-		squareErrorPerOutput = (errorType == "sum-squared" || errorType == "squared-sum-squared");
-		squareErrorPerTrial = (errorType == "squared-sum" || errorType == "squared-sum-squared");
+		logChampPerGens = props.getIntProperty(LOG_CHAMP_PERGENS_KEY, logChampPerGens);
+		fitnessCalculator = (TargetFitnessCalculator) props.newObjectProperty(TargetFitnessCalculator.class);
+		((AHNIRunProperties) props).getEvolver().addEventListener(this);
 	}
 
 	/**
 	 * @return maximum possible fitness value for this function.
 	 */
 	public int getMaxFitnessValue() {
-		return maxFitnessValue;
+		return fitnessCalculator.getMaxFitnessValue();
 	}
 
 	/**
@@ -90,68 +92,60 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 	 * @param newMaxFitnessValue The new maximum fitness.
 	 */
 	protected void setMaxFitnessValue(int newMaxFitnessValue) {
-		maxFitnessValue = newMaxFitnessValue;
+		fitnessCalculator.setMaxFitnessValue(newMaxFitnessValue);
+	}
+
+	/**
+	 * Set the input and target output pattern pairs to use for evaluations.
+	 * @param inputPatterns Array containing stimuli (input) examples, in the form [trial][y][x]. The dimensions should match those of the
+	 * input layer of the substrate network.
+	 * @param targetOutputPatterns Array containing target response (output) examples, in the form [trial][y][x]. The dimensions should match those of the
+	 * output layer of the substrate network.
+	 * @param minTargetOutputValue The smallest value that occurs in the target outputs.
+	 * @param maxTargetOutputValue The largest value that occurs in the target outputs.
+	 */
+	public void setPatterns(double[][][] inputPatterns, double[][][] targetOutputPatterns, double minTargetOutputValue, double maxTargetOutputValue) {
+		this.inputPatterns = inputPatterns;
+		this.targetOutputPatterns = targetOutputPatterns;
+		this.minTargetOutputValue = minTargetOutputValue;
+		this.maxTargetOutputValue = maxTargetOutputValue;
 	}
 
 	@Override
 	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
-		return evaluate(genotype, substrate, evalThreadIndex, false);
+		return evaluate(genotype, substrate, evalThreadIndex, null);
 	}
 	
-	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, boolean log) {
-		double minResponse = substrate.getMinResponse();
-		double maxResponse = substrate.getMaxResponse();
-		double responseRange = maxResponse - minResponse;
-		double maxErrorPerOutput = squareErrorPerOutput ? responseRange * responseRange : responseRange;
-		double maxErrorPerTrial = width[depth - 1] * height[depth - 1] * maxErrorPerOutput;
-		if (squareErrorPerTrial) {
-			maxErrorPerTrial *= maxErrorPerTrial;
+	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, NiceWriter logOutput) {
+		TargetFitnessCalculator.Results results = fitnessCalculator.evaluate(substrate, inputPatterns, targetOutputPatterns, minTargetOutputValue, maxTargetOutputValue, logOutput);
+		// Force performance result to be proportional.
+		if (fitnessCalculator.getFitnessConversionType().equals("inverse")) {
+			double performance = (double) results.proportionalFitness / fitnessCalculator.getMaxFitnessValue();
+			genotype.setPerformanceValue(performance);
 		}
-		double maxError = inputPatterns.length * maxErrorPerTrial;
-		double[][][] responses = substrate.nextSequence(inputPatterns);
-		double error = 0;
-		StringBuilder logString = null;
-		if (log) {
-			logString = new StringBuilder("HyperNEATTargetFitnessFunction trials:");
-		}
-		for (int i = 0; i < responses.length; ++i) {
-			double trialError = 0;
-			double[][] response = responses[i];
-			double[][] target = targetOutputPatterns[i];
-			for (int y = 0; y < target.length; y++) {
-				for (int x = 0; x < target[0].length; x++) {
-					double diff = Math.abs(response[y][x] - target[y][x]);
-					trialError += squareErrorPerOutput ? diff * diff : diff;
+		return results.fitness;
+	}
+	
+	@Override
+	public void ahniEventOccurred(AHNIEvent event) {
+		if (event.getType() == AHNIEvent.Type.GENERATION_END) {
+			HyperNEATEvolver evolver = event.getEvolver();
+			boolean finished = evolver.evolutionFinished(); 
+			if ((logChampPerGens >= 0 && finished) || (logChampPerGens > 0 && evolver.getGeneration() % logChampPerGens == 0)) {
+				try {
+					Chromosome bestPerforming = evolver.getBestPerformingFromLastGen();
+					Activator substrate = generateSubstrate(bestPerforming, null);
+					if (substrate != null) {
+						NiceWriter outputfile = new NiceWriter(new FileWriter(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : evolver.getGeneration()) + "-evaluation-" + bestPerforming.getId() + ".txt"), "0.00");
+						evaluate(bestPerforming, substrate, 0, outputfile);
+						outputfile.close();
+					}
+				} catch (TranscriberException e) {
+					logger.info("Error transcribing best performing individual: "  + Arrays.toString(e.getStackTrace()));
+				} catch (IOException e) {
+					logger.info("Error opening evaluation log file: " + Arrays.toString(e.getStackTrace()));
 				}
-			}			
-			error += squareErrorPerTrial ? trialError * trialError : trialError;
-			
-			if (log && i < 25) {
-				logString.append("" + 
-						"\n\tInput:  " + Arrays.deepToString(inputPatterns[i]) + 
-						"\n\tTarget: " + Arrays.deepToString(targetOutputPatterns[i]) + 
-						"\n\tOutput: " + Arrays.deepToString(responses[i]) + "\n");
 			}
-		}
-		if (log) {
-			logger.info(logString);
-		}
-		return maxFitnessValue - (int) Math.round((error / maxError) * maxFitnessValue);
-	}
-	
-	/**
-	 * {@inheritDoc}
-	 * <p>This default implementation prints out the best performing substrate using its toString() method and the input, target and output patterns for each trial.</p>
-	 */
-	public void evolutionFinished(HyperNEATEvolver evolver) {
-		super.evolutionFinished(evolver);
-		try {
-			Chromosome bestPerforming = evolver.getBestPerformingFromLastGen();
-			Activator substrate = generateSubstrate(bestPerforming, null);
-			evaluate(bestPerforming, substrate, 0, true);
-		} catch (TranscriberException e) {
-			System.err.println("Error transcribing best performing individual.");
-			e.printStackTrace();
 		}
 	}
 }

@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
 
+import ojc.ahni.hyperneat.HyperNEATEvolver;
+
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.regexp.RE;
@@ -468,12 +470,15 @@ public class Properties extends java.util.Properties {
 	 *         <code>Configurable</code>
 	 */
 	public Object singletonObjectProperty(Class aClass) {
+		//System.err.println(System.identityHashCode(this) + "  " + name + " singletonObjectProperty(Class aClass)  ENTER");
 		synchronized (classToSingletonsMap) {
+			///System.err.println(System.identityHashCode(this) + "  " + name + " singletonObjectProperty(Class aClass)  IN synchronized");
 			Object result = classToSingletonsMap.get(aClass);
 			if (result == null) {
 				result = newObjectProperty(aClass);
 				classToSingletonsMap.put(aClass, result);
 			}
+			//System.err.println(System.identityHashCode(this) + "  " + name + " singletonObjectProperty(Class aClass)  EXIT");
 			return result;
 		}
 	}
@@ -488,7 +493,8 @@ public class Properties extends java.util.Properties {
 			Object result = cl.newInstance();
 			if (result instanceof Configurable) {
 				Configurable conf = (Configurable) result;
-				conf.init(getSubProperties(key + "."));
+				//conf.init(getSubProperties(key + "."));
+				conf.init(this);
 			}
 			return result;
 		} catch (RuntimeException e) {
@@ -511,10 +517,9 @@ public class Properties extends java.util.Properties {
 				c.init(this);
 			}
 			return result;
-		} catch (RuntimeException e) {
-			throw e;
 		} catch (Exception e) {
-			throw new IllegalArgumentException("can't create object for class " + aClass + ": " + e);
+			e.printStackTrace();
+			throw new IllegalArgumentException("can't create object for class " + aClass + ":\n" + e);
 		}
 	}
 

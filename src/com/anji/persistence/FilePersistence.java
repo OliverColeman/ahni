@@ -69,7 +69,7 @@ public class FilePersistence implements Persistence {
 	/**
 	 * properties key, base directory for persistence storage
 	 */
-	public final static String BASE_DIR_KEY = "base.dir";
+	public final static String BASE_DIR_KEY = "persistence.base.dir";
 
 	Properties props;
 

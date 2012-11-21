@@ -77,7 +77,7 @@ public class AnjiActivator implements Activator {
 		if (newInputValues != null)
 			inputPattern.setValues(newInputValues);
 
-		// step through network activations
+		// step through network activations for recurrent network
 		for (int cycle = 0; cycle < numCycles - 1; ++cycle) {
 			net.step();
 
@@ -94,7 +94,9 @@ public class AnjiActivator implements Activator {
 			Neuron n = net.getOutputNeuron(idx);
 			result[idx] = n.getValue();
 		}
-		net.fullyActivate();
+		if (net.isRecurrent()) {
+			net.fullyActivate();
+		}
 
 		return result;
 	}
@@ -215,6 +217,16 @@ public class AnjiActivator implements Activator {
 	 */
 	public AnjiNet getAnjiNet() {
 		return net;
+	}
+
+	@Override
+	public int getInputCount() {
+		return inputPattern.getDimension();
+	}
+
+	@Override
+	public int getOutputCount() {
+		return outputDimension;
 	}
 
 }

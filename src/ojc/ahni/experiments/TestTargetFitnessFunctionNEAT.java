@@ -1,6 +1,5 @@
 package ojc.ahni.experiments;
 
-import ojc.ahni.hyperneat.HyperNEATTargetFitnessFunction;
 import ojc.ahni.integration.TargetFitnessFunctionMT;
 
 import com.anji.neat.NeatConfiguration;
@@ -12,21 +11,26 @@ import com.anji.util.Properties;
  * values are:
  * <ul>
  * <li>pass-through: the output should match the input, new random input patterns are generated for every generation.</li>
+ * <li>parity: bitwise parity over all inputs.</li>
  * <li>[More to come!]</li>
  * </ul>
- * The number of trials can be specified with the property key "fitness.function.test.numtrials". See
+ * The number of trials is determined by the number of inputs as 2 ^ (inputCount), thus every
+ * possible input pattern is tested. See
  * {@link TargetFitnessFunctionMT} for other available parameters that may be specified via the properties file.
  * 
  * @author Oliver Coleman
  */
 public class TestTargetFitnessFunctionNEAT extends TargetFitnessFunctionMT {
+	private static final long serialVersionUID = 1L;
+
 	public static final String TEST_TYPE_KEY = "fitness.function.test.type";
-	public static final String NUM_TRIALS_KEY = "fitness.function.test.numtrials";
 
 	private int numTrials;
 	String testType;
 
 	private int inputSize, outputSize;
+	
+	private double[][] inputPatterns, targetOutputPatterns;
 
 	public TestTargetFitnessFunctionNEAT() {
 	}
@@ -34,30 +38,46 @@ public class TestTargetFitnessFunctionNEAT extends TargetFitnessFunctionMT {
 	public void init(Properties props) {
 		super.init(props);
 
-		numTrials = props.getIntProperty(NUM_TRIALS_KEY);
 		testType = props.getProperty(TEST_TYPE_KEY);
-
 		inputSize = props.getShortProperty(NeatConfiguration.STIMULUS_SIZE_KEY, NeatConfiguration.DEFAULT_STIMULUS_SIZE);
 		outputSize = props.getShortProperty(NeatConfiguration.RESPONSE_SIZE_KEY, NeatConfiguration.DEFAULT_RESPONSE_SIZE);
 
 		if (testType.equals("pass-through") && inputSize != outputSize) {
 			throw new IllegalArgumentException("Network input and output dimensions must be the same for pass-through test in TestTargetFitnessFunctionNEAT.");
 		}
-
+		if (testType.equals("parity") && outputSize != 1) {
+			throw new IllegalArgumentException("Network output size must be 1 for the pass-through test in TestTargetFitnessFunctionNEAT.");
+		}
+		
+		numTrials = 1 << inputSize;
+		
+		generatePatterns();
 		inputPatterns = new double[numTrials][inputSize];
 		targetOutputPatterns = new double[numTrials][outputSize];
 	}
+	
+	private void generatePatterns() {
+		inputPatterns = new double[numTrials][inputSize];
+		targetOutputPatterns = new double[numTrials][outputSize];
+		
+		for (int t = 0; t < numTrials; t++) {
+			int p = t;
+			for (int i = 0; i < inputSize; i++, p >>= 1) {
+				inputPatterns[t][i] = p & 0x1;
 
-	public void initialiseEvaluation() {
-		switch (testType) {
-		case "pass-through":
-			for (int t = 0; t < numTrials; t++) {
-				for (int i = 0; i < inputSize; i++) {
-					inputPatterns[t][i] = random.nextInt(2);
+				if (testType.equals("pass-through")) {
 					targetOutputPatterns[t][i] = inputPatterns[t][i];
 				}
 			}
-			break;
+			if (testType.equals("parity")) {
+				int parity = t & 0x1;
+				for (int i = 1; i < 31; i++) {
+					parity ^= (t >> i) & 0x1;
+				}
+				targetOutputPatterns[t][0] = parity;
+			}
 		}
+
+		setPatterns(inputPatterns, targetOutputPatterns, 0, 1);
 	}
 }

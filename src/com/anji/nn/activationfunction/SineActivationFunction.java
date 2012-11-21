@@ -51,7 +51,7 @@ public class SineActivationFunction implements ActivationFunction {
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
 	public double apply(double input) {
-		return (double) Math.sin(input);
+		return Math.sin(input);
 	}
 
 	/**

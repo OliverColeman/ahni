@@ -54,6 +54,7 @@ public class ActivationFunctionFactory {
 		activationFunctions.put(SineActivationFunction.NAME, new SineActivationFunction());
 		activationFunctions.put(CosineActivationFunction.NAME, new CosineActivationFunction());
 		activationFunctions.put(AbsoluteActivationFunction.NAME, new AbsoluteActivationFunction());
+		activationFunctions.put(RampActivationFunction.NAME, new RampActivationFunction());
 		activationFunctions.put(ClampedAbsoluteActivationFunction.NAME, new ClampedAbsoluteActivationFunction());
 		activationFunctions.put(ConvertToSignedActivationFunction.NAME, new ConvertToSignedActivationFunction());
 		activationFunctions.put(DivideActivationFunction.NAME, new DivideActivationFunction());

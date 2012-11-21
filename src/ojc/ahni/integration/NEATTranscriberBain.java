@@ -37,8 +37,10 @@ import com.anji.util.Properties;
  * network.
  * </p>
  * <p>
- * Bain neural networks are not well suited to non-layered feed-forward networks as every neuron and synapse must be
- * activated every simulation step.
+ * Bain neural networks are not well suited to feed-forward networks as every neuron and synapse must be
+ * activated every simulation step. Bain is intended for recurrent networks, however the implementations of 
+ * {@link com.anji.integration.Activator#nextSequence(double[][])} and {@link com.anji.integration.Activator#nextSequence(double[][][])}
+ * in the {@link BainNN} wrapper are optimised to provide amortised performance over the number of input sequences for layered feed-forward networks.
  * </p>
  * 
  * @author Oliver Coleman
@@ -212,7 +214,7 @@ public class NEATTranscriberBain implements Transcriber<BainNN> {
 		int[] inputDims = new int[] { inNeuronAlleles.size() };
 		int[] outputDims = new int[] { outNeuronAlleles.size() };
 		try {
-			return new BainNN(nn, inputDims, outputDims, cyclesPerStep, topology, "network " + genotype.getId());
+			return new BainNN(nn, inputDims, outputDims, cyclesPerStep, topology, "network " + genotype.getId(), 1000);
 		} catch (Exception e) {
 			throw new TranscriberException(e);
 		}

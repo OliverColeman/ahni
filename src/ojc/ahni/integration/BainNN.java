@@ -11,9 +11,13 @@ import java.awt.geom.Arc2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -35,8 +39,10 @@ import ojc.bain.neuron.rate.NeuronCollectionWithBias;
  * integration with the ANJI/AHNI framework.
  * </p>
  * <p>
- * Bain neural networks are not well suited to non-layered feed-forward networks as every neuron and synapse must be
- * activated every simulation step.
+ * Bain neural networks are not well suited to feed-forward networks as every neuron and synapse must be
+ * activated every simulation step. Bain is intended for recurrent networks, however the implementations of 
+ * {@link com.anji.integration.Activator#nextSequence(double[][])} and {@link com.anji.integration.Activator#nextSequence(double[][])}
+ * are optimised to provide amortised performance over the number of input sequences for layered feed-forward networks.
  * </p>
  */
 public class BainNN implements Activator {
@@ -73,6 +79,7 @@ public class BainNN implements Activator {
 	private int[] outputDimensions;
 	private int inputSize, outputIndex, outputSize;
 	private int neuronCount, synapseCount;
+	private int maxCycleLength;
 
 	private double[][] coords;
 	private double[] coordsMin, coordsMax, coordsRange; 
@@ -95,7 +102,7 @@ public class BainNN implements Activator {
 	 * @throws Exception
 	 */
 	public BainNN(NeuralNetwork nn, int[] inputDimensions, int[] outputDimensions, int stepsPerStep, Topology topology) throws Exception {
-		init(nn, inputDimensions, outputDimensions, stepsPerStep, topology, null);
+		init(nn, inputDimensions, outputDimensions, stepsPerStep, topology, null, 1000);
 	}
 
 	/**
@@ -114,13 +121,14 @@ public class BainNN implements Activator {
 	 *            supplied value will be ignored.</strong>
 	 * @param topology Specifies the network topology, see {@link #topology}.
 	 * @param name A name for this BainNN.
+	 * @param maxCycleLength When determining if this network is recurrent, the maximum cycle length to search for before the network is considered recurrent. Note that this is set to the smaller of the given value and number of neurons in the network.
 	 * @throws Exception
 	 */
-	public BainNN(NeuralNetwork nn, int[] inputDimensions, int[] outputDimensions, int stepsPerStep, Topology topology, String name) throws Exception {
-		init(nn, inputDimensions, outputDimensions, stepsPerStep, topology, name);
+	public BainNN(NeuralNetwork nn, int[] inputDimensions, int[] outputDimensions, int stepsPerStep, Topology topology, String name, int maxCycleLength) throws Exception {
+		init(nn, inputDimensions, outputDimensions, stepsPerStep, topology, name, maxCycleLength);
 	}
 
-	private void init(NeuralNetwork nn, int[] inputDimensions, int[] outputDimensions, int stepsPerStep, Topology topology, String name) throws Exception {
+	private void init(NeuralNetwork nn, int[] inputDimensions, int[] outputDimensions, int stepsPerStep, Topology topology, String name, int maxCycleLength) throws Exception {
 		this.nn = nn;
 		this.stepsPerStep = stepsPerStep;
 		this.topology = topology;
@@ -129,6 +137,7 @@ public class BainNN implements Activator {
 		this.name = name;
 		this.neuronCount = nn.getNeurons().getSize();
 		this.synapseCount = nn.getSynapses().getSize();;
+		this.maxCycleLength = Math.min(neuronCount, maxCycleLength);
 		inputSize = 1;
 		for (int i = 0; i < inputDimensions.length; i++) {
 			inputSize *= inputDimensions[i];
@@ -150,6 +159,12 @@ public class BainNN implements Activator {
 	public NeuralNetwork getNeuralNetwork() {
 		return nn;
 	}
+	
+
+	public BainNN.Topology getTopology() {
+		return topology;
+	}
+
 
 	@Override
 	public Object next() {
@@ -314,22 +329,13 @@ public class BainNN implements Activator {
 	}
 
 	private void setStepsPerStepForNonLayeredFF() {
-		int maxDepth = Math.min(100, neuronCount-inputSize-outputSize);
-		int depth = 0;
-
 		// For each neuron store the list of neurons which have connections to it.
-		Map<Integer, Set<Integer>> neuronSourceIDs = new HashMap<Integer, Set<Integer>>();
+		ArrayList<ArrayList<Integer>> neuronSourceIDs = new ArrayList<ArrayList<Integer>>();
 		for (int id = 0; id < neuronCount; id++) {
-			neuronSourceIDs.put(id, new HashSet<Integer>());
+			neuronSourceIDs.add(new ArrayList<Integer>());
 		}
 		SynapseCollection<? extends ComponentConfiguration> synapses = nn.getSynapses();
 		for (int c = 0; c < synapses.getSize(); c++) {
-			if (neuronSourceIDs == null) {
-				logger.error("neuronSourceIDs == null");
-			}
-			if (synapses == null) {
-				logger.error("synapses == null");
-			}
 			if (neuronSourceIDs.get(synapses.getPostNeuron(c)) == null) {
 				logger.error("neuronSourceIDs.get(synapses.getPostNeuron(c)) == null");
 				logger.error("synapses.getPostNeuron(c) = " + synapses.getPostNeuron(c));
@@ -338,31 +344,48 @@ public class BainNN implements Activator {
 			neuronSourceIDs.get(synapses.getPostNeuron(c)).add(synapses.getPreNeuron(c));
 		}
 
-		// Start at output neurons, iterate through network finding source neurons until we are at the
-		// input neurons (which by definition don't have source neurons). This is not the most
-		// efficient implementation but should be fine in this case.
-		HashSet<Integer> current = new HashSet<Integer>();
-		for (int id = outputIndex; id < neuronCount; id++) {
+		// Start at output neurons, iterate through network finding source neurons until we reach dead ends or find a cycle.
+		int maxDepth = 0;
+		boolean[] visited = new boolean[neuronCount];
+		boolean cyclic = false;
+		ArrayList<Integer> current = new ArrayList<Integer>();
+		ArrayList<Integer> next = new ArrayList<Integer>();
+		for (int id = outputIndex; id < neuronCount && !cyclic; id++) {
+			int depth = 0;
+			Arrays.fill(visited, false);
+			current.clear();
+			
 			current.add(id);
-		}
-		while (!current.isEmpty() && depth < maxDepth) {
-			HashSet<Integer> next = new HashSet<Integer>();
-			// Get the neurons in the next "layer".
-			for (Integer c : current) {
-				for (Integer source : neuronSourceIDs.get(c)) {
-					next.add(source);
+			visited[id] = true;
+			while (!current.isEmpty() && depth < maxCycleLength && !cyclic) {
+				next.clear();
+				// Get the neurons in the next "layer".
+				for (Integer c : current) {
+					for (Integer source : neuronSourceIDs.get(c)) {
+						if (visited[source]) {
+							cyclic = true;
+							break;
+						}
+						else {
+							next.add(source);
+							visited[source] = true;
+						}
+					}
+					if (cyclic) break;
 				}
+				ArrayList<Integer> temp = current; 
+				current = next;
+				next = temp;
+				depth++;
 			}
-			current = next;
-			depth++;
+			if (depth > maxDepth) maxDepth = depth;
 		}
-		if (depth < maxDepth) {
-			stepsPerStep = depth - 1;
+		
+		if (!cyclic && maxDepth < maxCycleLength) {
+			stepsPerStep = maxDepth - 1;
 		}
 		else {
-			if (logger.isDebugEnabled()) {
-				logger.warn("Error determining depth of non-layered feed forward Bain network, stopping at apparent depth of " + maxDepth + ", perhaps the network contains cycles? Switching to recurrent topology mode with " + stepsPerStep + " activation cycles per step.");
-			}
+			logger.debug("Error determining depth of non-layered feed forward Bain network, stopping at apparent depth of " + maxCycleLength + ", perhaps the network contains cycles? Switching to recurrent topology mode with " + stepsPerStep + " activation cycles per step.");
 			this.topology = Topology.RECURRENT;
 			
 		}
@@ -378,6 +401,13 @@ public class BainNN implements Activator {
 			coordsMax = new double[3];
 			coordsRange = new double[3];
 		}
+	}
+	
+	/**
+	 * Returns true iff storing coordinates for neurons has been enabled.
+	 */
+	public boolean coordsEnabled() {
+		return (coords != null);
 	}
 
 	/**
@@ -597,5 +627,15 @@ public class BainNN implements Activator {
 	// Scale the coordinate to the range [0, 1].
 	private int scaleCoord(double c, int d, int scale) {
 		return (int) Math.round(((c - coordsMin[d]) / coordsRange[d]) * scale);
+	}
+
+	@Override
+	public int getInputCount() {
+		return inputSize;
+	}
+
+	@Override
+	public int getOutputCount() {
+		return outputSize;
 	}
 }

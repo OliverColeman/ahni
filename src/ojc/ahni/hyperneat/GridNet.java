@@ -819,4 +819,14 @@ public class GridNet implements Activator {
 		 * //net.stepFF();
 		 */
 	}
+
+	@Override
+	public int getInputCount() {
+		return height[0] * width[0];
+	}
+
+	@Override
+	public int getOutputCount() {
+		return height[depth-1] * width[depth-1];
+	}
 }

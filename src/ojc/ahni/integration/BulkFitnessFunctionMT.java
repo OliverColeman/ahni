@@ -56,10 +56,6 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 	protected int evaluatorsFinishedCount;
 	protected Evaluator[] evaluators;
 	protected Iterator<Chromosome> chromosomesIterator;
-	/**
-	 * The current generation of the evolutionary algorithm.
-	 */
-	protected int generation;
 
 	protected Random random;
 
@@ -117,8 +113,6 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 			evaluators[i] = new Evaluator(i);
 			evaluators[i].start();
 		}
-
-		generation = 0;
 	}
 
 	/**
@@ -167,11 +161,8 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 		endRun = false;
 		// If we've reached the target performance, end the run.
 		if ((targetPerformanceType == 1 && bestPerformance >= targetPerformance) || (targetPerformanceType == 0 && bestPerformance <= targetPerformance)) {
-			System.out.println("End run, solution found. bestPerformance: " + bestPerformance + ", targetPerformance: " + targetPerformance);
 			endRun = true;
 		}
-
-		generation++;
 	}
 
 	/**
@@ -237,8 +228,9 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 					while ((chrom = getNextChromosome()) != null) {
 						try {
 							substrate = generateSubstrate(chrom, substrate);
-							int fitness = evaluate(chrom, substrate, id);
+							int fitness = (substrate != null) ? evaluate(chrom, substrate, id) : 0;
 							chrom.setFitnessValue(fitness);
+							// If the fitness function hasn't explicitly set a performance value.
 							if (chrom.getPerformanceValue() == -1) {
 								chrom.setPerformanceValue((double) fitness / getMaxFitnessValue());
 							}
@@ -306,29 +298,10 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 	}
 	
 	/**
-	 * {@inheritDoc}
-	 * <p>This default implementation prints out the best performing substrate using its toString() method.</p>
-	 * @throws IOException 
+	 * This default implementation does nothing.
 	 */
+	@Override
+	@Deprecated
 	public void evolutionFinished(HyperNEATEvolver evolver) {
-		try {
-			Chromosome bestPerforming = evolver.getBestPerformingFromLastGen();
-			Activator substrate = generateSubstrate(bestPerforming, null);
-			System.out.println("Best performing substrate:\n" + substrate);
-			
-			if (substrate instanceof BainNN && props.getBooleanProperty(ESHyperNEATTranscriberBain.ES_HYPERNEAT_RECORD_COORDINATES, false)) {
-				BufferedImage image = new BufferedImage(800, 800, BufferedImage.TYPE_3BYTE_BGR);
-				((BainNN) substrate).draw(image.createGraphics(), image.getWidth(), image.getHeight(), 30);
-				File outputfile = new File(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "ESHyperNEATTranscriberBain-" + bestPerforming.getId() + ".png");
-				ImageIO.write(image, "png", outputfile);
-			}
-		} catch (TranscriberException e) {
-			System.err.println("Error transcribing best performing individual.");
-			e.printStackTrace();
-		} catch (IOException e) {
-			System.err.println("Error saving image of best performing network.");
-			e.printStackTrace();
-		}
 	}
-
 }

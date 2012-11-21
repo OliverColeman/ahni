@@ -122,7 +122,6 @@ public abstract class HyperNEATFitnessFunction extends BulkFitnessFunctionMT {
 		endRun = false;
 		// If we've completed all scalings and reached the target performance, end the run.
 		if (scaleCount >= 0 && scaleCount == scaleTimes && scaleFactor > 1 && ((targetPerformanceType == 1 && bestPerformance >= targetPerformance) || (targetPerformanceType == 0 && bestPerformance <= targetPerformance))) {
-			System.out.println("End run, solution found. bestPerformance: " + bestPerformance + ", targetPerformance: " + targetPerformance);
 			endRun = true;
 		}
 
@@ -136,8 +135,6 @@ public abstract class HyperNEATFitnessFunction extends BulkFitnessFunctionMT {
 
 			scaleCount++;
 		}
-
-		generation++;
 	}
 
 	/**
@@ -168,5 +165,12 @@ public abstract class HyperNEATFitnessFunction extends BulkFitnessFunctionMT {
 		// only record performance when all scales have been performed.
 		if (!scaleRecordIntermediatePerf && scaleCount < scaleTimes)
 			genotype.setPerformanceValue(0);
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 * <p>This default implementation does nothing.</p>
+	 */
+	public void evolutionFinished(HyperNEATEvolver evolver) {
 	}
 }

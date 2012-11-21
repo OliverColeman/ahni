@@ -188,10 +188,12 @@ public class Neuron implements XmlPersistable {
 	protected double value;
 
 	private boolean dirty; // indicates value has not been updated for the current
+	
+	private boolean nonIntegrating = false;
 
 	// time step
 
-	private Collection incomingConns = new ArrayList();
+	private ArrayList<Connection> incomingConns = new ArrayList<Connection>();
 
 	private ActivationFunction func = null;
 
@@ -206,6 +208,7 @@ public class Neuron implements XmlPersistable {
 		if (aFunc == null)
 			throw new IllegalArgumentException("activation function can not be null");
 		func = aFunc;
+		nonIntegrating = func instanceof ActivationFunctionNonIntegrating;
 		reset();
 	}
 
@@ -233,22 +236,17 @@ public class Neuron implements XmlPersistable {
 	 */
 	public double getValue() {
 		if (dirty) {
-			if (func instanceof ActivationFunctionNonIntegrating) {
+			if (nonIntegrating) {
 				ActivationFunctionNonIntegrating func2 = (ActivationFunctionNonIntegrating) func;
 				double[] input = new double[incomingConns.size()];
-				Iterator it = incomingConns.iterator();
-				int i = 0;
-				while (it.hasNext()) {
-					Connection conn = (Connection) it.next();
-					input[i++] = conn.read();
+				for (int i = 0; i < incomingConns.size(); i++) {
+					input[i] = incomingConns.get(i).read();
 				}
 				value = func2.apply(input);
 			} else {
-				double sum = 0.0f;
-				Iterator it = incomingConns.iterator();
-				while (it.hasNext()) {
-					Connection conn = (Connection) it.next();
-					sum += conn.read();
+				double sum = 0;
+				for (int i = 0; i < incomingConns.size(); i++) {
+					sum += incomingConns.get(i).read();
 				}
 				value = func.apply(sum);
 			}

@@ -114,16 +114,14 @@ public class AnjiNetTranscriber implements Transcriber<AnjiActivator> {
 	 * @throws TranscriberException
 	 */
 	public AnjiNet newAnjiNet(Chromosome genotype) throws TranscriberException {
-		Map allNeurons = new HashMap();
+		Map<Long, Neuron> allNeurons = new HashMap<Long, Neuron>();
 
 		// System.out.println("ID: " + genotype.getId());
 
 		// input neurons
-		SortedMap inNeuronAlleles = NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.INPUT);
-		List inNeurons = new ArrayList();
-		Iterator it = inNeuronAlleles.values().iterator();
-		while (it.hasNext()) {
-			NeuronAllele neuronAllele = (NeuronAllele) it.next();
+		SortedMap<Long, NeuronAllele> inNeuronAlleles = NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.INPUT);
+		List<Neuron> inNeurons = new ArrayList<Neuron>();
+		for (NeuronAllele neuronAllele : inNeuronAlleles.values()) {
 			Neuron n = new Neuron(ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType()));
 			n.setId(neuronAllele.getInnovationId().longValue());
 			inNeurons.add(n);
@@ -131,24 +129,18 @@ public class AnjiNetTranscriber implements Transcriber<AnjiActivator> {
 		}
 
 		// output neurons
-		SortedMap outNeuronAlleles = NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.OUTPUT);
-		List outNeurons = new ArrayList();
-		it = outNeuronAlleles.values().iterator();
-		while (it.hasNext()) {
-			NeuronAllele neuronAllele = (NeuronAllele) it.next();
-
+		SortedMap<Long, NeuronAllele> outNeuronAlleles = NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.OUTPUT);
+		List<Neuron> outNeurons = new ArrayList<Neuron>();
+		for (NeuronAllele neuronAllele : outNeuronAlleles.values()) {
 			Neuron n = new Neuron(ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType()));
-
 			n.setId(neuronAllele.getInnovationId().longValue());
 			outNeurons.add(n);
 			allNeurons.put(neuronAllele.getInnovationId(), n);
 		}
 
 		// hidden neurons
-		SortedMap hiddenNeuronAlleles = NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.HIDDEN);
-		it = hiddenNeuronAlleles.values().iterator();
-		while (it.hasNext()) {
-			NeuronAllele neuronAllele = (NeuronAllele) it.next();
+		SortedMap<Long, NeuronAllele> hiddenNeuronAlleles = NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.HIDDEN);
+		for (NeuronAllele neuronAllele : hiddenNeuronAlleles.values()) {
 			Neuron n = new Neuron(ActivationFunctionFactory.valueOf(neuronAllele.getActivationType()));
 			n.setId(neuronAllele.getInnovationId().longValue());
 			allNeurons.put(neuronAllele.getInnovationId(), n);
@@ -168,19 +160,17 @@ public class AnjiNetTranscriber implements Transcriber<AnjiActivator> {
 		//
 		// RecurrencyPolicy.BEST_GUESS - any connection where the source neuron is in the same or
 		// later (i.e., nearer output layer) as the destination is a CacheNeuronConnection
-		Collection recurrentConns = new ArrayList();
-		List remainingConnAlleles = NeatChromosomeUtility.getConnectionList(genotype.getAlleles());
-		Set currentNeuronInnovationIds = new HashSet(outNeuronAlleles.keySet());
-		Set traversedNeuronInnovationIds = new HashSet(currentNeuronInnovationIds);
-		Set nextNeuronInnovationIds = new HashSet();
+		List<CacheNeuronConnection> recurrentConns = new ArrayList<CacheNeuronConnection>();
+		List<ConnectionAllele> remainingConnAlleles = NeatChromosomeUtility.getConnectionList(genotype.getAlleles());
+		Set<Long> currentNeuronInnovationIds = new HashSet<Long>(outNeuronAlleles.keySet());
+		Set<Long> traversedNeuronInnovationIds = new HashSet<Long>(currentNeuronInnovationIds);
+		Set<Long> nextNeuronInnovationIds = new HashSet<Long>();
 		while (!remainingConnAlleles.isEmpty() && !currentNeuronInnovationIds.isEmpty()) {
 			nextNeuronInnovationIds.clear();
-			Collection connAlleles = NeatChromosomeUtility.extractConnectionAllelesForDestNeurons(remainingConnAlleles, currentNeuronInnovationIds);
-			it = connAlleles.iterator();
-			while (it.hasNext()) {
-				ConnectionAllele connAllele = (ConnectionAllele) it.next();
-				Neuron src = (Neuron) allNeurons.get(connAllele.getSrcNeuronId());
-				Neuron dest = (Neuron) allNeurons.get(connAllele.getDestNeuronId());
+			Collection<ConnectionAllele> connAlleles = NeatChromosomeUtility.extractConnectionAllelesForDestNeurons(remainingConnAlleles, currentNeuronInnovationIds);
+			for (ConnectionAllele connAllele : connAlleles) {
+				Neuron src = allNeurons.get(connAllele.getSrcNeuronId());
+				Neuron dest = allNeurons.get(connAllele.getDestNeuronId());
 				if (src == null || dest == null)
 					throw new TranscriberException("connection with missing src or dest neuron: " + connAllele.toString());
 
@@ -193,11 +183,12 @@ public class AnjiNetTranscriber implements Transcriber<AnjiActivator> {
 					cached = maybeRecurrent || recurrencyPolicy.equals(RecurrencyPolicy.LAZY);
 				}
 				NeuronConnection conn = null;
-				if (cached) {
-					conn = new CacheNeuronConnection(src, connAllele.getWeight());
-					recurrentConns.add(conn);
-				} else
-					conn = new NeuronConnection(src, connAllele.getWeight());
+				if (cached) {					
+					conn = new CacheNeuronConnection(src, (float) connAllele.getWeight());
+					recurrentConns.add((CacheNeuronConnection) conn);
+				} else {
+					conn = new NeuronConnection(src, (float) connAllele.getWeight());
+				}
 
 				conn.setId(connAllele.getInnovationId().longValue());
 				dest.addIncomingConnection(conn);
@@ -220,7 +211,7 @@ public class AnjiNetTranscriber implements Transcriber<AnjiActivator> {
 
 		// build network
 
-		Collection allNeuronsCol = allNeurons.values();
+		Collection<Neuron> allNeuronsCol = allNeurons.values();
 		String id = genotype.getId().toString();
 		return new AnjiNet(allNeuronsCol, inNeurons, outNeurons, recurrentConns, id);
 	}
