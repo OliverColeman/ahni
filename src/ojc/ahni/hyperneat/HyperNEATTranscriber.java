@@ -76,8 +76,13 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	/**
 	 * Enable or disable Link Expression Output (LEO). See P. Verbancsics and K. O. Stanley (2011) Constraining Connectivity to Encourage Modularity in 
 	 * HyperNEAT. In Proceedings of the Genetic and Evolutionary Computation Conference (GECCO 2011). Default is "false".
+	 * @see #HYPERNEAT_LEO_LOCALITY 
 	 */
 	public static final String HYPERNEAT_LEO = "ann.hyperneat.leo";
+	/**
+	 * Enable or disable seeding of the initial population of {@link org.jgapcustomised.Chromosome}s to incorporate a bias towards local connections via the Link Expression Output (LEO), see {@link #HYPERNEAT_LEO} and the article reference within. Default is "false".
+	 */
+	public static final String HYPERNEAT_LEO_LOCALITY = "ann.hyperneat.leo.localityseeding";
 	
 	
 	/**
@@ -165,9 +170,9 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	// Index of delta and angle inputs in CPPN input vector.
 	int cppnIdxDX = -1, cppnIdxDY = -1, cppnIdxDZ = -1, cppnIdxAn = -1;
 	// Index of output signals in CPPN output vector.
-	int[] cppnIdxW; // weights (either a single output for all layers or one output per layer)
-	int[] cppnIdxB = new int[0]; // bias (either a single output for all layers or one output per layer)
-	int[] cppnIdxL; // link expression (either a single output for all layers or one output per layer)
+	int[] cppnIdxW = new int[]{-1}; // weights (either a single output for all layers or one output per layer)
+	int[] cppnIdxB = new int[]{-1}; // bias (either a single output for all layers or one output per layer)
+	int[] cppnIdxL = new int[]{-1}; // link expression (either a single output for all layers or one output per layer)
 	
 	/**
 	 * Subclasses may set this to "force" or "prevent" before calling super.init(Properties) to either force or prevent the use of Z coordinate inputs for the CPPN (both source and target neuron Z coordinates will be affected).
@@ -209,11 +214,11 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 
 		// Determine CPPN input size and mapping.
 		cppnInputCount = 1; // Bias always has index 0.
-		cppnIdxTX = cppnInputCount++;
-		cppnIdxTY = cppnInputCount++;
 		cppnIdxSX = cppnInputCount++;
 		cppnIdxSY = cppnInputCount++;
-		logger.info("CPPN: Added bias, tx, ty, sx, sy inputs.");
+		cppnIdxTX = cppnInputCount++;
+		cppnIdxTY = cppnInputCount++;
+		logger.info("CPPN: Added bias, sx, sy, tx, ty inputs.");
 		if (zCoordsForCPPN.equals("force") || (!zCoordsForCPPN.equals("prevent") && (feedForward && layerEncodingIsInput && depth > 2 || !feedForward && depth > 1))) {
 			cppnIdxTZ = cppnInputCount++;
 			logger.info("CPPN: Added tz input.");
@@ -493,5 +498,111 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		public double getLEO(int sourceLayerIndex) {
 			return cppnOutput[cppnIdxL[sourceLayerIndex]];
 		}
+	}
+
+	/**
+	 * Returns true iff the Link Expression Output (LEO) is enabled.
+	 * @see #HYPERNEAT_LEO
+	 */
+	public boolean leoEnabled() {
+		return enableLEO;
+	}
+
+	/**
+	 * @return the index in the CPPN inputs for the bias.
+	 */
+	public int getCPPNIndexBiasInput() {
+		return 0;
+	}
+
+	/**
+	 * @return the index in the CPPN inputs for the x coordinate for the target neuron.
+	 */
+	public int getCPPNIndexTargetX() {
+		return cppnIdxTX;
+	}
+
+	/**
+	 * @return the index in the CPPN inputs for the y coordinate for the target neuron.
+	 */
+	public int getCPPNIndexTargetY() {
+		return cppnIdxTY;
+	}
+
+	/**
+	 * @return the index in the CPPN inputs for the z coordinate for the target neuron. Returns -1 if this input is not enabled.
+	 */
+	public int getCPPNIndexTargetZ() {
+		return cppnIdxTZ;
+	}
+
+	/**
+	 * @return the index in the CPPN inputs for the x coordinate for the source neuron.
+	 */
+	public int getCPPNIndexSourceX() {
+		return cppnIdxSX;
+	}
+
+	/**
+	 * @return the index in the CPPN inputs for the y coordinate for the source neuron.
+	 */
+	public int getCPPNIndexSourceY() {
+		return cppnIdxSY;
+	}
+
+	/**
+	 * @return the index in the CPPN inputs for the z coordinate for the source neuron. Returns -1 if this input is not enabled.
+	 */
+	public int getCPPNIndexSourceZ() {
+		return cppnIdxSZ;
+	}
+
+	/**
+	 * @return the index in the CPPN inputs for the delta (difference) for the x coordinates (the difference between the x coordinates of the source and target neurons). Returns -1 if this input is not enabled.
+	 */
+	public int getCPPNIndexDeltaX() {
+		return cppnIdxDX;
+	}
+
+	/**
+	 * @return the index in the CPPN inputs for the delta (difference) for the y coordinates (the difference between the y coordinates of the source and target neurons). Returns -1 if this input is not enabled.
+	 */
+	public int getCPPNIndexDeltaY() {
+		return cppnIdxDY;
+	}
+
+	/**
+	 * @return the index in the CPPN inputs for the delta (difference) for the z coordinates (the difference between the z coordinates of the source and target neurons). Returns -1 if this input is not enabled.
+	 */
+	public int getCPPNIndexDeltaZ() {
+		return cppnIdxDZ;
+	}
+
+	/**
+	 * @return the index in the CPPN inputs for the angle in the XY plane between the source and target neuron coordinates (relative to the line X axis). Returns -1 if this input is not enabled.
+	 */
+	public int getCPPNIndexAngle() {
+		return cppnIdxAn;
+	}
+
+	/**
+	 * @return an array containing the indexes in the CPPN outputs for the weight value(s).
+	 */
+	public int[] getCPPNIndexWeight() {
+		return cppnIdxW;
+	}
+
+	/**
+	 * @return an array containing the indexes in the CPPN outputs for the bias value(s). Returns [-1] if this output is not enabled.
+	 */
+	public int[] getCPPNIndexBiasOutput() {
+		return cppnIdxB;
+	}
+
+	/**
+	 * @return an array containing the indexes in the CPPN outputs for the Link Expression Output (LEO) value(s). Returns [-1] if this output is not enabled.
+	 */
+	public int[] getCPPNIndexLEO() {
+		return cppnIdxL;
 	}
 }

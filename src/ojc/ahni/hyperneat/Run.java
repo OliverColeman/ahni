@@ -69,11 +69,11 @@ public class Run {
 			for (int run = 0; run < numRuns; run++) {
 				long startRun = System.currentTimeMillis();
 
-				props = new AHNIRunProperties(args[0]);
+				AHNIRunProperties runProps = new AHNIRunProperties(props);
 				String runID = props.getProperty("run.name") + "-" + experimentID + (numRuns > 1 ? "-" + run : "");
-				props.setProperty("run.id", runID);
+				runProps.setProperty("run.id", runID);
 				String runOutputDir = outputDir + (numRuns > 1 ? run + File.separator : "");
-				props.setProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY, runOutputDir);
+				runProps.setProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY, runOutputDir);
 				
 				// If there is a file logger for each run.
 				if (runLogFile != null) {
@@ -83,7 +83,7 @@ public class Run {
 				}
 				
 				logger.info("\n\n--- START RUN: " + (run + 1) + " of " + numRuns + " (" + ((run * 100) / (numRuns)) + "%) ---------------------------------------\n\n");
-				HyperNEATEvolver evolver = (HyperNEATEvolver) props.singletonObjectProperty(HyperNEATEvolver.class);
+				HyperNEATEvolver evolver = (HyperNEATEvolver) runProps.singletonObjectProperty(HyperNEATEvolver.class);
 
 				evolver.run();
 

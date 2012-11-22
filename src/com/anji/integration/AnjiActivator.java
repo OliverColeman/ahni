@@ -19,6 +19,8 @@
  */
 package com.anji.integration;
 
+import java.awt.Graphics2D;
+
 import com.anji.nn.AnjiNet;
 import com.anji.nn.Neuron;
 import com.anji.nn.Pattern;
@@ -229,4 +231,7 @@ public class AnjiActivator implements Activator {
 		return outputDimension;
 	}
 
+	public boolean render(Graphics2D g, int width, int height, int neuronSize) {
+		return false;
+	}
 }

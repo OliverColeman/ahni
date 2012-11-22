@@ -19,7 +19,40 @@ For example:
 java -jar ahni.jar or3.properties
 
 See properties/test-pass-through-flip.properties for an example properties 
-file describing the function of each parameter. 
+file describing the function of each parameter and setting.
+
+By default a line containing a brief summary of the current progress is sent 
+to the log (which for most example .properties files goes to the console). The
+line looks something like this:
+
+INFO  Gen: 635  Fittest: 320278  (F: 0.0069  P: 0.4375)  Best perf: 321496  
+(F: 0.0057  P: 0.4414)  ZFC: 0  ABSF: 0.0053  S: 26  NS/ES: 0/0  SCT: 0.7  
+Min/Max SS: 12/29  Min/Max SA: 7/636  SNF: 12  Time: 0s  ETA: 0 00:04:57  
+Mem: 119MB
+
+The various labels are:
+Gen: Current generation number.
+Fittest: The ID of fittest chromosome (it's fitness level, and performance)
+Best perf: The ID of the  chromosome with highest performance (it's fitness level, and performance)
+ZFC: Zero Fitness Count, number of chromosomes with a fitness of 0.
+ABSF: Average Best Species Fitness
+S: The number of species.
+NS/ES: Number of New Species / Extinct Species this generation.
+SCT: Species Compatibility Threshold  .
+Min/Max SS: The minimum and maximum species sizes.  
+Min/Max SA: The minimum and maximum species ages (in number of generations).  
+SNF: The number of Species with a New Fittest chromosome.  
+Time: The duration of the generation in seconds.
+ETA: The estimated run finish time (Days HH:MM:SS).  
+Mem: Total memory usage.
+
+By setting the num.runs property to a value > 1 it is possible to perform 
+multiple evolutionary runs and have the average fitness / performance results
+for each generation averaged over all runs. If only one run is performed then 
+most output files will be placed directly in the directory specified by the
+output.dir property. If multiple runs are performed then the output files 
+specific to a run will be placed in a sub-directory of this directory labelled 
+with the run number.
 
 
 DEVELOPMENT AND CREATING NEW EXPERIMENTS
@@ -33,9 +66,20 @@ ojc.ahni.experiments.objectrecognition.*
 
 The main class is ojc.ahni.hyperneat.Run. It expects a .properties file containing
 parameters for NEAT, HyperNEAT, typically the specific experiment being run, 
-and a few other things. See properties/* for examples.
+and various settings.
 
 API documentation is available at http://olivercoleman.github.com/ahni/doc/index.html
+
+
+HyperNEAT-LEO
+
+AHNI supports the Link Expression Output (LEO) extension described in 
+P. Verbancsics and K. O. Stanley (2011) Constraining Connectivity to Encourage 
+Modularity in HyperNEAT. In Proceedings of the Genetic and Evolutionary 
+Computation Conference (GECCO 2011).
+
+properties/retina-problem-hyperneat.properties reproduces the HyperNEAT-LEO 
+with global locality seed experiment described in the above mentioned paper.
 
 
 ES-HyperNEAT

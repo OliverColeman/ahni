@@ -432,14 +432,31 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	 * @return ConnectionAllele
 	 */
 	public ConnectionAllele newConnectionAllele(Long srcNeuronId, Long destNeuronId) {
+		return newConnectionAllele(srcNeuronId, destNeuronId, 0);
+	}
+	
+	/**
+	 * factory method to construct new connection allele from neuron <code>srcNeuronId</code> to neuron
+	 * <code>destNeuronId</code> according to NEAT add connection mutation; if a previous mutation has occurred adding a
+	 * connection between srcNeuronId and destNeuronId, returns connection with that id; otherwise, new innovation id
+	 * 
+	 * @param srcNeuronId
+	 * @param destNeuronId
+	 * @param weight
+	 * @return ConnectionAllele
+	 */
+	public ConnectionAllele newConnectionAllele(Long srcNeuronId, Long destNeuronId, double weight) {
 		Long id = neatIdMap.findConnectionId(srcNeuronId, destNeuronId);
 		if (id == null) {
 			id = nextInnovationId();
 			neatIdMap.putConnectionId(srcNeuronId, destNeuronId, id);
 		}
 		ConnectionGene gene = new ConnectionGene(id, srcNeuronId, destNeuronId);
-		return new ConnectionAllele(gene);
+		ConnectionAllele allele = new ConnectionAllele(gene);
+		allele.setWeight(weight);
+		return allele;
 	}
+
 
 	/**
 	 * @return clone reproduction operator used to create mutated asexual offspring

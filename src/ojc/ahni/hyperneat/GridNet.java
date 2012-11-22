@@ -16,6 +16,8 @@
 
 package ojc.ahni.hyperneat;
 
+import java.awt.Graphics2D;
+
 import com.anji.integration.Activator;
 import com.anji.nn.activationfunction.ActivationFunction;
 import com.anji.nn.activationfunction.ActivationFunctionFactory;
@@ -828,5 +830,10 @@ public class GridNet implements Activator {
 	@Override
 	public int getOutputCount() {
 		return height[depth-1] * width[depth-1];
+	}
+
+	@Override
+	public boolean render(Graphics2D g, int width, int height, int neuronSize) {
+		return false;
 	}
 }

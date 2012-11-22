@@ -538,7 +538,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 				logger.debug(network);
 				if (properties.getBooleanProperty(ES_HYPERNEAT_RECORD_COORDINATES, false)) {
 					BufferedImage image = new BufferedImage(800, 800, BufferedImage.TYPE_3BYTE_BGR);
-					network.draw(image.createGraphics(), image.getWidth(), image.getHeight(), 30);
+					network.render(image.createGraphics(), image.getWidth(), image.getHeight(), 30);
 					File outputfile = new File(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "ESHyperNEATTranscriberBain-" + genotype.getId() + ".png");
 					ImageIO.write(image, "png", outputfile);
 				}

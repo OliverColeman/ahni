@@ -114,11 +114,7 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction imp
 	
 	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, NiceWriter logOutput) {
 		TargetFitnessCalculator.Results results = fitnessCalculator.evaluate(substrate, inputPatterns, targetOutputPatterns, minTargetOutputValue, maxTargetOutputValue, logOutput);
-		// Force performance result to be proportional.
-		if (fitnessCalculator.getFitnessConversionType().equals("inverse")) {
-			double performance = (double) results.proportionalFitness / fitnessCalculator.getMaxFitnessValue();
-			genotype.setPerformanceValue(performance);
-		}
+		genotype.setPerformanceValue(results.performance);
 		return results.fitness;
 	}
 	

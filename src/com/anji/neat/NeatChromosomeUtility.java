@@ -106,23 +106,23 @@ public class NeatChromosomeUtility {
 	 * @param fullyConnected all layers fully connected if true, not connected at all otherwise
 	 * @return List contains Allele objects
 	 */
-	private static List initAlleles(short numInputs, short numHidden, short numOutputs, NeatConfiguration config, boolean fullyConnected) {
-		List inNeurons = new ArrayList(numInputs);
-		List outNeurons = new ArrayList(numOutputs);
-		List hidNeurons = new ArrayList(numHidden);
-		List conns = new ArrayList();
+	public static List<Allele> initAlleles(short numInputs, short numHidden, short numOutputs, NeatConfiguration config, boolean fullyConnected) {
+		List<NeuronAllele> inNeurons = new ArrayList<NeuronAllele>(numInputs);
+		List<NeuronAllele> outNeurons = new ArrayList<NeuronAllele>(numOutputs);
+		List<NeuronAllele> hidNeurons = new ArrayList<NeuronAllele>(numHidden);
+		List<ConnectionAllele> conns = new ArrayList<ConnectionAllele>();
 
-		// input neurons
+		// Input neurons.
 		for (int i = 0; i < numInputs; ++i)
 			inNeurons.add(config.newNeuronAllele(NeuronType.INPUT));
 
-		// output neurons
+		// Output neurons.
 		for (int j = 0; j < numOutputs; ++j) {
 			NeuronAllele outNeuron = config.newNeuronAllele(NeuronType.OUTPUT);
 			outNeurons.add(outNeuron);
 
 			if (fullyConnected && (numHidden == 0)) {
-				// in->out connections
+				// Add input -> output connections.
 				for (int i = 0; i < numInputs; ++i) {
 					NeuronAllele srcNeuronAllele = (NeuronAllele) inNeurons.get(i);
 					ConnectionAllele c = config.newConnectionAllele(srcNeuronAllele.getInnovationId(), outNeuron.getInnovationId());
@@ -133,13 +133,13 @@ public class NeatChromosomeUtility {
 			}
 		}
 
-		// hidden neurons
+		// Hidden neurons.
 		if (fullyConnected) {
 			for (int k = 0; k < numHidden; ++k) {
 				NeuronAllele hidNeuron = config.newNeuronAllele(NeuronType.HIDDEN);
 				hidNeurons.add(hidNeuron);
 
-				// in->hid connections
+				// Add input -> hidden connections.
 				for (int i = 0; i < numInputs; ++i) {
 					NeuronAllele srcNeuronAllele = (NeuronAllele) inNeurons.get(i);
 					ConnectionAllele c = config.newConnectionAllele(srcNeuronAllele.getInnovationId(), hidNeuron.getInnovationId());
@@ -148,7 +148,7 @@ public class NeatChromosomeUtility {
 					conns.add(c);
 				}
 
-				// hid->out connections
+				// Add hidden -> output connections
 				for (int j = 0; j < numOutputs; ++j) {
 					NeuronAllele destNeuronAllele = (NeuronAllele) outNeurons.get(j);
 					ConnectionAllele c = config.newConnectionAllele(hidNeuron.getInnovationId(), destNeuronAllele.getInnovationId());
@@ -158,10 +158,10 @@ public class NeatChromosomeUtility {
 				}
 			}
 		} else if (numHidden > 0) {
-			logger.warn("ignoring intial topology hidden neurons, not fully connected");
+			logger.warn("Ignoring intial topology hidden neurons, not fully connected");
 		}
 
-		List result = new ArrayList();
+		List<Allele> result = new ArrayList<Allele>();
 		result.addAll(inNeurons);
 		result.addAll(outNeurons);
 		result.addAll(hidNeurons);

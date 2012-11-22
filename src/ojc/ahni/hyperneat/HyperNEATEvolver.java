@@ -493,13 +493,16 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 					outputfile.close();
 				}
 				
-				if (logImage) { 
-					if (substrate instanceof BainNN && ((BainNN) substrate).coordsEnabled()) {
+				if (logImage) {
+					// Performance improvement for BainNN, don't create a buffered image unless the BainNN has recorded neuron coords.
+					if (!(substrate instanceof BainNN) || ((BainNN) substrate).coordsEnabled()) { 
 						BufferedImage image = new BufferedImage(800, 800, BufferedImage.TYPE_3BYTE_BGR);
-						((BainNN) substrate).draw(image.createGraphics(), image.getWidth(), image.getHeight(), 30);
-						File outputfile = new File(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : generation) + "-" + champ.getId() + ".png");
-						ImageIO.write(image, "png", outputfile);
-						logger.info("Rendered " + msg + " to " + outputfile);
+						boolean success = substrate.render(image.createGraphics(), image.getWidth(), image.getHeight(), 30);
+						if (success) {
+							File outputfile = new File(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : generation) + "-" + champ.getId() + ".png");
+							ImageIO.write(image, "png", outputfile);
+							logger.info("Rendered " + msg + " to " + outputfile);
+						}
 					}
 				}
 			} catch (TranscriberException e) {

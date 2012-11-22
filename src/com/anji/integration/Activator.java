@@ -16,10 +16,11 @@
  * 02111-1307 USA
  * 
  * Created on Mar 9, 2004 by Philip Tucker
+ * Edited by Oliver Coleman
  */
 package com.anji.integration;
 
-import ojc.ahni.integration.BainNN;
+import java.awt.Graphics2D;
 
 import com.anji.util.XmlPersistable;
 
@@ -111,4 +112,14 @@ public interface Activator extends XmlPersistable {
 	 * @return the total number of outputs.
 	 */
 	public int getOutputCount();
+	
+	/**
+	 * Renders this network as an image.
+	 * @param g the graphics object to render the network to.
+	 * @param width The desired width in pixels of the rendering.
+	 * @param height The desired height in pixels of the rendering.
+	 * @param neuronSize The desired size in pixels of the neurons.
+	 * @return true iff successful, false otherwise. 
+	 */
+	public boolean render(Graphics2D g, int width, int height, int neuronSize);
 }

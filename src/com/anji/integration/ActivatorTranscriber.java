@@ -16,16 +16,12 @@
  * 02111-1307 USA
  * 
  * Created on Mar 11, 2004 by Philip Tucker
+ * Edited by Oliver Coleman
  */
 package com.anji.integration;
 
-import ojc.ahni.hyperneat.GridNet;
-import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
-
-import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.Chromosome;
 
-import com.anji.nn.AnjiNet;
 import com.anji.util.Configurable;
 import com.anji.util.Properties;
 
@@ -37,11 +33,10 @@ import com.anji.util.Properties;
  */
 public class ActivatorTranscriber implements Configurable {
 	/**
-	 * neural network type properties key
+	 * The class (implementing {@link Transcriber}) that will be used to transcribe a network (implementing {@link Activator}) from a {@link org.jgapcustomised.Chromosome}.
 	 */
 	public final static String TRANSCRIBER_KEY = "ann.transcriber";
 
-	private Properties props;
 	private Transcriber transcriber;
 
 	/**
@@ -51,16 +46,13 @@ public class ActivatorTranscriber implements Configurable {
 	 * @throws TranscriberException
 	 */
 	public void init(Properties props) throws TranscriberException {
-		this.props = props;
 		transcriber = (Transcriber) props.singletonObjectProperty(TRANSCRIBER_KEY);
 	}
 
 	/**
-	 * Constructs <code>Activator</code> phenotype from <code>Chromosome</code> genotype. The specific implementatrion
-	 * of Activator is determined by configuration parameters.
-	 * 
-	 * @param ch <code>Chromosome</code> from which activator will be built
-	 * @return Activator phenotype built from <code>Chromosome</code> genotype
+	 * Constructs an {@link Activator} phenotype from a {@link org.jgapcustomised.Chromosome}.
+	 * @param ch The Chromosome from which the phenotype will be decoded.
+	 * @return Activator phenotype decoded from the Chromosome.
 	 * @throws TranscriberException
 	 */
 	public Activator newActivator(Chromosome ch) throws TranscriberException {

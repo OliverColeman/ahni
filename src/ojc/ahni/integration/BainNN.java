@@ -498,7 +498,9 @@ public class BainNN implements Activator {
 	/**
 	 * Renders this network as an image.
 	 */
-	public void draw(Graphics2D g, int width, int height, int nodeSize) {
+	public boolean render(Graphics2D g, int width, int height, int nodeSize) {
+		if (!coordsEnabled()) return false;
+		
 		width -= nodeSize*2;
 		height -= nodeSize*2;
 		float[] dashes = new float[]{10, 10}; // For dashed lines.
@@ -623,6 +625,7 @@ public class BainNN implements Activator {
 				g.drawOval((int) nodes[neuronIndex].getX() - size/2, (int) nodes[neuronIndex].getY() - size/2, size, size);
 			}
 		}
+		return true;
 	}
 	// Scale the coordinate to the range [0, 1].
 	private int scaleCoord(double c, int d, int scale) {
