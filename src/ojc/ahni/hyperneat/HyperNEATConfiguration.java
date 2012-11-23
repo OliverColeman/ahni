@@ -71,6 +71,7 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 			ChromosomeMaterial sample;
 			// If LEO locality seeding is enabled. 
 			if (hnTranscriber.leoEnabled() && props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_LEO_LOCALITY, false)) {
+				logger.info("Creating sample Chromosome with LEO global locality seed."); 
 				boolean fullyConnected = props.getBooleanProperty(INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, false);
 				if (fullyConnected) {
 					logger.warn("It's generally best not to have a fully connected initial CPPN topology (" + INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY + "=true) when LEO locality seeding is enabled (" + HyperNEATTranscriber.HYPERNEAT_LEO_LOCALITY + "=true).");

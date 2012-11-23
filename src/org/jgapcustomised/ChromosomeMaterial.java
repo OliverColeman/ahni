@@ -192,9 +192,9 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 		while (iter.hasNext()) {
 			Allele newAllele = (Allele) iter.next();
 
-			// Set the gene's value (allele) to a random value.
+			// Perturb the gene's value (allele) a random amount.
 			// ------------------------------------------------
-			newAllele.setToRandomValue(a_activeConfiguration.getRandomGenerator());
+			newAllele.setToRandomValue(a_activeConfiguration.getRandomGenerator(), true);
 		}
 
 		return newMaterial;

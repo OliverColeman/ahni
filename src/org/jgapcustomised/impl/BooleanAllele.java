@@ -272,7 +272,7 @@ public class BooleanAllele extends Allele {
 	 * 
 	 */
 
-	public void setToRandomValue(Random a_numberGenerator)
+	public void setToRandomValue(Random a_numberGenerator, boolean onlyPerturbFromCurrentValue)
 
 	{
 

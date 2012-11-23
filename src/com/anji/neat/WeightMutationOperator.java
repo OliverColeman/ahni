@@ -116,7 +116,7 @@ public class WeightMutationOperator extends MutationOperator implements Configur
 		while ((i++ < numMutations) && iter.hasNext()) {
 			ConnectionAllele origAllele = (ConnectionAllele) iter.next();
 
-			double delta = (double) (config.getRandomGenerator().nextGaussian() * getStdDev());
+			double delta = config.getRandomGenerator().nextGaussian() * getStdDev();
 			double nextWeight = origAllele.getWeight() + delta;
 
 			if (nextWeight > config.getMaxConnectionWeight()) {

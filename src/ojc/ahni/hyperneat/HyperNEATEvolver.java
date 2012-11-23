@@ -257,7 +257,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 		} else {
 			genotype = Genotype.randomInitialGenotype(properties, config);
 		}
-
+		
 		// initialize result data
 		int generationOfFirstSolution = -1;
 		fittest = genotype.getFittestChromosome();

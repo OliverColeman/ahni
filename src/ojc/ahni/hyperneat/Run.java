@@ -107,7 +107,7 @@ public class Run {
 			// print results
 			double[] avgPerf = new double[numGens];
 			double[] avgFit = new double[numGens];
-			double p, f, pc;
+			double p, f;
 			for (int gen = 0; gen < numGens; gen++) {
 				avgPerf[gen] = 0;
 				avgFit[gen] = 0;

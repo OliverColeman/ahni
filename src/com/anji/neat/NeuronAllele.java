@@ -62,7 +62,7 @@ public class NeuronAllele extends Allele {
 	/**
 	 * @see Allele#setToRandomValue(Random)
 	 */
-	public void setToRandomValue(Random a_numberGenerator) {
+	public void setToRandomValue(Random a_numberGenerator, boolean onlyPerturbFromCurrentValue) {
 		// noop
 	}
 

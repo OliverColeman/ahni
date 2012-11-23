@@ -332,8 +332,12 @@ public class IntegerAllele extends Allele {
 	 *            choice.
 	 * 
 	 */
-	public void setToRandomValue(Random a_numberGenerator) {
-		m_value = new Integer(a_numberGenerator.nextInt());
+	public void setToRandomValue(Random a_numberGenerator, boolean onlyPerturbFromCurrentValue) {
+		int p = a_numberGenerator.nextInt();
+		if (onlyPerturbFromCurrentValue)
+			m_value = new Integer(p / 10);
+		else
+			m_value = new Integer(p);
 		// If the value isn't between the upper and lower bounds of this
 		// IntegerGene, map it to a value within those bounds.
 		// -------------------------------------------------------------

@@ -282,11 +282,12 @@ public class TargetFitnessCalculator implements Configurable {
 			totalError = totalError * totalError;
 
 		Results results = new Results();
-		results.proportionalFitness = maxFitnessValue - (int) Math.round((totalError / maxError) * maxFitnessValue);
+		double proportionalPerformance = 1 - (totalError / maxError);
+		results.proportionalFitness = (int) Math.round(proportionalPerformance * maxFitnessValue);
 		results.inverseFitness = (int) Math.round(maxFitnessValue / (1 + totalError));
 		results.percentCorrect = (double) percentCorrect / trialCount;
 		results.fitness = fitnessConversionType.equals("proportional") ? results.proportionalFitness : results.inverseFitness;
-		results.performance = performanceMetric.equals("proportional") ? totalError / maxError : results.percentCorrect;
+		results.performance = performanceMetric.equals("proportional") ? proportionalPerformance : results.percentCorrect;
 		return results;
 	}
 

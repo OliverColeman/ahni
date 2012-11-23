@@ -37,11 +37,10 @@ public class ConnectionAllele extends Allele {
 	 * default connection weight
 	 */
 	public final static double DEFAULT_WEIGHT = 0;
-
-	private final static double MIN_INIT_WEIGHT = -0.5f;
-
-	private final static double MAX_INIT_WEIGHT = 0.5f;
-
+	//private final static double MIN_INIT_WEIGHT = -0.5;
+	//private final static double MAX_INIT_WEIGHT = 0.5;
+	public static double RANDOM_STD_DEV = 1;
+	public static double RANDOM_PERTURBATION_FACTOR = 0.2;
 	private double weight = DEFAULT_WEIGHT;
 
 	/**
@@ -88,13 +87,16 @@ public class ConnectionAllele extends Allele {
 	}
 
 	/**
-	 * set weight to random value distributed uniformly between <code>MIN_INIT_WEIGHT</code> and
-	 * <code>MAX_INIT_WEIGHT</code>
+	 * Set weight to random value from a Gaussian distribution determined by {@link #RANDOM_STD_DEV}
 	 * 
 	 * @param a_numberGenerator
+	 * @param if true then the weight is perturbed by a random amount determine by a Gaussian distribution determined by {@link #RANDOM_STD_DEV} multiplied by {@link #RANDOM_PERTURBATION_FACTOR}.
 	 */
-	public void setToRandomValue(Random a_numberGenerator) {
-		weight = MIN_INIT_WEIGHT + (a_numberGenerator.nextFloat() * (MAX_INIT_WEIGHT - MIN_INIT_WEIGHT));
+	public void setToRandomValue(Random a_numberGenerator, boolean onlyPerturbFromCurrentValue) {
+		if (onlyPerturbFromCurrentValue)
+			weight += a_numberGenerator.nextGaussian() * RANDOM_STD_DEV * RANDOM_PERTURBATION_FACTOR;
+		else
+			weight = a_numberGenerator.nextGaussian() * RANDOM_STD_DEV;
 	}
 
 	/**

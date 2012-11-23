@@ -127,7 +127,7 @@ public class NeatChromosomeUtility {
 					NeuronAllele srcNeuronAllele = (NeuronAllele) inNeurons.get(i);
 					ConnectionAllele c = config.newConnectionAllele(srcNeuronAllele.getInnovationId(), outNeuron.getInnovationId());
 					if (config != null)
-						c.setToRandomValue(config.getRandomGenerator());
+						c.setToRandomValue(config.getRandomGenerator(), false);
 					conns.add(c);
 				}
 			}
@@ -144,7 +144,7 @@ public class NeatChromosomeUtility {
 					NeuronAllele srcNeuronAllele = (NeuronAllele) inNeurons.get(i);
 					ConnectionAllele c = config.newConnectionAllele(srcNeuronAllele.getInnovationId(), hidNeuron.getInnovationId());
 					if (config != null)
-						c.setToRandomValue(config.getRandomGenerator());
+						c.setToRandomValue(config.getRandomGenerator(), false);
 					conns.add(c);
 				}
 
@@ -153,7 +153,7 @@ public class NeatChromosomeUtility {
 					NeuronAllele destNeuronAllele = (NeuronAllele) outNeurons.get(j);
 					ConnectionAllele c = config.newConnectionAllele(hidNeuron.getInnovationId(), destNeuronAllele.getInnovationId());
 					if (config != null)
-						c.setToRandomValue(config.getRandomGenerator());
+						c.setToRandomValue(config.getRandomGenerator(), false);
 					conns.add(c);
 				}
 			}

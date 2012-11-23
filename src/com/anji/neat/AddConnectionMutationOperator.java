@@ -167,7 +167,7 @@ public class AddConnectionMutationOperator extends MutationOperator implements C
 			// ... for which a mutation can occur
 			if (connectionAllowed(src, dest, conns)) {
 				conns.put(newConn.getInnovationId(), newConn);
-				newConn.setToRandomValue(config.getRandomGenerator());
+				newConn.setToRandomValue(config.getRandomGenerator(), false);
 				allelesToAdd.add(newConn);
 			} else
 				rejectedConnIds.add(newConn.getInnovationId());
@@ -209,7 +209,7 @@ public class AddConnectionMutationOperator extends MutationOperator implements C
 			// ... for which a mutation can occur
 			if (connectionAllowed(src, dest, conns)) {
 				conns.put(newConn.getInnovationId(), newConn);
-				newConn.setToRandomValue(config.getRandomGenerator());
+				newConn.setToRandomValue(config.getRandomGenerator(), false);
 				allelesToAdd.add(newConn);
 				isAdded = true;
 			} else

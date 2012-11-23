@@ -69,8 +69,11 @@ public abstract class Allele implements Comparable {
 	 * @param a_numberGenerator The random number generator that should be used to create any random values. It's
 	 *            important to use this generator to maintain the user's flexibility to configure the genetic engine to
 	 *            use the random number generator of their choice.
+	 * @param onlyPerturbFromCurrentValue If true then the value should only be perturbed some small amount from the
+	 *            current value. If false then the value should be set to a completely new value irrespective of the
+	 *            current value.
 	 */
-	public abstract void setToRandomValue(Random a_numberGenerator);
+	public abstract void setToRandomValue(Random a_numberGenerator, boolean onlyPerturbFromCurrentValue);
 
 	/**
 	 * @return Gene clone of this object
