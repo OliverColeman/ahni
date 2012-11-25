@@ -19,6 +19,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,9 +27,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
-
-import ojc.ahni.hyperneat.HyperNEATEvolver;
-
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.regexp.RE;
@@ -48,11 +48,11 @@ public class Properties extends java.util.Properties {
 
 	private static Logger logger = Logger.getLogger(Properties.class.getName());
 
-	private HashSet loggedProps = new HashSet();
+	private HashSet<String> loggedProps = new HashSet<String>();
 
-	private HashMap keyToSingletonsMap = new HashMap();
+	private HashMap<String, Object> keyToSingletonsMap = new HashMap<String, Object>();
 
-	private HashMap classToSingletonsMap = new HashMap();
+	private HashMap<Class, Object> classToSingletonsMap = new HashMap<Class, Object>();
 
 	private String name = "default";
 
@@ -318,6 +318,160 @@ public class Properties extends java.util.Properties {
 		log(key, value, Double.toString(defaultVal));
 		return (value == null) ? defaultVal : Double.parseDouble(value);
 	}
+	
+	
+	/**
+	 * Retrieve an array of int values from a comma-separated list.
+	 */
+	public int[] getIntArrayProperty(String key, int[] defaultVal) {
+		String value = super.getProperty(key);
+		log(key, value, Arrays.toString(defaultVal));
+		if (value == null) return defaultVal;
+		return getIntArrayFromString(value);
+	}
+	
+	/**
+	 * Retrieve an array of int values from a comma-separated list.
+	 */
+	public int[] getIntArrayProperty(String key) {
+		String value = super.getProperty(key);
+		if (value == null)
+			throw new IllegalArgumentException("no value for " + key);
+		log(key, value, null);
+		return getIntArrayFromString(value);
+	}
+	
+	private int[] getIntArrayFromString(String valString) {
+		String[] valStrings = valString.replaceAll(" ", "").split(",");
+		int[] vals = new int[valStrings.length];
+		for (int i = 0; i < valStrings.length; i++) {
+			vals[i] = Integer.parseInt(valStrings[i]);
+		}
+		return vals;
+	}
+	
+
+	
+	/**
+	 * Retrieve an array of double values from a comma-separated list.
+	 */
+	public double[] getDoubleArrayProperty(String key, double[] defaultVal) {
+		String value = super.getProperty(key);
+		log(key, value, java.util.Arrays.toString(defaultVal));
+		if (value == null) return defaultVal;
+		return getDoubleArrayFromString(value);
+	}
+	
+	/**
+	 * Retrieve an array of double values from a comma-separated list.
+	 */
+	public double[] getDoubleArrayProperty(String key) {
+		String value = super.getProperty(key);
+		if (value == null)
+			throw new IllegalArgumentException("no value for " + key);
+		log(key, value, null);
+		return getDoubleArrayFromString(value);
+	}
+	
+	private double[] getDoubleArrayFromString(String valString) {
+		String[] valStrings = valString.replaceAll("\\s", "").split(",");
+		double[] vals = new double[valStrings.length];
+		for (int i = 0; i < valStrings.length; i++) {
+			vals[i] = Double.parseDouble(valStrings[i]);
+		}
+		return vals;
+	}
+	
+	
+	/**
+	 * Retrieve an array of Objects initialised from a comma-separated list of double arguments wrapped in brackets.
+	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects.
+	 * Note that the constructors for clazz must have arguments that are all doubles.    
+	 */
+	public Object getObjectFromArgsProperty(String key, Class clazz) {
+		return getObjectArrayProperty(key, clazz)[0];
+	}
+
+	
+	/**
+	 * Retrieve an array of Objects initialised from a comma-separated list of double arguments wrapped in brackets.
+	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects.
+	 * Note that the constructors for clazz must have arguments that are all doubles.    
+	 */
+	public Object getObjectFromArgsProperty(String key, Class clazz, Object defaultObject) {
+		return getObjectArrayProperty(key, clazz, new Object[]{defaultObject})[0];
+	}
+	
+	
+	/**
+	 * Retrieve an array of Objects initialised from a comma-separated list of double arguments wrapped in brackets.
+	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects.
+	 * Note that the constructors for clazz must have arguments that are all doubles.    
+	 */
+	public Object[] getObjectArrayProperty(String key, Class clazz, Object[] defaultObjects) {
+		String value = super.getProperty(key);
+		log(key, value, "defaults");
+		if (value == null) {
+			System.out.println("null");
+			return defaultObjects;
+		}
+		value = value.replaceAll("\\s", "");
+		String[] argValues = value.split("\\),\\(");
+		if (argValues.length == 0) {
+			throw new IllegalArgumentException("Could not create Object from property " + key + ": malformed value.");
+		}
+		Object[] objs = new Object[argValues.length];
+		int objectIndex = 0;
+		for (int i = 0; i < argValues.length; i++) {
+			String vals = argValues[i].replaceAll("[\\(\\)]", "");
+			double[] args = getDoubleArrayFromString(vals);
+			Class[] argTypes = new Class[args.length];
+			Double[] argObjects = new Double[args.length];
+			for (int a = 0; a < args.length; a++) {
+				argTypes[a] = double.class;
+				argObjects[a] = new Double(args[a]);
+			}
+			try {
+				Constructor c = clazz.getConstructor(argTypes);
+				objs[objectIndex++] = c.newInstance(argObjects);
+			} catch (Exception e) {
+				throw new IllegalArgumentException("Could not create Object from property:\n" + e.toString() + "\n" + java.util.Arrays.toString(e.getStackTrace())); 
+			}
+		}
+		return objs;
+	}
+	
+	/**
+	 * Retrieve an array of Objects initialised from a comma-separated list of double arguments wrapped in brackets.
+	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects.
+	 * Note that the constructors for clazz must have arguments that are all doubles.    
+	 */
+	public Object[] getObjectArrayProperty(String key, Class clazz) {
+		String value = super.getProperty(key);
+		if (value == null)
+			throw new IllegalArgumentException("no value for " + key);
+		return getObjectArrayProperty(key, clazz, null);
+	}
+		
+	
+	/**
+	 * Retrieve a list of double values from a comma-separated list.
+	 */
+	public double[] getObjectArrayProperty(String key) {
+		String value = super.getProperty(key);
+		if (value == null)
+			throw new IllegalArgumentException("no value for " + key);
+		log(key, value, null);
+		String[] valStrings = value.replaceAll(" ", "").split(",");
+		double[] vals = new double[valStrings.length];
+		for (int i = 0; i < valStrings.length; i++) {
+			vals[i] = Double.parseDouble(valStrings[i]);
+		}
+		return vals;
+	}
+
+	
+	
 
 	/**
 	 * Returns property keys matching regular expression pattern.
@@ -325,9 +479,9 @@ public class Properties extends java.util.Properties {
 	 * @param pattern interpreted as regular expression
 	 * @return Set contains String objects
 	 */
-	public Set getKeysForPattern(String pattern) {
+	public Set<String> getKeysForPattern(String pattern) {
 		RE regex = new RE(pattern);
-		Set result = new HashSet();
+		Set<String> result = new HashSet<String>();
 		Iterator it = super.keySet().iterator();
 		while (it.hasNext()) {
 			String key = (String) it.next();
@@ -343,9 +497,9 @@ public class Properties extends java.util.Properties {
 	 * @param pattern interpreted as regular expression
 	 * @return Set contains String objects
 	 */
-	public Set getPropertiesForPattern(String pattern) {
+	public Set<String> getPropertiesForPattern(String pattern) {
 		RE regex = new RE(pattern);
-		Set result = new HashSet();
+		Set<String> result = new HashSet<String>();
 		Iterator it = super.keySet().iterator();
 		while (it.hasNext()) {
 			String key = (String) it.next();
@@ -575,7 +729,7 @@ public class Properties extends java.util.Properties {
 	 */
 	public static double[][] loadArrayFromFile(InputStream in) throws FileNotFoundException, IOException {
 		// better class for this? combine w/ getProperty
-		List rows = new ArrayList();
+		List<double[]> rows = new ArrayList<double[]>();
 		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
 		for (String line = reader.readLine(); line != null; line = reader.readLine()) {
 			double[] row = loadRowFromString(line);
@@ -583,10 +737,10 @@ public class Properties extends java.util.Properties {
 		}
 
 		double[][] result = new double[rows.size()][];
-		Iterator it = rows.iterator();
+		Iterator<double[]> it = rows.iterator();
 		int i = 0;
 		while (it.hasNext())
-			result[i++] = (double[]) it.next();
+			result[i++] = it.next();
 		return result;
 	}
 
@@ -600,7 +754,7 @@ public class Properties extends java.util.Properties {
 	 * @throws IOException
 	 */
 	public static boolean[][] loadBooleanArrayFromFile(InputStream in) throws FileNotFoundException, IOException {
-		List rows = new ArrayList();
+		List<boolean[]> rows = new ArrayList<boolean[]>();
 		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
 		for (String line = reader.readLine(); line != null; line = reader.readLine()) {
 			boolean[] row = loadBooleanRowFromString(line);
@@ -608,10 +762,10 @@ public class Properties extends java.util.Properties {
 		}
 
 		boolean[][] result = new boolean[rows.size()][];
-		Iterator it = rows.iterator();
+		Iterator<boolean[]> it = rows.iterator();
 		int i = 0;
 		while (it.hasNext())
-			result[i++] = (boolean[]) it.next();
+			result[i++] = it.next();
 		return result;
 	}
 
@@ -623,7 +777,7 @@ public class Properties extends java.util.Properties {
 	 *         separated by semi-colons
 	 */
 	protected static double[] loadRowFromString(String line) {
-		List row = new ArrayList();
+		List<Double> row = new ArrayList<Double>();
 		StringTokenizer tok = new StringTokenizer(line, "; ");
 		while (tok.hasMoreTokens()) {
 			String element = tok.nextToken();
@@ -632,10 +786,10 @@ public class Properties extends java.util.Properties {
 		}
 
 		double[] result = new double[row.size()];
-		Iterator it = row.iterator();
+		Iterator<Double> it = row.iterator();
 		int i = 0;
 		while (it.hasNext())
-			result[i++] = ((Double) it.next()).doubleValue();
+			result[i++] = it.next().doubleValue();
 		return result;
 	}
 
@@ -647,7 +801,7 @@ public class Properties extends java.util.Properties {
 	 *         separated by semi-colons
 	 */
 	public static boolean[] loadBooleanRowFromString(String line) {
-		List row = new ArrayList();
+		List<Boolean> row = new ArrayList<Boolean>();
 		StringTokenizer tok = new StringTokenizer(line, "; ");
 		while (tok.hasMoreTokens()) {
 			String element = tok.nextToken();
@@ -656,10 +810,10 @@ public class Properties extends java.util.Properties {
 		}
 
 		boolean[] result = new boolean[row.size()];
-		Iterator it = row.iterator();
+		Iterator<Boolean> it = row.iterator();
 		int i = 0;
 		while (it.hasNext())
-			result[i++] = ((Boolean) it.next()).booleanValue();
+			result[i++] = it.next().booleanValue();
 		return result;
 	}
 
@@ -673,7 +827,7 @@ public class Properties extends java.util.Properties {
 	 * @param defaultList returns this if no property <code>key</code> exists
 	 * @return <code>List</code> contains initialized objects
 	 */
-	public List newObjectListProperty(String key, List defaultList) {
+	public List<Object> newObjectListProperty(String key, List<Object> defaultList) {
 		String val = super.getProperty(key);
 		if (val == null) {
 			log(key, val, defaultList == null ? "null" : defaultList.toString());
@@ -681,7 +835,7 @@ public class Properties extends java.util.Properties {
 		}
 
 		StringTokenizer tok = new StringTokenizer(val, ",");
-		List results = new ArrayList();
+		List<Object> results = new ArrayList<Object>();
 		while (tok.hasMoreTokens()) {
 			String objectName = tok.nextToken().trim();
 			Object o = newObjectProperty(objectName);
@@ -698,8 +852,8 @@ public class Properties extends java.util.Properties {
 	 * @return <code>List</code> contains initialized objects
 	 * @see Properties#newObjectListProperty(String, List)
 	 */
-	public List newObjectListProperty(String key) {
-		List result = newObjectListProperty(key, null);
+	public List<Object> newObjectListProperty(String key) {
+		List<Object> result = newObjectListProperty(key, null);
 		if (result == null)
 			throw new IllegalArgumentException("no value for " + key);
 		return result;

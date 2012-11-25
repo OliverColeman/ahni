@@ -1,5 +1,7 @@
 package ojc.ahni.hyperneat;
 
+import ojc.ahni.util.Range;
+
 import org.apache.log4j.Logger;
 import org.jgapcustomised.Chromosome;
 
@@ -29,20 +31,23 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 */
 	public static final String HYPERNEAT_ENABLE_BIAS = "ann.hyperneat.enablebias";
 	/**
-	 * If true indicates that the CPPN should receive the delta value for each axis between the source and target neuron coordinates.
+	 * If true indicates that the CPPN should receive the delta value for each axis between the source and target neuron
+	 * coordinates.
 	 */
 	public static final String HYPERNEAT_INCLUDE_DELTA = "ann.hyperneat.includedelta";
 	/**
-	 * If true indicates that the CPPN should receive the angle in the XY plane between the source and target neuron coordinates 
-	 * (relative to the line X axis).
+	 * If true indicates that the CPPN should receive the angle in the XY plane between the source and target neuron
+	 * coordinates (relative to the line X axis).
 	 */
 	public static final String HYPERNEAT_INCLUDE_ANGLE = "ann.hyperneat.includeangle";
 	/**
-	 * If true indicates that instead of using a separate output from the CPPN to specify weight values for each weight layer in a feed-forward network, the layer coordinate is input to the CPPN and only a single output from CPPN is used to specify weight values for all weight layers.
+	 * If true indicates that instead of using a separate output from the CPPN to specify weight values for each weight
+	 * layer in a feed-forward network, the layer coordinate is input to the CPPN and only a single output from CPPN is
+	 * used to specify weight values for all weight layers.
 	 */
 	public static final String HYPERNEAT_LAYER_ENCODING = "ann.hyperneat.useinputlayerencoding";
 	/**
-	 * The minimum CPPN output required to produce a non-zero weight in the substrate network. 
+	 * The minimum CPPN output required to produce a non-zero weight in the substrate network.
 	 */
 	public static final String HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD = "ann.hyperneat.connection.expression.threshold";
 	/**
@@ -54,7 +59,8 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 */
 	public static final String HYPERNEAT_CONNECTION_WEIGHT_MAX = "ann.hyperneat.connection.weight.max";
 	/**
-	 * Limits the incoming connections to a target neuron to include those from source neurons within the specified range of the target neuron. Set this to -1 to disable it.
+	 * Limits the incoming connections to a target neuron to include those from source neurons within the specified
+	 * range of the target neuron. Set this to -1 to disable it.
 	 */
 	public static final String HYPERNEAT_CONNECTION_RANGE = "ann.hyperneat.connection.range";
 	/**
@@ -62,29 +68,51 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 */
 	public static final String SUBSTRATE_DEPTH = "ann.hyperneat.depth";
 	/**
-	 * Comma separated list of the height of each layer in the network, including input and output layers and starting with the input layer.
+	 * Comma separated list of the height of each layer in the network, including input and output layers and starting
+	 * with the input layer.
 	 */
 	public static final String SUBSTRATE_HEIGHT = "ann.hyperneat.height";
 	/**
-	 * Comma separated list of the width of each layer in the network, including input and output layers and starting with the input layer.
+	 * Comma separated list of the width of each layer in the network, including input and output layers and starting
+	 * with the input layer.
 	 */
 	public static final String SUBSTRATE_WIDTH = "ann.hyperneat.width";
 	/**
-	 * For recurrent networks, the number of activation cycles to perform each time the substrate network is presented with new input and queried for its output.
+	 * The coordinate range of neurons in the substrate in the X dimension, corresponding to the width (this is used to
+	 * determine the input to the CPPN for a given neuron location). Defaults to "-1, 1".
+	 */
+	public static final String RANGE_X = "ann.hyperneat.range.x";
+	/**
+	 * The coordinate range of neurons in the substrate in the Y dimension, corresponding to the height (this is used to
+	 * determine the input to the CPPN for a given neuron location). Defaults to "-1, 1".
+	 */
+	public static final String RANGE_Y = "ann.hyperneat.range.y";
+	/**
+	 * The coordinate range of neurons in the substrate in the Z dimension, corresponding to the depth (this is used to
+	 * determine the input to the CPPN for a given neuron location). Defaults to "-1, 1".
+	 */
+	public static final String RANGE_Z = "ann.hyperneat.range.z";
+
+	/**
+	 * For recurrent networks, the number of activation cycles to perform each time the substrate network is presented
+	 * with new input and queried for its output.
 	 */
 	public static final String SUBSTRATE_CYCLES_PER_STEP = "ann.hyperneat.cyclesperstep";
 	/**
-	 * Enable or disable Link Expression Output (LEO). See P. Verbancsics and K. O. Stanley (2011) Constraining Connectivity to Encourage Modularity in 
-	 * HyperNEAT. In Proceedings of the Genetic and Evolutionary Computation Conference (GECCO 2011). Default is "false".
-	 * @see #HYPERNEAT_LEO_LOCALITY 
+	 * Enable or disable Link Expression Output (LEO). See P. Verbancsics and K. O. Stanley (2011) Constraining
+	 * Connectivity to Encourage Modularity in HyperNEAT. In Proceedings of the Genetic and Evolutionary Computation
+	 * Conference (GECCO 2011). Default is "false".
+	 * 
+	 * @see #HYPERNEAT_LEO_LOCALITY
 	 */
 	public static final String HYPERNEAT_LEO = "ann.hyperneat.leo";
 	/**
-	 * Enable or disable seeding of the initial population of {@link org.jgapcustomised.Chromosome}s to incorporate a bias towards local connections via the Link Expression Output (LEO), see {@link #HYPERNEAT_LEO} and the article reference within. Default is "false".
+	 * Enable or disable seeding of the initial population of {@link org.jgapcustomised.Chromosome}s to incorporate a
+	 * bias towards local connections via the Link Expression Output (LEO), see {@link #HYPERNEAT_LEO} and the article
+	 * reference within. Default is "false".
 	 */
 	public static final String HYPERNEAT_LEO_LOCALITY = "ann.hyperneat.leo.localityseeding";
-	
-	
+
 	/**
 	 * The width of each layer in the substrate.
 	 */
@@ -97,6 +125,18 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 * The number of layers in the substrate, including input and output layers.
 	 */
 	protected int depth;
+	/**
+	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range -1 to 1 to the range specified by {@link #RANGE_X}.
+	 */
+	protected Range rangeX = new Range();
+	/**
+	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range -1 to 1 to the range specified by {@link #RANGE_Y}.
+	 */
+	protected Range rangeY = new Range();
+	/**
+	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range -1 to 1 to the range specified by {@link #RANGE_Z}.
+	 */
+	protected Range rangeZ = new Range();
 	/**
 	 * If true indicates whether the substrate should have a feed-forward topology (no recurrent connections).
 	 */
@@ -170,12 +210,14 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	// Index of delta and angle inputs in CPPN input vector.
 	int cppnIdxDX = -1, cppnIdxDY = -1, cppnIdxDZ = -1, cppnIdxAn = -1;
 	// Index of output signals in CPPN output vector.
-	int[] cppnIdxW = new int[]{-1}; // weights (either a single output for all layers or one output per layer)
-	int[] cppnIdxB = new int[]{-1}; // bias (either a single output for all layers or one output per layer)
-	int[] cppnIdxL = new int[]{-1}; // link expression (either a single output for all layers or one output per layer)
-	
+	int[] cppnIdxW = new int[] { -1 }; // weights (either a single output for all layers or one output per layer)
+	int[] cppnIdxB = new int[] { -1 }; // bias (either a single output for all layers or one output per layer)
+	int[] cppnIdxL = new int[] { -1 }; // link expression (either a single output for all layers or one output per
+										// layer)
+
 	/**
-	 * Subclasses may set this to "force" or "prevent" before calling super.init(Properties) to either force or prevent the use of Z coordinate inputs for the CPPN (both source and target neuron Z coordinates will be affected).
+	 * Subclasses may set this to "force" or "prevent" before calling super.init(Properties) to either force or prevent
+	 * the use of Z coordinate inputs for the CPPN (both source and target neuron Z coordinates will be affected).
 	 */
 	protected String zCoordsForCPPN = "";
 
@@ -200,17 +242,12 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		cyclesPerStep = feedForward ? depth - 1 : props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP, 1);
 		enableLEO = props.getBooleanProperty(HYPERNEAT_LEO, enableLEO);
 
-		String[] heightStr = props.getProperty(SUBSTRATE_HEIGHT).split(",");
-		String[] widthStr = props.getProperty(SUBSTRATE_WIDTH).split(",");
-		height = new int[depth];
-		width = new int[depth];
-		if (heightStr.length != depth || widthStr.length != depth) {
-			throw new IllegalArgumentException("Number of comma-separated layer dimensions in " + SUBSTRATE_HEIGHT + " or " + SUBSTRATE_WIDTH + " does not match " + SUBSTRATE_DEPTH + ".");
-		}
-		for (int l = 0; l < depth; l++) {
-			height[l] = Integer.parseInt(heightStr[l].trim());
-			width[l] = Integer.parseInt(widthStr[l].trim());
-		}
+		height = props.getIntArrayProperty(SUBSTRATE_HEIGHT);
+		width = props.getIntArrayProperty(SUBSTRATE_WIDTH);
+
+		rangeX = (Range) props.getObjectFromArgsProperty(RANGE_X, Range.class, rangeX);
+		rangeY = (Range) props.getObjectFromArgsProperty(RANGE_Y, Range.class, rangeY);
+		rangeZ = (Range) props.getObjectFromArgsProperty(RANGE_Z, Range.class, rangeZ);
 
 		// Determine CPPN input size and mapping.
 		cppnInputCount = 1; // Bias always has index 0.
@@ -254,7 +291,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 				cppnIdxB[0] = cppnOutputCount++; // bias value
 				logger.info("CPPN: Added single bias output.");
 			}
-			
+
 			if (enableLEO) {
 				cppnIdxL = new int[1];
 				cppnIdxL[0] = cppnOutputCount++; // bias value
@@ -273,7 +310,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 					cppnIdxB[w] = cppnOutputCount++; // bias value
 				logger.info("CPPN: Added " + layerOutputCount + " bias outputs.");
 			}
-			
+
 			if (enableLEO) {
 				cppnIdxL = new int[layerOutputCount];
 				for (int w = 0; w < layerOutputCount; w++)
@@ -351,56 +388,60 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		}
 
 		/**
-		 * Set the coordinates of the source neuron in a two-dimensional substrate.
+		 * Set the coordinates of the source neuron in a two-dimensional substrate with dimensions with range [0, 1]
+		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link RANGE_X}).
 		 * 
-		 * @param x The x coordinate.
-		 * @param y The y coordinate.
+		 * @param x The x coordinate, range should be [0, 1].
+		 * @param y The y coordinate, range should be [0, 1].
 		 */
 		public void setSourceCoordinates(double x, double y) {
-			cppnInput[cppnIdxSX] = x;
-			cppnInput[cppnIdxSY] = y;
+			cppnInput[cppnIdxSX] = rangeX.translate(x);
+			cppnInput[cppnIdxSY] = rangeY.translate(y);
 		}
 
 		/**
-		 * Set the coordinates of the source neuron in a three-dimensional substrate. If the z coordinate is not
-		 * required it will be ignored.
+		 * Set the coordinates of the source neuron in a three-dimensional substrate with dimensions with range [0, 1]
+		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link RANGE_X}). If the z coordinate is not required it
+		 * will be ignored.
 		 * 
-		 * @param x The x coordinate.
-		 * @param y The y coordinate.
-		 * @param z The z coordinate.
+		 * @param x The x coordinate, range should be [0, 1].
+		 * @param y The y coordinate, range should be [0, 1].
+		 * @param z The z coordinate, range should be [0, 1].
 		 */
 		public void setSourceCoordinates(double x, double y, double z) {
-			cppnInput[cppnIdxSX] = x;
-			cppnInput[cppnIdxSY] = y;
+			cppnInput[cppnIdxSX] = rangeX.translate(x);
+			cppnInput[cppnIdxSY] = rangeY.translate(y);
 			if (cppnIdxSZ != -1) {
-				cppnInput[cppnIdxSZ] = z;
+				cppnInput[cppnIdxSZ] = rangeZ.translate(z);
 			}
 		}
 
 		/**
-		 * Set the coordinates of the source neuron in a two-dimensional substrate.
+		 * Set the coordinates of the source neuron in a two-dimensional substrate with dimensions with range [0, 1]
+		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link RANGE_X}).
 		 * 
-		 * @param x The x coordinate.
-		 * @param y The y coordinate.
+		 * @param x The x coordinate, range should be [0, 1].
+		 * @param y The y coordinate, range should be [0, 1].
 		 */
 		public void setTargetCoordinates(double x, double y) {
-			cppnInput[cppnIdxTX] = x;
-			cppnInput[cppnIdxTY] = y;
+			cppnInput[cppnIdxTX] = rangeX.translate(x);
+			cppnInput[cppnIdxTY] = rangeY.translate(y);
 		}
 
 		/**
-		 * Set the coordinates of the source neuron in a three-dimensional substrate. If the z coordinate is not
-		 * required it will be ignored.
+		 * Set the coordinates of the source neuron in a three-dimensional substrate with dimensions with range [0, 1]
+		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link RANGE_X}). If the z coordinate is not required it
+		 * will be ignored.
 		 * 
-		 * @param x The x coordinate.
-		 * @param y The y coordinate.
-		 * @param z The z coordinate.
+		 * @param x The x coordinate, range should be [0, 1].
+		 * @param y The y coordinate, range should be [0, 1].
+		 * @param z The z coordinate, range should be [0, 1].
 		 */
 		public void setTargetCoordinates(double x, double y, double z) {
-			cppnInput[cppnIdxTX] = x;
-			cppnInput[cppnIdxTY] = y;
+			cppnInput[cppnIdxTX] = rangeX.translate(x);
+			cppnInput[cppnIdxTY] = rangeY.translate(y);
 			if (cppnIdxTZ != -1) {
-				cppnInput[cppnIdxTZ] = z;
+				cppnInput[cppnIdxTZ] = rangeZ.translate(z);
 			}
 		}
 
@@ -483,17 +524,19 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		public double getBiasWeight(int sourceLayerIndex) {
 			return cppnOutput[cppnIdxB[sourceLayerIndex]];
 		}
-		
+
 		/**
-		 * Get the value of the link expression output (see {@link #HYPERNEAT_LEO}). Should be called after calling {@link #query()}.
+		 * Get the value of the link expression output (see {@link #HYPERNEAT_LEO}). Should be called after calling
+		 * {@link #query()}.
 		 */
 		public double getLEO() {
 			return cppnOutput[cppnIdxL[0]];
 		}
 
 		/**
-		 * Get the value of the link expression output (see {@link #HYPERNEAT_LEO}) for the specified layer in a layered feed-forward network
-		 * encoded with {@link #HYPERNEAT_LAYER_ENCODING} set to false. Should be called after calling {@link #query()}.
+		 * Get the value of the link expression output (see {@link #HYPERNEAT_LEO}) for the specified layer in a layered
+		 * feed-forward network encoded with {@link #HYPERNEAT_LAYER_ENCODING} set to false. Should be called after
+		 * calling {@link #query()}.
 		 */
 		public double getLEO(int sourceLayerIndex) {
 			return cppnOutput[cppnIdxL[sourceLayerIndex]];
@@ -502,6 +545,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 
 	/**
 	 * Returns true iff the Link Expression Output (LEO) is enabled.
+	 * 
 	 * @see #HYPERNEAT_LEO
 	 */
 	public boolean leoEnabled() {
@@ -530,7 +574,8 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	}
 
 	/**
-	 * @return the index in the CPPN inputs for the z coordinate for the target neuron. Returns -1 if this input is not enabled.
+	 * @return the index in the CPPN inputs for the z coordinate for the target neuron. Returns -1 if this input is not
+	 *         enabled.
 	 */
 	public int getCPPNIndexTargetZ() {
 		return cppnIdxTZ;
@@ -551,35 +596,40 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	}
 
 	/**
-	 * @return the index in the CPPN inputs for the z coordinate for the source neuron. Returns -1 if this input is not enabled.
+	 * @return the index in the CPPN inputs for the z coordinate for the source neuron. Returns -1 if this input is not
+	 *         enabled.
 	 */
 	public int getCPPNIndexSourceZ() {
 		return cppnIdxSZ;
 	}
 
 	/**
-	 * @return the index in the CPPN inputs for the delta (difference) for the x coordinates (the difference between the x coordinates of the source and target neurons). Returns -1 if this input is not enabled.
+	 * @return the index in the CPPN inputs for the delta (difference) for the x coordinates (the difference between the
+	 *         x coordinates of the source and target neurons). Returns -1 if this input is not enabled.
 	 */
 	public int getCPPNIndexDeltaX() {
 		return cppnIdxDX;
 	}
 
 	/**
-	 * @return the index in the CPPN inputs for the delta (difference) for the y coordinates (the difference between the y coordinates of the source and target neurons). Returns -1 if this input is not enabled.
+	 * @return the index in the CPPN inputs for the delta (difference) for the y coordinates (the difference between the
+	 *         y coordinates of the source and target neurons). Returns -1 if this input is not enabled.
 	 */
 	public int getCPPNIndexDeltaY() {
 		return cppnIdxDY;
 	}
 
 	/**
-	 * @return the index in the CPPN inputs for the delta (difference) for the z coordinates (the difference between the z coordinates of the source and target neurons). Returns -1 if this input is not enabled.
+	 * @return the index in the CPPN inputs for the delta (difference) for the z coordinates (the difference between the
+	 *         z coordinates of the source and target neurons). Returns -1 if this input is not enabled.
 	 */
 	public int getCPPNIndexDeltaZ() {
 		return cppnIdxDZ;
 	}
 
 	/**
-	 * @return the index in the CPPN inputs for the angle in the XY plane between the source and target neuron coordinates (relative to the line X axis). Returns -1 if this input is not enabled.
+	 * @return the index in the CPPN inputs for the angle in the XY plane between the source and target neuron
+	 *         coordinates (relative to the line X axis). Returns -1 if this input is not enabled.
 	 */
 	public int getCPPNIndexAngle() {
 		return cppnIdxAn;
@@ -593,14 +643,16 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	}
 
 	/**
-	 * @return an array containing the indexes in the CPPN outputs for the bias value(s). Returns [-1] if this output is not enabled.
+	 * @return an array containing the indexes in the CPPN outputs for the bias value(s). Returns [-1] if this output is
+	 *         not enabled.
 	 */
 	public int[] getCPPNIndexBiasOutput() {
 		return cppnIdxB;
 	}
 
 	/**
-	 * @return an array containing the indexes in the CPPN outputs for the Link Expression Output (LEO) value(s). Returns [-1] if this output is not enabled.
+	 * @return an array containing the indexes in the CPPN outputs for the Link Expression Output (LEO) value(s).
+	 *         Returns [-1] if this output is not enabled.
 	 */
 	public int[] getCPPNIndexLEO() {
 		return cppnIdxL;
