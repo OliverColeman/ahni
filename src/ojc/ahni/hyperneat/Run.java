@@ -12,6 +12,7 @@ import org.apache.log4j.FileAppender;
 
 import ojc.ahni.hyperneat.HyperNEATEvolver;
 import ojc.ahni.integration.AHNIRunProperties;
+import ojc.ahni.util.PostProcess;
 
 import com.anji.util.Misc;
 import com.anji.util.Properties;
@@ -25,19 +26,24 @@ import com.anji.util.Properties;
  * {@link com.anji.integration.Transcriber}).</p> 
  */
 public class Run {
-	private static Logger logger = Logger.getLogger(Run.class);
 	private static final DecimalFormat nf = new DecimalFormat("0.0000");
 	
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
+		if (args.length == 0) {
+			usage();
+			System.exit(-1);
+		}
+		
+		if (args[0].equals("pp") || args[0].equals("postProcess")) {
+			PostProcess.process(args);
+			System.exit(0);
+		}
+			
 		try {
-			if (args.length == 0) {
-				usage();
-				System.exit(-1);
-			}
-
+			Logger logger = Logger.getLogger(Run.class);
 			Properties props = new Properties(args[0]);
 
 			long experimentID = System.currentTimeMillis();
@@ -104,7 +110,7 @@ public class Run {
 			logger.info(numRuns + " runs completed in " + Misc.formatTimeInterval((end - start) / 1000));
 
 
-			// print results
+			// Print average results for each run.
 			double[] avgPerf = new double[numGens];
 			double[] avgFit = new double[numGens];
 			double p, f;
@@ -122,27 +128,23 @@ public class Run {
 			}
 			
 			BufferedWriter resultFilePerf = new BufferedWriter(new FileWriter(resultFileNameBase + "-avg_performance_in_each_gen_over_all_runs.txt"));
-			BufferedWriter resultFileFit = new BufferedWriter(new FileWriter(resultFileNameBase + "-avg_fitness_in_each_gen_over_all_runs.txt"));
-
-			//logger.info("Average performance for each gen over " + numRuns + " runs:");
 			String results = "";
 			for (int gen = 0; gen < numGens; gen++)
 				results += nf.format(avgPerf[gen]) + ", ";
-			//logger.info(results);
 			resultFilePerf.write(results + "\n");
 			resultFilePerf.close();
+			logger.info("Wrote best performance for each generation to " + resultFileNameBase + "-avg_performance_in_each_gen_over_all_runs.txt");
 
-			//logger.info("Average fitness for each gen over " + numRuns + " runs:");
+			BufferedWriter resultFileFit = new BufferedWriter(new FileWriter(resultFileNameBase + "-avg_fitness_in_each_gen_over_all_runs.txt"));
 			results = "";
 			for (int gen = 0; gen < numGens; gen++)
 				results += nf.format(avgFit[gen]) + ", ";
-			//logger.info(results);
 			resultFileFit.write(results + "\n");
-			resultFileFit.close();
+			resultFileFit.close();			
+			logger.info("Wrote best fitness for each generation to " + resultFileNameBase + "-avg_fitness_in_each_gen_over_all_runs.txt");
 
 			System.exit(0);
 		} catch (Throwable th) {
-			logger.error(th);
 			th.printStackTrace();
 		}
 	}
@@ -151,6 +153,10 @@ public class Run {
 	 * command line usage
 	 */
 	private static void usage() {
-		System.err.println("usage: <cmd> <properties-file> [result file name]");
+		System.out.println("Usage:\n" + 
+				"Experiments can be run with:\n" +
+				"  <cmd> <properties-file> [result file name]\n\n" +
+				"Post processing can be run with:\n" + 
+				"  <cmd> pp [compressAverage|ca] <input file/dir> <output file/dir> [options]");
 	}
 }
