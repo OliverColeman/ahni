@@ -389,7 +389,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 
 		/**
 		 * Set the coordinates of the source neuron in a two-dimensional substrate with dimensions with range [0, 1]
-		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link RANGE_X}).
+		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link #RANGE_X}).
 		 * 
 		 * @param x The x coordinate, range should be [0, 1].
 		 * @param y The y coordinate, range should be [0, 1].
@@ -401,7 +401,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 
 		/**
 		 * Set the coordinates of the source neuron in a three-dimensional substrate with dimensions with range [0, 1]
-		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link RANGE_X}). If the z coordinate is not required it
+		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link #RANGE_X}). If the z coordinate is not required it
 		 * will be ignored.
 		 * 
 		 * @param x The x coordinate, range should be [0, 1].
@@ -418,7 +418,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 
 		/**
 		 * Set the coordinates of the source neuron in a two-dimensional substrate with dimensions with range [0, 1]
-		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link RANGE_X}).
+		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link #RANGE_X}).
 		 * 
 		 * @param x The x coordinate, range should be [0, 1].
 		 * @param y The y coordinate, range should be [0, 1].
@@ -430,7 +430,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 
 		/**
 		 * Set the coordinates of the source neuron in a three-dimensional substrate with dimensions with range [0, 1]
-		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link RANGE_X}). If the z coordinate is not required it
+		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link #RANGE_X}). If the z coordinate is not required it
 		 * will be ignored.
 		 * 
 		 * @param x The x coordinate, range should be [0, 1].

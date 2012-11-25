@@ -90,7 +90,7 @@ public class ConnectionAllele extends Allele {
 	 * Set weight to random value from a Gaussian distribution determined by {@link #RANDOM_STD_DEV}
 	 * 
 	 * @param a_numberGenerator
-	 * @param if true then the weight is perturbed by a random amount determine by a Gaussian distribution determined by {@link #RANDOM_STD_DEV} multiplied by {@link #RANDOM_PERTURBATION_FACTOR}.
+	 * @param onlyPerturbFromCurrentValue if true then the weight is perturbed by a random amount determine by a Gaussian distribution determined by {@link #RANDOM_STD_DEV} multiplied by {@link #RANDOM_PERTURBATION_FACTOR}.
 	 */
 	public void setToRandomValue(Random a_numberGenerator, boolean onlyPerturbFromCurrentValue) {
 		if (onlyPerturbFromCurrentValue)

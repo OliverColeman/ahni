@@ -14,6 +14,9 @@ import java.util.Deque;
  * Contains utility methods to perform post-processing on the results of a run or multiple runs.
  */
 public class PostProcess {
+	/**
+	 * Utility method to process command line arguments, set-up file IO, and call required post-processing method.
+	 */
 	public static void process(String[] argsArray) {
 		Deque<String> args = new ArrayDeque<String>();
 		for (String a : argsArray) args.add(a);
@@ -44,7 +47,8 @@ public class PostProcess {
 	/**
 	 * Given a comma-separated list of fitness or performance results for each generation, compute the average over some window and create a new file consisting of these averages.
 	 * 
-	 * @param resultsFile the File containing the original results.
+	 * @param resultsReader input stream to read data from file containing the original results.
+	 * @param resultsWriter output stream to write generated data.
 	 * @param size the desired size of the output file (number of results). The window size is then computed as ([number of original generations] / size).
 	 * @throws IOException 
 	 */ 
