@@ -1,4 +1,4 @@
-package ojc.ahni.integration;
+package ojc.ahni.evaluation;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -8,9 +8,9 @@ import java.util.Arrays;
 
 import javax.imageio.ImageIO;
 
-import ojc.ahni.hyperneat.ESHyperNEATTranscriberBain;
 import ojc.ahni.hyperneat.HyperNEATConfiguration;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
+import ojc.ahni.transcriber.ESHyperNEATTranscriberBain;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
@@ -30,7 +30,7 @@ import com.anji.neat.Evolver;
  * on the fittest and/or best performing Chromosomes evolved during the run; the method
  * {@link #generateSubstrate(Chromosome, Activator)} may be used to create substrates for a Chromosome.</p>
  *  
- * <p>See {@link ojc.ahni.integration.TargetFitnessFunctionMT} for an example.</p>
+ * <p>See {@link ojc.ahni.evaluation.TargetFitnessFunctionMT} for an example.</p>
  * 
  * @author Oliver Coleman
  */

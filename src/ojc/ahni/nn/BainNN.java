@@ -1,4 +1,4 @@
-package ojc.ahni.integration;
+package ojc.ahni.nn;
 
 import java.awt.BasicStroke;
 import java.awt.Canvas;
@@ -26,7 +26,7 @@ import org.apache.log4j.Logger;
 import com.anji.integration.Activator;
 import com.anji.integration.TranscriberException;
 
-import ojc.ahni.hyperneat.ESHyperNEATTranscriberBain;
+import ojc.ahni.transcriber.ESHyperNEATTranscriberBain;
 import ojc.bain.NeuralNetwork;
 import ojc.bain.base.ComponentConfiguration;
 import ojc.bain.base.NeuronCollection;

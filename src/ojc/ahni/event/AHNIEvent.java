@@ -1,4 +1,4 @@
-package ojc.ahni.integration;
+package ojc.ahni.event;
 
 import ojc.ahni.hyperneat.HyperNEATEvolver;
 

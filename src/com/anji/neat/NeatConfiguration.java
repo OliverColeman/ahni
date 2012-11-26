@@ -22,7 +22,7 @@ package com.anji.neat;
 import java.io.IOException;
 import java.util.Arrays;
 
-import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
+import ojc.ahni.transcriber.HyperNEATTranscriberGridNet;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;

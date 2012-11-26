@@ -1,4 +1,4 @@
-package ojc.ahni.integration;
+package ojc.ahni.transcriber;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 
+import ojc.ahni.nn.BainNN;
+import ojc.ahni.nn.BainNN.Topology;
 import ojc.bain.NeuralNetwork;
 import ojc.bain.base.ComponentCollection;
 import ojc.bain.base.NeuronCollection;

@@ -1,4 +1,4 @@
-package ojc.ahni.hyperneat;
+package ojc.ahni.transcriber;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -17,7 +17,9 @@ import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
-import ojc.ahni.integration.*;
+import ojc.ahni.event.*;
+import ojc.ahni.hyperneat.HyperNEATConfiguration;
+import ojc.ahni.nn.BainNN;
 import ojc.ahni.util.Point;
 import ojc.bain.NeuralNetwork;
 import ojc.bain.base.ComponentCollection;

@@ -12,11 +12,11 @@ import java.util.Vector;
 import javax.imageio.ImageIO;
 
 import ojc.ahni.*;
-import ojc.ahni.hyperneat.GridNet;
+import ojc.ahni.evaluation.HyperNEATFitnessFunction;
+import ojc.ahni.event.AHNIRunProperties;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
-import ojc.ahni.hyperneat.HyperNEATFitnessFunction;
-import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
-import ojc.ahni.integration.AHNIRunProperties;
+import ojc.ahni.nn.GridNet;
+import ojc.ahni.transcriber.HyperNEATTranscriberGridNet;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;

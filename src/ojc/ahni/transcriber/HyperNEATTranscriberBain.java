@@ -1,6 +1,6 @@
-package ojc.ahni.hyperneat;
+package ojc.ahni.transcriber;
 
-import ojc.ahni.integration.BainNN;
+import ojc.ahni.nn.BainNN;
 import ojc.bain.NeuralNetwork;
 import ojc.bain.base.ComponentCollection;
 import ojc.bain.base.NeuronCollection;

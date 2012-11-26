@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedMap;
 
+import ojc.ahni.transcriber.HyperNEATTranscriber;
+
 import org.apache.log4j.Logger;
 import org.jgapcustomised.Allele;
 import org.jgapcustomised.Chromosome;
@@ -29,7 +31,7 @@ import com.anji.util.Properties;
 /**
  * Extension of NEAT configuration with HyperNEAT-specific features added:<ul>
  * <li>Forces correct number of inputs and outputs according to the number required for the CPPN in the initial {@link org.jgapcustomised.ChromosomeMaterial} sample from which an initial population is generated.</li>
- * <li>Adds required hidden nodes to the initial {@link org.jgapcustomised.ChromosomeMaterial} sample from which an initial population is generated if {@link ojc.ahni.hyperneat.HyperNEATTranscriber#HYPERNEAT_LEO_LOCALITY} is enabled.</li>
+ * <li>Adds required hidden nodes to the initial {@link org.jgapcustomised.ChromosomeMaterial} sample from which an initial population is generated if {@link ojc.ahni.transcriber.HyperNEATTranscriber#HYPERNEAT_LEO_LOCALITY} is enabled.</li>
  * </ul>  
  * 
  * @author Oliver Coleman

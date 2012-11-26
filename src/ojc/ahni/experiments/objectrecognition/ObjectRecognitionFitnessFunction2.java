@@ -3,9 +3,9 @@ package ojc.ahni.experiments.objectrecognition;
 import java.util.*;
 
 import ojc.ahni.*;
-import ojc.ahni.hyperneat.GridNet;
+import ojc.ahni.evaluation.HyperNEATFitnessFunction;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
-import ojc.ahni.hyperneat.HyperNEATFitnessFunction;
+import ojc.ahni.nn.GridNet;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;

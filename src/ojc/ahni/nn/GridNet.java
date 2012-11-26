@@ -14,7 +14,7 @@
  * @author oliver
  */
 
-package ojc.ahni.hyperneat;
+package ojc.ahni.nn;
 
 import java.awt.Graphics2D;
 

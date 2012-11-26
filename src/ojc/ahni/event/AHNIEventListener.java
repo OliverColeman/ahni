@@ -1,4 +1,4 @@
-package ojc.ahni.integration;
+package ojc.ahni.event;
 
 /**
  * An interface for objects that listen to events that occur during an evolutionary run in AHNI.

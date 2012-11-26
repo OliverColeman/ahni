@@ -21,10 +21,10 @@ import java.util.Vector;
 
 import javax.imageio.ImageIO;
 
-import ojc.ahni.integration.AHNIEvent;
-import ojc.ahni.integration.AHNIEventListener;
-import ojc.ahni.integration.AHNIRunProperties;
-import ojc.ahni.integration.BainNN;
+import ojc.ahni.event.AHNIEvent;
+import ojc.ahni.event.AHNIEventListener;
+import ojc.ahni.event.AHNIRunProperties;
+import ojc.ahni.nn.BainNN;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.BulkFitnessFunction;
@@ -552,7 +552,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 
 	/**
 	 * Provides a translation from and passes through {@link org.jgapcustomised.event.GeneticEvent}s
-	 * to {@link ojc.ahni.integration.AHNIEvent}s via {@link ojc.ahni.integration.AHNIEventListener}s.
+	 * to {@link ojc.ahni.event.AHNIEvent}s via {@link ojc.ahni.event.AHNIEventListener}s.
 	 */ 
 	@Override
 	public void geneticEventFired(GeneticEvent event) {

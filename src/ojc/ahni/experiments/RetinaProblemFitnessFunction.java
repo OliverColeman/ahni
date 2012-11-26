@@ -1,6 +1,6 @@
 package ojc.ahni.experiments;
 
-import ojc.ahni.hyperneat.HyperNEATTargetFitnessFunction;
+import ojc.ahni.evaluation.HyperNEATTargetFitnessFunction;
 
 import com.anji.util.Properties;
 

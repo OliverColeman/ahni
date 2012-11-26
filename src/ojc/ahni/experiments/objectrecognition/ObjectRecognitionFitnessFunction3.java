@@ -13,11 +13,11 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 
 import ojc.ahni.*;
-import ojc.ahni.hyperneat.GridNet;
+import ojc.ahni.evaluation.BulkFitnessFunctionMT;
+import ojc.ahni.evaluation.HyperNEATFitnessFunction;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
-import ojc.ahni.hyperneat.HyperNEATFitnessFunction;
-import ojc.ahni.hyperneat.HyperNEATTranscriberGridNet;
-import ojc.ahni.integration.BulkFitnessFunctionMT;
+import ojc.ahni.nn.GridNet;
+import ojc.ahni.transcriber.HyperNEATTranscriberGridNet;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;

@@ -1,6 +1,6 @@
 package ojc.ahni.experiments;
 
-import ojc.ahni.integration.TargetFitnessFunctionMT;
+import ojc.ahni.evaluation.TargetFitnessFunctionMT;
 
 import com.anji.neat.NeatConfiguration;
 import com.anji.util.Properties;

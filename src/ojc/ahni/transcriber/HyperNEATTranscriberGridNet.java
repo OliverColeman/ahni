@@ -1,6 +1,7 @@
-package ojc.ahni.hyperneat;
+package ojc.ahni.transcriber;
 
-import ojc.ahni.hyperneat.HyperNEATTranscriber.CPPN;
+import ojc.ahni.nn.GridNet;
+import ojc.ahni.transcriber.HyperNEATTranscriber.CPPN;
 import ojc.bain.neuron.rate.NeuronCollectionWithBias;
 
 import org.apache.log4j.Logger;
@@ -18,7 +19,7 @@ import com.anji.nn.activationfunction.ActivationFunctionFactory;
 import com.anji.util.*;
 
 /**
- * Constructs a {@link ojc.ahni.hyperneat.GridNet} neural network from a chromosome using the hypercube (from HyperNEAT)
+ * Constructs a {@link ojc.ahni.nn.GridNet} neural network from a chromosome using the hypercube (from HyperNEAT)
  * encoding scheme. An {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this
  * class.
  * 

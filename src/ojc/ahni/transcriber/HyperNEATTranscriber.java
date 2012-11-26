@@ -1,4 +1,4 @@
-package ojc.ahni.hyperneat;
+package ojc.ahni.transcriber;
 
 import java.util.Arrays;
 import java.util.Set;

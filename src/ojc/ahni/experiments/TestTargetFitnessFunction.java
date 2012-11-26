@@ -2,8 +2,8 @@ package ojc.ahni.experiments;
 
 import org.apache.log4j.Logger;
 
+import ojc.ahni.evaluation.HyperNEATTargetFitnessFunction;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
-import ojc.ahni.hyperneat.HyperNEATTargetFitnessFunction;
 
 import com.anji.integration.TranscriberException;
 import com.anji.util.Properties;

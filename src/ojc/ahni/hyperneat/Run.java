@@ -10,8 +10,8 @@ import org.apache.log4j.Appender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.FileAppender;
 
+import ojc.ahni.event.AHNIRunProperties;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
-import ojc.ahni.integration.AHNIRunProperties;
 import ojc.ahni.util.PostProcess;
 
 import com.anji.util.Misc;

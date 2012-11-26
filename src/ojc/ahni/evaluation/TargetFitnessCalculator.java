@@ -1,4 +1,4 @@
-package ojc.ahni.util;
+package ojc.ahni.evaluation;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -10,8 +10,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-import ojc.ahni.integration.AHNIRunProperties;
-import ojc.ahni.integration.BainNN;
+import ojc.ahni.event.AHNIRunProperties;
+import ojc.ahni.nn.BainNN;
+import ojc.ahni.util.NiceWriter;
 
 import org.apache.log4j.Logger;
 
@@ -24,8 +25,8 @@ import com.anji.util.Properties;
  * Utility class to perform target fitness function calculations.
  * </p>
  * 
- * @see ojc.ahni.integration.TargetFitnessFunctionMT
- * @see ojc.ahni.hyperneat.HyperNEATTargetFitnessFunction
+ * @see ojc.ahni.evaluation.TargetFitnessFunctionMT
+ * @see ojc.ahni.evaluation.HyperNEATTargetFitnessFunction
  * @author Oliver Coleman
  */
 public class TargetFitnessCalculator implements Configurable {

@@ -1,26 +1,23 @@
-package ojc.ahni.hyperneat;
+package ojc.ahni.evaluation;
 
-import java.awt.image.BufferedImage;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.Arrays;
 
-import javax.imageio.ImageIO;
-
-import ojc.ahni.integration.AHNIEvent;
-import ojc.ahni.integration.AHNIEventListener;
-import ojc.ahni.integration.AHNIRunProperties;
-import ojc.ahni.integration.BainNN;
+import ojc.ahni.event.AHNIEvent;
+import ojc.ahni.event.AHNIEventListener;
+import ojc.ahni.event.AHNIRunProperties;
+import ojc.ahni.event.AHNIEvent.Type;
+import ojc.ahni.hyperneat.HyperNEATConfiguration;
+import ojc.ahni.hyperneat.HyperNEATEvolver;
 import ojc.ahni.util.NiceWriter;
-import ojc.ahni.util.TargetFitnessCalculator;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
-import com.anji.integration.*;
+import com.anji.integration.Activator;
+import com.anji.integration.TranscriberException;
 import com.anji.util.Properties;
 
 /**
@@ -28,39 +25,38 @@ import com.anji.util.Properties;
  * (desired) output pattern pairs, determines fitness based on how close the output of the network encoded by each
  * genome is to the target output given some input.</p>
  * 
- * <p>See {@link ojc.ahni.util.TargetFitnessCalculator} for a list of property keys to specify how the error and fitness calculations are performed.</p>
+ * <p>See {@link ojc.ahni.evaluation.TargetFitnessCalculator} for a list of property keys to specify how the error and fitness calculations are performed.</p>
  * 
  * @author Oliver Coleman
  */
-public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction implements AHNIEventListener {
-	private static Logger logger = Logger.getLogger(HyperNEATTargetFitnessFunction.class);
+public class TargetFitnessFunctionMT extends BulkFitnessFunctionMT implements AHNIEventListener {
 	private static final long serialVersionUID = 1L;
+	private static Logger logger = Logger.getLogger(TargetFitnessFunctionMT.class);
 	
-	public static final String LOG_CHAMP_PERGENS_KEY = "fitness.function.log.champ.evaluation.pergenerations";
-	
-	protected int logChampPerGens = -1;
+	private static final String LOG_CHAMP_PERGENS_KEY = HyperNEATTargetFitnessFunction.LOG_CHAMP_PERGENS_KEY;
 	
 	private TargetFitnessCalculator fitnessCalculator;
+	protected int logChampPerGens = -1;
 	
-	private double[][][] inputPatterns;
-	private double[][][] targetOutputPatterns;
+	private double[][] inputPatterns;
+	private double[][] targetOutputPatterns;
 	private double minTargetOutputValue;
 	private double maxTargetOutputValue;
 
-	protected HyperNEATTargetFitnessFunction() {
+	protected TargetFitnessFunctionMT() {
 	}
 
 	/**
-	 * Create a HyperNEATTargetFitnessFunction with the specified input and output examples.
+	 * Create a TargetFitnessFunctionMT with the specified input and output examples.
 	 * 
-	 * @param inputPatterns Array containing stimuli (input) examples, in the form [trial][y][x]. The dimensions should match those of the
+	 * @param inputPatterns Array containing stimuli (input) examples, in the form [trial][input]. The dimensions should match those of the
 	 * input layer of the substrate network.
-	 * @param targetOutputPatterns Array containing target response (output) examples, in the form [trial][y][x]. The dimensions should match those of the
+	 * @param targetOutputPatterns Array containing target response (output) examples, in the form [trial][output]. The dimensions should match those of the
 	 * output layer of the substrate network.
 	 * @param minTargetOutputValue The smallest value that occurs in the target outputs.
 	 * @param maxTargetOutputValue The largest value that occurs in the target outputs.
 	 */
-	public HyperNEATTargetFitnessFunction(double[][][] inputPatterns, double[][][] targetOutputPatterns, double minTargetOutputValue, double maxTargetOutputValue) {
+	public TargetFitnessFunctionMT(double[][] inputPatterns, double[][] targetOutputPatterns, double minTargetOutputValue, double maxTargetOutputValue) {
 		this.inputPatterns = inputPatterns;
 		this.targetOutputPatterns = targetOutputPatterns;
 		this.minTargetOutputValue = minTargetOutputValue;
@@ -90,17 +86,17 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction imp
 	protected void setMaxFitnessValue(int newMaxFitnessValue) {
 		fitnessCalculator.setMaxFitnessValue(newMaxFitnessValue);
 	}
-
+	
 	/**
 	 * Set the input and target output pattern pairs to use for evaluations.
-	 * @param inputPatterns Array containing stimuli (input) examples, in the form [trial][y][x]. The dimensions should match those of the
+	 * @param inputPatterns Array containing stimuli (input) examples, in the form [trial][input]. The dimensions should match those of the
 	 * input layer of the substrate network.
-	 * @param targetOutputPatterns Array containing target response (output) examples, in the form [trial][y][x]. The dimensions should match those of the
+	 * @param targetOutputPatterns Array containing target response (output) examples, in the form [trial][output]. The dimensions should match those of the
 	 * output layer of the substrate network.
 	 * @param minTargetOutputValue The smallest value that occurs in the target outputs.
 	 * @param maxTargetOutputValue The largest value that occurs in the target outputs.
 	 */
-	public void setPatterns(double[][][] inputPatterns, double[][][] targetOutputPatterns, double minTargetOutputValue, double maxTargetOutputValue) {
+	protected void setPatterns(double[][] inputPatterns, double[][] targetOutputPatterns, double minTargetOutputValue, double maxTargetOutputValue) {
 		this.inputPatterns = inputPatterns;
 		this.targetOutputPatterns = targetOutputPatterns;
 		this.minTargetOutputValue = minTargetOutputValue;
@@ -118,6 +114,7 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction imp
 		return results.fitness;
 	}
 	
+
 	@Override
 	public void ahniEventOccurred(AHNIEvent event) {
 		if (event.getType() == AHNIEvent.Type.GENERATION_END) {
@@ -126,12 +123,10 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction imp
 			if ((logChampPerGens >= 0 && finished) || (logChampPerGens > 0 && evolver.getGeneration() % logChampPerGens == 0)) {
 				try {
 					Chromosome bestPerforming = evolver.getBestPerformingFromLastGen();
+					NiceWriter outputfile = new NiceWriter(new FileWriter(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : evolver.getGeneration()) + "-evaluation-" + bestPerforming.getId() + ".txt"), "0.00");
 					Activator substrate = generateSubstrate(bestPerforming, null);
-					if (substrate != null) {
-						NiceWriter outputfile = new NiceWriter(new FileWriter(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : evolver.getGeneration()) + "-evaluation-" + bestPerforming.getId() + ".txt"), "0.00");
-						evaluate(bestPerforming, substrate, 0, outputfile);
-						outputfile.close();
-					}
+					evaluate(bestPerforming, substrate, 0, outputfile);
+					outputfile.close();
 				} catch (TranscriberException e) {
 					logger.info("Error transcribing best performing individual: "  + Arrays.toString(e.getStackTrace()));
 				} catch (IOException e) {

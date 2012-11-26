@@ -1,8 +1,9 @@
-package ojc.ahni.hyperneat;
+package ojc.ahni.evaluation;
 
 import java.util.*;
 
-import ojc.ahni.integration.BulkFitnessFunctionMT;
+import ojc.ahni.hyperneat.HyperNEATEvolver;
+import ojc.ahni.transcriber.HyperNEATTranscriber;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
