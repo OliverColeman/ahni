@@ -79,17 +79,17 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	public static final String SUBSTRATE_WIDTH = "ann.hyperneat.width";
 	/**
 	 * The coordinate range of neurons in the substrate in the X dimension, corresponding to the width (this is used to
-	 * determine the input to the CPPN for a given neuron location). Defaults to "-1, 1".
+	 * determine the input to the CPPN for a given neuron location). Defaults to [0, 1].
 	 */
 	public static final String RANGE_X = "ann.hyperneat.range.x";
 	/**
 	 * The coordinate range of neurons in the substrate in the Y dimension, corresponding to the height (this is used to
-	 * determine the input to the CPPN for a given neuron location). Defaults to "-1, 1".
+	 * determine the input to the CPPN for a given neuron location). Defaults to [0, 1].
 	 */
 	public static final String RANGE_Y = "ann.hyperneat.range.y";
 	/**
 	 * The coordinate range of neurons in the substrate in the Z dimension, corresponding to the depth (this is used to
-	 * determine the input to the CPPN for a given neuron location). Defaults to "-1, 1".
+	 * determine the input to the CPPN for a given neuron location). Defaults to [0, 1].
 	 */
 	public static final String RANGE_Z = "ann.hyperneat.range.z";
 
@@ -126,15 +126,15 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 */
 	protected int depth;
 	/**
-	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range -1 to 1 to the range specified by {@link #RANGE_X}.
+	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range [0, 1] to the range specified by {@link #RANGE_X}.
 	 */
 	protected Range rangeX = new Range();
 	/**
-	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range -1 to 1 to the range specified by {@link #RANGE_Y}.
+	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range [0, 1] to the range specified by {@link #RANGE_Y}.
 	 */
 	protected Range rangeY = new Range();
 	/**
-	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range -1 to 1 to the range specified by {@link #RANGE_Z}.
+	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range [0, 1] to the range specified by {@link #RANGE_Z}.
 	 */
 	protected Range rangeZ = new Range();
 	/**
