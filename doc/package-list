@@ -1,1 +1,17 @@
+com.anji
+com.anji.integration
+com.anji.neat
+com.anji.nn
+com.anji.nn.activationfunction
+com.anji.persistence
+com.anji.run
+com.anji.util
+ojc.ahni
+ojc.ahni.experiments
+ojc.ahni.experiments.objectrecognition
 ojc.ahni.hyperneat
+ojc.ahni.integration
+ojc.ahni.util
+org.jgapcustomised
+org.jgapcustomised.event
+org.jgapcustomised.impl
