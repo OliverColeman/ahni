@@ -7,10 +7,13 @@ com.anji.persistence
 com.anji.run
 com.anji.util
 ojc.ahni
+ojc.ahni.evaluation
+ojc.ahni.event
 ojc.ahni.experiments
 ojc.ahni.experiments.objectrecognition
 ojc.ahni.hyperneat
-ojc.ahni.integration
+ojc.ahni.nn
+ojc.ahni.transcriber
 ojc.ahni.util
 org.jgapcustomised
 org.jgapcustomised.event
