@@ -48,13 +48,7 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 	 */
 	public void init(Properties props) {
 		super.init(props);
-
 		activationFunction = ActivationFunctionFactory.getInstance().get(props.getProperty(HYPERNEAT_ACTIVATION_FUNCTION_KEY));
-
-		if (!feedForward)
-			cyclesPerStep = props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP);
-
-		cppnTranscriber = (AnjiNetTranscriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
 	}
 
 	/**
@@ -80,60 +74,6 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 
 		int connectionRange = this.connectionRange == -1 ? Integer.MAX_VALUE / 4 : this.connectionRange;
 
-		// determine cppn input mapping
-		// target and source coordinates
-		int cppnIdxTX = -1, cppnIdxTY = -1, cppnIdxTZ = -1, cppnIdxSX = -1, cppnIdxSY = -1;
-		// deltas
-		int cppnIdxDX = -1, cppnIdxDY = -1, cppnIdxAn = -1;
-
-		int cppnInputIdx = 1; // 0 is always bias
-		cppnIdxTX = cppnInputIdx++;
-		cppnIdxTY = cppnInputIdx++;
-		cppnIdxSX = cppnInputIdx++;
-		cppnIdxSY = cppnInputIdx++;
-		if (depth > 2 && layerEncodingIsInput) { // if depth == 2 network necessarily feed forward, and only one layer
-													// of connections can exist
-			cppnIdxTZ = cppnInputIdx++;
-			if (!feedForward) {
-				if (includeDelta) {
-				}
-			}
-		}
-		if (includeDelta) {
-			cppnIdxDY = cppnInputIdx++; // y delta
-			cppnIdxDX = cppnInputIdx++; // x delta
-		}
-		if (includeAngle) {
-			cppnIdxAn = cppnInputIdx++; // angle
-		}
-
-		// determine cppn output mapping
-		int[] cppnIdxW; // weights (either a single output for all layers or one output per layer)
-		int[] cppnIdxB = new int[0]; // bias (either a single output for all layers or one output per layer)
-
-		int cppnOutputIdx = 0;
-		if (layerEncodingIsInput) {
-			cppnIdxW = new int[1];
-			cppnIdxW[0] = cppnOutputIdx++; // weight value
-
-			if (enableBias) {
-				cppnIdxB = new int[1];
-				cppnIdxB[0] = cppnOutputIdx++; // bias value
-			}
-		} else { // one output per layer
-			cppnIdxW = new int[depth - 1];
-			for (int w = 0; w < depth - 1; w++)
-				cppnIdxW[w] = cppnOutputIdx++; // weight value
-
-			if (enableBias) {
-				cppnIdxB = new int[depth - 1];
-				for (int w = 0; w < depth - 1; w++)
-					cppnIdxB[w] = cppnOutputIdx++; // weight value
-			}
-		}
-
-		// System.out.println("ii: " + cppnInputIdx + "   oi: " + cppnOutputIdx);
-
 		double[][][][][][] weights;
 		double[][][] bias;
 		boolean createNewPhenotype = (phenotype == null);
@@ -147,8 +87,6 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 			bias = phenotype.getBias();
 		}
 
-		double cppnTZ = 0, cppnTY, cppnTX, cppnSZ, cppnSY, cppnSX;
-
 		if (feedForward) {
 			if (createNewPhenotype) {
 				weights = new double[depth - 1][][][][][];
@@ -160,26 +98,9 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 
 			// query CPPN for substrate connection weights
 			for (int tz = 1; tz < depth; tz++) {
-				if (depth > 2 && layerEncodingIsInput) {
-					// double cppnTZ =((double) tz*2) / (depth-1) - 1;
-					cppnTZ = ((double) tz) / (depth - 1);
-				}
-
 				for (int ty = 0; ty < height[tz]; ty++) {
-					// double cppnTY =((double) ty*2) / (height-1) - 1;
-					if (height[tz] > 1)
-						cppnTY = ((double) ty) / (height[tz] - 1);
-					else
-						cppnTY = 0.5f;
-
 					for (int tx = 0; tx < width[tz]; tx++) {
-						// double cppnTX = ((double) tx*2) / (width-1) - 1;
-						if (width[tz] > 1)
-							cppnTX = ((double) tx) / (width[tz] - 1);
-						else
-							cppnTX = 0.5f;
-
-						cppn.setTargetCoordinates(cppnTX, cppnTY, cppnTZ);
+						cppn.setTargetCoordinatesFromGridIndices(tx, ty, tz);
 
 						// calculate dimensions of this weight target matrix
 						// (bounded by grid edges)
@@ -201,20 +122,8 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 						// w{y,x} is index into weight matrix
 						// s{y,x} is index of source neuron
 						for (int wy = 0, sy = Math.max(0, ty - connectionRange); wy < dy; wy++, sy++) {
-							// double cppnSY = ((double) sy * 2) / (height-1) - 1;
-							if (height[tz - 1] > 1)
-								cppnSY = ((double) sy) / (height[tz - 1] - 1);
-							else
-								cppnSY = 0.5f;
-
 							for (int wx = 0, sx = Math.max(0, tx - connectionRange); wx < dx; wx++, sx++) {
-								// double cppnSX = ((double) sx * 2) / (width-1) - 1;
-								if (width[tz - 1] > 1)
-									cppnSX = ((double) sx) / (width[tz - 1] - 1);
-								else
-									cppnSX = 0.5f;
-
-								cppn.setSourceCoordinates(cppnSX, cppnSY);
+								cppn.setSourceCoordinatesFromGridIndices(sx, sy, tz-1);
 
 								cppn.query();
 
@@ -304,21 +213,9 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 
 			// query CPPN for substrate connection weights
 			for (int tz = 1; tz < depth; tz++) {
-				cppnTZ = ((double) tz) / (depth - 1);
-
 				for (int ty = 0; ty < height[tz]; ty++) {
-					if (height[tz] > 1)
-						cppnTY = ((double) ty) / (height[tz] - 1);
-					else
-						cppnTY = 0.5f;
-
 					for (int tx = 0; tx < width[tz]; tx++) {
-						if (width[tz] > 1)
-							cppnTX = ((double) tx) / (width[tz] - 1);
-						else
-							cppnTX = 0.5f;
-
-						cppn.setTargetCoordinates(cppnTX, cppnTY, cppnTZ);
+						cppn.setTargetCoordinatesFromGridIndices(tx, ty, tz);
 
 						// calculate dimensions of this weight matrix (bounded by grid edges)
 						int dz = Math.min(depth - 1, tz + connectionRange) - Math.max(1, tz - connectionRange) + 1; // no
@@ -339,21 +236,9 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 						// w{z,y,x} is index into weight matrix
 						// s{z,y,x} is index of source neuron
 						for (int wz = 0, sz = Math.max(1, tz - connectionRange); wz < dz; wz++, sz++) {
-							cppnSZ = ((double) sz) / (depth - 1);
-
 							for (int wy = 0, sy = Math.max(0, ty - connectionRange); wy < dy; wy++, sy++) {
-								if (height[tz] > 1)
-									cppnSY = ((double) sy) / (height[tz] - 1);
-								else
-									cppnSY = 0.5f;
-
 								for (int wx = 0, sx = Math.max(0, tx - connectionRange); wx < dx; wx++, sx++) {
-									if (width[tz] > 1)
-										cppnSX = ((double) sx) / (width[tz] - 1);
-									else
-										cppnSX = 0.5f;
-
-									cppn.setSourceCoordinates(cppnSX, cppnSY, cppnSZ);
+									cppn.setSourceCoordinatesFromGridIndices(sx, sy, sz);
 
 									cppn.query();
 

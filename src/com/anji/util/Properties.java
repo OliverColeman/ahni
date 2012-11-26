@@ -19,6 +19,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -318,18 +319,18 @@ public class Properties extends java.util.Properties {
 		log(key, value, Double.toString(defaultVal));
 		return (value == null) ? defaultVal : Double.parseDouble(value);
 	}
-	
-	
+
 	/**
 	 * Retrieve an array of int values from a comma-separated list.
 	 */
 	public int[] getIntArrayProperty(String key, int[] defaultVal) {
 		String value = super.getProperty(key);
 		log(key, value, Arrays.toString(defaultVal));
-		if (value == null) return defaultVal;
+		if (value == null)
+			return defaultVal;
 		return getIntArrayFromString(value);
 	}
-	
+
 	/**
 	 * Retrieve an array of int values from a comma-separated list.
 	 */
@@ -340,7 +341,7 @@ public class Properties extends java.util.Properties {
 		log(key, value, null);
 		return getIntArrayFromString(value);
 	}
-	
+
 	private int[] getIntArrayFromString(String valString) {
 		String[] valStrings = valString.replaceAll(" ", "").split(",");
 		int[] vals = new int[valStrings.length];
@@ -349,19 +350,18 @@ public class Properties extends java.util.Properties {
 		}
 		return vals;
 	}
-	
 
-	
 	/**
 	 * Retrieve an array of double values from a comma-separated list.
 	 */
 	public double[] getDoubleArrayProperty(String key, double[] defaultVal) {
 		String value = super.getProperty(key);
 		log(key, value, java.util.Arrays.toString(defaultVal));
-		if (value == null) return defaultVal;
+		if (value == null)
+			return defaultVal;
 		return getDoubleArrayFromString(value);
 	}
-	
+
 	/**
 	 * Retrieve an array of double values from a comma-separated list.
 	 */
@@ -372,7 +372,7 @@ public class Properties extends java.util.Properties {
 		log(key, value, null);
 		return getDoubleArrayFromString(value);
 	}
-	
+
 	private double[] getDoubleArrayFromString(String valString) {
 		String[] valStrings = valString.replaceAll("\\s", "").split(",");
 		double[] vals = new double[valStrings.length];
@@ -381,34 +381,31 @@ public class Properties extends java.util.Properties {
 		}
 		return vals;
 	}
-	
-	
+
 	/**
 	 * Retrieve an array of Objects initialised from a comma-separated list of double arguments wrapped in brackets.
-	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects.
-	 * Note that the constructors for clazz must have arguments that are all doubles.    
+	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects. Note that the constructors for clazz must have arguments
+	 * that are all doubles.
 	 */
-	public Object getObjectFromArgsProperty(String key, Class clazz) {
-		return getObjectArrayProperty(key, clazz)[0];
+	public<T> T getObjectFromArgsProperty(String key, Class<T> clazz, double[] defaultArgs) {
+		return getObjectArrayProperty(key, clazz, defaultArgs)[0];
 	}
 
-	
 	/**
 	 * Retrieve an array of Objects initialised from a comma-separated list of double arguments wrapped in brackets.
-	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects.
-	 * Note that the constructors for clazz must have arguments that are all doubles.    
+	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects. Note that the constructors for clazz must have arguments
+	 * that are all doubles.
 	 */
-	public Object getObjectFromArgsProperty(String key, Class clazz, Object defaultObject) {
-		return getObjectArrayProperty(key, clazz, new Object[]{defaultObject})[0];
+	public<T> T getObjectFromArgsProperty(String key, Class<T> clazz, T defaultObject, double[] defaultArgs) {
+		return getObjectArrayProperty(key, clazz, (T[]) (new Object[] { defaultObject }), defaultArgs)[0];
 	}
-	
-	
+
 	/**
 	 * Retrieve an array of Objects initialised from a comma-separated list of double arguments wrapped in brackets.
-	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects.
-	 * Note that the constructors for clazz must have arguments that are all doubles.    
+	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects. Note that the constructors for clazz must have arguments
+	 * that are all doubles.
 	 */
-	public Object[] getObjectArrayProperty(String key, Class clazz, Object[] defaultObjects) {
+	public<T> T[] getObjectArrayProperty(String key, Class<T> clazz, T[] defaultObjects, double[] defaultArgs) {
 		String value = super.getProperty(key);
 		log(key, value, "defaults");
 		if (value == null) {
@@ -420,58 +417,39 @@ public class Properties extends java.util.Properties {
 		if (argValues.length == 0) {
 			throw new IllegalArgumentException("Could not create Object from property " + key + ": malformed value.");
 		}
-		Object[] objs = new Object[argValues.length];
+		T[] objs = (T[]) Array.newInstance(clazz, argValues.length);
 		int objectIndex = 0;
 		for (int i = 0; i < argValues.length; i++) {
 			String vals = argValues[i].replaceAll("[\\(\\)]", "");
 			double[] args = getDoubleArrayFromString(vals);
-			Class[] argTypes = new Class[args.length];
-			Double[] argObjects = new Double[args.length];
-			for (int a = 0; a < args.length; a++) {
+			int argCount = defaultArgs == null ? args.length : defaultArgs.length;
+			Class[] argTypes = new Class[argCount];
+			Object[] argObjects = new Object[argCount];
+			for (int a = 0; a < argCount; a++) {
 				argTypes[a] = double.class;
-				argObjects[a] = new Double(args[a]);
+				argObjects[a] = new Double(a < args.length ? args[a] : defaultArgs[a]);
 			}
 			try {
-				Constructor c = clazz.getConstructor(argTypes);
+				Constructor<T> c = clazz.getConstructor(argTypes);
 				objs[objectIndex++] = c.newInstance(argObjects);
 			} catch (Exception e) {
-				throw new IllegalArgumentException("Could not create Object from property:\n" + e.toString() + "\n" + java.util.Arrays.toString(e.getStackTrace())); 
+				throw new IllegalArgumentException("Could not create Object from property:\n" + e.toString() + "\n" + java.util.Arrays.toString(e.getStackTrace()));
 			}
 		}
 		return objs;
 	}
-	
+
 	/**
 	 * Retrieve an array of Objects initialised from a comma-separated list of double arguments wrapped in brackets.
-	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects.
-	 * Note that the constructors for clazz must have arguments that are all doubles.    
+	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects. Note that the constructors for clazz must have arguments
+	 * that are all doubles.
 	 */
-	public Object[] getObjectArrayProperty(String key, Class clazz) {
+	public<T> T[] getObjectArrayProperty(String key, Class<T> clazz, double[] defaultArgs) {
 		String value = super.getProperty(key);
 		if (value == null)
 			throw new IllegalArgumentException("no value for " + key);
-		return getObjectArrayProperty(key, clazz, null);
+		return getObjectArrayProperty(key, clazz, null, defaultArgs);
 	}
-		
-	
-	/**
-	 * Retrieve a list of double values from a comma-separated list.
-	 */
-	public double[] getObjectArrayProperty(String key) {
-		String value = super.getProperty(key);
-		if (value == null)
-			throw new IllegalArgumentException("no value for " + key);
-		log(key, value, null);
-		String[] valStrings = value.replaceAll(" ", "").split(",");
-		double[] vals = new double[valStrings.length];
-		for (int i = 0; i < valStrings.length; i++) {
-			vals[i] = Double.parseDouble(valStrings[i]);
-		}
-		return vals;
-	}
-
-	
-	
 
 	/**
 	 * Returns property keys matching regular expression pattern.
@@ -532,6 +510,27 @@ public class Properties extends java.util.Properties {
 		result.putAll(newProps);
 		result.setName(prefix);
 		return result;
+	}
+
+	/**
+	 * Return properties filtered for a particular sub-component.
+	 * 
+	 * @param prefix The top-level property for which to get the sub-properties.
+	 * @return A Properties object containing key/value pairs from this Properties object for which the keys in this
+	 *         Properties object start with the given prefix, with the keys in the returned Properties object stripped
+	 *         of the prefix.
+	 */
+	public Properties getOnlySubProperties(String prefix) {
+		Properties newProps = new Properties();
+		Iterator it = keySet().iterator();
+		while (it.hasNext()) {
+			String key = (String) it.next();
+			if (key.startsWith(prefix)) {
+				newProps.put(key.substring(prefix.length()+1), super.getProperty(key));
+			}
+		}
+		newProps.setName(prefix);
+		return newProps;
 	}
 
 	/**
@@ -624,15 +623,18 @@ public class Properties extends java.util.Properties {
 	 *         <code>Configurable</code>
 	 */
 	public Object singletonObjectProperty(Class aClass) {
-		//System.err.println(System.identityHashCode(this) + "  " + name + " singletonObjectProperty(Class aClass)  ENTER");
+		// System.err.println(System.identityHashCode(this) + "  " + name +
+		// " singletonObjectProperty(Class aClass)  ENTER");
 		synchronized (classToSingletonsMap) {
-			///System.err.println(System.identityHashCode(this) + "  " + name + " singletonObjectProperty(Class aClass)  IN synchronized");
+			// /System.err.println(System.identityHashCode(this) + "  " + name +
+			// " singletonObjectProperty(Class aClass)  IN synchronized");
 			Object result = classToSingletonsMap.get(aClass);
 			if (result == null) {
 				result = newObjectProperty(aClass);
 				classToSingletonsMap.put(aClass, result);
 			}
-			//System.err.println(System.identityHashCode(this) + "  " + name + " singletonObjectProperty(Class aClass)  EXIT");
+			// System.err.println(System.identityHashCode(this) + "  " + name +
+			// " singletonObjectProperty(Class aClass)  EXIT");
 			return result;
 		}
 	}
@@ -647,7 +649,7 @@ public class Properties extends java.util.Properties {
 			Object result = cl.newInstance();
 			if (result instanceof Configurable) {
 				Configurable conf = (Configurable) result;
-				//conf.init(getSubProperties(key + "."));
+				// conf.init(getSubProperties(key + "."));
 				conf.init(this);
 			}
 			return result;

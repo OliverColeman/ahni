@@ -34,9 +34,16 @@ public class Range {
 	}
 
 	/**
-	 * Translate a value from the unit range of 0 to 1 to the corresponding value from this range.
+	 * Translate a value from the unit range [0, 1] to the corresponding value from this range.
 	 */
-	public double translate(double p) {
-		return start + (p * range);
+	public double translateFromUnit(double p) {
+		return start + p * range;
+	}
+
+	/**
+	 * Translate a value from this range to the corresponding value from the unit range [0, 1].
+	 */
+	public double translateToUnit(double p) {
+		return (p - start) / range;
 	}
 }

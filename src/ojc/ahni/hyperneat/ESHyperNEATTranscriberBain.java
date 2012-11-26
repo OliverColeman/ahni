@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
 
 import ojc.ahni.integration.*;
+import ojc.ahni.util.Point;
 import ojc.bain.NeuralNetwork;
 import ojc.bain.base.ComponentCollection;
 import ojc.bain.base.NeuronCollection;
@@ -70,8 +71,8 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 
 	private Properties properties;
 
-	List<Neuron> inputNeuronPositions;
-	List<Neuron> outputNeuronPositions;
+	List<Neuron> inputNeurons; // Coordinates are in unit ranges.
+	List<Neuron> outputNeurons; // Coordinates are in unit ranges.
 	int esIterations = 1;
 	int initialDepth = 3;
 	int maxDepth = 3;
@@ -103,32 +104,41 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 	 */
 	@Override
 	public void init(Properties props) {
+		this.properties = props;
+
 		pseudo3D = props.getBooleanProperty(ES_HYPERNEAT_3D_PSEUDO, pseudo3D);
-		
-		if (props.containsKey(ES_HYPERNEAT_INPUT_POSITIONS)) {
-			inputNeuronPositions = extractCoords(props.getProperty(ES_HYPERNEAT_INPUT_POSITIONS).trim(), Neuron.INPUT);
-		}
-		if (props.containsKey(ES_HYPERNEAT_OUTPUT_POSITIONS)) {
-			outputNeuronPositions = extractCoords(props.getProperty(ES_HYPERNEAT_OUTPUT_POSITIONS).trim(), Neuron.OUTPUT);
-		}
-		
 		zCoordsForCPPN = pseudo3D ? "force" : "prevent";
+
 		// Set substrate dimensions to prevent HyperNEATTranscriber.init() throwing an error.
 		if (!props.containsKey(SUBSTRATE_DEPTH)) {
 			// If depth not specified then use a default depth of 2 (input and output layer), hidden neurons do not exist in a conventional layer.
 			props.put(SUBSTRATE_DEPTH, "2");
 		}
+
+		depth = props.getIntProperty(SUBSTRATE_DEPTH);
+		
+		if (props.containsKey(ES_HYPERNEAT_INPUT_POSITIONS) || props.containsKey(ES_HYPERNEAT_OUTPUT_POSITIONS)) {
+			throw new IllegalArgumentException("The properties " + ES_HYPERNEAT_INPUT_POSITIONS + " and " + ES_HYPERNEAT_OUTPUT_POSITIONS + " are no longer supported. Please use " + NEURON_POSITIONS_FOR_LAYER + ".");
+		}
+		
+		if (props.containsKey(NEURON_POSITIONS_FOR_LAYER + ".0")) {
+			inputNeurons = extractCoords(Neuron.INPUT);
+		}
+		if (props.containsKey(NEURON_POSITIONS_FOR_LAYER + "." + (depth-1))) {
+			outputNeurons = extractCoords(Neuron.OUTPUT);
+		}
+		
 		// Allow specifying substrate input and/or output layer dimensions in case 2D layers are important. 
 		if (!props.containsKey(SUBSTRATE_HEIGHT) || !props.containsKey(SUBSTRATE_WIDTH)) {
 			// Otherwise just configure as 1D vectors.
-			if (inputNeuronPositions != null && outputNeuronPositions != null) {
-				String width = ""+inputNeuronPositions.size(), height = "1";
+			if (inputNeurons != null && outputNeurons != null) {
+				String width = ""+inputNeurons.size(), height = "1";
 				// There are no real hidden layers, just set minimal dimensions for them.
 				for (int d = 1; d < depth-1; d++) {
 					width += ", 1";
 					height += ", 1";
 				}
-				width += ", " + outputNeuronPositions.size();
+				width += ", " + outputNeurons.size();
 				height += ", 1";
 				props.put(SUBSTRATE_WIDTH, width);
 				props.put(SUBSTRATE_HEIGHT, height);
@@ -148,21 +158,20 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 		super.init(props);
 		
 		// Automatically generate input neuron coordinates if they were not specified.
-		if (inputNeuronPositions == null) {
-			inputNeuronPositions = generateCoords(width[0], height[0], Neuron.INPUT);
-			logger.info("Input coordinates are: " + inputNeuronPositions);
+		if (inputNeurons == null) {
+			inputNeurons = generateCoords(width[0], height[0], Neuron.INPUT);
+			logger.info("Input coordinates are: " + inputNeurons);
 		}
-		else if (inputNeuronPositions.size() != width[0] * height[0]) {
+		else if (inputNeurons.size() != width[0] * height[0]) {
 			throw new IllegalArgumentException("Input layer size does not match number of input neurons specified by " + ES_HYPERNEAT_INPUT_POSITIONS + ".");
 		}
 
 		// Automatically generate output neuron coordinates if they were not specified.
-		if (outputNeuronPositions == null) {
-			outputNeuronPositions = generateCoords(width[depth-1], height[depth-1], Neuron.OUTPUT);
-			logger.info("Output coordinates are: " + outputNeuronPositions);
+		if (outputNeurons == null) {
+			outputNeurons = generateCoords(width[depth-1], height[depth-1], Neuron.OUTPUT);
+			logger.info("Output coordinates are: " + outputNeurons);
 		}
 
-		this.properties = props;
 		esIterations = props.getIntProperty(ES_HYPERNEAT_ITERATIONS, esIterations);
 		initialDepth = props.getIntProperty(ES_HYPERNEAT_INITIAL_DEPTH, initialDepth);
 		maxDepth = props.getIntProperty(ES_HYPERNEAT_MAX_DEPTH, maxDepth);
@@ -178,27 +187,29 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 		((AHNIRunProperties) props).getEvolver().addEventListener(this);
 	}
 
-	private ArrayList<Neuron> extractCoords(String positions, int type) {
-		Pattern coordPattern = Pattern.compile("(\\(\\s*-?\\d+\\.?\\d*\\s*,\\s*-?\\d+\\.?\\d*\\s*\\)\\s*)+");
-		Matcher positionsMatcher = coordPattern.matcher(positions);
-		ArrayList<Neuron> points = new ArrayList<Neuron>(positionsMatcher.groupCount());
-		double z = pseudo3D ? (type == Neuron.INPUT ? -1 : 1) : 0;
-		while (positionsMatcher.find()) {
-			String[] coords = positionsMatcher.group(1).replaceAll("[\\(\\)]", "").split(",");
-			Neuron p = new Neuron(Double.parseDouble(coords[0].trim()), Double.parseDouble(coords[1].trim()), z, type);
-			points.add(p);
+	private ArrayList<Neuron> extractCoords(int type) {
+		double z = pseudo3D ? (type == Neuron.INPUT ? 0 : 1) : 0;
+		Point defaultCoords = new Point(0, 0, z);
+		defaultCoords.translateFromUnit(rangeX, rangeY, rangeZ);
+		double[] defaultArgs = new double[] { defaultCoords.x, defaultCoords.y, defaultCoords.z };
+		int layer = type == Neuron.INPUT ? 0 : depth-1;
+		Point[] points = properties.getObjectArrayProperty(NEURON_POSITIONS_FOR_LAYER + "." + layer, Point.class, defaultArgs);
+		ArrayList<Neuron> neurons = new ArrayList<Neuron>(points.length);
+		for (int i = 0; i < points.length; i++) {
+			points[i].translateToUnit(rangeX, rangeY, rangeZ);
+			neurons.add(new Neuron(points[i].x, points[i].y, points[i].z, type));
 		}
-		return points;
+		return neurons;
 	}
 	
 	private ArrayList<Neuron> generateCoords(int width, int height, int type) {
 		ArrayList<Neuron> points = new ArrayList<Neuron>(width * height);
 		if (pseudo3D) {
-			double z = type == Neuron.INPUT ? -1 : 1;
+			double z = type == Neuron.INPUT ? 0 : 1;
 			for (int yi = 0; yi < height; yi++) {
-				double y = height > 1 ? (yi / (height - 1d)) * 2 - 1 : 0;
+				double y = height > 1 ? ((double) yi / (height - 1)) : 0;
 				for (int xi = 0; xi < width; xi++) {
-					double x = width > 1 ? (xi / (width - 1d)) * 2 - 1 : 0;
+					double x = width > 1 ? ((double) xi / (width - 1)) : 0;
 					Neuron p = new Neuron(x, y, z, type);
 					points.add(p);
 				}
@@ -208,9 +219,9 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 			if (height > 1) {
 				throw new IllegalArgumentException("Either the input or output layer height is greater 1 for a 2D substrate.");
 			}
-			double y = type == Neuron.INPUT ? -1 : 1;
+			double y = type == Neuron.INPUT ? 0 : 1;
 			for (int xi = 0; xi < width; xi++) {
-				double x = width > 1 ? (xi / (width - 1d)) * 2 - 1 : 0;
+				double x = width > 1 ? ((double) xi / (width - 1)) : 0;
 				Neuron p = new Neuron(x, y, 0, type);
 				points.add(p);
 			}
@@ -239,14 +250,14 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 		long startTime = System.currentTimeMillis();
 		CPPN cppn = new CPPN(genotype);
 
-		int inputCount = inputNeuronPositions.size();
-		int outputCount = outputNeuronPositions.size();
+		int inputCount = inputNeurons.size();
+		int outputCount = outputNeurons.size();
 		List<Neuron> inputNeuronPositionsCopy = new ArrayList<Neuron>(inputCount);
-		for (Neuron input : inputNeuronPositions) {
+		for (Neuron input : inputNeurons) {
 			inputNeuronPositionsCopy.add(new Neuron(input.x, input.y, input.z, input.type));
 		}
 		List<Neuron> outputNeuronPositionsCopy = new ArrayList<Neuron>(outputCount);
-		for (Neuron output : outputNeuronPositions) {
+		for (Neuron output : outputNeurons) {
 			outputNeuronPositionsCopy.add(new Neuron(output.x, output.y, output.z, output.type));
 		}
 		
@@ -556,7 +567,6 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 		public int type;
 		public int indexInBainNN;
 		public boolean hasOutgoingConnection;
-		public boolean hasIncomingConnection;
 		public List<Neuron> targets = new ArrayList<Neuron>();
 
 		public Neuron(double x, double y, double z, int type) {
@@ -595,32 +605,6 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 		}
 	}
 	
-	private class Point {
-		public double x, y, z;
-		public Point(double x, double y, double z) {
-			this.x = x;
-			this.y = y;
-			this.z = z;
-		}
-		@Override
-		public boolean equals(Object o) {
-			if (o instanceof Point) {
-				Point p = (Point) o;
-				return p.x == this.x && p.y == this.y && p.z == this.z;
-			}
-			return false;
-		}
-		@Override
-		public int hashCode() {
-			// x, y and z should be between -1 and 1.
-			return (int) ((x + y + z) * (Integer.MAX_VALUE/3));
-		}
-		@Override
-		public String toString() {
-			return "(" + (float) x + "," + (float) y + "," + (float) z + ")";
-		}
-	}
-
 	public class Connection {
 		public Neuron source, target;
 		double weight;
@@ -692,9 +676,9 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 			for (int ci = 0; ci < 4; ci++) {
 				QuadPoint child = p.children[ci];
 				if (outgoing) // Querying connection from input or hidden node.
-					child.w = cppn.query(n.x, n.y, n.z, child.x, child.y, child.z); // Outgoing connectivity pattern.
+					child.w = cppn.query(n, child); // Outgoing connectivity pattern.
 				else // Querying connection to output node.
-					child.w = cppn.query(child.x, child.y, child.z, n.x, n.y, n.z); // Incoming connectivity pattern.
+					child.w = cppn.query(child, n); // Incoming connectivity pattern.
 				
 				if (enableLEO)
 					child.leo = cppn.getLEO();

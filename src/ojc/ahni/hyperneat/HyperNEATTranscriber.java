@@ -1,16 +1,18 @@
 package ojc.ahni.hyperneat;
 
+import java.util.Arrays;
+import java.util.Set;
+
 import ojc.ahni.util.Range;
+import ojc.ahni.util.Point;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.Chromosome;
 
 import com.anji.integration.Activator;
-import com.anji.integration.AnjiActivator;
 import com.anji.integration.AnjiNetTranscriber;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
-import com.anji.nn.AnjiNet;
 import com.anji.util.Configurable;
 import com.anji.util.Properties;
 
@@ -94,6 +96,20 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	public static final String RANGE_Z = "ann.hyperneat.range.z";
 
 	/**
+	 * <p>
+	 * The coordinates of neurons in a specified layer. The layer must be specified as part of the property key/name,
+	 * e.g. to specify the coordinates of two neurons in the layer with index 2 (counting from 0):<br />
+	 * <code>ann.hyperneat.layer.positions.2=(-0.5, 0, 0), (0.5, 0, 0)</code>
+	 * </p>
+	 * <p>
+	 * For 2D layers the coordinates should be specified in row-packed order (i.e. one row after another, where a single
+	 * row has the same y index/coordinate). Coordinates must be specified for all neurons in the given layer. If the z
+	 * coordinate is not given it will be set to the default for the layer.
+	 * </p>
+	 */
+	public static final String NEURON_POSITIONS_FOR_LAYER = "ann.hyperneat.layer.positions";
+
+	/**
 	 * For recurrent networks, the number of activation cycles to perform each time the substrate network is presented
 	 * with new input and queried for its output.
 	 */
@@ -126,17 +142,30 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 */
 	protected int depth;
 	/**
-	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range [0, 1] to the range specified by {@link #RANGE_X}.
+	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range [0, 1] to the range specified by
+	 * {@link #RANGE_X}.
 	 */
 	protected Range rangeX = new Range();
 	/**
-	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range [0, 1] to the range specified by {@link #RANGE_Y}.
+	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range [0, 1] to the range specified by
+	 * {@link #RANGE_Y}.
 	 */
 	protected Range rangeY = new Range();
 	/**
-	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range [0, 1] to the range specified by {@link #RANGE_Z}.
+	 * Used by {@link HyperNEATTranscriber.CPPN} to translate from the default range [0, 1] to the range specified by
+	 * {@link #RANGE_Z}.
 	 */
 	protected Range rangeZ = new Range();
+
+	/**
+	 * Custom positions for the neurons in a layer, format is [z_index][y_index * width[z_index] * x_index]. If custom
+	 * positions have not been specified for a layer then the sub-array for the layer is null. The coordinates are in
+	 * the ranges {@link #rangeX}, {@link #rangeY} and {@link #rangeZ} (rather than unit ranges).
+	 * 
+	 * @see #NEURON_POSITIONS_FOR_LAYER
+	 */
+	protected Point[][] neuronPositionsForLayer;
+
 	/**
 	 * If true indicates whether the substrate should have a feed-forward topology (no recurrent connections).
 	 */
@@ -242,12 +271,29 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		cyclesPerStep = feedForward ? depth - 1 : props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP, 1);
 		enableLEO = props.getBooleanProperty(HYPERNEAT_LEO, enableLEO);
 
-		height = props.getIntArrayProperty(SUBSTRATE_HEIGHT);
 		width = props.getIntArrayProperty(SUBSTRATE_WIDTH);
+		height = props.getIntArrayProperty(SUBSTRATE_HEIGHT);
+		if (height.length != depth || width.length != depth) {
+			throw new IllegalArgumentException("Number of comma-separated layer dimensions in " + SUBSTRATE_HEIGHT + " or " + SUBSTRATE_WIDTH + " does not match " + SUBSTRATE_DEPTH + ".");
+		}
 
-		rangeX = (Range) props.getObjectFromArgsProperty(RANGE_X, Range.class, rangeX);
-		rangeY = (Range) props.getObjectFromArgsProperty(RANGE_Y, Range.class, rangeY);
-		rangeZ = (Range) props.getObjectFromArgsProperty(RANGE_Z, Range.class, rangeZ);
+		rangeX = props.getObjectFromArgsProperty(RANGE_X, Range.class, rangeX, null);
+		rangeY = props.getObjectFromArgsProperty(RANGE_Y, Range.class, rangeY, null);
+		rangeZ = props.getObjectFromArgsProperty(RANGE_Z, Range.class, rangeZ, null);
+
+		neuronPositionsForLayer = new Point[depth][];
+		Properties posProps = props.getOnlySubProperties(NEURON_POSITIONS_FOR_LAYER);
+		for (Object key : posProps.keySet()) {
+			int layer = Integer.parseInt((String) key);
+			// Provide default z coordinate if not specified in properties
+			Point defaultCoords = new Point(0, 0, depth == 1 ? 0 : (double) layer / (depth - 1));
+			defaultCoords.translateFromUnit(rangeX, rangeY, rangeZ);
+			double[] defaultArgs = new double[] { defaultCoords.x, defaultCoords.y, defaultCoords.z };
+			neuronPositionsForLayer[layer] = posProps.getObjectArrayProperty((String) key, Point.class, defaultArgs);
+			if (neuronPositionsForLayer[layer].length != width[layer] * height[layer]) {
+				throw new IllegalArgumentException("The number of neuron positions specified for " + NEURON_POSITIONS_FOR_LAYER + "." + key + " does not match the number of neurons for the layer.");
+			}
+		}
 
 		// Determine CPPN input size and mapping.
 		cppnInputCount = 1; // Bias always has index 0.
@@ -389,59 +435,133 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 
 		/**
 		 * Set the coordinates of the source neuron in a two-dimensional substrate with dimensions with range [0, 1]
-		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link #RANGE_X}).
+		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link #rangeX}).
 		 * 
 		 * @param x The x coordinate, range should be [0, 1].
 		 * @param y The y coordinate, range should be [0, 1].
 		 */
 		public void setSourceCoordinates(double x, double y) {
-			cppnInput[cppnIdxSX] = rangeX.translate(x);
-			cppnInput[cppnIdxSY] = rangeY.translate(y);
+			cppnInput[cppnIdxSX] = rangeX.translateFromUnit(x);
+			cppnInput[cppnIdxSY] = rangeY.translateFromUnit(y);
 		}
 
 		/**
 		 * Set the coordinates of the source neuron in a three-dimensional substrate with dimensions with range [0, 1]
-		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link #RANGE_X}). If the z coordinate is not required it
-		 * will be ignored.
+		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link #rangeX}). If the z
+		 * coordinate is not required it will be ignored.
 		 * 
 		 * @param x The x coordinate, range should be [0, 1].
 		 * @param y The y coordinate, range should be [0, 1].
 		 * @param z The z coordinate, range should be [0, 1].
 		 */
 		public void setSourceCoordinates(double x, double y, double z) {
-			cppnInput[cppnIdxSX] = rangeX.translate(x);
-			cppnInput[cppnIdxSY] = rangeY.translate(y);
+			cppnInput[cppnIdxSX] = rangeX.translateFromUnit(x);
+			cppnInput[cppnIdxSY] = rangeY.translateFromUnit(y);
 			if (cppnIdxSZ != -1) {
-				cppnInput[cppnIdxSZ] = rangeZ.translate(z);
+				cppnInput[cppnIdxSZ] = rangeZ.translateFromUnit(z);
+			}
+		}
+
+		/**
+		 * Set the coordinates of the source neuron in a substrate with dimensions with range [0, 1] (coordinates are
+		 * translated to a user-specified range if necessary, e.g. see {@link #rangeX}). If the z coordinate is not
+		 * required it will be ignored.
+		 * 
+		 * @param p A Point containing the coordinates of the source neuron. Coordinates should be in range [0, 1].
+		 */
+		public void setSourceCoordinates(Point p) {
+			setSourceCoordinates(p.x, p.y, p.z);
+		}
+
+		/**
+		 * Set the coordinates of the source neuron specified by the given indices into a grid-based substrate. If the z
+		 * coordinate is not required it will be ignored. Subclasses of {@link HyperNEATTranscriber} should generally
+		 * use this method instead of directly specifying coordinates as this method supports specifying arbitrary
+		 * coordinates for neurons via {@link HyperNEATTranscriber#NEURON_POSITIONS_FOR_LAYER}.
+		 * 
+		 * @param x The index of the source neuron in the X dimension.
+		 * @param y The index of the source neuron in the Y dimension.
+		 * @param z The index of the source neuron in the Z dimension.
+		 */
+		public void setSourceCoordinatesFromGridIndices(int x, int y, int z) {
+			if (depth == 1)
+				z = 0;
+			if (neuronPositionsForLayer[z] == null) {
+				setSourceCoordinates(width[z] > 1 ? (double) x / (width[z] - 1) : 0.5, height[z] > 1 ? (double) y / (height[z] - 1) : 0.5, depth > 1 ? (double) z / (depth - 1) : 0);
+			} else {
+				Point p = neuronPositionsForLayer[z][y * width[z] + x];
+				// Don't use setSourceCoordinates(Point) as the Points are already translated from unit.
+				cppnInput[cppnIdxSX] = p.x;
+				cppnInput[cppnIdxSY] = p.y;
+				if (cppnIdxSZ != -1) {
+					cppnInput[cppnIdxSZ] = p.y;
+				}
 			}
 		}
 
 		/**
 		 * Set the coordinates of the source neuron in a two-dimensional substrate with dimensions with range [0, 1]
-		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link #RANGE_X}).
+		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link #rangeX}).
 		 * 
 		 * @param x The x coordinate, range should be [0, 1].
 		 * @param y The y coordinate, range should be [0, 1].
 		 */
 		public void setTargetCoordinates(double x, double y) {
-			cppnInput[cppnIdxTX] = rangeX.translate(x);
-			cppnInput[cppnIdxTY] = rangeY.translate(y);
+			cppnInput[cppnIdxTX] = rangeX.translateFromUnit(x);
+			cppnInput[cppnIdxTY] = rangeY.translateFromUnit(y);
 		}
 
 		/**
 		 * Set the coordinates of the source neuron in a three-dimensional substrate with dimensions with range [0, 1]
-		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link #RANGE_X}). If the z coordinate is not required it
-		 * will be ignored.
+		 * (coordinates are translated to a user-specified range if necessary, e.g. see {@link #rangeX}). If the z
+		 * coordinate is not required it will be ignored.
 		 * 
 		 * @param x The x coordinate, range should be [0, 1].
 		 * @param y The y coordinate, range should be [0, 1].
 		 * @param z The z coordinate, range should be [0, 1].
 		 */
 		public void setTargetCoordinates(double x, double y, double z) {
-			cppnInput[cppnIdxTX] = rangeX.translate(x);
-			cppnInput[cppnIdxTY] = rangeY.translate(y);
+			cppnInput[cppnIdxTX] = rangeX.translateFromUnit(x);
+			cppnInput[cppnIdxTY] = rangeY.translateFromUnit(y);
 			if (cppnIdxTZ != -1) {
-				cppnInput[cppnIdxTZ] = rangeZ.translate(z);
+				cppnInput[cppnIdxTZ] = rangeZ.translateFromUnit(z);
+			}
+		}
+
+		/**
+		 * Set the coordinates of the target neuron in a substrate with dimensions with range [0, 1] (coordinates are
+		 * translated to a user-specified range if necessary, e.g. see {@link #rangeX}). If the z coordinate is not
+		 * required it will be ignored.
+		 * 
+		 * @param p A Point containing the coordinates of the target neuron. Coordinates should be in range [0, 1].
+		 */
+		public void setTargetCoordinates(Point p) {
+			setTargetCoordinates(p.x, p.y, p.z);
+		}
+
+		/**
+		 * Set the coordinates of the target neuron specified by the given indices into a grid-based substrate. If the z
+		 * coordinate is not required it will be ignored. Subclasses of {@link HyperNEATTranscriber} should generally
+		 * use this method instead of directly specifying coordinates as this method supports specifying arbitrary
+		 * coordinates for neurons via {@link HyperNEATTranscriber#NEURON_POSITIONS_FOR_LAYER}.
+		 * 
+		 * @param x The index of the target neuron in the X dimension.
+		 * @param y The index of the target neuron in the Y dimension.
+		 * @param z The index of the target neuron in the Z dimension.
+		 */
+		public void setTargetCoordinatesFromGridIndices(int x, int y, int z) {
+			if (depth == 1)
+				z = 0;
+			if (neuronPositionsForLayer[z] == null) {
+				setTargetCoordinates(width[z] > 1 ? (double) x / (width[z] - 1) : 0.5, height[z] > 1 ? (double) y / (height[z] - 1) : 0.5, depth > 1 ? (double) z / (depth - 1) : 0);
+			} else {
+				Point p = neuronPositionsForLayer[z][y * width[z] + x];
+				// Don't use setTargetCoordinates(Point) as the Points are already translated from unit.
+				cppnInput[cppnIdxTX] = p.x;
+				cppnInput[cppnIdxTY] = p.y;
+				if (cppnIdxTZ != -1) {
+					cppnInput[cppnIdxTZ] = p.y;
+				}
 			}
 		}
 
@@ -490,6 +610,32 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		public double query(double sx, double sy, double sz, double tx, double ty, double tz) {
 			setSourceCoordinates(sx, sy, sz);
 			setTargetCoordinates(tx, ty, tz);
+			return query();
+		}
+
+		/**
+		 * Query this CPPN with the specified coordinates.
+		 * 
+		 * @return The value of the (first) weight output. Other outputs can be retrieved with the various get methods.
+		 */
+		public double query(Point source, Point target) {
+			setSourceCoordinates(source);
+			setTargetCoordinates(target);
+			return query();
+		}
+
+		/**
+		 * Query this CPPN with the specified grid indices, see
+		 * {@link CPPN#setSourceCoordinatesFromGridIndices(int, int, int)} and
+		 * {@link CPPN#setTargetCoordinatesFromGridIndices(int, int, int)}. Subclasses of {@link HyperNEATTranscriber}
+		 * should generally use this method instead of directly specifying coordinates as this method supports
+		 * specifying arbitrary coordinates for neurons via {@link HyperNEATTranscriber#NEURON_POSITIONS_FOR_LAYER}.
+		 * 
+		 * @return The value of the (first) weight output. Other outputs can be retrieved with the various get methods.
+		 */
+		public double queryWithGridIndices(int sx, int sy, int sz, int tx, int ty, int tz) {
+			setSourceCoordinatesFromGridIndices(sx, sy, sz);
+			setTargetCoordinatesFromGridIndices(tx, ty, tz);
 			return query();
 		}
 

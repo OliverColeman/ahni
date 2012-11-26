@@ -134,51 +134,21 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		}
 		double[] synapseWeights = synapses.getEfficacies();
 
-		// Current values for inputs to CPPN. T=target, S=source.
-		double cppnTZ = 0, cppnTY, cppnTX, cppnSZ = 0, cppnSY, cppnSX;
 		int synapseIndex = 0;
 
 		// query CPPN for substrate connection weights
 		for (int tz = feedForward ? 1 : 0; tz < depth; tz++) {
-			if (cppnIdxTZ != -1) {
-				cppnTZ = ((double) tz) / (depth - 1);
-			}
-
 			for (int ty = 0; ty < height[tz]; ty++) {
-				if (height[tz] > 1)
-					cppnTY = ((double) ty) / (height[tz] - 1);
-				else
-					cppnTY = 0.5f;
-
 				for (int tx = 0; tx < width[tz]; tx++) {
-					if (width[tz] > 1)
-						cppnTX = ((double) tx) / (width[tz] - 1);
-					else
-						cppnTX = 0.5f;
-
-					cppn.setTargetCoordinates(cppnTX, cppnTY, cppnTZ);
+					cppn.setTargetCoordinatesFromGridIndices(tx, ty, tz);
 
 					int bainNeuronIndexTarget = getBainNeuronIndex(tx, ty, tz);
 
 					// Iteration over layers for the source neuron is only used for recurrent networks.
 					for (int sz = (feedForward ? tz - 1 : 0); sz < (feedForward ? tz : depth); sz++) {
-						if (cppnIdxSZ != -1) {
-							cppnSZ = ((double) sz) / (depth - 1);
-						}
-
 						for (int sy = 0; sy < height[sz]; sy++) {
-							if (height[sz] > 1)
-								cppnSY = ((double) sy) / (height[sz] - 1);
-							else
-								cppnSY = 0.5f;
-
 							for (int sx = 0; sx < width[sz]; sx++) {
-								if (width[sz] > 1)
-									cppnSX = ((double) sx) / (width[sz] - 1);
-								else
-									cppnSX = 0.5f;
-
-								cppn.setSourceCoordinates(cppnSX, cppnSY, cppnSZ);
+								cppn.setSourceCoordinatesFromGridIndices(sx, sy, sz);
 
 								cppn.query();
 
