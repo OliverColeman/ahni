@@ -1,9 +1,19 @@
 package ojc.ahni.hyperneat;
 
+import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.SortedMap;
 
+import javax.imageio.ImageIO;
+
+import ojc.ahni.nn.BainNN;
 import ojc.ahni.transcriber.HyperNEATTranscriber;
 
 import org.apache.log4j.Logger;
@@ -71,9 +81,114 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 			short responseSize = hnTranscriber.getCPPNOutputCount();
 			
 			ChromosomeMaterial sample;
-			// If LEO locality seeding is enabled. 
-			if (hnTranscriber.leoEnabled() && props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_LEO_LOCALITY, false)) {
-				logger.info("Creating sample Chromosome with LEO global locality seed."); 
+			
+			String initalCPPNString = props.getProperty(HyperNEATEvolver.INITIAL_CPPN, null);
+			if (initalCPPNString != null && props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_LEO_LOCALITY, false)) {
+				throw new IllegalArgumentException(HyperNEATEvolver.INITIAL_CPPN + " cannot be specified when " + HyperNEATTranscriber.HYPERNEAT_LEO_LOCALITY + "is enabled.");
+			}
+			
+			// If a custom initial CPPN has been specified.
+			if (initalCPPNString != null) {
+				logger.info("Creating custom Chromosome for initial sample."); 
+				boolean fullyConnected = props.getBooleanProperty(INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, false);
+				if (fullyConnected) {
+					logger.warn("Ignoring " + INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY + " as custom CPPN specified.");
+				}
+				if (props.containsKey(INITIAL_TOPOLOGY_NUM_HIDDEN_NEURONS_KEY) && props.getShortProperty(INITIAL_TOPOLOGY_NUM_HIDDEN_NEURONS_KEY) > 0) {
+					logger.warn("Ignoring specified hidden neuron count for CPPN (" + INITIAL_TOPOLOGY_NUM_HIDDEN_NEURONS_KEY + ") as custom CPPN specified.");
+				}
+				
+				// Generate CPPN Chromosome alleles with only input and output neurons.
+				List<Allele> sampleAlleles = NeatChromosomeUtility.initAlleles(stimulusSize, (short) 0, responseSize, this, false);
+				// Maps from IDs used in properties file to neuron alleles.
+				HashMap<String, NeuronAllele> neuronMap = new HashMap<String, NeuronAllele>();
+				
+				// Add input neurons to ID/neuron map.
+				int[] idxSrc = new int[]{hnTranscriber.getCPPNIndexSourceX(), hnTranscriber.getCPPNIndexSourceY(), hnTranscriber.getCPPNIndexSourceZ()};
+				int[] idxTrg = new int[]{hnTranscriber.getCPPNIndexTargetX(), hnTranscriber.getCPPNIndexTargetY(), hnTranscriber.getCPPNIndexTargetZ()};
+				int[] idxDlt = new int[]{hnTranscriber.getCPPNIndexDeltaX(), hnTranscriber.getCPPNIndexDeltaY(), hnTranscriber.getCPPNIndexDeltaZ()};
+				List<NeuronAllele> inputNeuronAlleles = new ArrayList<NeuronAllele>(NeatChromosomeUtility.getNeuronMap(sampleAlleles, NeuronType.INPUT).values());
+				// The order of input neuron alleles will match those in a CPPN generated from the Chromosomes.
+				neuronMap.put("b", inputNeuronAlleles.get(hnTranscriber.getCPPNIndexBiasInput()));
+				String[] dimIDs = new String[]{"x", "y", "z"};
+				for (int i = 0; i < 3; i++) {
+					String d = dimIDs[i];
+					if (idxSrc[i] != -1)
+						neuronMap.put(d+"s", inputNeuronAlleles.get(idxSrc[i]));
+					if (idxTrg[i] != -1)
+						neuronMap.put(d+"t", inputNeuronAlleles.get(idxTrg[i]));
+					if (idxDlt[i] != -1)
+						neuronMap.put(d+"d", inputNeuronAlleles.get(idxDlt[i]));
+				}
+				
+				// Add output neurons to ID/neuron map.
+				int[] idxWeight = hnTranscriber.getCPPNIndexWeight();
+				int[] idxBias = hnTranscriber.getCPPNIndexBiasOutput();
+				int[] idxLEO = hnTranscriber.getCPPNIndexLEO();
+				List<NeuronAllele> outputNeuronAlleles = new ArrayList<NeuronAllele>(NeatChromosomeUtility.getNeuronMap(sampleAlleles, NeuronType.OUTPUT).values());
+				// The order of output neuron alleles will match those in a CPPN generated from the Chromosomes.
+				for (int i = 0; i < idxWeight.length; i++) {
+					neuronMap.put("w" + i, outputNeuronAlleles.get(idxWeight[i]));
+					if (i < idxBias.length) 
+						neuronMap.put("b" + i, outputNeuronAlleles.get(idxBias[i]));
+					if (i < idxLEO.length) 
+						neuronMap.put("l" + i, outputNeuronAlleles.get(idxLEO[i]));
+				}
+				
+				String[] initialCPPNLines = initalCPPNString.split(",");
+				String[][] initialCPPNValues = new String[initialCPPNLines.length][];
+				// Add specified hidden neurons.
+				for (int i = 0; i < initialCPPNLines.length; i++) {
+					initialCPPNValues[i] = initialCPPNLines[i].split(":");
+					// If this isn't a connection specification then it's a hidden node specification.
+					if (!initialCPPNValues[i][0].trim().equals("c")) {
+						// Create the hidden neuron, add it to the sample alleles and ID/neuron map.
+						NeuronAllele newNeuron = newNeuronAllele(NeuronType.HIDDEN, initialCPPNValues[i][1].trim());
+						sampleAlleles.add(newNeuron);
+						neuronMap.put(initialCPPNValues[i][0].trim(), newNeuron);
+					}
+				}
+				// Add the connections.
+				for (int i = 0; i < initialCPPNValues.length; i++) {
+					if (initialCPPNValues[i][0].trim().equals("c")) {
+						// Create the connection, add it to sample alleles.
+						String srcID = initialCPPNValues[i][1].trim();
+						NeuronAllele src = neuronMap.get(srcID);
+						if (src == null) {
+							throw new IllegalArgumentException("Could not find specified connection source neuron " + srcID + " in custom CPPN specification in line " +  initialCPPNLines[i]);
+						}
+						String trgID = initialCPPNValues[i][2].trim();
+						NeuronAllele trg = neuronMap.get(trgID);
+						if (trg == null) {
+							throw new IllegalArgumentException("Could not find specified connection target neuron " + trgID + " in custom CPPN specification in line " +  initialCPPNLines[i]);
+						}
+						double weight = Double.parseDouble(initialCPPNValues[i][3].trim());
+						sampleAlleles.add(newConnectionAllele(src.getInnovationId(), trg.getInnovationId(), weight));
+					}
+				}
+				sample = new ChromosomeMaterial(sampleAlleles);
+				
+				
+				/*
+				Activator substrate;
+				try {
+					substrate = transcriber.transcribe(new Chromosome(sample, 0L), null);
+					BufferedImage image = new BufferedImage(800, 800, BufferedImage.TYPE_3BYTE_BGR);
+					boolean success = substrate.render(image.createGraphics(), image.getWidth(), image.getHeight(), 30);
+					if (success) {
+						File outputfile = new File("/home/data/Dropbox/ai/PhD/software/retina-problem-eshyperneat/initial-sample-cppn-substrate.png");
+						ImageIO.write(image, "png", outputfile);
+					}
+				} catch (TranscriberException | IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				*/
+			}
+			
+			// Else if LEO locality seeding is enabled.
+			else if (hnTranscriber.leoEnabled() && props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_LEO_LOCALITY, false)) {
+				logger.info("Creating initial sample Chromosome with LEO global locality seed."); 
 				boolean fullyConnected = props.getBooleanProperty(INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, false);
 				if (fullyConnected) {
 					logger.warn("It's generally best not to have a fully connected initial CPPN topology (" + INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY + "=true) when LEO locality seeding is enabled (" + HyperNEATTranscriber.HYPERNEAT_LEO_LOCALITY + "=true).");
@@ -89,8 +204,8 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 				int[] idxTrg = new int[]{hnTranscriber.getCPPNIndexTargetX(), hnTranscriber.getCPPNIndexTargetY(), hnTranscriber.getCPPNIndexTargetZ()};
 				int[] idxLEO = hnTranscriber.getCPPNIndexLEO();
 				// The order of input and output neuron alleles will match those in a CPPN generated from the Chromosomes.  
-				List<NeuronAllele> inputNeuronAlleles = new ArrayList(NeatChromosomeUtility.getNeuronMap(sampleAlleles, NeuronType.INPUT).values());
-				List<NeuronAllele> outputNeuronAlleles = new ArrayList(NeatChromosomeUtility.getNeuronMap(sampleAlleles, NeuronType.OUTPUT).values());
+				List<NeuronAllele> inputNeuronAlleles = new ArrayList<NeuronAllele>(NeatChromosomeUtility.getNeuronMap(sampleAlleles, NeuronType.INPUT).values());
+				List<NeuronAllele> outputNeuronAlleles = new ArrayList<NeuronAllele>(NeatChromosomeUtility.getNeuronMap(sampleAlleles, NeuronType.OUTPUT).values());
 				
 				// Create step function neuron.
 				NeuronAllele stepNeuron = newNeuronAllele(NeuronType.HIDDEN, StepActivationFunction.NAME);
@@ -126,6 +241,8 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 			
 				sample = new ChromosomeMaterial(sampleAlleles);
 			}
+			
+			// Otherwise generate default random initial Chromosome.
 			else {
 				sample = NeatChromosomeUtility.newSampleChromosomeMaterial(stimulusSize, props.getShortProperty(INITIAL_TOPOLOGY_NUM_HIDDEN_NEURONS_KEY, DEFAULT_INITIAL_HIDDEN_SIZE), responseSize, this, props.getBooleanProperty(INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, true));
 			}

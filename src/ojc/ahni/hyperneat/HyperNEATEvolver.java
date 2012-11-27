@@ -63,15 +63,16 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 	 */
 	public static final String FITNESS_FUNCTION_CLASS_KEY = "fitness_function";
 	// private static final String FITNESS_THRESHOLD_KEY = "fitness.threshold";
-	private static final String RESET_KEY = "run.reset";
-	private static final String HIBERNATE_ENABLE_KEY = "hibernate.enable";
-	private static final String LOGGING_ENABLE_KEY = "logging.enable";
-	private static final String LOAD_GENOTYPE_KEY = "persist.load.genotype";
-	private static final String PERSIST_ENABLE_KEY = "persist.enable";
-	private static final String PRESENTATION_GENERATE_KEY = "presentation.generate";
-	private static final String LOG_PER_GENERATIONS_KEY = "log.pergenerations";
-	private static final String LOG_CHAMP_TOSTRING_KEY = "log.champ.tostring";
-	private static final String LOG_CHAMP_TOIMAGE_KEY = "log.champ.toimage";
+	public static final String RESET_KEY = "run.reset";
+	public static final String HIBERNATE_ENABLE_KEY = "hibernate.enable";
+	public static final String LOGGING_ENABLE_KEY = "logging.enable";
+	public static final String LOAD_GENOTYPE_KEY = "persist.load.genotype";
+	public static final String PERSIST_ENABLE_KEY = "persist.enable";
+	public static final String PRESENTATION_GENERATE_KEY = "presentation.generate";
+	public static final String LOG_PER_GENERATIONS_KEY = "log.pergenerations";
+	public static final String LOG_CHAMP_TOSTRING_KEY = "log.champ.tostring";
+	public static final String LOG_CHAMP_TOIMAGE_KEY = "log.champ.toimage";
+	public static final String INITIAL_CPPN = "hyperneat.cppn.initial";
 	
 	private HyperNEATConfiguration config = null;
 	private List<AHNIEventListener> listeners = new ArrayList<AHNIEventListener>();
@@ -247,6 +248,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 		bestFitnesses = new double[numEvolutions];
 		bestPerformances = new double[numEvolutions];
 		
+		//TODO loading genotype from storage is broken? 
 		if (loadGenotypeFromDB) {
 			// load population, either from previous run or random
 			genotype = db.loadGenotype(config);
@@ -258,7 +260,16 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 			genotype = Genotype.randomInitialGenotype(properties, config);
 		}
 		
-		// initialize result data
+		if (logger.isDebugEnabled()) {
+			// Log CPPN represented by each initial Chromosome.
+			Transcriber transcriber = properties.singletonObjectProperty(AnjiNetTranscriber.class);
+			for (Chromosome c : genotype.getChromosomes()) {
+				Activator substrate = transcriber.transcribe(c);
+				logger.debug(substrate.toXml());
+			}
+		}
+		
+		// Initialise result data.
 		int generationOfFirstSolution = -1;
 		fittest = genotype.getFittestChromosome();
 
@@ -484,24 +495,28 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 		String msg = "best performing substrate from " + (finished ? "final generation" : "from generation " + generation);
 		if (logString || logImage) {
 			try {
-				Transcriber transcriber = (Transcriber) properties.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
+				Transcriber<? extends Activator> transcriber = (Transcriber<? extends Activator>) properties.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
 				Activator substrate = transcriber.transcribe(champ, null);
-				
-				if (logString) {
-					BufferedWriter outputfile = new BufferedWriter(new FileWriter(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : generation) + "-" + champ.getId() + ".txt"));
-					outputfile.write("String representation of " + msg + ":\n" + substrate);
-					outputfile.close();
+				if (substrate == null) {
+					logger.warn("Champ substrate is null, which probably means it's been classified as a dud by the transcriber (e.g. perhaps because there are no connections from input to output.");
 				}
-				
-				if (logImage) {
-					// Performance improvement for BainNN, don't create a buffered image unless the BainNN has recorded neuron coords.
-					if (!(substrate instanceof BainNN) || ((BainNN) substrate).coordsEnabled()) { 
-						BufferedImage image = new BufferedImage(800, 800, BufferedImage.TYPE_3BYTE_BGR);
-						boolean success = substrate.render(image.createGraphics(), image.getWidth(), image.getHeight(), 30);
-						if (success) {
-							File outputfile = new File(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : generation) + "-" + champ.getId() + ".png");
-							ImageIO.write(image, "png", outputfile);
-							logger.info("Rendered " + msg + " to " + outputfile);
+				else {
+					if (logString) {
+						BufferedWriter outputfile = new BufferedWriter(new FileWriter(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : generation) + "-" + champ.getId() + ".txt"));
+						outputfile.write("String representation of " + msg + ":\n" + substrate);
+						outputfile.close();
+					}
+					
+					if (logImage) {
+						// Performance improvement for BainNN, don't create a buffered image unless the BainNN has recorded neuron coords.
+						if (!(substrate instanceof BainNN) || ((BainNN) substrate).coordsEnabled()) { 
+							BufferedImage image = new BufferedImage(800, 800, BufferedImage.TYPE_3BYTE_BGR);
+							boolean success = substrate.render(image.createGraphics(), image.getWidth(), image.getHeight(), 30);
+							if (success) {
+								File outputfile = new File(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : generation) + "-" + champ.getId() + ".png");
+								ImageIO.write(image, "png", outputfile);
+								logger.info("Rendered " + msg + " to " + outputfile);
+							}
 						}
 					}
 				}

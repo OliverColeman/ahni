@@ -63,6 +63,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 	public static final String ES_HYPERNEAT_INPUT_POSITIONS = "ann.eshyperneat.input.positions";
 	public static final String ES_HYPERNEAT_OUTPUT_POSITIONS = "ann.eshyperneat.output.positions";
 	public static final String ES_HYPERNEAT_RECORD_COORDINATES = "ann.eshyperneat.record.coordinates";
+	
 	/**
 	 * If true then the substrate is considered as occupying a 3D space, with the 
 	 * input and outputs located on the XY plane at z=-1 and z=1 respectively, and
@@ -70,7 +71,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 	 * If false then all neurons are located in a 2D plane with X-Y axes.
 	 */
 	public static final String ES_HYPERNEAT_3D_PSEUDO = "ann.eshyperneat.3D.pseudo";
-
+	
 	private Properties properties;
 
 	List<Neuron> inputNeurons; // Coordinates are in unit ranges.
@@ -368,30 +369,6 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 			}
 		}
 		
-		// Find hidden neurons with only incoming connections. We leave hidden neurons with only outgoing connections as
-		// they can still have an influence (in the original ES-HyperNEAT all hidden nodes without a path to an input
-		// and output neuron are removed).
-		/*removedAllDeadEnds = false;
-		while (!removedAllDeadEnds) {
-			// Reset marker for each hidden neuron.
-			for (Neuron hidden : hiddenNeurons.values()) {
-				hidden.hasIncomingConnection = false;
-			}
-			// Mark the source neuron for each connection as having an outgoing connection.
-			for (Connection c : connections) {
-				c.target.hasIncomingConnection = true;
-			}
-			removedAllDeadEnds = true;
-			// Remove hidden neurons with no outgoing connections.
-			Iterator<Neuron> hiddenNeuronsIterator = hiddenNeurons.values().iterator();
-			while (hiddenNeuronsIterator.hasNext()) {
-				if (!hiddenNeuronsIterator.next().hasIncomingConnection) {
-					hiddenNeuronsIterator.remove();
-					removedAllDeadEnds = false; // We might need to do another iteration to remove dead-end chains.
-				}
-			}
-		}*/
-		
 		int hiddenCount = hiddenNeurons.size();
 		int neuronCount = inputCount + hiddenCount + outputCount;
 		int synapseCount = connections.size();
@@ -437,7 +414,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 		if (!foundOutput) {
 			logger.debug("Inputs not connected to outputs!");
 			noPathFromInputToOutputCount++;
-			return null; // Indicate that this substrate is should have zero fitness.
+			return null; // Indicate that this substrate should have zero fitness.
 		}
 		
 

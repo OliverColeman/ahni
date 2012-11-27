@@ -622,13 +622,13 @@ public class Properties extends java.util.Properties {
 	 * @return Object singleton instance of <code>cl</code> initialized with properties if it is
 	 *         <code>Configurable</code>
 	 */
-	public Object singletonObjectProperty(Class aClass) {
+	public<T> T singletonObjectProperty(Class<T> aClass) {
 		// System.err.println(System.identityHashCode(this) + "  " + name +
 		// " singletonObjectProperty(Class aClass)  ENTER");
 		synchronized (classToSingletonsMap) {
 			// /System.err.println(System.identityHashCode(this) + "  " + name +
 			// " singletonObjectProperty(Class aClass)  IN synchronized");
-			Object result = classToSingletonsMap.get(aClass);
+			T result = (T) classToSingletonsMap.get(aClass);
 			if (result == null) {
 				result = newObjectProperty(aClass);
 				classToSingletonsMap.put(aClass, result);
@@ -665,9 +665,9 @@ public class Properties extends java.util.Properties {
 	 * @return Object new instance of class <code>cl</code>, initialized with properties if <code>Configurable</code>
 	 *         not found
 	 */
-	public Object newObjectProperty(Class aClass) {
+	public<T> T newObjectProperty(Class<T> aClass) {
 		try {
-			Object result = aClass.newInstance();
+			T result = aClass.newInstance();
 			if (result instanceof Configurable) {
 				Configurable c = (Configurable) result;
 				c.init(this);

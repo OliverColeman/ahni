@@ -239,10 +239,9 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	// Index of delta and angle inputs in CPPN input vector.
 	int cppnIdxDX = -1, cppnIdxDY = -1, cppnIdxDZ = -1, cppnIdxAn = -1;
 	// Index of output signals in CPPN output vector.
-	int[] cppnIdxW = new int[] { -1 }; // weights (either a single output for all layers or one output per layer)
-	int[] cppnIdxB = new int[] { -1 }; // bias (either a single output for all layers or one output per layer)
-	int[] cppnIdxL = new int[] { -1 }; // link expression (either a single output for all layers or one output per
-										// layer)
+	int[] cppnIdxW = new int[0]; // weights (either a single output for all layers or one output per layer)
+	int[] cppnIdxB = new int[0]; // bias (either a single output for all layers or one output per layer)
+	int[] cppnIdxL = new int[0]; // link expression (either a single output for all layers or one output per layer)
 
 	/**
 	 * Subclasses may set this to "force" or "prevent" before calling super.init(Properties) to either force or prevent
