@@ -43,6 +43,7 @@ public abstract class NaturalSelector {
 	private int minAge = 10;
 	protected boolean speciatedFitness = true;
 	private List<Chromosome> elite = new ArrayList<Chromosome>();
+	private boolean maxStagnantGenerationsMaintainFittest = false;
 
 	/**
 	 * If elitism is enabled, places appropriate chromosomes in <code>elite</code> list. Elitism follows methodology in
@@ -54,12 +55,13 @@ public abstract class NaturalSelector {
 	 */
 	public final void add(Configuration config, List<Species> species, List<Chromosome> chroms) {
 		numChromosomes += chroms.size();
-
+		
 		// determine elites for each species
 		Iterator<Species> speciesIter = species.iterator();
 		while (speciesIter.hasNext()) {
 			Species s = speciesIter.next();
-			if (s.getStagnantGenerationsCount() < maxStagnantGenerations) {
+			// Add elites from this species if it's the only species or it hasn't been stagnant for too long or it contains the fittest individual.
+			if (species.size() == 1 || s.getStagnantGenerationsCount() < maxStagnantGenerations || s.containsFittest) {
 				if ((elitismProportion > 0 || elitismMinToSelect > 0) && (s.size() >= elitismMinSpeciesSize || s.getAge() < minAge)) {
 					List<Chromosome> elites = s.getElite(elitismProportion, elitismMinToSelect);
 					elite.addAll(elites);
@@ -78,8 +80,9 @@ public abstract class NaturalSelector {
 
 			// don't add if it's already in the list of elites
 			if (!c.isElite) {
-				// if this individual's species hasn't been stagnant for too long add it to the pool
-				if (specie == null || (specie != null && specie.getStagnantGenerationsCount() < maxStagnantGenerations)) {
+				// if this individual's species hasn't been stagnant for too long or there's only one 
+				// species at the moment or the species contains the fittest individual, add it to the pool.
+				if (species.size() == 1 || specie == null || (specie != null && specie.getStagnantGenerationsCount() < maxStagnantGenerations || specie.containsFittest)) {
 					add(config, c);
 				}
 			}
@@ -214,5 +217,9 @@ public abstract class NaturalSelector {
 
 	public void setMinAge(int minAge) {
 		this.minAge = minAge;
+	}
+
+	public void setMaxStagnantGenerationsMaintainFittest(boolean maintainFittest) {
+		this.maxStagnantGenerationsMaintainFittest  = maintainFittest;
 	}
 }

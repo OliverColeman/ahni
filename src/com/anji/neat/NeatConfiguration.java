@@ -141,7 +141,9 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	public final static String ELITISM_MIN_SPECIE_SIZE_KEY = "selector.elitism.min.specie.size";
 	public final static String SPECIATED_FITNESS_KEY = "selector.speciated.fitness";
 	public final static String MAX_STAGNANT_GENERATIONS_KEY = "selector.max.stagnant.generations";
+	public final static String MAX_STAGNANT_MAINTAIN_FITTEST_GENERATIONS_KEY = "selector.max.stagnant.maintainfittest";
 	public final static String MINIMUM_AGE_KEY = "selector.min.generations";
+	
 
 	/**
 	 * properties key, enable weighted selection process
@@ -275,6 +277,7 @@ public class NeatConfiguration extends Configuration implements Configurable {
 		selector.setElitismMinSpeciesSize(props.getIntProperty(ELITISM_MIN_SPECIE_SIZE_KEY, 5));
 		selector.setSpeciatedFitness(props.getBooleanProperty(SPECIATED_FITNESS_KEY, true));
 		selector.setMaxStagnantGenerations(props.getIntProperty(MAX_STAGNANT_GENERATIONS_KEY, 999999));
+		selector.setMaxStagnantGenerationsMaintainFittest(props.getBooleanProperty(MAX_STAGNANT_MAINTAIN_FITTEST_GENERATIONS_KEY, false));
 		selector.setMinAge(props.getIntProperty(MINIMUM_AGE_KEY, 10));
 		setNaturalSelector(selector);
 

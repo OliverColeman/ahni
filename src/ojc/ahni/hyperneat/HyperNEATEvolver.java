@@ -318,10 +318,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 			int maxSpeciesAge = 0;
 			int minSpeciesAge = Integer.MAX_VALUE;
 			double avgBestSpeciesFitness = 0;
-			Iterator<Species> speciesIter = genotype.getSpecies().iterator();
-			while (speciesIter.hasNext()) {
-				Species species = speciesIter.next();
-
+			for (Species species : genotype.getSpecies()) {
 				if (species.originalSize > maxSpeciesSize)
 					maxSpeciesSize = species.originalSize;
 				if (species.originalSize < minSpeciesSize)
@@ -348,10 +345,8 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 			int numExtinctSpecies = previousSpeciesCount - numSpecies + numNewSpecies;
 
 			// write out some info about species history
-			speciesIter = allSpeciesEver.values().iterator();
 			output = new StringBuffer(generation + ",\t" + allSpeciesEver.size() + ",\t" + numSpecies + ",\t" + numNewSpecies + ",\t" + numExtinctSpecies);
-			while (speciesIter.hasNext()) {
-				Species species = speciesIter.next();
+			for (Species species : allSpeciesEver.values()) {
 				output.append(",\t");
 				output.append(species.originalSize);
 			}

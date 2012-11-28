@@ -1,7 +1,11 @@
 package ojc.ahni.transcriber;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -210,9 +214,9 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 		if (pseudo3D) {
 			double z = type == Neuron.INPUT ? 0 : 1;
 			for (int yi = 0; yi < height; yi++) {
-				double y = height > 1 ? ((double) yi / (height - 1)) : 0;
+				double y = height > 1 ? ((double) yi / (height - 1)) : 0.5;
 				for (int xi = 0; xi < width; xi++) {
-					double x = width > 1 ? ((double) xi / (width - 1)) : 0;
+					double x = width > 1 ? ((double) xi / (width - 1)) : 0.5;
 					Neuron p = new Neuron(x, y, z, type);
 					points.add(p);
 				}
@@ -224,7 +228,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 			}
 			double y = type == Neuron.INPUT ? 0 : 1;
 			for (int xi = 0; xi < width; xi++) {
-				double x = width > 1 ? ((double) xi / (width - 1)) : 0;
+				double x = width > 1 ? ((double) xi / (width - 1)) : 0.5;
 				Neuron p = new Neuron(x, y, 0, type);
 				points.add(p);
 			}
@@ -252,6 +256,15 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 	public BainNN generateSubstrate(Chromosome genotype) throws TranscriberException {
 		long startTime = System.currentTimeMillis();
 		CPPN cppn = new CPPN(genotype);
+		
+		
+		/*DecimalFormat nf1 = new DecimalFormat("###0.0#");
+		for (double zs = 0; zs <=1 ; zs+=0.1) {
+			for (double zt = 0; zt <=1 ; zt+=0.1) {
+				logger.info(nf1.format(zs) + " -> " + nf1.format(zt) + " : " + nf1.format(cppn.query(0, 0, zs, 0, 0, zt)));
+				//logger.info(nf1.format(zs) + " -> " + nf1.format(zt) + " : " + nf1.format(cppn.query(Math.random(), Math.random(), zs, Math.random(), Math.random(), zt)));
+			}
+		}*/
 
 		int inputCount = inputNeurons.size();
 		int outputCount = outputNeurons.size();
@@ -555,7 +568,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 	}
 
 	public class QuadPoint extends Point {
-		public double w; // stores the CPPN value
+		public double cppnValue; // stores the CPPN value
 		public double leo; // stores the CPPN LEO output value (if LEO enabled). 
 		public double width; // width of this quad tree square
 		public QuadPoint[] children;
@@ -569,7 +582,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 		}
 		
 		public String toString() {
-			return super.toString() + ": " + (float) w;
+			return super.toString() + ": " + (float) cppnValue;
 		}
 
 		public String toStringDeep() {
@@ -626,52 +639,86 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 	 * @return The root of the generated quadtree, each QuadPoint stores CPPN activation level for its position.
 	 */
 	public QuadPoint quadTreeInitialisation(CPPN cppn, Point n, boolean outgoing, double[] tempStorageForCPPNValues) {
-		QuadPoint root = new QuadPoint(0, 0, 0, 1, 1); // x, y, z, width, level
+		QuadPoint root = new QuadPoint(0.5, 0.5, 0.5, 1, 1); // x, y, z, width, level
 		ArrayDeque<QuadPoint> queue = new ArrayDeque<QuadPoint>(maxQuadTreeSize);
 		queue.add(root);
 
+		//DecimalFormat nf1 = new DecimalFormat("###0.0##");
+		/*BufferedImage image = null;
+		Graphics2D g = null;
+		int w = 800;
+		int h = 800;
+		if (firstTime) {
+			image = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
+			g = image.createGraphics();
+		}*/
+		
 		while (!queue.isEmpty()) {
-			QuadPoint p = queue.removeFirst();
+			QuadPoint parent = queue.removeFirst();
 
 			// Divide into sub-regions and assign children to parent.
-			double hw = p.width/2;
-			int level = p.level+1;
+			int childLevel = parent.level+1;
+			double childWidth = parent.width * 0.5;
+			double offset = childWidth * 0.5;
 			if (pseudo3D ) {
-				// Hidden nodes located on XZ plane at y = 0.
-				p.children[0] = new QuadPoint(p.x - hw, 0, p.z - hw, hw, level);
-				p.children[1] = new QuadPoint(p.x - hw, 0, p.z + hw, hw, level);
-				p.children[2] = new QuadPoint(p.x + hw, 0, p.z - hw, hw, level);
-				p.children[3] = new QuadPoint(p.x + hw, 0, p.z + hw, hw, level);
+				// Hidden nodes located on XZ plane at y = 0.5.
+				parent.children[0] = new QuadPoint(parent.x - offset, 0.5, parent.z - offset, childWidth, childLevel);
+				parent.children[1] = new QuadPoint(parent.x - offset, 0.5, parent.z + offset, childWidth, childLevel);
+				parent.children[2] = new QuadPoint(parent.x + offset, 0.5, parent.z - offset, childWidth, childLevel);
+				parent.children[3] = new QuadPoint(parent.x + offset, 0.5, parent.z + offset, childWidth, childLevel);
 			}
 			else {
-				// Hidden nodes located on XY plane at z = 0.
-				p.children[0] = new QuadPoint(p.x - hw, p.y - hw, 0, hw, level);
-				p.children[1] = new QuadPoint(p.x - hw, p.y + hw, 0, hw, level);
-				p.children[2] = new QuadPoint(p.x + hw, p.y - hw, 0, hw, level);
-				p.children[3] = new QuadPoint(p.x + hw, p.y + hw, 0, hw, level);
+				// Hidden nodes located on XY plane.
+				parent.children[0] = new QuadPoint(parent.x - offset, parent.y - offset, 0, childWidth, childLevel);
+				parent.children[1] = new QuadPoint(parent.x - offset, parent.y + offset, 0, childWidth, childLevel);
+				parent.children[2] = new QuadPoint(parent.x + offset, parent.y - offset, 0, childWidth, childLevel);
+				parent.children[3] = new QuadPoint(parent.x + offset, parent.y + offset, 0, childWidth, childLevel);
 			}
 			
 			// Get CPPN output for each child.
 			for (int ci = 0; ci < 4; ci++) {
-				QuadPoint child = p.children[ci];
+				QuadPoint child = parent.children[ci];
 				if (outgoing) // Querying connection from input or hidden node.
-					child.w = cppn.query(n, child); // Outgoing connectivity pattern.
+					child.cppnValue = cppn.query(n, child); // Outgoing connectivity pattern.
 				else // Querying connection to output node.
-					child.w = cppn.query(child, n); // Incoming connectivity pattern.
+					child.cppnValue = cppn.query(child, n); // Incoming connectivity pattern.
 				
 				if (enableLEO)
 					child.leo = cppn.getLEO();
+				
+				/*if (firstTime) {
+					int hwI = (int) Math.round(childWidth * w);
+					int x = (int) Math.round(child.x * w) - hwI/2;
+					int y = (int) Math.round((pseudo3D ? child.z : child.y) * h) - hwI/2;
+					int c = Math.min((int) Math.round(child.cppnValue * 0.5 * 255), 255);
+					g.setColor(new Color(c, c, c));
+					g.fillRect(x, y, hwI, hwI);*/
+					//logger.info(child.level + " : " + child.width + " : " + nf1.format(n.x) + ", " + nf1.format(n.y) + ", " + nf1.format(n.z) +  " -> " + nf1.format(child.x) + ", " + nf1.format(child.y) + ", " + nf1.format(child.z) + " : " + nf1.format(child.cppnValue));
+				//}
 			}
 
 			// Divide if minimum resolution hasn't been reached or variance is above threshold and maximum resolution hasn't been reached.
-			if (p.level < initialDepth || (p.level < maxDepth && variance(p, tempStorageForCPPNValues) > divisionThreshold)) {
+			if (parent.level < initialDepth || (parent.level < maxDepth && variance(parent, tempStorageForCPPNValues) > divisionThreshold)) {
 				for (int ci = 0; ci < 4; ci++) {
-					queue.add(p.children[ci]);
+					queue.add(parent.children[ci]);
 				}
 			}
 		}
+		
+		/*if (firstTime) {
+			//firstTime = false;
+			File outputfile = new File("/home/data/Dropbox/ai/PhD/cppn + " + n + ".png");
+			try {
+				ImageIO.write(image, "png", outputfile);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}*/
+		
 		return root;
 	}
+	//static boolean firstTime = true;
 
 	/**
 	 * The given quadtree is traversed depth-first until the current node's variance is smaller than the variance threshold
@@ -702,35 +749,35 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 				// Determine if point is in a band by checking neighbour CPPN values.
 				double width = root.width;
 				if (outgoing) {
-					left = Math.abs(child.w - cppn.query(neuron.x, neuron.y, neuron.z, child.x - width, child.y, child.z));
-					right = Math.abs(child.w - cppn.query(neuron.x, neuron.y, neuron.z, child.x + width, child.y, child.z));
-					if (pseudo3D) { // Hidden nodes located on XZ plane at y = 0.
-						top = Math.abs(child.w - cppn.query(neuron.x, neuron.y, neuron.z, child.x, child.y, child.z - width));
-						bottom = Math.abs(child.w - cppn.query(neuron.x, neuron.y, neuron.z, child.x, child.y, child.z + width));
+					left = Math.abs(child.cppnValue - cppn.query(neuron.x, neuron.y, neuron.z, child.x - width, child.y, child.z));
+					right = Math.abs(child.cppnValue - cppn.query(neuron.x, neuron.y, neuron.z, child.x + width, child.y, child.z));
+					if (pseudo3D) { // Hidden nodes located on XZ plane.
+						top = Math.abs(child.cppnValue - cppn.query(neuron.x, neuron.y, neuron.z, child.x, child.y, child.z - width));
+						bottom = Math.abs(child.cppnValue - cppn.query(neuron.x, neuron.y, neuron.z, child.x, child.y, child.z + width));
 					}
-					else { // Hidden nodes located on XZ plane at y = 0.
-						top = Math.abs(child.w - cppn.query(neuron.x, neuron.y, neuron.z, child.x, child.y - width, child.z));
-						bottom = Math.abs(child.w - cppn.query(neuron.x, neuron.y, neuron.z, child.x, child.y + width, child.z));
+					else { // Hidden nodes located on XY plane.
+						top = Math.abs(child.cppnValue - cppn.query(neuron.x, neuron.y, neuron.z, child.x, child.y - width, child.z));
+						bottom = Math.abs(child.cppnValue - cppn.query(neuron.x, neuron.y, neuron.z, child.x, child.y + width, child.z));
 					}
 				} else {
-					left = Math.abs(child.w - cppn.query(child.x - width, child.y, child.z, neuron.x, neuron.y, neuron.z));
-					right = Math.abs(child.w - cppn.query(child.x + width, child.y, child.z, neuron.x, neuron.y, neuron.z));
-					if (pseudo3D) { // Hidden nodes located on XZ plane at y = 0.
-						top = Math.abs(child.w - cppn.query(child.x, child.y, child.z - width, neuron.x, neuron.y, neuron.z));
-						bottom = Math.abs(child.w - cppn.query(child.x, child.y, child.z + width, neuron.x, neuron.y, neuron.z));
+					left = Math.abs(child.cppnValue - cppn.query(child.x - width, child.y, child.z, neuron.x, neuron.y, neuron.z));
+					right = Math.abs(child.cppnValue - cppn.query(child.x + width, child.y, child.z, neuron.x, neuron.y, neuron.z));
+					if (pseudo3D) { // Hidden nodes located on XZ plane.
+						top = Math.abs(child.cppnValue - cppn.query(child.x, child.y, child.z - width, neuron.x, neuron.y, neuron.z));
+						bottom = Math.abs(child.cppnValue - cppn.query(child.x, child.y, child.z + width, neuron.x, neuron.y, neuron.z));
 					}
-					else { // Hidden nodes located on XZ plane at y = 0.
-						top = Math.abs(child.w - cppn.query(child.x, child.y - width, child.z, neuron.x, neuron.y, neuron.z));
-						bottom = Math.abs(child.w - cppn.query(child.x, child.y + width, child.z, neuron.x, neuron.y, neuron.z));
+					else { // Hidden nodes located on XY plane.
+						top = Math.abs(child.cppnValue - cppn.query(child.x, child.y - width, child.z, neuron.x, neuron.y, neuron.z));
+						bottom = Math.abs(child.cppnValue - cppn.query(child.x, child.y + width, child.z, neuron.x, neuron.y, neuron.z));
 					}
 				}
 				
 				if (Math.max(Math.min(top, bottom), Math.min(left, right)) > bandThrehold) {
 					TempConnection tc;
 					if (outgoing) {
-						tc = new TempConnection(neuron, child, child.w);
+						tc = new TempConnection(neuron, child, child.cppnValue);
 					} else {
-						tc = new TempConnection(child, neuron, child.w);
+						tc = new TempConnection(child, neuron, child.cppnValue);
 					}
 					connections.add(tc);
 				}
@@ -776,7 +823,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 				index = getCPPNValues(p.children[ci], tempStorageForCPPNValues, index);
 			}
 		} else {
-			tempStorageForCPPNValues[index] = p.w;
+			tempStorageForCPPNValues[index] = p.cppnValue;
 			index++;
 		}
 		return index;

@@ -89,6 +89,11 @@ public class Species {
 	private Long id;
 
 	/**
+	 * True iff this species contains the fittest individual from the entire population.
+	 */
+	public boolean containsFittest;
+
+	/**
 	 * @see java.lang.Object#hashCode()
 	 */
 	public int hashCode() {

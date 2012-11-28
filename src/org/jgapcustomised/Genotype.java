@@ -526,6 +526,12 @@ public class Genotype implements Serializable {
 
 				lastGenChangedSpeciesCompatThreshold = generation;
 			}
+			
+			// Set which species contains the fittest individual.
+			for (Species s : m_species) {
+				s.containsFittest = false;
+			}
+			fittest.getSpecie().containsFittest = true;
 
 			// Select chromosomes to generate new population from,
 			// and determine elites that will survive unchanged to next generation
