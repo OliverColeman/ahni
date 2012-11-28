@@ -10,6 +10,10 @@
 			<attribute name="javadoc_location" value="file:/home/data/ai/PhD/software/baindoc/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/aparapi.jar" sourcepath="/home/data/ai/PhD/software/aparapi-trunk"/>
+	<classpathentry kind="lib" path="lib/aparapi.jar" sourcepath="/home/data/ai/PhD/software/aparapi-trunk">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="/home/data/ai/PhD/software/lib/aparapi"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

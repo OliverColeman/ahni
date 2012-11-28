@@ -82,7 +82,9 @@ public class BainNN implements Activator {
 	private int maxCycleLength;
 
 	private double[][] coords;
-	private double[] coordsMin, coordsMax, coordsRange; 
+	private double[] coordsMin, coordsMax, coordsRange;
+	
+	private static boolean reportedExecutionModeProblem = false;
 
 	/**
 	 * Create a new BainNN with the given Bain neural network.
@@ -194,6 +196,7 @@ public class BainNN implements Activator {
 		}
 		double[] outputs = new double[outputSize];
 		System.arraycopy(nn.getNeurons().getOutputs(), outputIndex, outputs, 0, outputSize);
+		checkExecMode();
 		return outputs;
 	}
 
@@ -219,6 +222,7 @@ public class BainNN implements Activator {
 				result[s] = next(stimuli[s]);
 			}
 		}
+		checkExecMode();
 		return result;
 	}
 
@@ -249,7 +253,14 @@ public class BainNN implements Activator {
 				result[s] = next(stimuli[s]);
 			}
 		}
+		checkExecMode();
 		return result;
+	}
+	
+	private void checkExecMode() {
+		if (!reportedExecutionModeProblem && nn.getPreferredExecutionMode() != null && nn.getPreferredExecutionMode() != nn.getSynapses().getExecutionMode()) {
+			logger.warn("Preferred execution mode for Bain network unable to be used.");
+		}
 	}
 
 	@Override
@@ -640,5 +651,10 @@ public class BainNN implements Activator {
 	@Override
 	public int getOutputCount() {
 		return outputSize;
+	}
+
+	@Override
+	public void dispose() {
+		nn.dispose();
 	}
 }

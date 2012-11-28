@@ -122,4 +122,9 @@ public interface Activator extends XmlPersistable {
 	 * @return true iff successful, false otherwise. 
 	 */
 	public boolean render(Graphics2D g, int width, int height, int neuronSize);
+	
+	/**
+	 * Release any resources associated with this Activator.
+	 */
+	public void dispose();
 }

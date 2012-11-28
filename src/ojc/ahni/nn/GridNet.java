@@ -836,4 +836,8 @@ public class GridNet implements Activator {
 	public boolean render(Graphics2D g, int width, int height, int neuronSize) {
 		return false;
 	}
+
+	@Override
+	public void dispose() {
+	}
 }

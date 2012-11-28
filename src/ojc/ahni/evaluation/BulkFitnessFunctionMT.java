@@ -215,6 +215,10 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 		 * @see Transcriber#transcribe(Chromosome, Activator)
 		 */
 		public void resetSubstrate() {
+			if (substrate != null) {
+				// Dispose of the old substrate.
+				substrate.dispose();
+			}
 			substrate = null;
 		}
 
@@ -228,6 +232,7 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 					while ((chrom = getNextChromosome()) != null) {
 						try {
 							substrate = generateSubstrate(chrom, substrate);
+							
 							int fitness = (substrate != null) ? evaluate(chrom, substrate, id) : 0;
 							chrom.setFitnessValue(fitness);
 							// If the fitness function hasn't explicitly set a performance value.
@@ -268,6 +273,10 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 			go = true;
 			notifyAll();
 		}
+		
+		public void dispose() {
+			substrate.dispose();
+		}
 	}
 	
 	/**
@@ -277,13 +286,24 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 	 * @throws TranscriberException 
 	 */
 	public Activator generateSubstrate(Chromosome chrom, Activator substrate) throws TranscriberException {
-		return transcriber.transcribe(chrom, substrate);
+		Activator previousSubstrate = substrate;
+		substrate = transcriber.transcribe(chrom, substrate);
+		
+		// If the previous substrate was not reused, dispose of it.
+		if (previousSubstrate != null && previousSubstrate != substrate) {
+			// Dispose of the old substrate.
+			previousSubstrate.dispose();
+		}
+		return substrate;
 	}
 
 	/**
 	 * Sub-classes may override this method to dispose of resources upon disposal of this object.
 	 */
 	public void dispose() {
+		for (Evaluator e : evaluators) {
+			e.dispose();
+		}
 	}
 
 	/**
