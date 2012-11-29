@@ -1,20 +1,24 @@
 package ojc.ahni.experiments;
 
+import java.util.Arrays;
+
 import ojc.ahni.evaluation.HyperNEATTargetFitnessFunction;
 
 import com.anji.util.Properties;
 
 /**
- * Implements the Left and Right Retina Problem as described in J. Clune, B. E. Beckmann, P. McKinley, and C. Ofria
- * (2010) Investigating whether hyperneat produces modular neural networks. In GECCO '10: Proceedings of the Genetic and
- * Evolutionary Computation Conference, pages 635-642, ACM. with the difference that in the reported experimental set-up
- * input values range from -3 to 3 and target output values range from -1 to 1 but in this implementation input values
- * range from 0 to 3 and target output values from 0 to 1.
+ * Implements the Left and Right Retina Problem as described in Constraining Connectivity to Encourage Modularity in
+ * HyperNEAT (2011) In: Proceedings of the Genetic and Evolutionary Computation Conference (GECCO 2011).
  * 
  * @author Oliver Coleman
  */
 public class RetinaProblemFitnessFunction extends HyperNEATTargetFitnessFunction {
 	private static final long serialVersionUID = 1L;
+
+	public static final String INPUT_MIN_VALUE_KEY = "fitness.function.retinaproblem.input.min";
+	public static final String INPUT_MAX_VALUE_KEY = "fitness.function.retinaproblem.input.max";
+	public static final String OUTPUT_MIN_VALUE_KEY = "fitness.function.retinaproblem.output.min";
+	public static final String OUTPUT_MAX_VALUE_KEY = "fitness.function.retinaproblem.output.max";
 
 	private static double[][][] validPatternsLeft = new double[][][] { { { 0, 1 }, { 1, 1 } }, // 7
 			{ { 1, 0 }, { 1, 1 } }, // 11
@@ -33,6 +37,9 @@ public class RetinaProblemFitnessFunction extends HyperNEATTargetFitnessFunction
 			{ { 1, 1 }, { 1, 0 } }, // 14
 			{ { 1, 1 }, { 0, 0 } }, // 12
 			{ { 0, 0 }, { 0, 0 } } };// 0
+
+	private double inputMinValue = -3, inputMaxValue = 3;
+	private double outputMinValue = -1, outputMaxValue = 1;
 
 	public RetinaProblemFitnessFunction() {
 	}
@@ -60,6 +67,7 @@ public class RetinaProblemFitnessFunction extends HyperNEATTargetFitnessFunction
 
 		double[][][] inputPatterns = new double[trialCount][inputHeight][inputWidth];
 		double[][][] targetOutputPatterns = new double[trialCount][outputHeight][outputWidth];
+		
 
 		int[] validPatternsLeftVal = new int[validPatternCount];
 		int[] validPatternsRightVal = new int[validPatternCount];
@@ -82,19 +90,28 @@ public class RetinaProblemFitnessFunction extends HyperNEATTargetFitnessFunction
 			int p = t;
 			for (int y = 0; y < inputHeight; y++) {
 				for (int x = 0; x < inputWidth; x++, p >>= 1) {
-					inputPatterns[t][y][x] = 3 * (p & 0x1);
+					inputPatterns[t][y][x] = (p & 0x1) == 1 ? inputMaxValue : inputMinValue;
 				}
 			}
+			
+			// Fill target outputs with default value.
+			for (int y = 0; y < outputHeight; y++) {
+				for (int x = 0; x < outputWidth; x++) {
+					targetOutputPatterns[t][y][x] = outputMinValue;
+				}
+			}
+			
+			// If this trial corresponds to a valid pattern on the left or right then set the outputs accordingly.
 			int prVal = (t >> 4) & 0x0F;
 			int plVal = t & 0x0F;
 			for (int i = 0; i < validPatternCount; i++) {
 				if (validPatternsLeftVal[i] == plVal)
-					targetOutputPatterns[t][0][0] = 1;
+					targetOutputPatterns[t][0][0] = outputMaxValue;
 				if (validPatternsRightVal[i] == prVal)
-					targetOutputPatterns[t][0][1] = 1;
+					targetOutputPatterns[t][0][1] = outputMaxValue;
 			}
 		}
 
-		setPatterns(inputPatterns, targetOutputPatterns, 0, 1);
+		setPatterns(inputPatterns, targetOutputPatterns, outputMinValue, outputMaxValue);
 	}
 }

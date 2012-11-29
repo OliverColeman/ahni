@@ -56,8 +56,8 @@ public class SigmoidActivationFunction implements ActivationFunction {
 	SigmoidActivationFunction() {
 		// initialise lookup table
 		//sigmoid = new double[LUT_RESOLUTION + 1];
-		double input = 0;
-		double output = 0;
+		//double input = 0;
+		//double output = 0;
 		//for (int i = 0; i <= LUT_RESOLUTION; i++) {
 		//	input = (LUT_INPUT_RANGE / LUT_RESOLUTION) * (i + 0.5f) + MIN_LUT_INPUT;
 		//	output = (double) (1.0 / (1.0 + Math.exp(-(input * SLOPE))));

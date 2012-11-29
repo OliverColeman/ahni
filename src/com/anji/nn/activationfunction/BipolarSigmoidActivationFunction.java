@@ -53,7 +53,7 @@ public class BipolarSigmoidActivationFunction implements ActivationFunction {
 	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
 	 */
 	public double apply(double input) {
-		return 2.0f / (1.0f + (double) Math.exp(-(input * SLOPE))) - 1;
+		return 2.0 / (1.0 + Math.exp(-(input * SLOPE))) - 1.0;
 	}
 
 	/**
