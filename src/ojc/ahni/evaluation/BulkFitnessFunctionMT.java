@@ -231,9 +231,19 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 					Chromosome chrom;
 					while ((chrom = getNextChromosome()) != null) {
 						try {
+							Activator previousSubstrate = substrate;
 							substrate = generateSubstrate(chrom, substrate);
+							int fitness = 0;
 							
-							int fitness = (substrate != null) ? evaluate(chrom, substrate, id) : 0;
+							// If a valid substrate could be generated.
+							if (substrate != null) { 
+								fitness = evaluate(chrom, substrate, id);
+							}
+							// If the transcriber decided the substrate was a dud then still allow reusing the old substrate.
+							else {
+								substrate = previousSubstrate;
+							}
+							
 							chrom.setFitnessValue(fitness);
 							// If the fitness function hasn't explicitly set a performance value.
 							if (chrom.getPerformanceValue() == -1) {

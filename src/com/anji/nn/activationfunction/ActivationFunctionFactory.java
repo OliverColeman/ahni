@@ -29,7 +29,7 @@ import java.util.Map;
  */
 public class ActivationFunctionFactory {
 
-	private Map activationFunctions = new HashMap<String, ActivationFunction>();
+	private Map<String, ActivationFunction> activationFunctions = new HashMap<String, ActivationFunction>();
 
 	private static ActivationFunctionFactory instance = null;
 
@@ -61,6 +61,7 @@ public class ActivationFunctionFactory {
 		activationFunctions.put(LogicAndActivationFunction.NAME, new LogicAndActivationFunction());
 		activationFunctions.put(LogicOrActivationFunction.NAME, new LogicOrActivationFunction());
 		activationFunctions.put(LogicXORActivationFunction.NAME, new LogicXORActivationFunction());
+		activationFunctions.put(RecipriocalActivationFunction.NAME, new RecipriocalActivationFunction());
 	}
 
 	/**
@@ -79,7 +80,7 @@ public class ActivationFunctionFactory {
 	 * @return ActivationFunction
 	 */
 	public ActivationFunction get(String key) {
-		return (ActivationFunction) activationFunctions.get(key);
+		return activationFunctions.get(key);
 	}
 
 	/**

@@ -199,7 +199,7 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 
 			if (createNewPhenotype) {
 				phenotype = new GridNet(connectionMaxRanges, layerDimensions, weights, bias, activationFunction, 1, "network " + genotype.getId());
-				logger.info("Substrate has input size " + width[0] + "x" + height[0] + " and " + phenotype.getConnectionCount(true) + " connections.");
+				logger.info("New substrate has input size " + width[0] + "x" + height[0] + " and " + phenotype.getConnectionCount(true) + " connections.");
 			} else {
 				phenotype.setName("network " + genotype.getId());
 			}
@@ -288,7 +288,7 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 				}
 
 				phenotype = new GridNet(connectionRange, layerDimensions, weights, bias, activationFunction, cyclesPerStep, "network " + genotype.getId());
-				logger.info("Substrate has " + phenotype.getConnectionCount(true) + " connections.");
+				logger.info("New substrate has " + phenotype.getConnectionCount(true) + " connections.");
 			} else {
 				phenotype.setName("network " + genotype.getId());
 			}

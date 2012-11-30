@@ -240,7 +240,7 @@ public class TargetFitnessCalculator implements Configurable {
 				}
 				if (logOutput != null) {
 					try {
-						logOutput.put(trial).put("\tInput:  ").put(input1D[trial]).put("\n\tTarget: ").put(output1D[trial]).put("\n\tOutput: ").put(responses1D[trial]).put("\n\tError: ").put(trialError).put((errorTypeOutput.squareErrors() ? " (sum of squared)" : "") + "\n\n");
+						logOutput.put(trial).put("\tInput:  ").put(input1D[trial]).put("\n\tTarget: ").put(output1D[trial]).put("\n\tOutput: ").put(responses1D[trial]).put("\n\tError: ").put(trialError).put((errorTypeOutput.squareErrors() ? " (sum of squared)" : "") + "  (" + (correct ? "" : "in") + "correct)\n\n");
 					} catch (IOException e) {
 						logger.info("Error writing to evaluation log file: " + Arrays.toString(e.getStackTrace()));
 					}
@@ -256,7 +256,7 @@ public class TargetFitnessCalculator implements Configurable {
 				}
 				if (logOutput != null) {
 					try {
-						logOutput.put(trial).put("\tInput:  ").put(input2D[trial]).put("\n\tTarget: ").put(output2D[trial]).put("\n\tOutput: ").put(responses2D[trial]).put("\n\tError: ").put(trialError).put((errorTypeOutput.squareErrors() ? " (sum of squared)" : "") + "\n\n");
+						logOutput.put(trial).put("\tInput:  ").put(input2D[trial]).put("\n\tTarget: ").put(output2D[trial]).put("\n\tOutput: ").put(responses2D[trial]).put("\n\tError: ").put(trialError).put((errorTypeOutput.squareErrors() ? " (sum of squared)" : "") + "  (" + (correct ? "" : "in") + "correct)\n\n");
 					} catch (IOException e) {
 						logger.info("Error writing to evaluation log file: " + Arrays.toString(e.getStackTrace()));
 					}

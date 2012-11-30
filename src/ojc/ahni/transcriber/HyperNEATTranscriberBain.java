@@ -223,7 +223,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 			} catch (Exception e) {
 				throw new TranscriberException(e);
 			}
-			logger.info("Substrate has " + neuronCount + " neurons and " + synapseCount + " synapses.");
+			logger.info("New substrate has " + neuronCount + " neurons and " + synapseCount + " synapses.");
 		} else {
 			phenotype.setName("network " + genotype.getId());
 		}
