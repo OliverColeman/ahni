@@ -141,8 +141,25 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 			for (int ty = 0; ty < height[tz]; ty++) {
 				for (int tx = 0; tx < width[tz]; tx++) {
 					cppn.setTargetCoordinatesFromGridIndices(tx, ty, tz);
-
 					int bainNeuronIndexTarget = getBainNeuronIndex(tx, ty, tz);
+					
+					// Bias for each neuron (non-inputs for feed-forward
+					if (enableBias) {
+						cppn.setSourceCoordinatesFromGridIndices(tx, ty, tz);
+						cppn.query();
+						int cppnOutputIndex = layerEncodingIsInput ? 0 : tz-1; 						
+						double biasVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getBiasWeight(cppnOutputIndex)));
+						if (Math.abs(biasVal) > connectionExprThresh) {
+							if (biasVal > 0)
+								biasVal = (biasVal - connectionExprThresh) * (connectionWeightMax / (connectionWeightMax - connectionExprThresh));
+							else
+								biasVal = (biasVal + connectionExprThresh) * (connectionWeightMin / (connectionWeightMin + connectionExprThresh));
+
+							((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, biasVal);
+						} else {
+							((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, 0);
+						}
+					}
 
 					// Iteration over layers for the source neuron is only used for recurrent networks.
 					for (int sz = (feedForward ? tz - 1 : 0); sz < (feedForward ? tz : depth); sz++) {
@@ -182,25 +199,6 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 								}
 
 								synapseIndex++;
-
-								// Bias for each neuron.
-								if (enableBias && sz == 0 && sy == 0 && sx == 0) {
-									double biasVal;
-									if (layerEncodingIsInput)
-										biasVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getBiasWeight()));
-									else
-										biasVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getBiasWeight(sz)));
-									if (Math.abs(biasVal) > connectionExprThresh) {
-										if (biasVal > 0)
-											biasVal = (biasVal - connectionExprThresh) * (connectionWeightMax / (connectionWeightMax - connectionExprThresh));
-										else
-											biasVal = (biasVal + connectionExprThresh) * (connectionWeightMin / (connectionWeightMin + connectionExprThresh));
-
-										((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, biasVal);
-									} else {
-										((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, 0);
-									}
-								}
 							} // sx
 						} // sy
 					} // sz

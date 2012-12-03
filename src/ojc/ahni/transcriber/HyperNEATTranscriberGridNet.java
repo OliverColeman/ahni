@@ -103,6 +103,24 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 					for (int tx = 0; tx < width[tz]; tx++) {
 						cppn.setTargetCoordinatesFromGridIndices(tx, ty, tz);
 
+						// bias
+						if (enableBias) {
+							cppn.setSourceCoordinatesFromGridIndices(tx, ty, tz);
+							cppn.query();
+							int cppnOutputIndex = layerEncodingIsInput ? 0 : tz-1; 						
+							double biasVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getBiasWeight(cppnOutputIndex)));
+							if (Math.abs(biasVal) > connectionExprThresh) {
+								if (biasVal > 0)
+									biasVal = (biasVal - connectionExprThresh) * (connectionWeightMax / (connectionWeightMax - connectionExprThresh));
+								else
+									biasVal = (biasVal + connectionExprThresh) * (connectionWeightMin / (connectionWeightMin + connectionExprThresh));
+
+								bias[tz - 1][ty][tx] = biasVal;
+							} else {
+								bias[tz - 1][ty][tx] = 0;
+							}
+						}
+
 						// calculate dimensions of this weight target matrix
 						// (bounded by grid edges)
 						int dy = Math.min(height[tz - 1] - 1, ty + connectionRange) - Math.max(0, ty - connectionRange) + 1;
@@ -146,25 +164,6 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 									weightVal = 0;
 								}
 								w[wy][wx] = weightVal;
-								
-								// bias
-								if (enableBias && sy == ty && sx == tx) {
-									double biasVal;
-									if (layerEncodingIsInput)
-										biasVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getBiasWeight()));
-									else
-										biasVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getBiasWeight(tz - 1)));
-									if (Math.abs(biasVal) > connectionExprThresh) {
-										if (biasVal > 0)
-											biasVal = (biasVal - connectionExprThresh) * (connectionWeightMax / (connectionWeightMax - connectionExprThresh));
-										else
-											biasVal = (biasVal + connectionExprThresh) * (connectionWeightMin / (connectionWeightMin + connectionExprThresh));
-
-										bias[tz - 1][ty][tx] = biasVal;
-									} else {
-										bias[tz - 1][ty][tx] = 0;
-									}
-								}
 								// System.out.print("\t" + w[wy][wx]);
 							}
 							// System.out.println();

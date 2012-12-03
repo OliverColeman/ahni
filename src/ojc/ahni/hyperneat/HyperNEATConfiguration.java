@@ -24,6 +24,7 @@ import org.jgapcustomised.InvalidConfigurationException;
 
 import com.anji.integration.Activator;
 import com.anji.integration.ActivatorTranscriber;
+import com.anji.integration.AnjiActivator;
 import com.anji.integration.AnjiNetTranscriber;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
@@ -33,6 +34,7 @@ import com.anji.neat.NeatConfiguration;
 import com.anji.neat.NeuronAllele;
 import com.anji.neat.NeuronGene;
 import com.anji.neat.NeuronType;
+import com.anji.nn.AnjiNet;
 import com.anji.nn.activationfunction.StepActivationFunction;
 import com.anji.nn.activationfunction.GaussianActivationFunction;
 import com.anji.util.Configurable;
@@ -73,6 +75,10 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 	public void init(Properties newProps) throws InvalidConfigurationException {
 		super.init(newProps);
 		props = newProps;
+		
+		File dirFile = new File(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY));
+		if (!dirFile.exists())
+			dirFile.mkdirs();
 
 		Transcriber transcriber = (Transcriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
 		if (transcriber instanceof HyperNEATTranscriber) {
@@ -167,23 +173,6 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 					}
 				}
 				sample = new ChromosomeMaterial(sampleAlleles);
-				
-				
-				/*
-				Activator substrate;
-				try {
-					substrate = transcriber.transcribe(new Chromosome(sample, 0L), null);
-					BufferedImage image = new BufferedImage(800, 800, BufferedImage.TYPE_3BYTE_BGR);
-					boolean success = substrate.render(image.createGraphics(), image.getWidth(), image.getHeight(), 30);
-					if (success) {
-						File outputfile = new File("/home/data/Dropbox/ai/PhD/software/retina-problem-eshyperneat/initial-sample-cppn-substrate.png");
-						ImageIO.write(image, "png", outputfile);
-					}
-				} catch (TranscriberException | IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				*/
 			}
 			
 			// Else if LEO locality seeding is enabled.
@@ -247,6 +236,16 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 				sample = NeatChromosomeUtility.newSampleChromosomeMaterial(stimulusSize, props.getShortProperty(INITIAL_TOPOLOGY_NUM_HIDDEN_NEURONS_KEY, DEFAULT_INITIAL_HIDDEN_SIZE), responseSize, this, props.getBooleanProperty(INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, true));
 			}
 			setSampleChromosomeMaterial(sample);
+			
+			try {
+				Transcriber cppnTranscriber = (Transcriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
+				AnjiActivator n = (AnjiActivator) cppnTranscriber.transcribe(new Chromosome(sample, 0L));
+				BufferedWriter outputfile = new BufferedWriter(new FileWriter(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "initial-sample-CPPN.txt"));
+				outputfile.write(n.toXml());
+				outputfile.close();
+			} catch (IOException | TranscriberException e) {
+				e.printStackTrace();
+			}
 		}
 		
 		enableVisuals = props.getBooleanProperty(ENABLE_VISUALS_KEY, false);
