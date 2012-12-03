@@ -592,7 +592,9 @@ public class Genotype implements Serializable {
 
 			// cull population down to just elites (only elites survive to next gen)
 			m_chromosomes.clear();
-			for (Species s : m_species) {
+			speciesIter = m_species.iterator();
+			while (speciesIter.hasNext()) {
+				Species s = speciesIter.next();
 				s.cullToElites(fittest);
 				if (s.isEmpty()) {
 					s.originalSize = 0;

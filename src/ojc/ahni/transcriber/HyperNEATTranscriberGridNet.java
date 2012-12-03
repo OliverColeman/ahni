@@ -128,29 +128,25 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 
 								cppn.query();
 
-								// weights
-								double weightVal;
-								if (layerEncodingIsInput)
-									weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getWeight()));
-								else
-									weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getWeight(tz - 1)));
+								// Determine weight for synapse from source to target.
+								int cppnOutputIndex = layerEncodingIsInput ? 0 : tz-1; 
+								double weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getWeight(cppnOutputIndex)));
 								
 								if (enableLEO) {
-									double leo = layerEncodingIsInput ? cppn.getLEO() : cppn.getLEO(tz-1);
-									w[wy][wx] = leo > 0 ? weightVal : 0; 
+									weightVal = cppn.getLEO(cppnOutputIndex) > 0 ? weightVal : 0; 
 								}
-								// Conventional thresholding.
+								// Otherwise use conventional thresholding.
 								else if (Math.abs(weightVal) > connectionExprThresh) {
 									if (weightVal > 0)
 										weightVal = (weightVal - connectionExprThresh) * (connectionWeightMax / (connectionWeightMax - connectionExprThresh));
 									else
 										weightVal = (weightVal + connectionExprThresh) * (connectionWeightMin / (connectionWeightMin + connectionExprThresh));
-
-									w[wy][wx] = weightVal;
-								} else {
-									w[wy][wx] = 0;
 								}
-
+								else {
+									weightVal = 0;
+								}
+								w[wy][wx] = weightVal;
+								
 								// bias
 								if (enableBias && sy == ty && sx == tx) {
 									double biasVal;

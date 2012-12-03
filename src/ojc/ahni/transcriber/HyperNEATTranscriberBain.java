@@ -157,23 +157,21 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 								synapses.setPreAndPostNeurons(synapseIndex, bainNeuronIndexSource, bainNeuronIndexTarget);
 
 								// Determine weight for synapse from source to target.
-								double weightVal = 0;
-								if (layerEncodingIsInput) {
-									weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getWeight()));
-								}
-								else {
-									weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getWeight(sz)));
-								}
+								int cppnOutputIndex = layerEncodingIsInput ? 0 : sz; 
+								double weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getWeight(cppnOutputIndex)));
+								
 								if (enableLEO) {
-									double leo = layerEncodingIsInput ? cppn.getLEO() : cppn.getLEO(sz);
-									weightVal = leo > 0 ? weightVal : 0; 
+									weightVal = cppn.getLEO(cppnOutputIndex) > 0 ? weightVal : 0; 
 								}
-								// Conventional thresholding.
+								// Otherwise use conventional thresholding.
 								else if (Math.abs(weightVal) > connectionExprThresh) {
 									if (weightVal > 0)
 										weightVal = (weightVal - connectionExprThresh) * (connectionWeightMax / (connectionWeightMax - connectionExprThresh));
 									else
 										weightVal = (weightVal + connectionExprThresh) * (connectionWeightMin / (connectionWeightMin + connectionExprThresh));
+								}
+								else {
+									weightVal = 0;
 								}
 								synapseWeights[synapseIndex] = weightVal;
 
