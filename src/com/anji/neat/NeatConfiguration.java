@@ -84,9 +84,13 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	 */
 	public static final String SURVIVAL_RATE_KEY = "survival.rate";
 	/**
-	 * properties key, survival rate
+	 * properties key, proportion of new population that is generated via crossover from two parents (as opposed to mutation of a single parent), [0, 1].
 	 */
 	public static final String CROSSOVER_PROPORTION_KEY = "crossover.proportion";
+	/**
+	 * properties key, the probability that an individual produced by the crossover operator will be a candidate for having mutations applied to it (independent of other mutation probabilities).
+	 */
+	public static final String CROSSOVER_MUTATE_RATE_KEY = "crossover.mutate.probability";
 	/**
 	 * properties key, topology mutation type; if true, use "classic" method where at most a single topological mutation
 	 * occurs per generation per individual
@@ -201,40 +205,40 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	protected void initMutation() throws InvalidConfigurationException {
 		// remove connection
 		RemoveConnectionMutationOperator removeOperator = (RemoveConnectionMutationOperator) props.singletonObjectProperty(RemoveConnectionMutationOperator.class);
-		if ((removeOperator.getMutationRate() > 0.0f) && (removeOperator.getMaxWeightRemoved() > 0.0f)) {
+		if ((removeOperator.getMutationRate() > 0.0) && (removeOperator.getMaxWeightRemoved() > 0.0)) {
 			addMutationOperator(removeOperator);
 		}
 
 		// add topology
-		boolean isTopologyMutationClassic = props.getBooleanProperty(TOPOLOGY_MUTATION_CLASSIC_KEY, false);
+		boolean isTopologyMutationClassic = props.getBooleanProperty(TOPOLOGY_MUTATION_CLASSIC_KEY, true);
 		if (isTopologyMutationClassic) {
 			SingleTopologicalMutationOperator singleOperator = (SingleTopologicalMutationOperator) props.singletonObjectProperty(SingleTopologicalMutationOperator.class);
-			if (singleOperator.getMutationRate() > 0.0f) {
+			if (singleOperator.getMutationRate() > 0.0) {
 				addMutationOperator(singleOperator);
 			}
 		} else {
 			// add connection
 			AddConnectionMutationOperator addConnOperator = (AddConnectionMutationOperator) props.singletonObjectProperty(AddConnectionMutationOperator.class);
-			if (addConnOperator.getMutationRate() > 0.0f) {
+			if (addConnOperator.getMutationRate() > 0.0) {
 				addMutationOperator(addConnOperator);
 			}
 
 			// add neuron
 			AddNeuronMutationOperator addNeuronOperator = (AddNeuronMutationOperator) props.singletonObjectProperty(AddNeuronMutationOperator.class);
-			if (addNeuronOperator.getMutationRate() > 0.0f) {
+			if (addNeuronOperator.getMutationRate() > 0.0) {
 				addMutationOperator(addNeuronOperator);
 			}
 		}
 
 		// modify weight
 		WeightMutationOperator weightOperator = (WeightMutationOperator) props.singletonObjectProperty(WeightMutationOperator.class);
-		if (weightOperator.getMutationRate() > 0.0f) {
+		if (weightOperator.getMutationRate() > 0.0) {
 			addMutationOperator(weightOperator);
 		}
 
 		// prune
 		PruneMutationOperator pruneOperator = (PruneMutationOperator) props.singletonObjectProperty(PruneMutationOperator.class);
-		if (pruneOperator.getMutationRate() > 0.0f) {
+		if (pruneOperator.getMutationRate() > 0.0) {
 			addMutationOperator(pruneOperator);
 		}
 	}
@@ -297,6 +301,8 @@ public class NeatConfiguration extends Configuration implements Configurable {
 		crossoverOper = new NeatCrossoverReproductionOperator();
 		getCloneOperator().setSlice(reproductionSlice * (1 - crossoverProportion));
 		getCrossoverOperator().setSlice(reproductionSlice * crossoverProportion);
+		getCloneOperator().setMutateRate(1.0);
+		getCrossoverOperator().setMutateRate(props.getDoubleProperty(CROSSOVER_MUTATE_RATE_KEY, 1.0));
 		addReproductionOperator(getCloneOperator());
 		addReproductionOperator(getCrossoverOperator());
 

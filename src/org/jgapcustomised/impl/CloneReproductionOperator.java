@@ -34,7 +34,6 @@ import org.jgapcustomised.ReproductionOperator;
  * @author Philip Tucker
  */
 public class CloneReproductionOperator extends ReproductionOperator {
-
 	/**
 	 * Adds new children of <code>parents</code> to <code>offspring</code>.
 	 * 

@@ -119,14 +119,14 @@ public class Configuration implements java.io.Serializable {
 	 * population after natural selection. In general, operators will be executed in the order that they are added to
 	 * this list. Added by Tucker and James.
 	 */
-	private List reproductionOperators = new ArrayList();
+	private List<ReproductionOperator> reproductionOperators = new ArrayList();
 
 	/**
 	 * Stores all of the MutationOperator implementations that are to be used to operate upon the chromosomes of a
 	 * population after natural selection. In general, operators will be executed in the order that they are added to
 	 * this list. Added by Tucker and James.
 	 */
-	private List mutationOperators = new ArrayList();
+	private List<MutationOperator> mutationOperators = new ArrayList();
 
 	/**
 	 * Add a reproduction operator for use in this algorithm.
@@ -149,7 +149,7 @@ public class Configuration implements java.io.Serializable {
 	 * 
 	 * @return The list of reproduction operators added to this Configuration
 	 */
-	public List getReproductionOperators() {
+	public List<ReproductionOperator> getReproductionOperators() {
 		return reproductionOperators;
 	}
 
@@ -173,7 +173,7 @@ public class Configuration implements java.io.Serializable {
 	 * 
 	 * @return The list of mutation operators added to this Configuration
 	 */
-	public List getMutationOperators() {
+	public List<MutationOperator> getMutationOperators() {
 		return mutationOperators;
 	}
 

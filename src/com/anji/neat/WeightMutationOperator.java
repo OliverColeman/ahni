@@ -24,6 +24,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import ojc.ahni.util.ArrayUtil;
+
+import org.jgapcustomised.Allele;
 import org.jgapcustomised.ChromosomeMaterial;
 import org.jgapcustomised.Configuration;
 import org.jgapcustomised.MutationOperator;
@@ -49,13 +52,17 @@ public class WeightMutationOperator extends MutationOperator implements Configur
 	 */
 	private static final String WEIGHT_MUTATE_STD_DEV_KEY = "weight.mutation.std.dev";
 	/**
+	 * properties key, the amount to perturb weights by when generating the initial population.
+	 */
+	private static final String WEIGHT_MUTATE_STD_DEV_INITIAL_KEY = "weight.mutation.std.dev.initial";
+	/**
 	 * default mutation rate
 	 */
-	public static final double DEFAULT_MUTATE_RATE = 0.10f;
+	public static final double DEFAULT_MUTATE_RATE = 0.1;
 	/**
 	 * default standard deviation for weight delta
 	 */
-	public final static double DEFAULT_STD_DEV = 1.0f;
+	public final static double DEFAULT_STD_DEV = 1.0;
 	private double stdDev = DEFAULT_STD_DEV;
 
 	/**
@@ -64,6 +71,8 @@ public class WeightMutationOperator extends MutationOperator implements Configur
 	public void init(Properties props) throws Exception {
 		setMutationRate(props.getDoubleProperty(WEIGHT_MUTATE_RATE_KEY, DEFAULT_MUTATE_RATE));
 		stdDev = props.getDoubleProperty(WEIGHT_MUTATE_STD_DEV_KEY, DEFAULT_STD_DEV);
+		
+		ConnectionAllele.RANDOM_STD_DEV = props.getDoubleProperty(WEIGHT_MUTATE_STD_DEV_INITIAL_KEY, stdDev);
 	}
 
 	/**
@@ -72,25 +81,7 @@ public class WeightMutationOperator extends MutationOperator implements Configur
 	public WeightMutationOperator() {
 		super(DEFAULT_MUTATE_RATE);
 	}
-
-	/**
-	 * @param newMutationRate
-	 * @see WeightMutationOperator#WeightMutationOperator(double, double)
-	 */
-	public WeightMutationOperator(double newMutationRate) {
-		this(newMutationRate, DEFAULT_STD_DEV);
-	}
-
-	/**
-	 * @param newMutationRate
-	 * @param newStdDev
-	 * @see MutationOperator#MutationOperator(double)
-	 */
-	public WeightMutationOperator(double newMutationRate, double newStdDev) {
-		super(newMutationRate);
-		stdDev = newStdDev;
-	}
-
+	
 	/**
 	 * Removes from <code>genesToAdd</code> and adds to <code>genesToRemove</code> all connection genes that are
 	 * modified.
@@ -100,21 +91,21 @@ public class WeightMutationOperator extends MutationOperator implements Configur
 	 * @param genesToAdd <code>Set</code> contains <code>Gene</code> objects
 	 * @param genesToRemove <code>Set</code> contains <code>Gene</code> objects
 	 */
-	protected void mutate(Configuration jgapConfig, final ChromosomeMaterial target, Set genesToAdd, Set genesToRemove) {
+	protected void mutate(Configuration jgapConfig, final ChromosomeMaterial target, Set<Allele> genesToAdd, Set<Allele> genesToRemove) {
 		if ((jgapConfig instanceof NeatConfiguration) == false) {
 			throw new AnjiRequiredException(NeatConfiguration.class.toString());
 		}
 		NeatConfiguration config = (NeatConfiguration) jgapConfig;
 
-		List conns = NeatChromosomeUtility.getConnectionList(target.getAlleles());
+		List<ConnectionAllele> conns = NeatChromosomeUtility.getConnectionList(target.getAlleles());
 		Collections.shuffle(conns, config.getRandomGenerator());
 
 		int numMutations = numMutations(config.getRandomGenerator(), conns.size());
-		Iterator iter = conns.iterator();
+		Iterator<ConnectionAllele> iter = conns.iterator();
 		int i = 0;
 
 		while ((i++ < numMutations) && iter.hasNext()) {
-			ConnectionAllele origAllele = (ConnectionAllele) iter.next();
+			ConnectionAllele origAllele = iter.next();
 
 			double delta = config.getRandomGenerator().nextGaussian() * getStdDev();
 			double nextWeight = origAllele.getWeight() + delta;

@@ -21,7 +21,6 @@ package org.jgapcustomised;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Random;
 import java.util.Set;
 
@@ -33,7 +32,6 @@ import java.util.Set;
  * @author Philip Tucker
  */
 public abstract class MutationOperator {
-
 	private double mutationRate = 0.0f;
 
 	/**
@@ -57,26 +55,24 @@ public abstract class MutationOperator {
 	 * @param allelesToRemove alleles removed by this mutation, <code>Set</code> contains <code>Allele</code> objects
 	 * @throws InvalidConfigurationException
 	 */
-	protected abstract void mutate(final Configuration config, final ChromosomeMaterial target, Set allelesToAdd, Set allelesToRemove) throws InvalidConfigurationException;
+	protected abstract void mutate(final Configuration config, final ChromosomeMaterial target, Set<Allele> allelesToAdd, Set<Allele> allelesToRemove) throws InvalidConfigurationException;
 
 	/**
-	 * The operate method will be invoked on each of the mutation operators referenced by the current Configuration
-	 * object during the evolution phase. Operators are given an opportunity to run in the order that they are added to
-	 * the Configuration.
+	 * The {@link #mutate(Configuration, ChromosomeMaterial, Set, Set)} method will be invoked on each of the given individuals.
 	 * 
 	 * @param config The current active genetic configuration.
 	 * @param offspring <code>List</code> Contains <code>ChromosomeMaterial</code> objects from the current evolution.
 	 *            Material in this <code>List</code> should be modified directly.
 	 * @throws InvalidConfigurationException
 	 */
-	public void mutate(final Configuration config, final List offspring) throws InvalidConfigurationException {
-		ListIterator iter = offspring.listIterator();
-		while (iter.hasNext()) {
-			ChromosomeMaterial material = (ChromosomeMaterial) iter.next();
-			Set allelesToAdd = new HashSet();
-			Set allelesToRemove = new HashSet();
-			mutate(config, material, allelesToAdd, allelesToRemove);
-			updateMaterial(material, allelesToAdd, allelesToRemove);
+	public void mutate(final Configuration config, final List<ChromosomeMaterial> offspring) throws InvalidConfigurationException {
+		for (ChromosomeMaterial material : offspring) {
+			if (material.shouldMutate()) {
+				Set<Allele> allelesToAdd = new HashSet<Allele>();
+				Set<Allele> allelesToRemove = new HashSet<Allele>();
+				mutate(config, material, allelesToAdd, allelesToRemove);
+				updateMaterial(material, allelesToAdd, allelesToRemove);
+			}
 		}
 	}
 

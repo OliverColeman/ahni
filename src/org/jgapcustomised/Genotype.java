@@ -455,9 +455,7 @@ public class Genotype implements Serializable {
 			fittest = null;
 			bestPerforming = null;
 			zeroFitnessCount = 0;
-			it = m_chromosomes.iterator();
-			while (it.hasNext()) {
-				Chromosome c = it.next();
+			for (Chromosome c : m_chromosomes) {
 				if (fittest == null || fittest.getFitnessValue() < c.getFitnessValue()) {
 					fittest = c;
 				}
@@ -579,18 +577,14 @@ public class Genotype implements Serializable {
 
 			// Execute Reproduction Operators.
 			// -------------------------------------
-			Iterator<ReproductionOperator> iterator = m_activeConfiguration.getReproductionOperators().iterator();
 			List<ChromosomeMaterial> offspring = new ArrayList<ChromosomeMaterial>();
-			while (iterator.hasNext()) {
-				ReproductionOperator operator = iterator.next();
+			for (ReproductionOperator operator : m_activeConfiguration.getReproductionOperators()) {
 				operator.reproduce(m_activeConfiguration, m_species, offspring);
 			}
 
 			// Execute Mutation Operators.
 			// -------------------------------------
-			Iterator<MutationOperator> mutOpIter = m_activeConfiguration.getMutationOperators().iterator();
-			while (mutOpIter.hasNext()) {
-				MutationOperator operator = mutOpIter.next();
+			for (MutationOperator operator : m_activeConfiguration.getMutationOperators()) {
 				operator.mutate(m_activeConfiguration, offspring);
 			}
 
@@ -598,9 +592,7 @@ public class Genotype implements Serializable {
 
 			// cull population down to just elites (only elites survive to next gen)
 			m_chromosomes.clear();
-			speciesIter = m_species.iterator();
-			while (speciesIter.hasNext()) {
-				Species s = speciesIter.next();
+			for (Species s : m_species) {
 				s.cullToElites(fittest);
 				if (s.isEmpty()) {
 					s.originalSize = 0;

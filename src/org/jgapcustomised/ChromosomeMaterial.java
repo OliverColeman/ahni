@@ -34,9 +34,12 @@ import java.util.TreeSet;
  * be modifying this object.
  */
 public class ChromosomeMaterial implements Comparable, Serializable {
+	private static final long serialVersionUID = 1L;
+	
 	private Long primaryParentId = null;
 	private Long secondaryParentId = null;
-	private SortedSet m_alleles = null;
+	private SortedSet<Allele> m_alleles = null;
+	private boolean shouldMutate = true;
 
 	/**
 	 * Create chromosome with two parents. Used for crossover.
@@ -45,7 +48,7 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 	 * @param aPrimaryParentId
 	 * @param aSecondaryParentId
 	 */
-	public ChromosomeMaterial(Collection a_initialAlleles, Long aPrimaryParentId, Long aSecondaryParentId) {
+	public ChromosomeMaterial(Collection<Allele> a_initialAlleles, Long aPrimaryParentId, Long aSecondaryParentId) {
 		// Sanity checks: make sure the genes array isn't null and
 		// that none of the genes contained within it are null.
 		// -------------------------------------------------------
@@ -64,7 +67,7 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 			}
 		}
 
-		m_alleles = new TreeSet(a_initialAlleles);
+		m_alleles = new TreeSet<Allele>(a_initialAlleles);
 	}
 
 	/**
@@ -74,7 +77,7 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 	 * @param aPrimaryParentId
 	 * @see ChromosomeMaterial#ChromosomeMaterial(Collection, Long, Long)
 	 */
-	public ChromosomeMaterial(Collection a_initialGenes, Long aPrimaryParentId) {
+	public ChromosomeMaterial(Collection<Allele> a_initialGenes, Long aPrimaryParentId) {
 		this(a_initialGenes, aPrimaryParentId, null);
 	}
 
@@ -84,7 +87,7 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 	 * @param a_initialAlleles
 	 * @see ChromosomeMaterial#ChromosomeMaterial(Collection, Long, Long)
 	 */
-	public ChromosomeMaterial(Collection a_initialAlleles) {
+	public ChromosomeMaterial(Collection<Allele> a_initialAlleles) {
 		this(a_initialAlleles, null, null);
 	}
 
@@ -92,7 +95,7 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 	 * for hibernate
 	 */
 	ChromosomeMaterial() {
-		this(new TreeSet(), null, null);
+		this(new TreeSet<Allele>(), null, null);
 	}
 
 	/**
@@ -108,11 +111,9 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 		// at each respective gene location (locus) to create the new Gene that
 		// is to occupy that same locus in the new Chromosome.
 		// -------------------------------------------------------------------
-		List copyOfAlleles = new ArrayList(m_alleles.size());
+		List<Allele> copyOfAlleles = new ArrayList<Allele>(m_alleles.size());
 
-		Iterator iter = m_alleles.iterator();
-		while (iter.hasNext()) {
-			Allele orig = (Allele) iter.next();
+		for (Allele orig : m_alleles) {
 			copyOfAlleles.add(orig.cloneAllele());
 		}
 
@@ -128,7 +129,7 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 	 * 
 	 * @return an array of the Genes contained within this Chromosome.
 	 */
-	public SortedSet getAlleles() {
+	public SortedSet<Allele> getAlleles() {
 		return m_alleles;
 	}
 
@@ -322,11 +323,11 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 	 * @param threshold
 	 * @return excess alleles, <code>List</code> contains <code>Allele</code> objects
 	 */
-	private List extractExcessAlleles(Collection alleles, long threshold) {
-		List result = new ArrayList();
-		Iterator iter = alleles.iterator();
+	private List<Allele> extractExcessAlleles(Collection<Allele> alleles, long threshold) {
+		List<Allele> result = new ArrayList<Allele>();
+		Iterator<Allele> iter = alleles.iterator();
 		while (iter.hasNext()) {
-			Allele allele = (Allele) iter.next();
+			Allele allele = iter.next();
 			if (allele.getInnovationId().longValue() > threshold) {
 				iter.remove();
 				result.add(allele);
@@ -347,11 +348,11 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 	 */
 	public double distance(ChromosomeMaterial target, SpeciationParms speciationParms) {
 		// get genes I have target does not
-		List myUnmatchedAlleles = new ArrayList(m_alleles);
+		List<Allele> myUnmatchedAlleles = new ArrayList<Allele>(m_alleles);
 		myUnmatchedAlleles.removeAll(target.getAlleles());
 
 		// get genes target has I do not
-		List targetUnmatchedAlleles = new ArrayList(target.getAlleles());
+		List<Allele> targetUnmatchedAlleles = new ArrayList<Allele>(target.getAlleles());
 		targetUnmatchedAlleles.removeAll(m_alleles);
 
 		// extract excess genes
@@ -360,13 +361,13 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 		List excessAlleles = (targetMax > thisMax) ? extractExcessAlleles(targetUnmatchedAlleles, thisMax) : extractExcessAlleles(myUnmatchedAlleles, targetMax);
 
 		// all other extras are disjoint
-		List disjointAlleles = new ArrayList(myUnmatchedAlleles);
+		List<Allele> disjointAlleles = new ArrayList<Allele>(myUnmatchedAlleles);
 		disjointAlleles.addAll(targetUnmatchedAlleles);
 
 		// get common connection genes
-		List myCommonAlleles = new ArrayList(this.getAlleles());
+		List<Allele> myCommonAlleles = new ArrayList<Allele>(this.getAlleles());
 		myCommonAlleles.retainAll(target.getAlleles());
-		List targetCommonAlleles = new ArrayList(target.getAlleles());
+		List<Allele> targetCommonAlleles = new ArrayList<Allele>(target.getAlleles());
 		targetCommonAlleles.retainAll(this.getAlleles());
 
 		// sanity test
@@ -379,11 +380,11 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 		int numComparableCommonAlleles = 0;
 		if (myCommonAlleles.size() > 0) {
 			double totalCommonDiff = 0;
-			Iterator myIter = myCommonAlleles.iterator();
-			Iterator targetIter = targetCommonAlleles.iterator();
+			Iterator<Allele> myIter = myCommonAlleles.iterator();
+			Iterator<Allele> targetIter = targetCommonAlleles.iterator();
 			while (myIter.hasNext() && targetIter.hasNext() && totalCommonDiff < Double.MAX_VALUE) {
-				Allele myAllele = (Allele) myIter.next();
-				Allele targetAllele = (Allele) targetIter.next();
+				Allele myAllele = myIter.next();
+				Allele targetAllele = targetIter.next();
 				if (myAllele.getInnovationId().equals(targetAllele.getInnovationId()) == false) {
 					throw new IllegalStateException("corresponding genes do not have same innovation ids");
 				}
@@ -418,7 +419,23 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 	 * 
 	 * @param aAlleles
 	 */
-	void setAlleles(SortedSet aAlleles) {
+	public void setAlleles(SortedSet<Allele> aAlleles) {
 		m_alleles = aAlleles;
+	}
+	
+
+	/**
+	 * Indicates whether this individual is a candidate for mutations (after reproduction). Default value is true.
+	 * @return the mutateProbability
+	 */
+	public boolean shouldMutate() {
+		return shouldMutate;
+	}
+
+	/**
+	 * May be used by reproduction operators to indicate that this individual is a candidate for mutations.
+	 */
+	public void setShouldMutate(boolean mutate) {
+		this.shouldMutate = mutate;
 	}
 }

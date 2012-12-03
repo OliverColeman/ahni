@@ -34,6 +34,9 @@ import java.util.List;
  */
 public abstract class ReproductionOperator {
 	private double slice = 0.0f;
+	// The probability that individuals produced by this operator will be a candidate for having mutations applied to them (independent of the mutation rates of MutationOperators).
+	private double mutateProbability = 1;
+
 
 	/**
 	 * The reproduce method will be invoked on each of the reproduction operators referenced by the current
@@ -50,27 +53,23 @@ public abstract class ReproductionOperator {
 	 * @throws InvalidConfigurationException
 	 * @see ReproductionOperator#reproduce(Configuration, List, int, List)
 	 */
-	final public void reproduce(final Configuration config, final List parentSpecies, List offspring) throws InvalidConfigurationException {
+	final public void reproduce(final Configuration config, final List<Species> parentSpecies, List<ChromosomeMaterial> offspring) throws InvalidConfigurationException {
 		int targetNewOffspringCount = (int) Math.round(config.getPopulationSize() * getSlice());
 
 		if (targetNewOffspringCount > 0) {
 			if (parentSpecies.isEmpty()) {
 				throw new IllegalStateException("no parent species from which to produce offspring");
 			}
-			List newOffspring = new ArrayList(targetNewOffspringCount);
+			List<ChromosomeMaterial> newOffspring = new ArrayList<ChromosomeMaterial>(targetNewOffspringCount);
 
 			// calculate total fitness
 			double totalSpeciesFitness = 0;
-			Iterator specieIter = parentSpecies.iterator();
-			while (specieIter.hasNext()) {
-				Species specie = (Species) specieIter.next();
+			for (Species specie : parentSpecies) {
 				totalSpeciesFitness += specie.getFitnessValue();
 			}
 
 			// reproduce from each specie relative to its percentage of total fitness
-			specieIter = parentSpecies.iterator();
-			while (specieIter.hasNext()) {
-				Species specie = (Species) specieIter.next();
+			for (Species specie : parentSpecies) {
 				double percentFitness = specie.getFitnessValue() / totalSpeciesFitness;
 				int numSpecieOffspring = (int) Math.round(percentFitness * targetNewOffspringCount) - specie.getEliteCount();
 				if (numSpecieOffspring > 0)
@@ -89,6 +88,10 @@ public abstract class ReproductionOperator {
 				int idx = config.getRandomGenerator().nextInt(newOffspring.size());
 				ChromosomeMaterial clonee = (ChromosomeMaterial) newOffspring.get(idx);
 				newOffspring.add(clonee.clone(null));
+			}
+			
+			for (ChromosomeMaterial c : newOffspring) {
+				c.setShouldMutate(mutateProbability > config.getRandomGenerator().nextDouble());
 			}
 
 			offspring.addAll(newOffspring);
@@ -118,4 +121,13 @@ public abstract class ReproductionOperator {
 	final public void setSlice(double aSlice) {
 		this.slice = aSlice;
 	}
+	
+	/**
+	 * Set the probability that individuals produced by this operator will be a candidate for having mutations applied to them (independent of the mutation rates of MutationOperators).
+	 * @param mutateRate the mutateRate to set
+	 */
+	public void setMutateRate(double mutateRate) {
+		this.mutateProbability = mutateRate;
+	}
+
 }

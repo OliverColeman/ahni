@@ -11,7 +11,7 @@ public class ArrayUtil {
 		if (a.length > 0)
 			result.append(prefix).append(a[0]);
 		for (int i = 1; i < a.length; i++)
-			result.append("\n").append(prefix).append(a[0]);
+			result.append("\n").append(prefix).append(a[i]);
 		return result.toString();
 	}
 
@@ -25,7 +25,7 @@ public class ArrayUtil {
 		if (a.length > 0)
 			result.append(prefix).append(a[0]);
 		for (int i = 1; i < a.length; i++)
-			result.append("\n").append(prefix).append(a[0]);
+			result.append("\n").append(prefix).append(a[i]);
 		return result.toString();
 	}
 	

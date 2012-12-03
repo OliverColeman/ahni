@@ -17,7 +17,9 @@ import com.anji.util.Configurable;
 import com.anji.util.Properties;
 
 /**
- * To "transcribe" is to construct a phenotype from a genotype.
+ * To "transcribe" is to construct a phenotype from a genotype. This is a base class for Transcribers implementing the 
+ * HyperNEAT encoding scheme or extensions thereof. A non-abstract sub-class will typically specify a particular 
+ * Activator implementation that it creates. See {@link HyperNEATTranscriberBain} for an example of a sub-class.
  * 
  * @author Oliver Coleman
  */
