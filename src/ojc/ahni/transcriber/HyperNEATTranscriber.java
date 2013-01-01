@@ -3,10 +3,13 @@ package ojc.ahni.transcriber;
 import java.util.Arrays;
 import java.util.Set;
 
+import ojc.ahni.evaluation.AHNIFitnessFunction;
+import ojc.ahni.hyperneat.HyperNEATEvolver;
 import ojc.ahni.util.Range;
 import ojc.ahni.util.Point;
 
 import org.apache.log4j.Logger;
+import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.Chromosome;
 
 import com.anji.integration.Activator;
@@ -17,8 +20,8 @@ import com.anji.util.Configurable;
 import com.anji.util.Properties;
 
 /**
- * To "transcribe" is to construct a phenotype from a genotype. This is a base class for Transcribers implementing the 
- * HyperNEAT encoding scheme or extensions thereof. A non-abstract sub-class will typically specify a particular 
+ * To "transcribe" is to construct a phenotype from a genotype. This is a base class for Transcribers implementing the
+ * HyperNEAT encoding scheme or extensions thereof. A non-abstract sub-class will typically specify a particular
  * Activator implementation that it creates. See {@link HyperNEATTranscriberBain} for an example of a sub-class.
  * 
  * @author Oliver Coleman
@@ -160,11 +163,9 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	protected Range rangeZ = new Range();
 
 	/**
-	 * Custom positions for the neurons in a layer, format is [z_index][y_index * width[z_index] * x_index]. If custom
-	 * positions have not been specified for a layer then the sub-array for the layer is null. The coordinates are in
+	 * Custom positions for all neurons in the network. This is used when either the {@link #NEURON_POSITIONS_FOR_LAYER}
+	 * property is used and/or the fitness function defines some/all neuron layers and positions. The coordinates are in
 	 * the ranges {@link #rangeX}, {@link #rangeY} and {@link #rangeZ} (rather than unit ranges).
-	 * 
-	 * @see #NEURON_POSITIONS_FOR_LAYER
 	 */
 	protected Point[][] neuronPositionsForLayer;
 
@@ -271,28 +272,61 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		depth = props.getIntProperty(SUBSTRATE_DEPTH);
 		cyclesPerStep = feedForward ? depth - 1 : props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP, 1);
 		enableLEO = props.getBooleanProperty(HYPERNEAT_LEO, enableLEO);
-
-		width = props.getIntArrayProperty(SUBSTRATE_WIDTH);
-		height = props.getIntArrayProperty(SUBSTRATE_HEIGHT);
-		if (height.length != depth || width.length != depth) {
-			throw new IllegalArgumentException("Number of comma-separated layer dimensions in " + SUBSTRATE_HEIGHT + " or " + SUBSTRATE_WIDTH + " does not match " + SUBSTRATE_DEPTH + ".");
-		}
-
+		
+		width = getProvisionalLayerSize(props, SUBSTRATE_WIDTH);
+		height = getProvisionalLayerSize(props, SUBSTRATE_HEIGHT);
+		
 		rangeX = props.getObjectFromArgsProperty(RANGE_X, Range.class, rangeX, null);
 		rangeY = props.getObjectFromArgsProperty(RANGE_Y, Range.class, rangeY, null);
 		rangeZ = props.getObjectFromArgsProperty(RANGE_Z, Range.class, rangeZ, null);
 
+		// Determine width and height of each layer.
+		BulkFitnessFunction ff = (BulkFitnessFunction) props.singletonObjectProperty(HyperNEATEvolver.FITNESS_FUNCTION_CLASS_KEY);
+		AHNIFitnessFunction aff = (ff instanceof AHNIFitnessFunction) ? (AHNIFitnessFunction) ff : null;
+		for (int layer = 0; layer < depth; layer++) {
+			// If the fitness function is to define this layer.
+			if (width[layer] == -1 || height[layer] == -1) {
+				int[] layerDims = aff != null ? aff.getLayerDimensions(layer, depth) : null;
+				if (layerDims != null) {
+					if (width[layer] == -1) {
+						width[layer] = layerDims[0];
+					}
+					if (height[layer] == -1) {
+						height[layer] = layerDims[1];
+					}
+					logger.info("Fitness function defines dimensions for layer " + layer + ": " + width[layer] + "x" + height[layer]);
+				} else {
+					throw new IllegalArgumentException("Properties specify that fitness function should specify layer dimensions for layer " + layer + " but fitness function does not specify this.");
+				}
+			}
+		}
+
+		// Determine custom neuron positions (if any) for each layer.
 		neuronPositionsForLayer = new Point[depth][];
-		Properties posProps = props.getOnlySubProperties(NEURON_POSITIONS_FOR_LAYER);
-		for (Object key : posProps.keySet()) {
-			int layer = Integer.parseInt((String) key);
-			// Provide default z coordinate if not specified in properties
-			Point defaultCoords = new Point(0, 0, depth == 1 ? 0 : (double) layer / (depth - 1));
-			defaultCoords.translateFromUnit(rangeX, rangeY, rangeZ);
-			double[] defaultArgs = new double[] { defaultCoords.x, defaultCoords.y, defaultCoords.z };
-			neuronPositionsForLayer[layer] = posProps.getObjectArrayProperty((String) key, Point.class, defaultArgs);
-			if (neuronPositionsForLayer[layer].length != width[layer] * height[layer]) {
-				throw new IllegalArgumentException("The number of neuron positions specified for " + NEURON_POSITIONS_FOR_LAYER + "." + key + " does not match the number of neurons for the layer.");
+		for (int layer = 0; layer < depth; layer++) {
+			// If the user has specified positions for neurons for this layer.
+			if (props.containsKey(NEURON_POSITIONS_FOR_LAYER + "." + layer)) {
+				// Provide default z coordinate if not specified in properties.
+				Point defaultCoords = new Point(0, 0, depth == 1 ? 0 : (double) layer / (depth - 1));
+				defaultCoords.translateFromUnit(rangeX, rangeY, rangeZ);
+				double[] defaultArgs = new double[] { defaultCoords.x, defaultCoords.y, defaultCoords.z };
+				neuronPositionsForLayer[layer] = props.getObjectArrayProperty(NEURON_POSITIONS_FOR_LAYER + "." + layer, Point.class, defaultArgs);
+				if (neuronPositionsForLayer[layer].length != width[layer] * height[layer]) {
+					throw new IllegalArgumentException("The number of neuron positions specified for " + NEURON_POSITIONS_FOR_LAYER + "." + layer + " does not match the number of neurons for the layer.");
+				}
+			} else if (aff != null) {
+				neuronPositionsForLayer[layer] = aff.getNeuronPositions(layer, depth);
+				if (neuronPositionsForLayer[layer] != null) {
+					if (neuronPositionsForLayer[layer].length != width[layer] * height[layer]) {
+						throw new IllegalArgumentException("The number of neuron positions specified by the fitness function for " + layer + " does not match the number of neurons for the layer.");
+					}
+					StringBuilder logStr = new StringBuilder("Fitness function defines neuron positions for layer " + layer + ": ");
+					for (Point p : neuronPositionsForLayer[layer]) {
+						p.translateFromUnit(rangeX, rangeY, rangeZ);
+						logStr.append(p + ", ");
+					}
+					logger.info(logStr);
+				}
 			}
 		}
 
@@ -370,6 +404,30 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 
 		cppnTranscriber = (Transcriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
 	}
+	
+	/**
+	 * Returns provisional width or height values for each layer of the substrate. 
+	 * Any values that are to be determined by the fitness function have value -1.
+	 * @param props The properties to read the size from.
+	 * @param sizeKey Whether to retrieve width or height values, allowed values are {@link #SUBSTRATE_WIDTH} or  {@link #SUBSTRATE_HEIGHT}.
+	 * @return An array containing values for the width or height of each layer of the substrate.
+	 */
+	public static int[] getProvisionalLayerSize(Properties props, String sizeKey) {
+		int depth = props.getIntProperty(SUBSTRATE_DEPTH);
+		int[] sizes;
+		if (props.containsKey(sizeKey)) {
+			String valString = props.getProperty(sizeKey).replaceAll("f", "-1");
+			sizes = props.getIntArrayFromString(valString);
+			if (sizes.length != depth) {
+				throw new IllegalArgumentException("Number of comma-separated layer dimensions in " + sizeKey + " does not match " + SUBSTRATE_DEPTH + ".");
+			}
+		}
+		else {
+			sizes = new int[depth];
+			Arrays.fill(sizes, -1);
+		}
+		return sizes;
+	}
 
 	/**
 	 * Get the number of layers in the substrate, including input and output layers.
@@ -424,10 +482,10 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	/**
 	 * Provides a wrapper for an {@link com.anji.integration.Activator} that represents a CPPN.
 	 */
-	public class CPPN {
-		Activator cppnActivator;
-		double[] cppnInput = new double[cppnInputCount];
-		double[] cppnOutput;
+	protected class CPPN {
+		protected Activator cppnActivator;
+		protected double[] cppnInput = new double[cppnInputCount];
+		protected double[] cppnOutput;
 
 		public CPPN(Chromosome genotype) throws TranscriberException {
 			cppnActivator = cppnTranscriber.transcribe(genotype);
@@ -478,11 +536,16 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		 * Set the coordinates of the source neuron specified by the given indices into a grid-based substrate. If the z
 		 * coordinate is not required it will be ignored. Subclasses of {@link HyperNEATTranscriber} should generally
 		 * use this method instead of directly specifying coordinates as this method supports specifying arbitrary
-		 * coordinates for neurons via {@link HyperNEATTranscriber#NEURON_POSITIONS_FOR_LAYER}.
+		 * coordinates for neurons via {@link HyperNEATTranscriber#NEURON_POSITIONS_FOR_LAYER} or coordinates specified
+		 * by the fitness function. Note that if custom coordinates have been specified for a layer then the values of
+		 * the x and y parameters may not correlate linearly to the actual coordinates if the layer does not use a
+		 * regular grid-based layout, however this detail can generally be ignored by subclasses, they can just blindly
+		 * rely on the {@link HyperNEATTranscriber#width} and {@link HyperNEATTranscriber#height} values (see
+		 * {@link HyperNEATTranscriberBain} for an example).
 		 * 
 		 * @param x The index of the source neuron in the X dimension.
 		 * @param y The index of the source neuron in the Y dimension.
-		 * @param z The index of the source neuron in the Z dimension.
+		 * @param z The index of the source neuron in the Z dimension (the layer index).
 		 */
 		public void setSourceCoordinatesFromGridIndices(int x, int y, int z) {
 			if (depth == 1)
@@ -544,11 +607,16 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		 * Set the coordinates of the target neuron specified by the given indices into a grid-based substrate. If the z
 		 * coordinate is not required it will be ignored. Subclasses of {@link HyperNEATTranscriber} should generally
 		 * use this method instead of directly specifying coordinates as this method supports specifying arbitrary
-		 * coordinates for neurons via {@link HyperNEATTranscriber#NEURON_POSITIONS_FOR_LAYER}.
+		 * coordinates for neurons via {@link HyperNEATTranscriber#NEURON_POSITIONS_FOR_LAYER} or coordinates specified
+		 * by the fitness function. Note that if custom coordinates have been specified for a layer then the values of
+		 * the x and y parameters may not correlate linearly to the actual coordinates if the layer does not use a
+		 * regular grid-based layout, however this detail can generally be ignored by subclasses, they can just blindly
+		 * rely on the {@link HyperNEATTranscriber#width} and {@link HyperNEATTranscriber#height} values (see
+		 * {@link HyperNEATTranscriberBain} for an example).
 		 * 
 		 * @param x The index of the target neuron in the X dimension.
 		 * @param y The index of the target neuron in the Y dimension.
-		 * @param z The index of the target neuron in the Z dimension.
+		 * @param z The index of the target neuron in the Z dimension (the layer index).
 		 */
 		public void setTargetCoordinatesFromGridIndices(int x, int y, int z) {
 			if (depth == 1)
@@ -687,6 +755,14 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		 */
 		public double getLEO(int sourceLayerIndex) {
 			return cppnOutput[cppnIdxL[sourceLayerIndex]];
+		}
+
+		/**
+		 * Get the value of the output with the given index. This is useful for sub-classes of HyperNEATTranscriber that
+		 * add additional outputs to the CPPN.
+		 */
+		public double getOutput(int index) {
+			return cppnOutput[index];
 		}
 	}
 

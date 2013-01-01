@@ -1,7 +1,6 @@
 package ojc.ahni.transcriber;
 
 import ojc.ahni.nn.GridNet;
-import ojc.ahni.transcriber.HyperNEATTranscriber.CPPN;
 import ojc.bain.neuron.rate.NeuronCollectionWithBias;
 
 import org.apache.log4j.Logger;

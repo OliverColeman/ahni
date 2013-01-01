@@ -11,6 +11,7 @@ import java.awt.geom.Arc2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
+import java.text.DecimalFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,6 +28,7 @@ import com.anji.integration.Activator;
 import com.anji.integration.TranscriberException;
 
 import ojc.ahni.transcriber.ESHyperNEATTranscriberBain;
+import ojc.ahni.util.ArrayUtil;
 import ojc.bain.NeuralNetwork;
 import ojc.bain.base.ComponentConfiguration;
 import ojc.bain.base.NeuronCollection;
@@ -228,7 +230,7 @@ public class BainNN implements Activator {
 
 	@Override
 	public double[][] next(double[][] stimuli) {
-		return arrayUnpack(next(arrayPack(stimuli)), outputDimensions[0], outputDimensions[1], 0);
+		return ArrayUtil.unpack(next(ArrayUtil.pack(stimuli)), outputDimensions[0], outputDimensions[1], 0);
 	}
 
 	@Override
@@ -240,12 +242,12 @@ public class BainNN implements Activator {
 		if (topology == Topology.FEED_FORWARD_LAYERED) {
 			for (int stimuliIndex = 0, responseIndex = 1 - stepsPerStep; stimuliIndex < stimuliCount + stepsPerStep - 1; stimuliIndex++, responseIndex++) {
 				if (stimuliIndex < stimuliCount) {
-					double[] input = arrayPack(stimuli[stimuliIndex]);
+					double[] input = ArrayUtil.pack(stimuli[stimuliIndex]);
 					System.arraycopy(input, 0, nnOutputs, 0, input.length);
 				}
 				nn.step();
 				if (responseIndex >= 0) {
-					result[responseIndex] = arrayUnpack(nnOutputs, outputDimensions[0], outputDimensions[1], outputIndex);
+					result[responseIndex] = ArrayUtil.unpack(nnOutputs, outputDimensions[0], outputDimensions[1], outputIndex);
 				}
 			}
 		} else {
@@ -313,30 +315,6 @@ public class BainNN implements Activator {
 	public String toXml() {
 		// TODO Auto-generated method stub
 		return null;
-	}
-
-	private double[] arrayPack(double[][] unpacked) {
-		int width = unpacked[0].length;
-		int height = unpacked.length;
-		double[] packed = new double[width * height];
-		int i = 0;
-		for (int y = 0; y < height; y++) {
-			for (int x = 0; x < width; x++) {
-				packed[i++] = unpacked[y][x];
-			}
-		}
-		return packed;
-	}
-
-	private double[][] arrayUnpack(double[] packed, int width, int height, int outputIndex) {
-		double[][] unpacked = new double[height][width];
-		int i = outputIndex;
-		for (int y = 0; y < height; y++) {
-			for (int x = 0; x < width; x++) {
-				unpacked[y][x] = packed[i++];
-			}
-		}
-		return unpacked;
 	}
 
 	private void setStepsPerStepForNonLayeredFF() {
@@ -473,6 +451,7 @@ public class BainNN implements Activator {
 	 */
 	@Override
 	public String toString() {
+		DecimalFormat nf = new DecimalFormat(" #.###;-#.###");
 		StringBuilder out = new StringBuilder(125 + synapseCount * 30);
 		out.append("Neuron class: " + nn.getNeurons().getClass());
 		out.append("\nSynapse class: " + nn.getSynapses().getClass());
@@ -480,21 +459,43 @@ public class BainNN implements Activator {
 		out.append("\nSynapse count: " + synapseCount);
 		out.append("\nTopology type: " + topology);
 		out.append("\nCycles per step: " + stepsPerStep);
-		out.append("\nConnectivity:");
+		
+		out.append("\nNeurons:\n\t");
+		NeuronCollectionWithBias biasNeurons = (nn.getNeurons() instanceof NeuronCollectionWithBias) ? (NeuronCollectionWithBias) nn.getNeurons() : null;
+		if (biasNeurons != null) {
+		  out.append("bias \t");
+		}
+		String[] paramNames = nn.getNeurons().getConfigSingleton() != null ? nn.getNeurons().getConfigSingleton().getParameterNames() : null;
+		if (paramNames != null) {
+			out.append(ArrayUtil.toString(paramNames, "\t"));
+		}
+		for (int i = 0; i < neuronCount; i++) {
+			out.append("\n\t");
+			if (biasNeurons != null) {
+				out.append(nf.format(biasNeurons.getBias(i)));
+			}
+			if (paramNames != null && nn.getNeurons().getComponentConfiguration(i) != null) {
+				out.append("\t" + ArrayUtil.toString(nn.getNeurons().getComponentConfiguration(i).getParameterValues(), "\t", nf));
+			}
+		}
+		
+		out.append("\nSynapses:");
+		out.append("\n\tpre > post\tweight");
+		paramNames = nn.getSynapses().getConfigSingleton() != null ? nn.getSynapses().getConfigSingleton().getParameterNames() : null;
+		if (paramNames != null) {
+			out.append("\t" + ArrayUtil.toString(paramNames, "\t"));
+		}
 		for (int i = 0; i < synapseCount; i++) {
 			int pre = nn.getSynapses().getPreNeuron(i);
 			int post = nn.getSynapses().getPostNeuron(i);
 			String preType = isInput(pre) ? "i" : isOutput(pre) ? "o" : "h";
 			String postType = isInput(post) ? "i" : isOutput(post) ? "o" : "h";
-			out.append("\n\t" + preType + ":" + pre + " > " + postType + ":" + post + "  w: " + (float) nn.getSynapses().getEfficacy(i));
-		}
-		if (nn.getNeurons() instanceof NeuronCollectionWithBias) {
-			out.append("\nNeuron bias values:");
-			NeuronCollectionWithBias<? extends ComponentConfiguration> neurons = (NeuronCollectionWithBias) nn.getNeurons();
-			for (int i = 0; i < neuronCount; i++) {
-				out.append("\n\t" + (float) neurons.getBias(i));
+			out.append("\n\t" + preType + ":" + pre + " > " + postType + ":" + post + "\t" + nf.format(nn.getSynapses().getEfficacy(i)));
+			if (paramNames != null && nn.getSynapses().getComponentConfiguration(i) != null) {
+				out.append("\t" + ArrayUtil.toString(nn.getSynapses().getComponentConfiguration(i).getParameterValues(), "\t", nf));
 			}
 		}
+		
 		return out.toString();
 	}
 	

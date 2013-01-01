@@ -1,16 +1,8 @@
 package ojc.ahni.evaluation;
 
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
-import java.util.Arrays;
 
-import javax.imageio.ImageIO;
-
-import ojc.ahni.hyperneat.HyperNEATConfiguration;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
-import ojc.ahni.transcriber.ESHyperNEATTranscriberBain;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
@@ -25,16 +17,15 @@ import com.anji.neat.Evolver;
  * evaluations on multiple genomes. The methods {@link #getMaxFitnessValue()} and
  * {@link #evaluate(Chromosome, Activator, int)} must be implemented in subclasses. Subclasses may also need to override
  * the methods {@link #init(Properties)}, {@link #initialiseEvaluation()},
- * {@link #postEvaluate(Chromosome, Activator, int)} and {@link #dispose()}.
- * Subclasses may wish to override {@link #evolutionFinished(ojc.ahni.hyperneat.HyperNEATEvolver)} to perform testing or other analysis
- * on the fittest and/or best performing Chromosomes evolved during the run; the method
- * {@link #generateSubstrate(Chromosome, Activator)} may be used to create substrates for a Chromosome.</p>
+ * {@link #postEvaluate(Chromosome, Activator, int)} and {@link #dispose()}. Subclasses may also
+ * need to override {@link #getLayerDimensions(int, int)} or {@link #getNeuronPositions(int, int)} to specify required layer dimensions or
+ * neuron positions, for example for input or output layers.</p>
  *  
  * <p>See {@link ojc.ahni.evaluation.TargetFitnessFunctionMT} for an example.</p>
  * 
  * @author Oliver Coleman
  */
-public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Configurable {
+public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implements Configurable {
 	private static final long serialVersionUID = 1L;
 	private static Logger logger = Logger.getLogger(BulkFitnessFunctionMT.class);
 
@@ -57,6 +48,9 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 	protected Evaluator[] evaluators;
 	protected Iterator<Chromosome> chromosomesIterator;
 
+	/**
+	 * This RNG should be used by all sub-classes for all randomness.
+	 */ 
 	protected Random random;
 
 	protected boolean endRun = false;
@@ -94,7 +88,6 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 	public void init(Properties props) {
 		this.props = props;
 		random = ((Randomizer) props.singletonObjectProperty(Randomizer.class)).getRand();
-		transcriber = (Transcriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
 
 		targetPerformance = props.getFloatProperty(Evolver.PERFORMANCE_TARGET_KEY, 1);
 		targetPerformanceType = props.getProperty(Evolver.PERFORMANCE_TARGET_TYPE_KEY, "higher").toLowerCase().trim().equals("higher") ? 1 : 0;
@@ -134,6 +127,8 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 	 * @param genotypes The set of chromosomes to evaluate.
 	 */
 	public void evaluate(List<Chromosome> genotypes) {
+		transcriber = (Transcriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
+
 		initialiseEvaluation();
 
 		bestPerformance = targetPerformanceType == 1 ? 0 : Float.MAX_VALUE;
@@ -328,6 +323,7 @@ public abstract class BulkFitnessFunctionMT implements BulkFitnessFunction, Conf
 	}
 	
 	/**
+	 * {@inheritDoc}
 	 * This default implementation does nothing.
 	 */
 	@Override

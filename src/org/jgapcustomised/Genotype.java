@@ -409,7 +409,7 @@ public class Genotype implements Serializable {
 	 */
 	public synchronized Chromosome evolve() {
 		try {
-			long start = System.currentTimeMillis();
+			//long start = System.currentTimeMillis();
 
 			m_activeConfiguration.lockSettings();
 			BulkFitnessFunction bulkFunction = m_activeConfiguration.getBulkFitnessFunction();
@@ -422,7 +422,7 @@ public class Genotype implements Serializable {
 				it.next().setPerformanceValue(-1);
 			}
 
-			long startEval = System.currentTimeMillis();
+			//long startEval = System.currentTimeMillis();
 			
 			// Fire an event to indicate we're now evaluating all chromosomes.
 			// -------------------------------------------------------
@@ -448,11 +448,16 @@ public class Genotype implements Serializable {
 				}
 			}
 
-			long finishEval = System.currentTimeMillis();
+			//long finishEval = System.currentTimeMillis();
 
 			// find fittest and best performing
-			Chromosome oldFittest = fittest;
-			fittest = null;
+			if (previousFittest != null && m_chromosomes.contains(previousFittest)) {
+				// Attempt to reuse previous fittest if available.
+				fittest = previousFittest;
+			}
+			else {
+				fittest = null;
+			}
 			bestPerforming = null;
 			zeroFitnessCount = 0;
 			for (Chromosome c : m_chromosomes) {
@@ -463,35 +468,33 @@ public class Genotype implements Serializable {
 					bestPerforming = c;
 					// System.out.println("bpv="+bestPerforming.getPerformanceValue());
 				}
-				if (c.getFitnessValue() == 1) {
+				if (c.getFitnessValue() <= 1) {
 					zeroFitnessCount++;
 				}
 			}
 
 			// check if best fitness has dropped a lot (indication that evaluation function is too inconsistent)
-			if (oldFittest != null) {
-				int oldFitness = (oldFittest.getFitnessValue() * 100) / maxFitness;
-				int newFitness = (fittest.getFitnessValue() * 100) / maxFitness;
-				if (oldFitness > (newFitness + 3)) // if dropped more than 3%
-					logger.info("(Fitness drop:" + oldFitness + " > " + newFitness + ")");
+			if (previousFittest != null) {
+				int oldFitnessPercent = (previousFittestFitness * 100) / maxFitness;
+				int newFitnessPercent = (fittest.getFitnessValue() * 100) / maxFitness;
+				if (oldFitnessPercent > (newFitnessPercent + 5)) // if dropped more than 5%
+					logger.info("(Fitness drop in percent:" + oldFitnessPercent + " > " + newFitnessPercent + ")");
 			}
+			
+			//logger.info("Fittest: \n" + fittest.cloneMaterial().toString());
+			
+			previousFittest = fittest;
+			previousFittestFitness = fittest.getFitnessValue();
 
 			// Fire an event to indicate we've evaluated all chromosomes.
 			// -------------------------------------------------------
 			m_activeConfiguration.getEventManager().fireGeneticEvent(new GeneticEvent(GeneticEvent.GENOTYPE_EVALUATED_EVENT, this));
 
-			long startSelect = System.currentTimeMillis();
+			//long startSelect = System.currentTimeMillis();
 
 			// Speciate population after fitness evaluation. Do this now because we use fittest individuals as
-			// representatives of species.
-			// if (generation % 100 == 0) {
-			// logger.info("Respeciating");
-			// respeciate();
-			// }
-			// else {
 			speciate();
-			// }
-
+			
 			// attempt to stay within 25% of species count target
 			int targetSpeciesCount = m_specParms.getSpeciationTarget();
 			if ((targetSpeciesCount > 0 && (generation - lastGenChangedSpeciesCompatThreshold > 5) && // don't change
@@ -520,7 +523,7 @@ public class Genotype implements Serializable {
 				// " (target=" + targetSpeciesCount + "). Speciation threshold is now " +
 				// m_specParms.getSpeciationThreshold());
 
-				logger.info("Adjusted species compatability threshold to " + m_specParms.getSpeciationThreshold());
+				//logger.info("Adjusted species compatability threshold to " + m_specParms.getSpeciationThreshold());
 
 				lastGenChangedSpeciesCompatThreshold = generation;
 			}
@@ -539,7 +542,7 @@ public class Genotype implements Serializable {
 			selector.add(m_activeConfiguration, m_species, m_chromosomes);
 			m_chromosomes = selector.select(m_activeConfiguration);
 			selector.empty();
-
+			
 			// System.out.println("Selected: " + m_chromosomes.size());
 
 			// cull species down to contain only remaining chromosomes.
@@ -560,10 +563,8 @@ public class Genotype implements Serializable {
 			if (m_species.isEmpty()) {
 				logger.info("All species removed!");
 			}
-
-			// System.out.println("Elite: " + eliteCount);
-
-			long finishSelect = System.currentTimeMillis();
+			
+			//long finishSelect = System.currentTimeMillis();
 
 			// Repopulate the population of species and chromosomes with those selected
 			// by the natural selector
@@ -573,7 +574,7 @@ public class Genotype implements Serializable {
 			// other things this allows for RAM conservation.
 			m_activeConfiguration.getEventManager().fireGeneticEvent(new GeneticEvent(GeneticEvent.GENOTYPE_START_GENETIC_OPERATORS_EVENT, this));
 
-			long startReprod = System.currentTimeMillis();
+			//long startReprod = System.currentTimeMillis();
 
 			// Execute Reproduction Operators.
 			// -------------------------------------
@@ -587,8 +588,8 @@ public class Genotype implements Serializable {
 			for (MutationOperator operator : m_activeConfiguration.getMutationOperators()) {
 				operator.mutate(m_activeConfiguration, offspring);
 			}
-
-			long finishReprod = System.currentTimeMillis();
+			
+			//long finishReprod = System.currentTimeMillis();
 
 			// cull population down to just elites (only elites survive to next gen)
 			m_chromosomes.clear();
@@ -612,11 +613,13 @@ public class Genotype implements Serializable {
 			// ------------------------------
 			addChromosomesFromMaterial(offspring);
 
+			//assert (m_chromosomes.contains(fittest));
+
 			// in case we're off due to rounding errors
 			if (m_chromosomes.size() != m_activeConfiguration.getPopulationSize()) {
 				adjustChromosomeList(m_chromosomes, m_activeConfiguration.getPopulationSize());
 			}
-
+			
 			// Fire an event to indicate we've finished genetic operators. Among
 			// other things this allows for RAM conservation.
 			// -------------------------------------------------------
@@ -628,12 +631,12 @@ public class Genotype implements Serializable {
 
 			generation++;
 
-			long finish = System.currentTimeMillis();
+			//long finish = System.currentTimeMillis();
 
-			double timeTotal = (finish - start) / 1000f;
-			double timeEval = (finishEval - startEval) / 1000f;
-			double timeSelect = (finishSelect - startSelect) / 1000f;
-			double timeReprod = (finishReprod - startReprod) / 1000f;
+			//double timeTotal = (finish - start) / 1000f;
+			//double timeEval = (finishEval - startEval) / 1000f;
+			//double timeSelect = (finishSelect - startSelect) / 1000f;
+			//double timeReprod = (finishReprod - startReprod) / 1000f;
 
 			// System.out.println("Time total: " + timeTotal + ", eval: " + timeEval + " (" + (timeEval/timeTotal) +
 			// "), select: " + timeSelect + "(" + (timeSelect/timeTotal) + "), reprod: " + timeReprod + "(" +

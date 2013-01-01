@@ -99,12 +99,14 @@ public class TargetFitnessCalculator implements Configurable {
 	private String fitnessConversionType = "proportional";
 	private String performanceMetric = "proportional";
 	private double acceptableError = 0.1;
-	private Random random;
-
+	private Properties properties;
+	
 	public TargetFitnessCalculator() {
 	}
 
 	public void init(Properties props) {
+		properties = props;
+		
 		// If old error type specified.
 		if (props.containsKey(ERROR_TYPE_KEY)) {
 			if (props.containsKey(ERROR_TYPE_TRIAL_KEY) || props.containsKey(ERROR_TYPE_OUTPUT_KEY)) {
@@ -140,8 +142,6 @@ public class TargetFitnessCalculator implements Configurable {
 		}
 
 		acceptableError = props.getDoubleProperty(FITNESS_ACCEPTABLE_ERROR_KEY, acceptableError);
-
-		random = ((AHNIRunProperties) props).getEvolver().getConfig().getRandomGenerator();
 	}
 
 	/**
@@ -180,6 +180,8 @@ public class TargetFitnessCalculator implements Configurable {
 		// logger.debug("Setting fitness to 0 due to recurrent topology for target fitness function.");
 		// return new Results();
 		// }
+		
+		Random random = ((AHNIRunProperties) properties).getEvolver().getConfig().getRandomGenerator();
 
 		int dim = (inputPatterns instanceof double[][]) ? 1 : 2;
 		double[][] input1D = null, output1D = null, responses1D = null;
@@ -197,6 +199,7 @@ public class TargetFitnessCalculator implements Configurable {
 		double maxError = 0;
 		int trialCount = dim == 1 ? input1D.length : input2D.length;
 		int outputCount = substrate.getOutputCount();
+		
 		if (substrate.getMinResponse() > minTargetOutputValue || substrate.getMaxResponse() < maxTargetOutputValue) {
 			throw new IllegalStateException("The response range of the substrate does not encompass the target output range.");
 		}

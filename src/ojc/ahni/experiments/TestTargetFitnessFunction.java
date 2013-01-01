@@ -4,7 +4,9 @@ import org.apache.log4j.Logger;
 
 import ojc.ahni.evaluation.HyperNEATTargetFitnessFunction;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
+import ojc.ahni.transcriber.HyperNEATTranscriber;
 
+import com.anji.integration.ActivatorTranscriber;
 import com.anji.integration.TranscriberException;
 import com.anji.util.Properties;
 
@@ -33,7 +35,7 @@ public class TestTargetFitnessFunction extends HyperNEATTargetFitnessFunction {
 
 	private int numTrials;
 	String testType;
-
+	
 	public TestTargetFitnessFunction() {
 	}
 
@@ -41,11 +43,7 @@ public class TestTargetFitnessFunction extends HyperNEATTargetFitnessFunction {
 		super.init(props);
 
 		testType = props.getProperty(TEST_TYPE_KEY);
-		int inputWidth = width[0];
-		int inputHeight = height[0];
-		int outputWidth = width[depth - 1];
-		int outputHeight = height[depth - 1];
-
+		
 		if (testType.equals("pass-through") || testType.equals("pass-through-flip") || testType.equals("rotate90")) {
 			if (inputWidth != outputWidth || inputHeight != outputHeight) {
 				throw new IllegalArgumentException("HyperNEAT substrate input and output dimensions must be the same for TestTargetFitnessFunction.");
@@ -62,18 +60,31 @@ public class TestTargetFitnessFunction extends HyperNEATTargetFitnessFunction {
 		generatePatterns();
 	}
 
-	protected void scale(int scaleCount, int scaleFactor) {
+	@Override
+	protected void scale(int scaleCount, int scaleFactor, HyperNEATTranscriber transcriber) {
+		int[] width = transcriber.getWidth();
+		int[] height = transcriber.getHeight();
+		int connectionRange = transcriber.getConnectionRange();
+		
 		for (int l = 0; l < width.length; l++) {
 			width[l] *= scaleFactor;
 			height[l] *= scaleFactor;
 		}
-		if (this.connectionRange != -1) {
+		if (connectionRange != -1) {
 			connectionRange *= scaleFactor;
 		}
+		
+		transcriber.resize(width, height, connectionRange);
+		
 		generatePatterns();
 	}
 
 	private void generatePatterns() {
+		HyperNEATTranscriber transcriber = (HyperNEATTranscriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
+		int[] width = transcriber.getWidth();
+		int[] height = transcriber.getHeight();
+		int depth = transcriber.getDepth();
+		
 		double[][][] inputPatterns = new double[numTrials][height[0]][width[0]];
 		double[][][] targetOutputPatterns = new double[numTrials][height[depth - 1]][width[depth - 1]];
 

@@ -19,7 +19,7 @@ import com.anji.util.Properties;
 
 /**
  * <p>This is the main class from which experiment runs are performed.
- * The main purpose of this class is to allow performing multiple evolutionary runs and aggregating the result </p>
+ * The main purpose of this class is to allow performing multiple evolutionary runs and aggregating the result.</p>
  * <p>For each run a new {@link AHNIRunProperties} object is generated from the properties file specified on the command line. The AHNIRunProperties
  * object encapsulates all the configuration parameters for a run, and can be used to retrieve these properties as well as generate and retrieve 
  * singletons of most components used in a run (e.g. the {@link HyperNEATEvolver}, {@link org.jgapcustomised.BulkFitnessFunction} and 
@@ -41,92 +41,113 @@ public class Run {
 			PostProcess.process(args);
 			System.exit(0);
 		}
-			
+		
 		try {
-			Logger logger = Logger.getLogger(Run.class);
-			Properties props = new Properties(args[0]);
+			run(new Properties(args[0]), args, true);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Performs one or more runs.
+	 * @return The final (average) fitness.
+	 */
+	public static double run(Properties props, String[] args, boolean enableLoggingToFiles) throws Exception {
+		Logger logger = Logger.getLogger(Run.class);
 
-			long experimentID = System.currentTimeMillis();
-			String outputDir = props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + File.separator + experimentID + File.separator;
+		long experimentID = System.currentTimeMillis();
+		String outputDir = null;
+		String resultFileNameBase = null;
+		String runLogFile = null;
+		if (enableLoggingToFiles) {
+			outputDir = props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + File.separator + experimentID + File.separator;
 			outputDir = (new File(outputDir)).getCanonicalPath() + File.separator;
 			
-			String resultFileNameBase = outputDir;
+			resultFileNameBase = outputDir;
 			if (args.length > 1)
 				resultFileNameBase += args[1];
 			else
 				resultFileNameBase += "results";
 			
-			String runLogFile = props.getProperty("log4j.appender.RunLog.File", null);
+			runLogFile = props.getProperty("log4j.appender.RunLog.File", null);
 
 			logger.info("Output directory is " + outputDir + ".");
 			logger.info("Performance results will be written to " + resultFileNameBase + "-[performance|fitness].");
-			
-			int numRuns = props.getIntProperty(HyperNEATConfiguration.NUM_RUNS_KEY);
-			int numGens = props.getIntProperty(HyperNEATEvolver.NUM_GENERATIONS_KEY);
+		}
+		
+		int numRuns = props.getIntProperty(HyperNEATConfiguration.NUM_RUNS_KEY);
+		int numGens = props.getIntProperty(HyperNEATEvolver.NUM_GENERATIONS_KEY);
 
-			double[][] performance;
-			double[][] fitness;
-			
-			performance = new double[numRuns][];
-			fitness = new double[numRuns][];
+		double[][] performance;
+		double[][] fitness;
+		
+		performance = new double[numRuns][];
+		fitness = new double[numRuns][];
 
-			long start = System.currentTimeMillis();
-			double avgRunTime = 0;
-			for (int run = 0; run < numRuns; run++) {
-				long startRun = System.currentTimeMillis();
+		long start = System.currentTimeMillis();
+		double avgRunTime = 0;
+		for (int run = 0; run < numRuns; run++) {
+			long startRun = System.currentTimeMillis();
 
-				AHNIRunProperties runProps = new AHNIRunProperties(props);
-				String runID = props.getProperty("run.name") + "-" + experimentID + (numRuns > 1 ? "-" + run : "");
-				runProps.setProperty("run.id", runID);
+			AHNIRunProperties runProps = new AHNIRunProperties(props);
+			String runID = props.getProperty("run.name") + "-" + experimentID + (numRuns > 1 ? "-" + run : "");
+			runProps.setProperty("run.id", runID);
+			if (enableLoggingToFiles) {
 				String runOutputDir = outputDir + (numRuns > 1 ? run + File.separator : "");
 				runProps.setProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY, runOutputDir);
-				
+			
 				// If there is a file logger for each run.
 				if (runLogFile != null) {
 					FileAppender fileAppender = (FileAppender) Logger.getRootLogger().getAppender("RunLog");
 					fileAppender.setFile(runOutputDir + runLogFile);
 					fileAppender.activateOptions();
 				}
-				
-				logger.info("\n\n--- START RUN: " + (run + 1) + " of " + numRuns + " (" + ((run * 100) / (numRuns)) + "%) ---------------------------------------\n\n");
-				HyperNEATEvolver evolver = (HyperNEATEvolver) runProps.singletonObjectProperty(HyperNEATEvolver.class);
-
-				evolver.run();
-
-				performance[run] = evolver.getBestPerformance();
-				fitness[run] = evolver.getBestFitness();
-
-				evolver.dispose();
-
-				long duration = (System.currentTimeMillis() - startRun) / 1000;
-				if (avgRunTime == 0)
-					avgRunTime = duration;
-				else
-					avgRunTime = avgRunTime * 0.9 + duration * 0.1;
-				int eta = (int) Math.round(avgRunTime * (numRuns - (run + 1)));
-				logger.info("\n--- Run finished in " + Misc.formatTimeInterval(duration) + ".  ETA to complete all runs:" + Misc.formatTimeInterval(eta) + ". ------------------\n");
 			}
-			long end = System.currentTimeMillis();
-			logger.info(numRuns + " runs completed in " + Misc.formatTimeInterval((end - start) / 1000));
-
-
-			// Print average results for each run.
-			double[] avgPerf = new double[numGens];
-			double[] avgFit = new double[numGens];
-			double p, f;
-			for (int gen = 0; gen < numGens; gen++) {
-				avgPerf[gen] = 0;
-				avgFit[gen] = 0;
-				for (int run = 0; run < numRuns; run++) {
-					p = performance[run][gen];
-					f = fitness[run][gen];
-					avgPerf[gen] += p;
-					avgFit[gen] += f;
-				}
-				avgPerf[gen] /= numRuns;
-				avgFit[gen] /= numRuns;
+			else {
+				runProps.remove(HyperNEATConfiguration.OUTPUT_DIR_KEY);
 			}
 			
+			logger.info("\n\n--- START RUN: " + (run + 1) + " of " + numRuns + " (" + ((run * 100) / (numRuns)) + "%) ---------------------------------------\n\n");
+			HyperNEATEvolver evolver = (HyperNEATEvolver) runProps.singletonObjectProperty(HyperNEATEvolver.class);
+
+			evolver.run();
+
+			performance[run] = evolver.getBestPerformance();
+			fitness[run] = evolver.getBestFitness();
+
+			evolver.dispose();
+
+			long duration = (System.currentTimeMillis() - startRun) / 1000;
+			if (avgRunTime == 0)
+				avgRunTime = duration;
+			else
+				avgRunTime = avgRunTime * 0.9 + duration * 0.1;
+			int eta = (int) Math.round(avgRunTime * (numRuns - (run + 1)));
+			logger.info("\n--- Run finished in " + Misc.formatTimeInterval(duration) + ".  ETA to complete all runs:" + Misc.formatTimeInterval(eta) + ". ------------------\n");
+		}
+		long end = System.currentTimeMillis();
+		logger.info(numRuns + " runs completed in " + Misc.formatTimeInterval((end - start) / 1000));
+
+
+		// Print average results for each run.
+		double[] avgPerf = new double[numGens];
+		double[] avgFit = new double[numGens];
+		double p, f;
+		for (int gen = 0; gen < numGens; gen++) {
+			avgPerf[gen] = 0;
+			avgFit[gen] = 0;
+			for (int run = 0; run < numRuns; run++) {
+				p = performance[run][gen];
+				f = fitness[run][gen];
+				avgPerf[gen] += p;
+				avgFit[gen] += f;
+			}
+			avgPerf[gen] /= numRuns;
+			avgFit[gen] /= numRuns;
+		}
+		
+		if (enableLoggingToFiles) {
 			BufferedWriter resultFilePerf = new BufferedWriter(new FileWriter(resultFileNameBase + "-avg_performance_in_each_gen_over_all_runs.txt"));
 			String results = "";
 			for (int gen = 0; gen < numGens; gen++)
@@ -134,7 +155,7 @@ public class Run {
 			resultFilePerf.write(results + "\n");
 			resultFilePerf.close();
 			logger.info("Wrote best performance for each generation to " + resultFileNameBase + "-avg_performance_in_each_gen_over_all_runs.txt");
-
+	
 			BufferedWriter resultFileFit = new BufferedWriter(new FileWriter(resultFileNameBase + "-avg_fitness_in_each_gen_over_all_runs.txt"));
 			results = "";
 			for (int gen = 0; gen < numGens; gen++)
@@ -142,11 +163,9 @@ public class Run {
 			resultFileFit.write(results + "\n");
 			resultFileFit.close();			
 			logger.info("Wrote best fitness for each generation to " + resultFileNameBase + "-avg_fitness_in_each_gen_over_all_runs.txt");
-
-			System.exit(0);
-		} catch (Throwable th) {
-			th.printStackTrace();
 		}
+		
+		return avgFit[numGens-1];
 	}
 
 	/**

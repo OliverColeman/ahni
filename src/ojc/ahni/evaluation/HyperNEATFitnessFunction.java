@@ -56,28 +56,6 @@ public abstract class HyperNEATFitnessFunction extends BulkFitnessFunctionMT {
 	public static final String SCALE_RIP_KEY = "fitness.hyperneat.scale.recordintermediateperformance";
 
 	/**
-	 * The Transcriber used to transcribe from a CPPN to a substrate network.
-	 */
-	protected HyperNEATTranscriber transcriberHN;
-	/**
-	 * Width of each layer in the substrate network.
-	 */
-	protected int width[];
-	/**
-	 * Height of each layer in the substrate network.
-	 */
-	protected int height[];
-	/**
-	 * Number of layers in the substrate network.
-	 */
-	protected int depth;
-	/**
-	 * Limits the incoming connections to a target neuron to include those from source neurons within the specified
-	 * range of the target neuron. This is optional.
-	 */
-	protected int connectionRange;
-
-	/**
 	 * The performance level required before a scaling is performed.
 	 * 
 	 * @see #SCALE_PERFORMANCE_KEY
@@ -93,6 +71,23 @@ public abstract class HyperNEATFitnessFunction extends BulkFitnessFunctionMT {
 	private int scaleFactor = 2;
 	private int scaleTimes = 2;
 	private boolean scaleRecordIntermediatePerf = true;
+	
+	/**
+	 * The width of the input layer. This will be set in {@link #init(Properties)} (if the fitness function is to determine this then it will be set to -1 initially).
+	 */
+	protected int inputWidth;
+	/**
+	 * The height of the input layer. This will be set in {@link #init(Properties)} (if the fitness function is to determine this then it will be set to -1 initially).
+	 */
+	protected int inputHeight;
+	/**
+	 * The width of the output layer. This will be set in {@link #init(Properties)} (if the fitness function is to determine this then it will be set to -1 initially).
+	 */
+	protected int outputWidth;
+	/**
+	 * The height of the output layer. This will be set in {@link #init(Properties)} (if the fitness function is to determine this then it will be set to -1 initially).
+	 */
+	protected int outputHeight;
 
 	/**
 	 * Subclasses may override this method to perform initialise tasks. <strong>Make sure to call this method from the
@@ -103,15 +98,17 @@ public abstract class HyperNEATFitnessFunction extends BulkFitnessFunctionMT {
 	public void init(Properties props) {
 		super.init(props);
 
-		transcriberHN = (HyperNEATTranscriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
-		depth = transcriberHN.getDepth();
-		height = transcriberHN.getHeight();
-		width = transcriberHN.getWidth();
-		connectionRange = transcriberHN.getConnectionRange();
-
 		scalePerformance = props.getDoubleProperty(SCALE_PERFORMANCE_KEY, scalePerformance);
 		scaleTimes = Math.max(0, props.getIntProperty(SCALE_COUNT_KEY, scaleTimes));
 		scaleRecordIntermediatePerf = props.getBooleanProperty(SCALE_RIP_KEY, scaleRecordIntermediatePerf);
+		
+		int depth = props.getIntProperty(HyperNEATTranscriber.SUBSTRATE_DEPTH);
+		int[] width = HyperNEATTranscriber.getProvisionalLayerSize(props, HyperNEATTranscriber.SUBSTRATE_WIDTH);
+		int[] height = HyperNEATTranscriber.getProvisionalLayerSize(props, HyperNEATTranscriber.SUBSTRATE_HEIGHT);
+		inputWidth = width[0];
+		inputHeight = height[0];
+		outputWidth = width[depth - 1];
+		outputHeight = height[depth - 1];
 	}
 
 	/**
@@ -129,27 +126,31 @@ public abstract class HyperNEATFitnessFunction extends BulkFitnessFunctionMT {
 		// if we should scale the substrate
 		if (scaleCount < scaleTimes && scaleFactor > 1 && ((targetPerformanceType == 1 && bestPerformance >= scalePerformance) || (targetPerformanceType == 0 && bestPerformance <= scalePerformance))) {
 			// allow sub-class to make necessary changes
-			scale(scaleCount, scaleFactor);
+			HyperNEATTranscriber transcriber = (HyperNEATTranscriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
+			scale(scaleCount, scaleFactor, transcriber);
 			for (Evaluator ev : evaluators)
 				ev.resetSubstrate(); // don't reuse old size substrate
-			transcriberHN.resize(width, height, connectionRange);
+			HyperNEATTranscriber transcriberHN = (HyperNEATTranscriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
+			transcriberHN.resize(transcriberHN.getWidth(), transcriberHN.getHeight(), transcriberHN.getConnectionRange());
 
 			scaleCount++;
 		}
 	}
 
 	/**
-	 * Allow sub-class to make the necessary changes when a substrate scale occurs. If implemented, then at a minimum
-	 * this method will usually need to set new values for the {@link #width} and {#link height} array fields, and the
-	 * {@link #connectionRange} field if applicable.
+	 * Allow a sub-class to make the necessary changes when a substrate scale occurs. If implemented, then at a minimum
+	 * this method will usually need to set new values for the width and height of each layer of the substrate, and the
+	 * connection range if applicable, via {@link HyperNEATTranscriber#resize(int[], int[], int)}.
 	 * 
 	 * @param scaleCount A count of how many times a scale has previously occurred. In the first call this has value 0.
 	 * @param scaleFactor The amount the substrate is being scaled by.
+	 * @param transcriber The transcriber that generates substrates (on which {@link HyperNEATTranscriber#resize(int[], int[], int)} may be called).
 	 */
-	protected void scale(int scaleCount, int scaleFactor) {
+	protected void scale(int scaleCount, int scaleFactor, HyperNEATTranscriber transcriber) {
 	}
 
 	public int getConnectionRange() {
+		HyperNEATTranscriber transcriberHN = (HyperNEATTranscriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
 		return transcriberHN.getConnectionRange();
 	}
 

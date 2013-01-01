@@ -1,33 +1,93 @@
 package ojc.ahni.util;
 
+import java.text.NumberFormat;
+import java.util.Random;
+
 public class ArrayUtil {
 	/**
 	 * @param a The array to print.
-	 * @param prefix A string to prefix to the start of each new line/element.
-	 * @return String representation of the given array with each element on a new line.
+	 * @param separator A string to separate each element.
+	 * @param formatter A formatter to format the values. If null given the numbers will be printed raw.
+	 * @return String representation of the given array.
 	 */
-	public static String toString(int[] a, String prefix) {
+	public static String toString(int[] a, String separator, NumberFormat formatter) {
 		StringBuffer result = new StringBuffer();
-		if (a.length > 0)
-			result.append(prefix).append(a[0]);
-		for (int i = 1; i < a.length; i++)
-			result.append("\n").append(prefix).append(a[i]);
+		if (formatter != null) {
+			if (a.length > 0)
+				result.append(formatter.format(a[0]));
+			for (int i = 1; i < a.length; i++)
+				result.append(separator).append(formatter.format(a[i]));
+		}
+		else {
+			if (a.length > 0)
+				result.append(a[0]);
+			for (int i = 1; i < a.length; i++)
+				result.append(separator).append(a[i]);
+		}
+		return result.toString();
+	}
+	
+	/**
+	 * @param a The array to print.
+	 * @param separator A string to separate each element.
+	 * @param formatter A formatter to format the values. If null given the numbers will be printed raw.
+	 * @return String representation of the given array.
+	 */
+	public static String toString(byte[] a, String separator, NumberFormat formatter) {
+		StringBuffer result = new StringBuffer();
+		if (formatter != null) {
+			if (a.length > 0)
+				result.append(formatter.format(a[0]));
+			for (int i = 1; i < a.length; i++)
+				result.append(separator).append(formatter.format(a[i]));
+		}
+		else {
+			if (a.length > 0)
+				result.append(a[0]);
+			for (int i = 1; i < a.length; i++)
+				result.append(separator).append(a[i]);
+		}
 		return result.toString();
 	}
 
 	/**
 	 * @param a The array to print.
-	 * @param prefix A string to prefix to the start of each new line/element.
-	 * @return String representation of the given array with each element on a new line.
+	 * @param separator A string to separate each element.
+	 * @param formatter A formatter to format the values. If null given the numbers will be printed raw.
+	 * @return String representation of the given array.
 	 */
-	public static String toString(double[] a, String prefix) {
+	public static String toString(double[] a, String separator, NumberFormat formatter) {
 		StringBuffer result = new StringBuffer();
-		if (a.length > 0)
-			result.append(prefix).append(a[0]);
-		for (int i = 1; i < a.length; i++)
-			result.append("\n").append(prefix).append(a[i]);
+		if (formatter != null) {
+			if (a.length > 0)
+				result.append(formatter.format(a[0]));
+			for (int i = 1; i < a.length; i++)
+				result.append(separator).append(formatter.format(a[i]));
+		}
+		else {
+			if (a.length > 0)
+				result.append(a[0]);
+			for (int i = 1; i < a.length; i++)
+				result.append(separator).append(a[i]);
+		}
 		return result.toString();
 	}
+	
+	/**
+	 * @param a The array to print.
+	 * @param separator A string to separate each element.
+	 * @return String representation of the given array.
+	 */
+	public static String toString(String[] a, String separator) {
+		StringBuffer result = new StringBuffer();
+		if (a.length > 0)
+			result.append(a[0]);
+		for (int i = 1; i < a.length; i++)
+			result.append(separator).append(a[i]);
+		return result.toString();
+	}
+	
+	
 	
 	/**
 	 * @param a The array to sum.
@@ -80,4 +140,68 @@ public class ArrayUtil {
 			a[i] *= sumInv;
 		return a;
 	}
+
+	public static double[] newRandom(int size, Random r) {
+		double[] a = new double[size];
+		for (int i = 0; i < size; i++) {
+			a[i] = r.nextDouble();
+		}
+		return a;
+	}
+
+	/**
+	 * Returns the index of the element with the largest value in the given array.
+	 */
+	public static int getMaxIndex(double[] a) {
+		int maxIndex = 0;
+		for (int i = 1; i < a.length; i++) {
+			if (a[i] > a[maxIndex])
+				maxIndex = i;
+		}
+		return maxIndex;
+	}
+	
+	/**
+	 * Returns the largest value in the given array.
+	 */
+	public static double getMaxValue(double[] a) {
+		return a[getMaxIndex(a)];
+	}
+
+	/** 
+	 * Returns a new array that is the result of row-packing the given 2D array into a 1D array.
+	 * @see #unpack(double[], int, int, int)
+	 */
+	public static double[] pack(double[][] unpacked) {
+		int width = unpacked[0].length;
+		int height = unpacked.length;
+		double[] packed = new double[width * height];
+		int i = 0;
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				packed[i++] = unpacked[y][x];
+			}
+		}
+		return packed;
+	}
+
+	/** 
+	 * Returns a new array that is the result of unpacking the given 1D array into a 2D array, row-first.
+	 * @param packed The packed array.
+	 * @param width The width, or number of columns, in the unpacked array.
+	 * @param height The height, or number of rows, in the unpacked array.
+	 * @param outputIndex The index to start reading from in the packed array.
+	 * @see #pack(double[][])
+	 */
+	public static double[][] unpack(double[] packed, int width, int height, int outputIndex) {
+		double[][] unpacked = new double[height][width];
+		int i = outputIndex;
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				unpacked[y][x] = packed[i++];
+			}
+		}
+		return unpacked;
+	}
 }
+

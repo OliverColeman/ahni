@@ -16,12 +16,15 @@ import ojc.ahni.evaluation.HyperNEATFitnessFunction;
 import ojc.ahni.event.AHNIRunProperties;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
 import ojc.ahni.nn.GridNet;
+import ojc.ahni.transcriber.HyperNEATTranscriber;
 import ojc.ahni.transcriber.HyperNEATTranscriberGridNet;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
 import com.anji.integration.Activator;
+import com.anji.integration.ActivatorTranscriber;
+import com.anji.integration.Transcriber;
 import com.anji.neat.Evolver;
 
 public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction {
@@ -122,8 +125,8 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 		int deltaAdjust = 1 + shapeSize / 2; // max delta (in x or y dimension) is width or height of the field -1 - min
 												// distance the centre of the target shape can be from the edge of the
 												// board
-		int maxXDelta = width[0] - deltaAdjust;
-		int maxYDelta = height[0] - deltaAdjust;
+		int maxXDelta = inputWidth - deltaAdjust;
+		int maxYDelta = inputHeight - deltaAdjust;
 		maxDistance = (double) Math.sqrt(maxXDelta * maxXDelta + maxYDelta * maxYDelta);
 
 		if (saveImages) {
@@ -286,25 +289,25 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 	 */
 	public void initialiseEvaluation() {
 		// generate trials
-		stimuli = new double[numTrials][height[0]][width[0]];
+		stimuli = new double[numTrials][inputHeight][inputWidth];
 		// targetCoords = new Point[numTrials];
 		targetPresent = new boolean[numTrials];
 		if (saveImages)
 			stimuliImages = new BufferedImage[numTrials];
 
 		Point pos = new Point();
-		pos.x = width[0] / 2;
-		pos.y = height[0] / 2;
+		pos.x = inputWidth / 2;
+		pos.y = inputHeight / 2;
 
 		// logger.info("init eval");
 		double minDistFactor = (double) Math.sqrt(2) * 2; // no overlap for square shapes
 		for (int t = 0; t < numTrials; t++) {
-			BufferedImage image = new BufferedImage(width[0], height[0], BufferedImage.TYPE_BYTE_GRAY);
+			BufferedImage image = new BufferedImage(inputWidth, inputHeight, BufferedImage.TYPE_BYTE_GRAY);
 			Graphics2D canvas = image.createGraphics();
 			// canvas.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			/*
-			 * //randomly place target pos.x = random.nextInt(width[0]-shapeSize+1); pos.y =
-			 * random.nextInt(height[0]-shapeSize+1); drawShape(canvas, pos, target); targetCoords[t] = new Point(pos.x
+			 * //randomly place target pos.x = random.nextInt(inputWidth-shapeSize+1); pos.y =
+			 * random.nextInt(inputHeight-shapeSize+1); drawShape(canvas, pos, target); targetCoords[t] = new Point(pos.x
 			 * + shapeSize/2, pos.y + shapeSize/2); //assumes odd size
 			 * 
 			 * //randomly place other shapes so they don't overlap the target Path2D.Float shape; for (int s = 0; s <
@@ -312,7 +315,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 			 * shapes[random.nextInt(numShapesInLib)]; } while (shape == target);
 			 * 
 			 * //find somewhere to put it that doesn't overlap too much with the target int tries = 0; do { pos.x =
-			 * random.nextInt(width[0]-shapeSize+1); pos.y = random.nextInt(height[0]-shapeSize+1);
+			 * random.nextInt(inputWidth-shapeSize+1); pos.y = random.nextInt(inputHeight-shapeSize+1);
 			 * 
 			 * tries++; if (tries > 1000) { if (minDistFactor > 1) { minDistFactor *= 0.9f; if (minDistFactor < 1)
 			 * minDistFactor = 1; tries = 0; } else {
@@ -341,8 +344,8 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 
 			// draw image on NN input
 			Raster raster = image.getData();
-			for (int yi = 0; yi < height[0]; yi++) {
-				for (int xi = 0; xi < width[0]; xi++) {
+			for (int yi = 0; yi < inputHeight; yi++) {
+				for (int xi = 0; xi < inputWidth; xi++) {
 					stimuli[t][yi][xi] = raster.getSampleFloat(xi, yi, 0) / 255f;
 					// System.out.print((int) Math.round(stimuli[t][yi][xi] * 10) + " ");
 				}
@@ -369,7 +372,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 		 * double avgDist = 0; double avgInvDist = 0; double percentCorrect = 0; double wsose = 0; for (int t = 0; t <
 		 * numTrials; t++) { double targetOutputError = 0; //for wsoe double nonTargetOutputError = 0; //for wsoe
 		 * 
-		 * Point highest = new Point(0, 0); for (int y = 0; y < height[0]; y++) { for (int x = 0; x < width[0]; x++) {
+		 * Point highest = new Point(0, 0); for (int y = 0; y < inputHeight; y++) { for (int x = 0; x < inputWidth; x++) {
 		 * //find output with highest response if (responses[t][y][x] > responses[t][highest.y][highest.x])
 		 * highest.setLocation(x, y);
 		 * 
@@ -379,7 +382,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 		 * 
 		 * avgDist += targetCoords[t].distance(highest); avgInvDist += 1 / (targetCoords[t].distance(highest) + 1);
 		 * percentCorrect += targetCoords[t].equals(highest) ? 1 : 0; wsose += (targetOutputError +
-		 * (nonTargetOutputError / (width[0]*height[0] - 1))) / 2; } avgDist /= numTrials; avgInvDist /= numTrials;
+		 * (nonTargetOutputError / (inputWidth*inputHeight - 1))) / 2; } avgDist /= numTrials; avgInvDist /= numTrials;
 		 * percentCorrect /= numTrials; wsose /= numTrials;
 		 * 
 		 * 
@@ -437,6 +440,11 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 
 			double weightRange = connectionWeightMax - connectionWeightMin;
 			int connectionRange = getConnectionRange();
+			
+			HyperNEATTranscriber transcriber = (HyperNEATTranscriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
+			int depth = transcriber.getDepth();
+			int[] width = transcriber.getWidth();
+			int[] height = transcriber.getHeight();
 
 			// Generate image for weights
 			BufferedImage[] weightImage = new BufferedImage[depth - 1];
@@ -554,7 +562,13 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 		return (int) Math.round(fitness * maxFitnessValue);
 	}
 
-	protected void scale(int scaleCount, int scaleFactor) {
+	@Override
+	protected void scale(int scaleCount, int scaleFactor, HyperNEATTranscriber transcriber) {
+		int depth = transcriber.getDepth();
+		int[] width = transcriber.getWidth();
+		int[] height = transcriber.getHeight();
+		int connectionRange = transcriber.getConnectionRange();
+
 		// get ratio of shape size to image size (this should be maintained during scale).
 		double ratioW[] = new double[depth];
 		double ratioH[] = new double[depth];
@@ -562,8 +576,6 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 			ratioW[l] = (double) width[l] / shapeSize;
 			ratioH[l] = (double) height[l] / shapeSize;
 		}
-
-		// System.out.println(ratioW + ", " + ratioH);
 
 		// adjust shape size
 		if (scaleFactor % 2 == 0 && shapeSize % 2 == 1) // if scaleFactor is even but shapeSize is odd
@@ -584,6 +596,13 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 		AffineTransform scaleTransform = AffineTransform.getScaleInstance(scaleFactor, scaleFactor);
 		for (int s = 0; s < numShapesInLib; s++)
 			shapes[s].transform(scaleTransform);
+		
+		inputWidth = width[0];
+		inputHeight = height[0];
+		outputWidth = width[width.length - 1];
+		outputHeight = height[height.length - 1];
+		
+		transcriber.resize(width, height, connectionRange);
 
 		logger.info("Scale performed: layer sizes: " + layerSizeString + "shape size: " + shapeSize + ", conn range: " + connectionRange);
 	}

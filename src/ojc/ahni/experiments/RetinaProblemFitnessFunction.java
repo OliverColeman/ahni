@@ -51,11 +51,6 @@ public class RetinaProblemFitnessFunction extends HyperNEATTargetFitnessFunction
 		int retinaWidth = validPatternsLeft[0][0].length;
 		int retinaHeight = validPatternsLeft[0].length;
 
-		int inputWidth = width[0];
-		int inputHeight = height[0];
-		int outputWidth = width[depth - 1];
-		int outputHeight = height[depth - 1];
-
 		if (inputWidth != retinaWidth * 2 || inputHeight != retinaHeight) {
 			throw new IllegalArgumentException("HyperNEAT substrate input layer width and height must be 4 and 2 respectively for the Retina Problem.");
 		}

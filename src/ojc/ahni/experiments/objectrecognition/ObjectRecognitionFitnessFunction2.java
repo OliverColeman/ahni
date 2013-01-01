@@ -6,6 +6,7 @@ import ojc.ahni.*;
 import ojc.ahni.evaluation.HyperNEATFitnessFunction;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
 import ojc.ahni.nn.GridNet;
+import ojc.ahni.transcriber.HyperNEATTranscriber;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
@@ -43,8 +44,8 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 		int deltaAdjust = 1 + largeSquareSize / 2; // max delta (in x or y dimension) is width or height of the field -1
 													// - min distance the centre of the large square can be from the
 													// edge of the board
-		int maxXDelta = width[0] - deltaAdjust;
-		int maxYDelta = height[0] - deltaAdjust;
+		int maxXDelta = inputWidth - deltaAdjust;
+		int maxYDelta = inputHeight - deltaAdjust;
 		double maxDistance = (double) Math.sqrt(maxXDelta * maxXDelta + maxYDelta * maxYDelta);
 		maxFitnessValue = (int) Math.ceil(maxDistance * 1000); // fitness is given by maxFitnessValue - avg of distances
 																// * 1000
@@ -65,13 +66,13 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 	 */
 	public void initialiseEvaluation() {
 		// generate trials
-		stimuli = new double[numTrials][height[0]][width[0]];
+		stimuli = new double[numTrials][inputHeight][inputWidth];
 		targetCoords = new int[numTrials][2];
 
 		for (int t = 0; t < numTrials; t++) {
 			// randomly place large square
-			int xpos = random.nextInt(width[0] - largeSquareSize);
-			int ypos = random.nextInt(height[0] - largeSquareSize);
+			int xpos = random.nextInt(inputWidth - largeSquareSize);
+			int ypos = random.nextInt(inputHeight - largeSquareSize);
 			for (int y = ypos; y < ypos + largeSquareSize; y++) {
 				for (int x = xpos; x < xpos + largeSquareSize; x++) {
 					stimuli[t][y][x] = 1;
@@ -83,8 +84,8 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 			// randomly place small squares to not overlap large square or each other
 			for (int s = 0; s < numSmallSquares; s++) {
 				while (true) {
-					xpos = random.nextInt(width[0]);
-					ypos = random.nextInt(height[0]);
+					xpos = random.nextInt(inputWidth);
+					ypos = random.nextInt(inputHeight);
 					if (stimuli[t][ypos][xpos] == 0) { // if not overlapping
 						stimuli[t][ypos][xpos] = 1;
 						break;
@@ -106,8 +107,8 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 			// find output with highest response
 			int xh = 0;
 			int yh = 0;
-			for (int y = 0; y < height[0]; y++) {
-				for (int x = 0; x < width[0]; x++) {
+			for (int y = 0; y < inputHeight; y++) {
+				for (int x = 0; x < inputWidth; x++) {
 					if (responses[t][y][x] > responses[t][yh][xh]) {
 						xh = x;
 						yh = y;
@@ -126,7 +127,8 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 		return maxFitnessValue - (int) Math.round(((double) (totalDists / numTrials)) * 1000);
 	}
 
-	protected void scale(int scaleCount, int scaleFactor) {
+	@Override
+	protected void scale(int scaleCount, int scaleFactor, HyperNEATTranscriber transcriber) {
 		// adjust shape size
 		largeSquareSize *= scaleFactor;
 		smallSquareSize *= scaleFactor;

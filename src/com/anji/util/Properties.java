@@ -342,7 +342,7 @@ public class Properties extends java.util.Properties {
 		return getIntArrayFromString(value);
 	}
 
-	private int[] getIntArrayFromString(String valString) {
+	public int[] getIntArrayFromString(String valString) {
 		String[] valStrings = valString.replaceAll(" ", "").split(",");
 		int[] vals = new int[valStrings.length];
 		for (int i = 0; i < valStrings.length; i++) {
