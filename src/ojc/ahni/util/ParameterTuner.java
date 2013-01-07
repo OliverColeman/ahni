@@ -187,7 +187,9 @@ public class ParameterTuner {
 		System.out.print("\t\tStarting " + numRuns + " runs: ");
 		for (int r = 0; r < numRuns; r++) {
 			System.out.print(r + " ");
-			sumFitness += Run.run(props, args, false);
+			Run runner = new Run(props);
+			runner.nolog = true;
+			sumFitness += runner.run();
 		}
 		System.out.println();
 		return sumFitness / numRuns;

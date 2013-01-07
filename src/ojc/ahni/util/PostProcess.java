@@ -17,10 +17,9 @@ public class PostProcess {
 	/**
 	 * Utility method to process command line arguments, set-up file IO, and call required post-processing method.
 	 */
-	public static void process(String[] argsArray) {
+	public static void main(String[] argsArray) {
 		Deque<String> args = new ArrayDeque<String>();
 		for (String a : argsArray) args.add(a);
-		args.removeFirst(); // Remove "pp" or "postProcess" command.
 		
 		System.out.println("Running post process with commands " + args);
 		

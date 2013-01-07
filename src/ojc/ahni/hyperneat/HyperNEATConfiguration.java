@@ -236,7 +236,7 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 					BufferedWriter outputfile = new BufferedWriter(new FileWriter(getOutputDirPath() + "initial-sample-CPPN.txt"));
 					outputfile.write(n.toXml());
 					outputfile.close();
-				} catch (IOException | TranscriberException e) {
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}

@@ -3,18 +3,20 @@ package ojc.ahni.hyperneat;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.text.*;
-import java.util.Enumeration;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.apache.log4j.Appender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.FileAppender;
 
 import ojc.ahni.hyperneat.HyperNEATEvolver;
-import ojc.ahni.util.PostProcess;
 
 import com.anji.util.Misc;
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
 
 /**
  * <p>This is the main class from which experiment runs are performed.
@@ -28,56 +30,80 @@ public class Run {
 	private static Logger logger = Logger.getLogger(Run.class);
 	private static final DecimalFormat nf = new DecimalFormat("0.0000");
 	
+	public boolean nolog = false;
+
+	@Parameter(names = { "-output" }, description = "Directory to write output files to (overrides output.dir in properties file).")
+	public String outputDir = null;
+	
+	@Parameter(names = { "-aggresult" }, description = "Suffix of names of files to write aggregate results to.")
+	public String resultFileNameBase = "results";
+	
+	@Parameter(description = "Properties file to read experiment parameters from.", arity=1)
+	public List<String> parameters = new ArrayList<String>();
+
+	public Properties properties = null;
+	
+	
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		if (args.length == 0) {
-			usage();
-			System.exit(-1);
-		}
-		
-		if (args[0].equals("pp") || args[0].equals("postProcess")) {
-			PostProcess.process(args);
-			System.exit(0);
-		}
-		
 		try {
-			run(new Properties(args[0]), args, true);
+			Run runner = new Run();
+			JCommander jcom = new JCommander(runner, args);
+			
+			if (runner.properties == null) {
+				jcom.usage();
+				System.exit(-1);
+			}
+			runner.run();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public Run() throws IOException {
+	}
+	
+	public Run(Properties props) {
+		properties = props;
 	}
 	
 	/**
 	 * Performs one or more runs.
 	 * @return The final (average) fitness.
 	 */
-	public static double run(Properties props, String[] args, boolean enableLoggingToFiles) throws Exception {
-		if (Logger.getRootLogger().getLevel() == Level.OFF) enableLoggingToFiles = false;
-
+	public double run() throws Exception {
+		if (properties == null) properties = new Properties(parameters.get(0));
+		
+		if (nolog) {
+			outputDir = null;
+			properties.setProperty("log4j.rootLogger", "OFF");
+		}
+		
 		long experimentID = System.currentTimeMillis();
-		String outputDir = null;
-		String resultFileNameBase = null;
 		String runLogFile = null;
-		if (enableLoggingToFiles) {
-			outputDir = props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + File.separator + experimentID + File.separator;
+		if (!nolog) {
+			if (outputDir == null) {
+				outputDir = properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + File.separator + experimentID + File.separator;
+			}
+			if ((new File(outputDir)).exists()) {
+				throw new IllegalArgumentException("Output directory " + outputDir + " already exists.");
+			}
 			outputDir = (new File(outputDir)).getCanonicalPath() + File.separator;
+			resultFileNameBase = outputDir + resultFileNameBase;
 			
-			resultFileNameBase = outputDir;
-			if (args.length > 1)
-				resultFileNameBase += args[1];
-			else
-				resultFileNameBase += "results";
-			
-			runLogFile = props.getProperty("log4j.appender.RunLog.File", null);
+			runLogFile = properties.getProperty("log4j.appender.RunLog.File", null);
 
 			logger.info("Output directory is " + outputDir + ".");
 			logger.info("Performance results will be written to " + resultFileNameBase + "-[performance|fitness].");
 		}
+		else {
+			properties.remove(HyperNEATConfiguration.OUTPUT_DIR_KEY);
+		}
 		
-		int numRuns = props.getIntProperty(HyperNEATConfiguration.NUM_RUNS_KEY);
-		int numGens = props.getIntProperty(HyperNEATEvolver.NUM_GENERATIONS_KEY);
+		int numRuns = properties.getIntProperty(HyperNEATConfiguration.NUM_RUNS_KEY);
+		int numGens = properties.getIntProperty(HyperNEATEvolver.NUM_GENERATIONS_KEY);
 
 		double[][] performance;
 		double[][] fitness;
@@ -90,10 +116,10 @@ public class Run {
 		for (int run = 0; run < numRuns; run++) {
 			long startRun = System.currentTimeMillis();
 
-			Properties runProps = new Properties(props);
-			String runID = props.getProperty("run.name") + "-" + experimentID + (numRuns > 1 ? "-" + run : "");
+			Properties runProps = new Properties(properties);
+			String runID = properties.getProperty("run.name") + "-" + experimentID + (numRuns > 1 ? "-" + run : "");
 			runProps.setProperty("run.id", runID);
-			if (enableLoggingToFiles) {
+			if (!nolog) {
 				String runOutputDir = outputDir + (numRuns > 1 ? run + File.separator : "");
 				runProps.setProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY, runOutputDir);
 			
@@ -147,7 +173,7 @@ public class Run {
 			avgFit[gen] /= numRuns;
 		}
 		
-		if (enableLoggingToFiles) {
+		if (!nolog) {
 			BufferedWriter resultFilePerf = new BufferedWriter(new FileWriter(resultFileNameBase + "-avg_performance_in_each_gen_over_all_runs.txt"));
 			String results = "";
 			for (int gen = 0; gen < numGens; gen++)
