@@ -116,7 +116,6 @@ public class Species {
 	public Long getRepresentativeId() {
 		// return representative.getId();
 		if (getFittest() == null) {
-			System.out.println("species empty!");
 			return -1l;
 		}
 		return getFittest().getId();
@@ -366,7 +365,6 @@ public class Species {
 	 */
 	public boolean match(Chromosome aChromosome) {
 		if (isEmpty()) {
-			System.err.println("Attempt to determine chromosome match for empty species");
 			return false;
 		}
 		// return (representative.distance(aChromosome, speciationParms) < speciationParms.getSpeciationThreshold());

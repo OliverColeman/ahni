@@ -10,15 +10,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-import ojc.ahni.event.AHNIRunProperties;
+import ojc.ahni.hyperneat.Configurable;
+import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.nn.BainNN;
 import ojc.ahni.util.NiceWriter;
 
 import org.apache.log4j.Logger;
 
 import com.anji.integration.*;
-import com.anji.util.Configurable;
-import com.anji.util.Properties;
 
 /**
  * <p>
@@ -181,7 +180,7 @@ public class TargetFitnessCalculator implements Configurable {
 		// return new Results();
 		// }
 		
-		Random random = ((AHNIRunProperties) properties).getEvolver().getConfig().getRandomGenerator();
+		Random random = properties.getConfig().getRandomGenerator();
 
 		int dim = (inputPatterns instanceof double[][]) ? 1 : 2;
 		double[][] input1D = null, output1D = null, responses1D = null;

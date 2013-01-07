@@ -55,7 +55,7 @@ import com.anji.util.Properties;
  * @see com.anji.nn.AnjiNet
  * @author Philip Tucker
  */
-public class AnjiNetTranscriber implements Transcriber<AnjiActivator> {
+public class AnjiNetTranscriber implements Transcriber<AnjiActivator>, Configurable {
 	/**
 	 * # recurrent cycles properties key
 	 */

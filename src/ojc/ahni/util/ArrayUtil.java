@@ -1,6 +1,8 @@
 package ojc.ahni.util;
 
+import java.lang.reflect.Array;
 import java.text.NumberFormat;
+import java.util.Arrays;
 import java.util.Random;
 
 public class ArrayUtil {
@@ -202,6 +204,12 @@ public class ArrayUtil {
 			}
 		}
 		return unpacked;
+	}
+	
+	public static double[] newArray(int length, double initialValues) {
+		double[] a = new double[length];
+		if (initialValues != 0) Arrays.fill(a, initialValues);
+		return a;
 	}
 }
 

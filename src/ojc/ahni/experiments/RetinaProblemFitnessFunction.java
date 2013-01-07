@@ -3,8 +3,8 @@ package ojc.ahni.experiments;
 import java.util.Arrays;
 
 import ojc.ahni.evaluation.HyperNEATTargetFitnessFunction;
+import ojc.ahni.hyperneat.Properties;
 
-import com.anji.util.Properties;
 
 /**
  * Implements the Left and Right Retina Problem as described in Constraining Connectivity to Encourage Modularity in

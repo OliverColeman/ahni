@@ -1,16 +1,22 @@
 package ojc.ahni.evaluation;
 
-import java.util.*;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
 
+import ojc.ahni.hyperneat.Configurable;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
+import ojc.ahni.hyperneat.Properties;
 
 import org.apache.log4j.Logger;
-import org.jgapcustomised.*;
+import org.jgapcustomised.Chromosome;
 
-import com.anji.integration.*;
-import com.anji.util.*;
-import com.anji.util.Properties;
+import com.anji.integration.Activator;
+import com.anji.integration.ActivatorTranscriber;
+import com.anji.integration.Transcriber;
+import com.anji.integration.TranscriberException;
 import com.anji.neat.Evolver;
+import com.anji.util.Randomizer;
 
 /**
  * <p>Provides a base for multi-threaded bulk fitness functions. Provides a multi-threaded framework for performing
@@ -195,6 +201,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 
 	protected class Evaluator extends Thread {
 		private volatile boolean go = false;
+		private volatile boolean finish = false;
 		private int id;
 		private Activator substrate;
 
@@ -221,7 +228,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		 * Internal use only
 		 */
 		public void run() {
-			for (;;) {
+			while (!finish) {
 				while (go) {
 					Chromosome chrom;
 					while ((chrom = getNextChromosome()) != null) {
@@ -281,6 +288,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		
 		public void dispose() {
 			substrate.dispose();
+			finish = true;
 		}
 	}
 	

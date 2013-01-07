@@ -1,10 +1,11 @@
 package ojc.ahni.transcriber;
 
 import java.util.Arrays;
-import java.util.Set;
 
 import ojc.ahni.evaluation.AHNIFitnessFunction;
+import ojc.ahni.hyperneat.Configurable;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
+import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.util.Range;
 import ojc.ahni.util.Point;
 
@@ -16,8 +17,6 @@ import com.anji.integration.Activator;
 import com.anji.integration.AnjiNetTranscriber;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
-import com.anji.util.Configurable;
-import com.anji.util.Properties;
 
 /**
  * To "transcribe" is to construct a phenotype from a genotype. This is a base class for Transcribers implementing the
@@ -58,7 +57,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 */
 	public static final String HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD = "ann.hyperneat.connection.expression.threshold";
 	/**
-	 * The minimum weight values in the substrate network.
+	 * The minimum weight values in the substrate network. If this is not specified then the negated value of HYPERNEAT_CONNECTION_WEIGHT_MAX will be used. 
 	 */
 	public static final String HYPERNEAT_CONNECTION_WEIGHT_MIN = "ann.hyperneat.connection.weight.min";
 	/**
@@ -266,12 +265,16 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		// layerEncodingIsInput must be used for recurrent networks.
 		layerEncodingIsInput = !feedForward ? true : layerEncodingIsInput;
 		connectionExprThresh = props.getDoubleProperty(HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD, connectionExprThresh);
-		connectionWeightMin = props.getDoubleProperty(HYPERNEAT_CONNECTION_WEIGHT_MIN);
 		connectionWeightMax = props.getDoubleProperty(HYPERNEAT_CONNECTION_WEIGHT_MAX);
+		connectionWeightMin = props.getDoubleProperty(HYPERNEAT_CONNECTION_WEIGHT_MIN, -connectionWeightMax);
 		connectionRange = props.getIntProperty(HYPERNEAT_CONNECTION_RANGE, -1);
 		depth = props.getIntProperty(SUBSTRATE_DEPTH);
 		cyclesPerStep = feedForward ? depth - 1 : props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP, 1);
 		enableLEO = props.getBooleanProperty(HYPERNEAT_LEO, enableLEO);
+		
+		if (enableLEO && connectionExprThresh != 0) {
+			logger.warn("LEO is enabled but the connection expression threshold is not 0. It is recommended to set the connection expression threshold to 0 when LEO is enabled.");
+		}
 		
 		width = getProvisionalLayerSize(props, SUBSTRATE_WIDTH);
 		height = getProvisionalLayerSize(props, SUBSTRATE_HEIGHT);
@@ -486,10 +489,18 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		protected Activator cppnActivator;
 		protected double[] cppnInput = new double[cppnInputCount];
 		protected double[] cppnOutput;
+		protected double cppnMin, cppnMax, cppnRange;
+		protected boolean cppnOutputUnitBounded;
+		protected boolean cppnOutputPlusMinusUnitBounded;
 
 		public CPPN(Chromosome genotype) throws TranscriberException {
 			cppnActivator = cppnTranscriber.transcribe(genotype);
 			cppnInput[0] = 1; // Bias.
+			cppnMin = cppnActivator.getMinResponse();
+			cppnMax = cppnActivator.getMaxResponse();
+			cppnRange = cppnMax - cppnMin;
+			cppnOutputUnitBounded = cppnMin == 0 && cppnMax == 1;
+			cppnOutputPlusMinusUnitBounded = cppnMin == -1 && cppnMax == 1;
 		}
 
 		/**
@@ -714,6 +725,15 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		public double getWeight() {
 			return cppnOutput[cppnIdxW[0]];
 		}
+		
+		/**
+		 * Get the value of the weight. Should be called after calling {@link #query()}.
+		 * The output will be transformed to be within the specified range and may optionally
+		 * have a threshold applied.
+		 */
+		public double getRangedWeight(double minValue, double maxValue, double valueRange, double threshold) {
+			return getRangedOutput(cppnIdxW[0], minValue, maxValue, valueRange, threshold);
+		}
 
 		/**
 		 * Get the value of the weight for the specified layer in a layered feed-forward network encoded with
@@ -721,6 +741,16 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		 */
 		public double getWeight(int sourceLayerIndex) {
 			return cppnOutput[cppnIdxW[sourceLayerIndex]];
+		}
+		
+		/**
+		 * Get the value of the weight for the specified layer in a layered feed-forward network encoded with
+		 * {@link #HYPERNEAT_LAYER_ENCODING} set to false. Should be called after calling {@link #query()}.
+		 * The output will be transformed to be within the specified range and may optionally
+		 * have a threshold applied.
+		 */
+		public double getRangedWeight(int sourceLayerIndex, double minValue, double maxValue, double valueRange, double threshold) {
+			return getRangedOutput(cppnIdxW[sourceLayerIndex], minValue, maxValue, valueRange, threshold);
 		}
 
 		/**
@@ -730,6 +760,16 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		public double getBiasWeight() {
 			return cppnOutput[cppnIdxB[0]];
 		}
+		
+		/**
+		 * Get the value of the weight for a bias connection. Should be called after calling {@link #query()}. The bias
+		 * is usually queried for a target neuron after setting the source coordinate values to 0.
+		 * The output will be transformed to be within the specified range and may optionally
+		 * have a threshold applied.
+		 */
+		public double getRangedBiasWeight(double minValue, double maxValue, double valueRange, double threshold) {
+			return getRangedOutput(cppnIdxB[0], minValue, maxValue, valueRange, threshold);
+		}
 
 		/**
 		 * Get the value of the weight for a bias connection for the specified layer in a layered feed-forward network
@@ -738,6 +778,17 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		 */
 		public double getBiasWeight(int sourceLayerIndex) {
 			return cppnOutput[cppnIdxB[sourceLayerIndex]];
+		}
+
+		/**
+		 * Get the value of the weight for a bias connection for the specified layer in a layered feed-forward network
+		 * encoded with {@link #HYPERNEAT_LAYER_ENCODING} set to false. Should be called after calling {@link #query()}.
+		 * The bias is usually queried for a target neuron after setting the source coordinate values to 0.
+		 * The output will be transformed to be within the specified range and may optionally
+		 * have a threshold applied.
+		 */
+		public double getRangedBiasWeight(int sourceLayerIndex, double minValue, double maxValue, double valueRange, double threshold) {
+			return getRangedOutput(cppnIdxB[sourceLayerIndex], minValue, maxValue, valueRange, threshold);
 		}
 
 		/**
@@ -763,6 +814,41 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		 */
 		public double getOutput(int index) {
 			return cppnOutput[index];
+		}
+		
+		/**
+		 * Get the value of the output with the given index. This is useful for sub-classes of HyperNEATTranscriber that
+		 * add additional outputs to the CPPN. The output will be transformed to be within the specified range and may optionally
+		 * have a threshold applied.
+		 */
+		public double getRangedOutput(int index, double minValue, double maxValue, double valueRange, double threshold) {
+			double output = cppnOutput[index];
+			if (cppnOutputUnitBounded) {
+				// Scale to range [minValue, maxValue].
+				output = output * valueRange + minValue;
+			}
+			else if (cppnOutputPlusMinusUnitBounded) {
+				// Scale to range [minValue, maxValue].
+				output = ((output + 1) * 0.5) * valueRange + minValue;
+			}
+			else {
+				// Truncate to range [minValue, maxValue].
+				output = Math.min(maxValue, Math.max(minValue, output));
+			}
+			
+			// If thresholding is to be applied.
+			if (threshold > 0) { 
+				if (Math.abs(output) > threshold) {
+					if (output > 0)
+						output = (output - threshold) * (maxValue / (maxValue - threshold));
+					else
+						output = (output + threshold) * (minValue / (minValue + threshold));
+				}
+				else {
+					output = 0;
+				}
+			}
+			return output;
 		}
 	}
 

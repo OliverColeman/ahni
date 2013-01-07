@@ -1,9 +1,9 @@
 package ojc.ahni.experiments;
 
 import ojc.ahni.evaluation.TargetFitnessFunctionMT;
+import ojc.ahni.hyperneat.Properties;
 
 import com.anji.neat.NeatConfiguration;
-import com.anji.util.Properties;
 
 /**
  * A test fitness function that determines fitness based on how close the output of a network is to a target output

@@ -4,11 +4,11 @@ import org.apache.log4j.Logger;
 
 import ojc.ahni.evaluation.HyperNEATTargetFitnessFunction;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
+import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.transcriber.HyperNEATTranscriber;
 
 import com.anji.integration.ActivatorTranscriber;
 import com.anji.integration.TranscriberException;
-import com.anji.util.Properties;
 
 /**
  * A test fitness function that determines fitness based on how close the output of a network is to a target output

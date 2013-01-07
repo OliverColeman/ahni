@@ -9,8 +9,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 
+import ojc.ahni.hyperneat.Configurable;
+import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.nn.BainNN;
-import ojc.ahni.nn.BainNN.Topology;
 import ojc.bain.NeuralNetwork;
 import ojc.bain.base.ComponentCollection;
 import ojc.bain.base.NeuronCollection;
@@ -28,8 +29,6 @@ import com.anji.neat.NeuronAllele;
 import com.anji.neat.NeuronType;
 
 import com.anji.nn.RecurrencyPolicy;
-import com.anji.util.Configurable;
-import com.anji.util.Properties;
 
 /**
  * <p>
@@ -47,7 +46,7 @@ import com.anji.util.Properties;
  * 
  * @author Oliver Coleman
  */
-public class NEATTranscriberBain implements Transcriber<BainNN> {
+public class NEATTranscriberBain implements Transcriber<BainNN>, Configurable {
 	private final static Logger logger = Logger.getLogger(NEATTranscriberBain.class);
 
 	public static final String SIMULATION_RESOLUTION_KEY = "ann.bain.resolution";

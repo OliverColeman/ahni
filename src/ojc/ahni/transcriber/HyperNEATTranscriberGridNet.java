@@ -1,5 +1,6 @@
 package ojc.ahni.transcriber;
 
+import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.nn.GridNet;
 import ojc.bain.neuron.rate.NeuronCollectionWithBias;
 
@@ -15,7 +16,6 @@ import com.anji.integration.TranscriberException;
 import com.anji.nn.*;
 import com.anji.nn.activationfunction.ActivationFunction;
 import com.anji.nn.activationfunction.ActivationFunctionFactory;
-import com.anji.util.*;
 
 /**
  * Constructs a {@link ojc.ahni.nn.GridNet} neural network from a chromosome using the hypercube (from HyperNEAT)
@@ -46,7 +46,7 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 	/**
 	 * @see Configurable#init(Properties)
 	 */
-	public void init(Properties props) {
+	public void init(ojc.ahni.hyperneat.Properties props) {
 		super.init(props);
 		activationFunction = ActivationFunctionFactory.getInstance().get(props.getProperty(HYPERNEAT_ACTIVATION_FUNCTION_KEY));
 	}
@@ -297,15 +297,4 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 	public Class getPhenotypeClass() {
 		return GridNet.class;
 	}
-
-	/*
-	 * public static void main(String[] args) { Point2D.Double p1 = new Point2D.Double(1, 1); Point2D.Double p2 = new
-	 * Point2D.Double(1, 2); for (double a = 0; a < Math.PI*2; a += Math.PI * 0.1) { p2.x = p1.x + Math.cos(a); p2.y =
-	 * p1.y + Math.sin(a);
-	 * 
-	 * double angle = Math.atan2(p2.y-p1.y, p2.x-p1.x); if (angle < 0) angle += 2*Math.PI;
-	 * 
-	 * System.out.println(p1.x + "," + p1.y + " - " + (double)p2.x + "," + (double)p2.y + " - " + (double)
-	 * Math.toDegrees(a) + " - " + (double) Math.toDegrees(angle) + " - " + (double) (angle / (2*Math.PI))); } }
-	 */
 }

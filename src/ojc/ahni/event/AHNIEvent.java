@@ -6,7 +6,7 @@ import ojc.ahni.hyperneat.HyperNEATEvolver;
  * Class to encapsulate information about events that occur during the course of an evolutionary run in AHNI.
  * @see AHNIEventListener
  * @see ojc.ahni.hyperneat.HyperNEATEvolver
- * @see AHNIRunProperties
+ * @see ojc.ahni.hyperneat.Properties
  */
 public class AHNIEvent {
 	/**

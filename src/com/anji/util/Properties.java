@@ -409,7 +409,6 @@ public class Properties extends java.util.Properties {
 		String value = super.getProperty(key);
 		log(key, value, "defaults");
 		if (value == null) {
-			System.out.println("null");
 			return defaultObjects;
 		}
 		value = value.replaceAll("\\s", "");

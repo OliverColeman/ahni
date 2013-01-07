@@ -463,11 +463,13 @@ public class BainNN implements Activator {
 		out.append("\nNeurons:\n\t");
 		NeuronCollectionWithBias biasNeurons = (nn.getNeurons() instanceof NeuronCollectionWithBias) ? (NeuronCollectionWithBias) nn.getNeurons() : null;
 		if (biasNeurons != null) {
-		  out.append("bias \t");
+		  out.append("bias\t");
 		}
 		String[] paramNames = nn.getNeurons().getConfigSingleton() != null ? nn.getNeurons().getConfigSingleton().getParameterNames() : null;
 		if (paramNames != null) {
-			out.append(ArrayUtil.toString(paramNames, "\t"));
+			for (int p = 0; p < paramNames.length; p++) {
+				out.append(paramNames[p].substring(0, Math.min(6, paramNames[p].length())) + "\t");
+			}
 		}
 		for (int i = 0; i < neuronCount; i++) {
 			out.append("\n\t");
@@ -483,7 +485,10 @@ public class BainNN implements Activator {
 		out.append("\n\tpre > post\tweight");
 		paramNames = nn.getSynapses().getConfigSingleton() != null ? nn.getSynapses().getConfigSingleton().getParameterNames() : null;
 		if (paramNames != null) {
-			out.append("\t" + ArrayUtil.toString(paramNames, "\t"));
+			out.append("\t");
+			for (int p = 0; p < paramNames.length; p++) {
+				out.append(paramNames[p].substring(0, Math.min(6, paramNames[p].length())) + "\t");
+			}
 		}
 		for (int i = 0; i < synapseCount; i++) {
 			int pre = nn.getSynapses().getPreNeuron(i);

@@ -7,25 +7,25 @@ import java.text.*;
 import java.util.Enumeration;
 
 import org.apache.log4j.Appender;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.FileAppender;
 
-import ojc.ahni.event.AHNIRunProperties;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
 import ojc.ahni.util.PostProcess;
 
 import com.anji.util.Misc;
-import com.anji.util.Properties;
 
 /**
  * <p>This is the main class from which experiment runs are performed.
  * The main purpose of this class is to allow performing multiple evolutionary runs and aggregating the result.</p>
- * <p>For each run a new {@link AHNIRunProperties} object is generated from the properties file specified on the command line. The AHNIRunProperties
+ * <p>For each run a new {@link Properties} object is generated from the properties file specified on the command line. The Properties
  * object encapsulates all the configuration parameters for a run, and can be used to retrieve these properties as well as generate and retrieve 
  * singletons of most components used in a run (e.g. the {@link HyperNEATEvolver}, {@link org.jgapcustomised.BulkFitnessFunction} and 
  * {@link com.anji.integration.Transcriber}).</p> 
  */
 public class Run {
+	private static Logger logger = Logger.getLogger(Run.class);
 	private static final DecimalFormat nf = new DecimalFormat("0.0000");
 	
 	/**
@@ -54,7 +54,7 @@ public class Run {
 	 * @return The final (average) fitness.
 	 */
 	public static double run(Properties props, String[] args, boolean enableLoggingToFiles) throws Exception {
-		Logger logger = Logger.getLogger(Run.class);
+		if (Logger.getRootLogger().getLevel() == Level.OFF) enableLoggingToFiles = false;
 
 		long experimentID = System.currentTimeMillis();
 		String outputDir = null;
@@ -90,7 +90,7 @@ public class Run {
 		for (int run = 0; run < numRuns; run++) {
 			long startRun = System.currentTimeMillis();
 
-			AHNIRunProperties runProps = new AHNIRunProperties(props);
+			Properties runProps = new Properties(props);
 			String runID = props.getProperty("run.name") + "-" + experimentID + (numRuns > 1 ? "-" + run : "");
 			runProps.setProperty("run.id", runID);
 			if (enableLoggingToFiles) {

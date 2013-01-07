@@ -31,7 +31,7 @@ import com.anji.util.Configurable;
  * 
  * @author Philip Tucker
  */
-public interface Transcriber<T extends Activator> extends Configurable {
+public interface Transcriber<T extends Activator> {
 
 	/**
 	 * Sub-classes must implement this method to convert the genotype to a phenotype.

@@ -1,10 +1,9 @@
 package ojc.ahni.experiments.objectrecognition;
 
-import java.util.*;
-
 import ojc.ahni.*;
 import ojc.ahni.evaluation.HyperNEATFitnessFunction;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
+import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.nn.GridNet;
 import ojc.ahni.transcriber.HyperNEATTranscriber;
 
@@ -13,12 +12,9 @@ import org.jgapcustomised.*;
 
 import com.anji.integration.*;
 import com.anji.nn.*;
-import com.anji.util.*;
 
 /**
  * Determines fitness based on how close <code>Activator</code> output is to a target.
- * 
- * @author Philip Tucker
  */
 public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction {
 	private double[][][] stimuli;
@@ -35,7 +31,7 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 	 * 
 	 * @param props configuration parameters
 	 */
-	public void init(com.anji.util.Properties props) {
+	public void init(Properties props) {
 		super.init(props);
 		setMaxFitnessValue();
 	}

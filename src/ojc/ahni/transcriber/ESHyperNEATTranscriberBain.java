@@ -1,14 +1,9 @@
 package ojc.ahni.transcriber;
 
-import java.awt.Color;
-import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,13 +11,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
 import ojc.ahni.event.*;
 import ojc.ahni.hyperneat.HyperNEATConfiguration;
+import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.nn.BainNN;
 import ojc.ahni.util.Point;
 import ojc.bain.NeuralNetwork;
@@ -37,8 +31,6 @@ import org.jgapcustomised.Chromosome;
 import com.amd.aparapi.Kernel;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
-import com.anji.util.Configurable;
-import com.anji.util.Properties;
 
 /**
  * Constructs a <a href="https://github.com/OliverColeman/bain">Bain</a> neural network from a chromosome using the
@@ -191,7 +183,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 		
 		maxQuadTreeSize = (int) Math.pow(4, maxDepth+0.25);
 		
-		((AHNIRunProperties) props).getEvolver().addEventListener(this);
+		((Properties) props).getEvolver().addEventListener(this);
 	}
 
 	private ArrayList<Neuron> extractCoords(int type) {

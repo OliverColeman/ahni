@@ -16,6 +16,7 @@ import ojc.ahni.*;
 import ojc.ahni.evaluation.BulkFitnessFunctionMT;
 import ojc.ahni.evaluation.HyperNEATFitnessFunction;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
+import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.nn.GridNet;
 import ojc.ahni.transcriber.HyperNEATTranscriber;
 import ojc.ahni.transcriber.HyperNEATTranscriberGridNet;
@@ -81,7 +82,7 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
 	double connectionWeightMin;
 	double connectionWeightMax;
 
-	public void init(com.anji.util.Properties props) {
+	public void init(Properties props) {
 		super.init(props);
 
 		shapeSize = props.getIntProperty(SHAPE_SIZE_KEY, shapeSize);

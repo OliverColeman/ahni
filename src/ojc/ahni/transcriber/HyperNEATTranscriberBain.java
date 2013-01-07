@@ -1,5 +1,6 @@
 package ojc.ahni.transcriber;
 
+import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.nn.BainNN;
 import ojc.bain.NeuralNetwork;
 import ojc.bain.base.ComponentCollection;
@@ -19,7 +20,6 @@ import com.anji.integration.AnjiNetTranscriber;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
 import com.anji.nn.*;
-import com.anji.util.*;
 
 /**
  * Constructs a <a href="https://github.com/OliverColeman/bain">Bain</a> neural network from a chromosome using the
@@ -56,6 +56,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 	private int[] neuronLayerSize, bainIndexForNeuronLayer, ffSynapseLayerSize, bainIndexForFFSynapseLayer; // ff=feed
 																											// forward
 	private int neuronCount, synapseCount;
+	private double connectionWeightRange;
 
 	// The names of neuron and synapse model parameters set via CPPN outputs.
 	String[] cppnNeuronParamNames = new String[0];
@@ -99,6 +100,32 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		super.init(props);
 
 		this.properties = props;
+		
+		connectionWeightRange = connectionWeightMax - connectionWeightMin;
+		
+		// Weight for first synapse type comes from the standard CPPN weight output.
+		// This gets set even if multiple synapse types aren't enabled.
+		cppnIDXSynapseTypeWeights[0] = getCPPNIndexWeight()[0];
+		// If multiple synapse types are enabled.
+		if (props.containsKey(SUBSTRATE_SYNAPSE_MODEL_TYPES)) {
+			String[] typeData = props.getProperty(SUBSTRATE_SYNAPSE_MODEL_TYPES).replaceAll("\\s|\\)", "").split(",");
+			if (typeData.length > 1) {
+				synapseModelTypeCount = typeData.length-1;
+				cppnIDXSynapseTypeWeights = new int[synapseModelTypeCount];
+				cppnIDXSynapseTypeWeights[0] = getCPPNIndexWeight()[0];
+				synapseTypesEnabled = true;
+				synapseModelTypeParam = typeData[0];
+				synapseModelTypes = new double[synapseModelTypeCount];
+				for (int i = 0; i < synapseModelTypeCount; i++) {
+					synapseModelTypes[i] = Double.parseDouble(typeData[i+1]);
+				}
+				for (int i = 1; i < synapseModelTypeCount; i++) {
+					cppnIDXSynapseTypeWeights[i] = cppnOutputCount++;
+				}
+				logger.info("CPPN output size with synapse model types: " + cppnOutputCount);
+			}
+		}
+
 		neuronLayerSize = new int[depth];
 		bainIndexForNeuronLayer = new int[depth];
 		if (feedForward) {
@@ -130,27 +157,6 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		if (neuronParamsEnabled || synapseParamsEnabled) {
 			logger.info("CPPN output size with synapse and/or neuron model parameters: " + cppnOutputCount);
 		}
-
-		
-		// Weight for first synapse type comes from the standard CPPN weight output.
-		// This gets set even if multiple synapse types aren't enabled.
-		cppnIDXSynapseTypeWeights[0] = getCPPNIndexWeight()[0];
-		// If multiple synapse types are enabled.
-		if (props.containsKey(SUBSTRATE_SYNAPSE_MODEL_TYPES)) {
-			String[] typeData = props.getProperty(SUBSTRATE_SYNAPSE_MODEL_TYPES).replaceAll("\\s|\\)", "").split("(");
-			if (typeData.length > 1) {
-				synapseTypesEnabled = true;
-				synapseModelTypeParam = typeData[0];
-				synapseModelTypeCount = typeData.length-1;
-				synapseModelTypes = new double[synapseModelTypeCount];
-				for (int i = 0; i < synapseModelTypeCount; i++) {
-					synapseModelTypes[i] = Double.parseDouble(typeData[i+1]);
-				}
-				for (int i = 1; i < synapseModelTypeCount; i++) {
-					cppnIDXSynapseTypeWeights[i] = cppnOutputCount++;
-				}
-			}
-		}
 		
 		synapseDisableParamName = props.getProperty(SUBSTRATE_SYNAPSE_MODEL_DISABLE_PARAM, null);
 	}
@@ -175,9 +181,11 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 	 * @return phenotype If given this will be updated and returned, if NULL then a new network will be created.
 	 * @throws TranscriberException
 	 */
-	public BainNN newBainNN(Chromosome genotype, BainNN subsrate) throws TranscriberException {
+	public BainNN newBainNN(Chromosome genotype, BainNN substrate) throws TranscriberException {
 		CPPN cppn = new CPPN(genotype);
-		boolean createNewPhenotype = (subsrate == null);
+				
+		//substrate = null;
+		boolean createNewPhenotype = (substrate == null);
 		NeuronCollection neurons = null;
 		SynapseCollection synapses = null;
 		if (createNewPhenotype) {
@@ -211,8 +219,8 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 				((SynapseConfiguration) synapses.getConfiguration(0)).maximumEfficacy = connectionWeightMax;
 			}
 		} else {
-			neurons = subsrate.getNeuralNetwork().getNeurons();
-			synapses = subsrate.getNeuralNetwork().getSynapses();
+			neurons = substrate.getNeuralNetwork().getNeurons();
+			synapses = substrate.getNeuralNetwork().getSynapses();
 		}
 		double[] synapseWeights = synapses.getEfficacies();
 		
@@ -230,19 +238,13 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 						cppn.setSourceCoordinatesFromGridIndices(tx, ty, tz);
 						cppn.query();
 						
-						if ( enableBias) {
+						if (enableBias) {
+							double biasVal = 0;
 							int cppnOutputIndex = layerEncodingIsInput ? 0 : tz - 1;
-							double biasVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getBiasWeight(cppnOutputIndex)));
-							if (Math.abs(biasVal) > connectionExprThresh) {
-								if (biasVal > 0)
-									biasVal = (biasVal - connectionExprThresh) * (connectionWeightMax / (connectionWeightMax - connectionExprThresh));
-								else
-									biasVal = (biasVal + connectionExprThresh) * (connectionWeightMin / (connectionWeightMin + connectionExprThresh));
-	
-								((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, biasVal);
-							} else {
-								((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, 0);
+							if (!enableLEO || enableLEO && cppn.getLEO(cppnOutputIndex) > 0) {
+								biasVal = cppn.getRangedBiasWeight(cppnOutputIndex, connectionWeightMin, connectionWeightMax, connectionWeightRange, connectionExprThresh);
 							}
+							((NeuronCollectionWithBias) neurons).setBias(bainNeuronIndexTarget, biasVal);
 						}
 						
 						if (neuronParamsEnabled) {
@@ -275,27 +277,10 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 									synapses.setPreAndPostNeurons(synapseIndex, bainNeuronIndexSource, bainNeuronIndexTarget);
 									
 									// Determine weight for synapse from source to target.
-									int cppnOutputIndex;
-									if (!synapseTypesEnabled) {
-										cppnOutputIndex = this.getCPPNIndexWeight()[layerEncodingIsInput ? 0 : sz];
-									}
-									else {
-										cppnOutputIndex = cppnIDXSynapseTypeWeights[synapseType];
-									}
-									double weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getOutput(cppnOutputIndex)));
-									//logger.info(cppnOutputIndex + " : " + weightVal);
-									
-									if (enableLEO) {
-										weightVal = cppn.getLEO(layerEncodingIsInput ? 0 : sz) > 0 ? weightVal : 0;
-									}
-									// Otherwise use conventional thresholding.
-									else if (Math.abs(weightVal) > connectionExprThresh) {
-										if (weightVal > 0)
-											weightVal = (weightVal - connectionExprThresh) * (connectionWeightMax / (connectionWeightMax - connectionExprThresh));
-										else
-											weightVal = (weightVal + connectionExprThresh) * (connectionWeightMin / (connectionWeightMin + connectionExprThresh));
-									} else {
-										weightVal = 0;
+									int cppnOutputIndex = !synapseTypesEnabled ? this.getCPPNIndexWeight()[layerEncodingIsInput ? 0 : sz] : cppnIDXSynapseTypeWeights[synapseType];
+									double weightVal = 0;
+									if (!enableLEO || enableLEO && cppn.getLEO(layerEncodingIsInput ? 0 : sz) > 0) {
+										weightVal = cppn.getRangedOutput(cppnOutputIndex, connectionWeightMin, connectionWeightMax, connectionWeightRange, connectionExprThresh);
 									}
 									synapseWeights[synapseIndex] = weightVal;
 									
@@ -306,8 +291,8 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 										c.maximumEfficacy = connectionWeightMax;
 										// Set parameters for the config.
 										for (int p = 0; p < cppnSynapseParamNames.length; p++) {
-											c.setParameterValue(cppnSynapseParamNames[p], cppn.getOutput(cppnIDXSynapseParams[p]), true);
-											//logger.info(cppnSynapseParamNames[p] + " (" + cppnIDXSynapseParams[p] + "): " + cppn.getOutput(cppnIDXSynapseParams[p]));
+											double v = cppn.getRangedOutput(cppnIDXSynapseParams[p], connectionWeightMin, connectionWeightMax, connectionWeightRange, connectionExprThresh);
+											c.setParameterValue(cppnSynapseParamNames[p], v, true);
 										}
 										if (synapseTypesEnabled) {
 											c.setParameterValue(synapseModelTypeParam, synapseModelTypes[synapseType], true);
@@ -348,20 +333,20 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 			int[] inputDims = new int[] { width[0], height[0] };
 			int maxRecurrentCycles = properties.getIntProperty(SUBSTRATE_MAX_RECURRENT_CYCLE, 1000);
 			try {
-				subsrate = new BainNN(nn, inputDims, outputDims, cyclesPerStep, feedForward ? BainNN.Topology.FEED_FORWARD_LAYERED : BainNN.Topology.RECURRENT, "network " + genotype.getId(), maxRecurrentCycles);
+				substrate = new BainNN(nn, inputDims, outputDims, cyclesPerStep, feedForward ? BainNN.Topology.FEED_FORWARD_LAYERED : BainNN.Topology.RECURRENT, "network " + genotype.getId(), maxRecurrentCycles);
 			} catch (Exception e) {
 				throw new TranscriberException(e);
 			}
 			//logger.info("New substrate has " + neuronCount + " neurons and " + synapseCount + " synapses.");
 		} else {
-			subsrate.setName("network " + genotype.getId());
+			substrate.setName("network " + genotype.getId());
 		}
 		
 		// This will cause the kernels to push all relevant data to the OpenCL device if necessary.
 		neurons.init();
 		synapses.init();
-		subsrate.reset();
-		return subsrate;
+		substrate.reset();
+		return substrate;
 	}
 
 	@Override

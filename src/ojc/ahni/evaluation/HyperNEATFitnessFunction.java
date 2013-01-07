@@ -1,16 +1,15 @@
 package ojc.ahni.evaluation;
 
-import java.util.*;
+import java.util.List;
 
 import ojc.ahni.hyperneat.HyperNEATEvolver;
+import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.transcriber.HyperNEATTranscriber;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
 import com.anji.integration.*;
-import com.anji.util.*;
-import com.anji.util.Properties;
 import com.anji.neat.Evolver;
 
 /**
@@ -18,7 +17,7 @@ import com.anji.neat.Evolver;
  * evaluations on multiple genomes. The methods {@link #getMaxFitnessValue()} and
  * {@link #evaluate(Chromosome, Activator, int)} must be implemented in subclasses. Subclasses may also need to override
  * the methods {@link #init(Properties)}, {@link #initialiseEvaluation()},
- * {@link #postEvaluate(Chromosome, Activator, int)}, {@link #scale(int, int)} and {@link #dispose()}.</p>
+ * {@link #postEvaluate(Chromosome, Activator, int)}, {@link #scale(int, int, HyperNEATTranscriber)} and {@link #dispose()}.</p>
  * 
  * <p>Subclasses may wish to override {@link #evolutionFinished(ojc.ahni.hyperneat.HyperNEATEvolver)} to perform testing or other analysis
  * on the fittest and/or best performing Chromosomes evolved during the run; the method

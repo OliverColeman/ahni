@@ -13,7 +13,7 @@ import javax.imageio.ImageIO;
 
 import ojc.ahni.*;
 import ojc.ahni.evaluation.HyperNEATFitnessFunction;
-import ojc.ahni.event.AHNIRunProperties;
+import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
 import ojc.ahni.nn.GridNet;
 import ojc.ahni.transcriber.HyperNEATTranscriber;
@@ -52,7 +52,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 	private static int maxFitnessValue = 1000000;
 	private static int numTrials = 200;
 
-	private AHNIRunProperties properties;
+	private Properties properties;
 	private double bestPerformanceSoFar = 0;
 	private double bestFitnessSoFar = 0;
 	public double bestPCSoFar = 0;
@@ -93,8 +93,8 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 	double connectionWeightMin;
 	double connectionWeightMax;
 
-	public void init(com.anji.util.Properties props) {
-		this.properties = (AHNIRunProperties) props;
+	public void init(Properties props) {
+		this.properties = (Properties) props;
 		super.init(props);
 
 		shapeSize = props.getIntProperty(SHAPE_SIZE_KEY, shapeSize);

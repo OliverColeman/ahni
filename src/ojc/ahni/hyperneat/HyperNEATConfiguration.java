@@ -1,19 +1,13 @@
 package ojc.ahni.hyperneat;
 
-import java.awt.image.BufferedImage;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.SortedMap;
 
-import javax.imageio.ImageIO;
-
-import ojc.ahni.nn.BainNN;
 import ojc.ahni.transcriber.HyperNEATTranscriber;
 
 import org.apache.log4j.Logger;
@@ -22,23 +16,18 @@ import org.jgapcustomised.Chromosome;
 import org.jgapcustomised.ChromosomeMaterial;
 import org.jgapcustomised.InvalidConfigurationException;
 
-import com.anji.integration.Activator;
 import com.anji.integration.ActivatorTranscriber;
 import com.anji.integration.AnjiActivator;
 import com.anji.integration.AnjiNetTranscriber;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
-import com.anji.neat.ConnectionAllele;
 import com.anji.neat.NeatChromosomeUtility;
 import com.anji.neat.NeatConfiguration;
 import com.anji.neat.NeuronAllele;
 import com.anji.neat.NeuronGene;
 import com.anji.neat.NeuronType;
-import com.anji.nn.AnjiNet;
 import com.anji.nn.activationfunction.StepActivationFunction;
 import com.anji.nn.activationfunction.GaussianActivationFunction;
-import com.anji.util.Configurable;
-import com.anji.util.Properties;
 
 /**
  * Extension of NEAT configuration with HyperNEAT-specific features added:<ul>
@@ -76,9 +65,12 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 		super.init(newProps);
 		props = newProps;
 		
-		File dirFile = new File(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY));
-		if (!dirFile.exists())
-			dirFile.mkdirs();
+		boolean enableLogFiles = props.contains(HyperNEATConfiguration.OUTPUT_DIR_KEY);
+		if (enableLogFiles) {
+			File dirFile = new File(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY));
+			if (!dirFile.exists())
+				dirFile.mkdirs();
+		}
 
 		Transcriber transcriber = (Transcriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
 		if (transcriber instanceof HyperNEATTranscriber) {
@@ -237,14 +229,16 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 			}
 			setSampleChromosomeMaterial(sample);
 			
-			try {
-				Transcriber cppnTranscriber = (Transcriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
-				AnjiActivator n = (AnjiActivator) cppnTranscriber.transcribe(new Chromosome(sample, 0L));
-				BufferedWriter outputfile = new BufferedWriter(new FileWriter(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "initial-sample-CPPN.txt"));
-				outputfile.write(n.toXml());
-				outputfile.close();
-			} catch (IOException | TranscriberException e) {
-				e.printStackTrace();
+			if (enableLogFiles) {
+				try {
+					Transcriber cppnTranscriber = (Transcriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
+					AnjiActivator n = (AnjiActivator) cppnTranscriber.transcribe(new Chromosome(sample, 0L));
+					BufferedWriter outputfile = new BufferedWriter(new FileWriter(getOutputDirPath() + "initial-sample-CPPN.txt"));
+					outputfile.write(n.toXml());
+					outputfile.close();
+				} catch (IOException | TranscriberException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		
@@ -271,6 +265,14 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 	
 	public boolean visualsEnabled() {
 		return enableVisuals;
+	}
+	
+	/**
+	 * Returns the path of the directory where files for this experiment should be written to. Includes a trailing slash.
+	 * @see #logFilesEnabled()
+	 */
+	public String getOutputDirPath() {
+		return props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY, null);
 	}
 	
 	/**

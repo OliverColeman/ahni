@@ -352,8 +352,8 @@ public class NeatConfiguration extends Configuration implements Configurable {
 		}
 
 		// weight bounds
-		minConnectionWeight = props.getFloatProperty(WEIGHT_MIN_KEY, -Float.MAX_VALUE);
-		maxConnectionWeight = props.getFloatProperty(WEIGHT_MAX_KEY, Float.MAX_VALUE);
+		maxConnectionWeight = props.getDoubleProperty(WEIGHT_MAX_KEY, Float.MAX_VALUE);
+		minConnectionWeight = props.getDoubleProperty(WEIGHT_MIN_KEY, -maxConnectionWeight);
 
 		// speciation parameters
 		initSpeciationParms();

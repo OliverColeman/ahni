@@ -7,10 +7,10 @@ import java.util.Arrays;
 
 import ojc.ahni.event.AHNIEvent;
 import ojc.ahni.event.AHNIEventListener;
-import ojc.ahni.event.AHNIRunProperties;
 import ojc.ahni.event.AHNIEvent.Type;
 import ojc.ahni.hyperneat.HyperNEATConfiguration;
 import ojc.ahni.hyperneat.HyperNEATEvolver;
+import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.util.NiceWriter;
 
 import org.apache.log4j.Logger;
@@ -18,7 +18,6 @@ import org.jgapcustomised.*;
 
 import com.anji.integration.Activator;
 import com.anji.integration.TranscriberException;
-import com.anji.util.Properties;
 
 /**
  * <p>Given a set of genotypes that encode a neural network, and a set of training examples consisting of input and target
@@ -67,7 +66,7 @@ public class TargetFitnessFunctionMT extends BulkFitnessFunctionMT implements AH
 		super.init(props);
 		logChampPerGens = props.getIntProperty(LOG_CHAMP_PERGENS_KEY, logChampPerGens);
 		fitnessCalculator = (TargetFitnessCalculator) props.newObjectProperty(TargetFitnessCalculator.class);
-		((AHNIRunProperties) props).getEvolver().addEventListener(this);
+		props.getEvolver().addEventListener(this);
 	}
 
 	/**
