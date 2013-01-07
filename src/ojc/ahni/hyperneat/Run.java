@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.FileAppender;
 
 import ojc.ahni.hyperneat.HyperNEATEvolver;
+import ojc.ahni.util.PropertiesConverter;
 
 import com.anji.util.Misc;
 import com.beust.jcommander.JCommander;
@@ -38,11 +39,10 @@ public class Run {
 	@Parameter(names = { "-aggresult" }, description = "Suffix of names of files to write aggregate results to.")
 	public String resultFileNameBase = "results";
 	
-	@Parameter(description = "Properties file to read experiment parameters from.", arity=1)
-	public List<String> parameters = new ArrayList<String>();
-
-	public Properties properties = null;
+	@Parameter(converter = PropertiesConverter.class, arity = 1, description = "<Properties file to read experiment parameters from>")
+	public List<Properties> propertiesFiles = new ArrayList<Properties>(1);
 	
+	Properties properties;
 	
 	/**
 	 * @param args
@@ -51,8 +51,7 @@ public class Run {
 		try {
 			Run runner = new Run();
 			JCommander jcom = new JCommander(runner, args);
-			
-			if (runner.properties == null) {
+			if (runner.propertiesFiles.isEmpty()) {
 				jcom.usage();
 				System.exit(-1);
 			}
@@ -60,6 +59,8 @@ public class Run {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		
+		System.out.println(Thread.activeCount());
 	}
 	
 	public Run() throws IOException {
@@ -74,7 +75,9 @@ public class Run {
 	 * @return The final (average) fitness.
 	 */
 	public double run() throws Exception {
-		if (properties == null) properties = new Properties(parameters.get(0));
+		if (properties == null) {
+			properties = propertiesFiles.get(0);
+		}
 		
 		if (nolog) {
 			outputDir = null;
@@ -192,16 +195,5 @@ public class Run {
 		}
 		
 		return avgFit[numGens-1];
-	}
-
-	/**
-	 * command line usage
-	 */
-	private static void usage() {
-		System.out.println("Usage:\n" + 
-				"Experiments can be run with:\n" +
-				"  <cmd> <properties-file> [result file name]\n\n" +
-				"Post processing can be run with:\n" + 
-				"  <cmd> pp [compressAverage|ca] <input file/dir> <output file/dir> [options]");
 	}
 }

@@ -272,7 +272,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 				}
 				try {
 					synchronized (this) {
-						while (!go)
+						while (!go && !finish)
 							wait();
 					}
 				} catch (InterruptedException e) {
@@ -286,9 +286,10 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 			notifyAll();
 		}
 		
-		public void dispose() {
+		public synchronized void dispose() {
 			substrate.dispose();
 			finish = true;
+			notifyAll();
 		}
 	}
 	

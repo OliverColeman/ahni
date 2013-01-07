@@ -15,6 +15,6 @@
 			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="/home/data/ai/PhD/software/lib/aparapi"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/jcommander.jar"/>
+	<classpathentry kind="lib" path="lib/jcommander.jar" sourcepath="/jcommander-master/src/main/java"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
