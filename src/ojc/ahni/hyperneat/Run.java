@@ -31,12 +31,18 @@ public class Run {
 	private static Logger logger = Logger.getLogger(Run.class);
 	private static final DecimalFormat nf = new DecimalFormat("0.0000");
 	
-	public boolean nolog = false;
+	/**
+	 * Disable all output to files and terminal.
+	 */
+	public boolean noOutput = false;
 
-	@Parameter(names = { "-output" }, description = "Directory to write output files to (overrides output.dir in properties file).")
+	@Parameter(names = { "-nofiles", "-nf" }, description = "Do not generate any files (only output will be to terminal).")
+	public boolean noFiles = false;
+	 
+	@Parameter(names = { "-outputdir", "-od" }, description = "Directory to write output files to (overrides output.dir in properties file).")
 	public String outputDir = null;
 	
-	@Parameter(names = { "-aggresult" }, description = "Suffix of names of files to write aggregate results to.")
+	@Parameter(names = { "-aggresult", "-ar" }, description = "Suffix of names of files to write aggregate results to.")
 	public String resultFileNameBase = "results";
 	
 	@Parameter(converter = PropertiesConverter.class, arity = 1, description = "<Properties file to read experiment parameters from>")
@@ -79,30 +85,36 @@ public class Run {
 			properties = propertiesFiles.get(0);
 		}
 		
-		if (nolog) {
+		long experimentID = System.currentTimeMillis();
+		// If there should be no output whatsoever.
+		if (noOutput) {
+			properties.remove(HyperNEATConfiguration.OUTPUT_DIR_KEY);
 			outputDir = null;
 			properties.setProperty("log4j.rootLogger", "OFF");
 		}
-		
-		long experimentID = System.currentTimeMillis();
-		String runLogFile = null;
-		if (!nolog) {
+		// If no files should be generated (but output to terminal is allowed).
+		else if (noFiles) {
+			properties.remove(HyperNEATConfiguration.OUTPUT_DIR_KEY);
+			outputDir = null;
+		}
+		// If all output is allowed.
+		else {
 			if (outputDir == null) {
-				outputDir = properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + File.separator + experimentID + File.separator;
+				outputDir = properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + File.separator + experimentID;
 			}
 			if ((new File(outputDir)).exists()) {
 				throw new IllegalArgumentException("Output directory " + outputDir + " already exists.");
 			}
-			outputDir = (new File(outputDir)).getCanonicalPath() + File.separator;
+			if (!outputDir.endsWith("\\") && !outputDir.endsWith("/")) {
+				outputDir += File.separator;
+			}
+			
+			// NOTE: outputDir is kept as a relative path to allow the program to be relocated to another machine, for example by HTCondor.
+			
 			resultFileNameBase = outputDir + resultFileNameBase;
 			
-			runLogFile = properties.getProperty("log4j.appender.RunLog.File", null);
-
 			logger.info("Output directory is " + outputDir + ".");
 			logger.info("Performance results will be written to " + resultFileNameBase + "-[performance|fitness].");
-		}
-		else {
-			properties.remove(HyperNEATConfiguration.OUTPUT_DIR_KEY);
 		}
 		
 		int numRuns = properties.getIntProperty(HyperNEATConfiguration.NUM_RUNS_KEY);
@@ -122,19 +134,21 @@ public class Run {
 			Properties runProps = new Properties(properties);
 			String runID = properties.getProperty("run.name") + "-" + experimentID + (numRuns > 1 ? "-" + run : "");
 			runProps.setProperty("run.id", runID);
-			if (!nolog) {
-				String runOutputDir = outputDir + (numRuns > 1 ? run + File.separator : "");
+			
+			String runOutputDir = outputDir + (numRuns > 1 ? run + File.separator : "");
+			if (outputDir != null) {
 				runProps.setProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY, runOutputDir);
 			
 				// If there is a file logger for each run.
+				String runLogFile = properties.getProperty("log4j.appender.RunLog.File", null);
 				if (runLogFile != null) {
+					//runLogFile = ((new File(runOutputDir + runLogFile))).getPath();
+					runLogFile = runOutputDir + runLogFile;
+					System.out.println("+++++++++++++++++++++++++++++++ " + runLogFile);
 					FileAppender fileAppender = (FileAppender) Logger.getRootLogger().getAppender("RunLog");
-					fileAppender.setFile(runOutputDir + runLogFile);
+					fileAppender.setFile(runLogFile);
 					fileAppender.activateOptions();
 				}
-			}
-			else {
-				runProps.remove(HyperNEATConfiguration.OUTPUT_DIR_KEY);
 			}
 			
 			logger.info("\n\n--- START RUN: " + (run + 1) + " of " + numRuns + " (" + ((run * 100) / (numRuns)) + "%) ---------------------------------------\n\n");
@@ -176,7 +190,7 @@ public class Run {
 			avgFit[gen] /= numRuns;
 		}
 		
-		if (!nolog) {
+		if (!noOutput) {
 			BufferedWriter resultFilePerf = new BufferedWriter(new FileWriter(resultFileNameBase + "-avg_performance_in_each_gen_over_all_runs.txt"));
 			String results = "";
 			for (int gen = 0; gen < numGens; gen++)
