@@ -7,10 +7,13 @@ import java.io.IOException;
 import java.text.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.FileAppender;
+import org.apache.log4j.PropertyConfigurator;
 
 import ojc.ahni.hyperneat.HyperNEATEvolver;
 import ojc.ahni.util.PropertiesConverter;
@@ -42,6 +45,9 @@ public class Run {
 	@Parameter(names = { "-outputdir", "-od" }, description = "Directory to write output files to (overrides output.dir in properties file).")
 	public String outputDir = null;
 	
+	@Parameter(names = { "-force", "-f" }, description = "Force using the specified output directory even if it exists.")
+	public boolean forceOutputDir = false;
+
 	@Parameter(names = { "-aggresult", "-ar" }, description = "Suffix of names of files to write aggregate results to.")
 	public String resultFileNameBase = "results";
 	
@@ -65,8 +71,6 @@ public class Run {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
-		System.out.println(Thread.activeCount());
 	}
 	
 	public Run() throws IOException {
@@ -86,31 +90,36 @@ public class Run {
 		}
 		
 		long experimentID = System.currentTimeMillis();
+		String runLogFile = properties.getProperty("log4j.appender.RunLog.File", null);
+		
 		// If there should be no output whatsoever.
 		if (noOutput) {
 			properties.remove(HyperNEATConfiguration.OUTPUT_DIR_KEY);
 			outputDir = null;
-			properties.setProperty("log4j.rootLogger", "OFF");
+			resultFileNameBase = null;
 		}
 		// If no files should be generated (but output to terminal is allowed).
 		else if (noFiles) {
 			properties.remove(HyperNEATConfiguration.OUTPUT_DIR_KEY);
 			outputDir = null;
+			resultFileNameBase = null;
+			configureLog4J(true);
 		}
 		// If all output is allowed.
 		else {
 			if (outputDir == null) {
 				outputDir = properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + File.separator + experimentID;
 			}
-			if ((new File(outputDir)).exists()) {
-				throw new IllegalArgumentException("Output directory " + outputDir + " already exists.");
-			}
 			if (!outputDir.endsWith("\\") && !outputDir.endsWith("/")) {
 				outputDir += File.separator;
 			}
-			
 			// NOTE: outputDir is kept as a relative path to allow the program to be relocated to another machine, for example by HTCondor.
-			
+
+			if (!forceOutputDir && (new File(outputDir)).exists()) {
+				throw new IllegalArgumentException("Output directory " + outputDir + " already exists.");
+			}
+
+			configureLog4J(false);
 			resultFileNameBase = outputDir + resultFileNameBase;
 			
 			logger.info("Output directory is " + outputDir + ".");
@@ -130,7 +139,7 @@ public class Run {
 		double avgRunTime = 0;
 		for (int run = 0; run < numRuns; run++) {
 			long startRun = System.currentTimeMillis();
-
+			
 			Properties runProps = new Properties(properties);
 			String runID = properties.getProperty("run.name") + "-" + experimentID + (numRuns > 1 ? "-" + run : "");
 			runProps.setProperty("run.id", runID);
@@ -140,14 +149,11 @@ public class Run {
 				runProps.setProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY, runOutputDir);
 			
 				// If there is a file logger for each run.
-				String runLogFile = properties.getProperty("log4j.appender.RunLog.File", null);
 				if (runLogFile != null) {
-					//runLogFile = ((new File(runOutputDir + runLogFile))).getPath();
-					runLogFile = runOutputDir + runLogFile;
-					System.out.println("+++++++++++++++++++++++++++++++ " + runLogFile);
 					FileAppender fileAppender = (FileAppender) Logger.getRootLogger().getAppender("RunLog");
-					fileAppender.setFile(runLogFile);
+					fileAppender.setFile(runOutputDir + runLogFile);
 					fileAppender.activateOptions();
+					
 				}
 			}
 			
@@ -170,6 +176,14 @@ public class Run {
 			logger.info("\n--- Run finished in " + Misc.formatTimeInterval(duration) + ".  ETA to complete all runs:" + Misc.formatTimeInterval(eta) + ". ------------------\n");
 		}
 		long end = System.currentTimeMillis();
+		
+		// If there is a file logger for each run, set log file back to root output dir.
+		if (runLogFile != null) {
+			FileAppender fileAppender = (FileAppender) Logger.getRootLogger().getAppender("RunLog");
+			fileAppender.setFile(outputDir + runLogFile);
+			fileAppender.activateOptions();
+			
+		}
 		logger.info(numRuns + " runs completed in " + Misc.formatTimeInterval((end - start) / 1000));
 
 
@@ -190,7 +204,7 @@ public class Run {
 			avgFit[gen] /= numRuns;
 		}
 		
-		if (!noOutput) {
+		if (resultFileNameBase != null) {
 			BufferedWriter resultFilePerf = new BufferedWriter(new FileWriter(resultFileNameBase + "-avg_performance_in_each_gen_over_all_runs.txt"));
 			String results = "";
 			for (int gen = 0; gen < numGens; gen++)
@@ -209,5 +223,52 @@ public class Run {
 		}
 		
 		return avgFit[numGens-1];
+	}
+	
+	private void configureLog4J(boolean disableFiles) {
+		// If logging is not disabled.
+		if (!properties.getProperty("log4j.rootLogger", "OFF").trim().startsWith("OFF")) {
+			Set<String> propKeys = properties.stringPropertyNames();
+			// Find all logger labels that correspond to file loggers.
+			ArrayList<String> fileLogLabels = new ArrayList<String>();
+			ArrayList<String> fileLogProps = new ArrayList<String>();
+			Pattern p = Pattern.compile("log4j\\.appender\\.(\\w*)\\.file", Pattern.CASE_INSENSITIVE);
+			for (String k : propKeys) {
+				Matcher m = p.matcher(k);
+				if (m.matches()) {
+					fileLogProps.add(m.group());
+					fileLogLabels.add(m.group(1));
+				}
+			}
+			if (!fileLogLabels.isEmpty()) {
+				if (disableFiles) {
+					// Construct a new root logger without the logger labels that corresponding to file loggers.
+					String[] rootLoggerProp = properties.getProperty("log4j.rootLogger").split(",");
+					String newRootLoggerProp = rootLoggerProp[0];
+					for (int i = 1; i < rootLoggerProp.length; i++) {
+						if (!fileLogLabels.contains(rootLoggerProp[i].trim())) {
+							newRootLoggerProp += ", " + rootLoggerProp[i].trim();
+						}
+					}
+					properties.setProperty("log4j.rootLogger", newRootLoggerProp);
+				}
+				else {
+					// Make sure all file loggers are configured to output to the output dir.
+					for (String prop : fileLogProps) {
+						String val = properties.getProperty(prop);
+						if (!val.contains(outputDir)) {
+							val = outputDir + val;
+							properties.setProperty(prop, val);
+						}
+					}
+				}
+			}
+			
+			java.util.Properties log4jProps = new java.util.Properties();
+			log4jProps.putAll(properties);
+			PropertyConfigurator.configure(log4jProps);
+
+			properties.configureLogger();
+		}
 	}
 }

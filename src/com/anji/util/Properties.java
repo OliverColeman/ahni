@@ -28,8 +28,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.regexp.RE;
@@ -47,7 +45,7 @@ public class Properties extends java.util.Properties {
 	 */
 	public final static String CLASS_SUFFIX = ".class";
 
-	private static Logger logger = Logger.getLogger(Properties.class.getName());
+	private static Logger logger;
 
 	private HashSet<String> loggedProps = new HashSet<String>();
 
@@ -83,7 +81,7 @@ public class Properties extends java.util.Properties {
 	public Properties(String resource) throws IOException {
 		super();
 		loadFromResource(resource);
-		logger.info("loaded properties from " + resource);
+		//logger.info("loaded properties from " + resource);
 	}
 
 	/**
@@ -120,18 +118,18 @@ public class Properties extends java.util.Properties {
 	 * @param defaultValue
 	 */
 	private void log(String key, String value, String defaultValue) {
-
-		synchronized (loggedProps) {
-			if (loggedProps.contains(key) == false) {
-				StringBuffer log = new StringBuffer("Properties: ");
-				log.append(key).append(" == ").append(value);
-				if (value == null)
-					log.append(" [").append(defaultValue).append("]");
-				logger.info(log);
-				loggedProps.add(key);
+		if (logger != null) {
+			synchronized (loggedProps) {
+				if (loggedProps.contains(key) == false) {
+					StringBuffer log = new StringBuffer("Properties: ");
+					log.append(key).append(" == ").append(value);
+					if (value == null)
+						log.append(" [").append(defaultValue).append("]");
+					logger.info(log);
+					loggedProps.add(key);
+				}
 			}
 		}
-
 	}
 
 	/**
@@ -872,5 +870,10 @@ public class Properties extends java.util.Properties {
 	 */
 	protected void setName(String aName) {
 		name = aName;
+	}
+	
+	public void configureLogger() {
+		if (logger == null)
+			logger = Logger.getLogger(Properties.class.getName());
 	}
 }

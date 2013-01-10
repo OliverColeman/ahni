@@ -50,6 +50,7 @@ import com.anji.integration.Generation;
 import com.anji.integration.XmlPersistableChromosome;
 import com.anji.integration.XmlPersistableAllele;
 import com.anji.integration.XmlPersistableRun;
+import com.anji.neat.Evolver;
 import com.anji.run.Run;
 import com.anji.util.Properties;
 import com.anji.util.XmlPersistable;
@@ -84,15 +85,17 @@ public class FilePersistence implements Persistence {
 	 */
 	public void init(Properties props) {
 		this.props = props;
-		String baseDirStr = props.getProperty(BASE_DIR_KEY);
-		baseDir = new File(baseDirStr);
-		baseDir.mkdirs();
-		if (!baseDir.exists())
-			throw new IllegalArgumentException("base directory does not exist: " + baseDirStr);
-		if (!baseDir.isDirectory())
-			throw new IllegalArgumentException("base directory is a file: " + baseDirStr);
-		if (!baseDir.canWrite())
-			throw new IllegalArgumentException("base directory not writable: " + baseDirStr);
+		if (props.getBooleanProperty(Evolver.PERSIST_ENABLE_KEY, false)) {
+			String baseDirStr = props.getProperty(BASE_DIR_KEY);
+			baseDir = new File(baseDirStr);
+			baseDir.mkdirs();
+			if (!baseDir.exists())
+				throw new IllegalArgumentException("base directory does not exist: " + baseDirStr);
+			if (!baseDir.isDirectory())
+				throw new IllegalArgumentException("base directory is a file: " + baseDirStr);
+			if (!baseDir.canWrite())
+				throw new IllegalArgumentException("base directory not writable: " + baseDirStr);
+		}
 	}
 
 	/**

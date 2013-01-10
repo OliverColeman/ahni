@@ -77,7 +77,7 @@ public class Evolver implements Configurable {
 
 	private static final String LOAD_GENOTYPE_KEY = "persist.load.genotype";
 
-	private static final String PERSIST_ENABLE_KEY = "persist.enable";
+	public static final String PERSIST_ENABLE_KEY = "persist.enable";
 
 	private static final String PRESENTATION_GENERATE_KEY = "presentation.generate";
 

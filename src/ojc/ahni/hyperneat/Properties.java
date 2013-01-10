@@ -34,7 +34,8 @@ public class Properties extends com.anji.util.Properties {
 	 * @throws IOException
 	 */
 	public Properties(String resource) throws IOException {
-		super(resource);
+		super();
+		loadFromResourceWithoutLogging(resource);
 	}
 	
 	/**

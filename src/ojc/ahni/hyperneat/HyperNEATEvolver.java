@@ -32,6 +32,7 @@ import org.jgapcustomised.Species;
 import org.jgapcustomised.event.GeneticEvent;
 import org.jgapcustomised.event.GeneticEventListener;
 
+import com.anji.neat.Evolver;
 import com.anji.persistence.Persistence;
 import com.anji.run.Run;
 import com.anji.util.Misc;
@@ -133,13 +134,15 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 	public void init(Properties props) throws Exception {
 		properties = props;
 		properties.setEvolver(this);
-
-		boolean doReset = props.getBooleanProperty(RESET_KEY, false);
-		if (doReset) {
-			// logger.warn( "Resetting previous run !!!" );
-			Reset resetter = new Reset(props);
-			resetter.setUserInteraction(false);
-			resetter.reset();
+		
+		if (props.getBooleanProperty(PERSIST_ENABLE_KEY, false)) {
+			boolean doReset = props.getBooleanProperty(RESET_KEY, false);
+			if (doReset) {
+				// logger.warn( "Resetting previous run !!!" );
+				Reset resetter = new Reset(props);
+				resetter.setUserInteraction(false);
+				resetter.reset();
+			}
 		}
 
 		config = (HyperNEATConfiguration) props.singletonObjectProperty(HyperNEATConfiguration.class);
