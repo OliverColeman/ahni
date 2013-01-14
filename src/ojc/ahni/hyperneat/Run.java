@@ -39,17 +39,20 @@ public class Run {
 	 */
 	public boolean noOutput = false;
 
+	@Parameter(names = { "-aggresult", "-ar" }, description = "Suffix of names of files to write aggregate results to (aggregated over all runs).")
+	public String resultFileNameBase = "results";
+
 	@Parameter(names = { "-nofiles", "-nf" }, description = "Do not generate any files (only output will be to terminal).")
 	public boolean noFiles = false;
+
+	@Parameter(names = { "-aggonly", "-ao" }, description = "Only generate files for aggregate results.")
+	public boolean aggFilesOnly = false;
 	 
 	@Parameter(names = { "-outputdir", "-od" }, description = "Directory to write output files to (overrides output.dir in properties file).")
 	public String outputDir = null;
 	
 	@Parameter(names = { "-force", "-f" }, description = "Force using the specified output directory even if it exists.")
 	public boolean forceOutputDir = false;
-
-	@Parameter(names = { "-aggresult", "-ar" }, description = "Suffix of names of files to write aggregate results to.")
-	public String resultFileNameBase = "results";
 	
 	@Parameter(converter = PropertiesConverter.class, arity = 1, description = "<Properties file to read experiment parameters from>")
 	public List<Properties> propertiesFiles = new ArrayList<Properties>(1);
@@ -97,15 +100,17 @@ public class Run {
 			properties.remove(HyperNEATConfiguration.OUTPUT_DIR_KEY);
 			outputDir = null;
 			resultFileNameBase = null;
+			runLogFile = null;
 		}
 		// If no files should be generated (but output to terminal is allowed).
 		else if (noFiles) {
 			properties.remove(HyperNEATConfiguration.OUTPUT_DIR_KEY);
 			outputDir = null;
 			resultFileNameBase = null;
+			runLogFile = null;
 			configureLog4J(true);
 		}
-		// If all output is allowed.
+		// If all or aggregate output is allowed.
 		else {
 			if (outputDir == null) {
 				outputDir = properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + File.separator + experimentID;
@@ -119,10 +124,20 @@ public class Run {
 				throw new IllegalArgumentException("Output directory " + outputDir + " already exists.");
 			}
 
-			configureLog4J(false);
+			configureLog4J(aggFilesOnly);
 			resultFileNameBase = outputDir + resultFileNameBase;
 			
-			logger.info("Output directory is " + outputDir + ".");
+			// If only aggregate result files should be produced.
+			if (aggFilesOnly) {
+				// Disable file output for everything else (now that we've set resultFileNameBase).
+				outputDir = null;
+				runLogFile = null;
+				properties.remove(HyperNEATConfiguration.OUTPUT_DIR_KEY);
+			}
+			else {
+				logger.info("Output directory is " + outputDir + ".");
+			}
+				
 			logger.info("Performance results will be written to " + resultFileNameBase + "-[performance|fitness].");
 		}
 		
