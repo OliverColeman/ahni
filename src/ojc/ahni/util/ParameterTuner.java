@@ -1,5 +1,6 @@
 package ojc.ahni.util;
 
+import java.lang.management.ManagementFactory;
 import java.util.Arrays;
 
 import org.apache.log4j.Level;
@@ -73,7 +74,7 @@ public class ParameterTuner {
 			double[] maxValues = props.getDoubleArrayProperty("parametertuner.maxvalues", ArrayUtil.newArray(propCount, Double.MAX_VALUE));
 			int maxIterations = props.getIntProperty("parametertuner.maxiterations", 100);
 			double valAdjustFactor = props.getDoubleProperty("parametertuner.initialvalueadjustfactor", 2);
-			int numRuns = props.getIntProperty("parametertuner.numruns", 50);
+			int numRuns = props.getIntProperty("parametertuner.numruns", 30);
 			
 			props.setProperty("num.runs", "1"); // We'll calculate our own average so we can report progress as we go.
 			props.setProperty("log4j.rootLogger", "OFF"); // Suppress logging.
@@ -88,7 +89,7 @@ public class ParameterTuner {
 			System.out.println("Determining initial fitness.");
 			double bestFitness = doRuns(props, args, numRuns);
 			System.out.println("Initial fitness: " + bestFitness);
-
+			
 			for (int i = 0; i < maxIterations; i++) {
 				System.out.println("Start iteration " + i);
 				
@@ -101,7 +102,7 @@ public class ParameterTuner {
 
 					// Sample fitness either side of current parameter value.
 					if (adjustCountDown[p] == 0) {
-						System.out.println("\tTuning " + propKey + " (current value is " + currentBestVals[p] + ")");
+						System.out.println("\tTuning " + propKey + " (current value is " + currentBestVals[p] + ").");
 						double newVal = currentBestVals[p];
 						double newBestFitness = bestFitness;
 
@@ -189,9 +190,19 @@ public class ParameterTuner {
 			System.out.print(r + " ");
 			Run runner = new Run(props);
 			runner.noOutput = true;
-			sumFitness += runner.run();
+			runner.run();
+			double[] fitness = runner.fitness[0];
+			double fs = 0;
+			// Get average of last 10 fitness evaluations, in case fitness function is very stochastic.
+			// (Generally speaking, the fitness function should not be very stochastic, but in some cases can be).
+			for (int g = fitness.length-10; g < fitness.length; g++) {
+				fs += fitness[g];
+			}
+			sumFitness += fs / 10;
 		}
-		System.out.println();
+		float memHeap = (float) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() / 1048576d);
+		float memNonHeap = (float) (ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage().getUsed() / 1048576d);
+		System.out.println(" Finished runs, memory usage (heap / non-heap / total MB): " + memHeap + " / " + memNonHeap + " / " + (memHeap + memNonHeap));
 		return sumFitness / numRuns;
 	}
 

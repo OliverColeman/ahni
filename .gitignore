@@ -1,5 +1,6 @@
 db/
 bin/
+.classpath
 .metadata/
 .settings/
 ahni.jar
