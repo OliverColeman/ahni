@@ -2,6 +2,7 @@ package ojc.ahni.transcriber;
 
 import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.nn.BainNN;
+import ojc.ahni.util.ArrayUtil;
 import ojc.bain.NeuralNetwork;
 import ojc.bain.base.ComponentCollection;
 import ojc.bain.base.ComponentConfiguration;
@@ -40,6 +41,8 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 	public static final String SUBSTRATE_NEURON_MODEL_PARAMS = "ann.hyperneat.bain.neuron.model.params";
 	public static final String SUBSTRATE_SYNAPSE_MODEL = "ann.hyperneat.bain.synapse.model";
 	public static final String SUBSTRATE_SYNAPSE_MODEL_PARAMS = "ann.hyperneat.bain.synapse.model.params";
+	public static final String SUBSTRATE_SYNAPSE_MODEL_PARAMS_MIN = "ann.hyperneat.bain.synapse.model.params.min";
+	public static final String SUBSTRATE_SYNAPSE_MODEL_PARAMS_MAX = "ann.hyperneat.bain.synapse.model.params.max";
 	public static final String SUBSTRATE_SYNAPSE_MODEL_DISABLE_PARAM = "ann.hyperneat.bain.synapse.model.plasticitydisableparam";
 	public static final String SUBSTRATE_SYNAPSE_MODEL_TYPES = "ann.hyperneat.bain.synapse.model.types";
 
@@ -72,6 +75,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 	int synapseModelTypeCount = 1; // Set to 1 to allow things like getBainSynapseIndex() to work.
 	int[] cppnIDXSynapseTypeWeights = new int[1];
 	boolean synapseTypesEnabled;
+	double[] synapseModelParamsMin, synapseModelParamsMax, synapseModelParamsRange;
 
 	public HyperNEATTranscriberBain() {
 	}
@@ -146,12 +150,21 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		}
 		if (props.containsKey(SUBSTRATE_SYNAPSE_MODEL_PARAMS)) {
 			cppnSynapseParamNames = props.getProperty(SUBSTRATE_SYNAPSE_MODEL_PARAMS).replaceAll("\\s", "").split(",");
-			if (cppnSynapseParamNames.length > 0) {
-				cppnIDXSynapseParams = new int[cppnSynapseParamNames.length];
-				for (int i = 0; i < cppnIDXSynapseParams.length; i++) {
+			int paramCount = cppnSynapseParamNames.length;
+			if (paramCount > 0) {
+				cppnIDXSynapseParams = new int[paramCount];
+				for (int i = 0; i < paramCount; i++) {
 					cppnIDXSynapseParams[i] = cppnOutputCount++;
 				}
 				synapseParamsEnabled = true;
+			}
+			
+			synapseModelParamsMax = props.getDoubleArrayProperty(SUBSTRATE_SYNAPSE_MODEL_PARAMS_MAX, ArrayUtil.newArray(paramCount, connectionWeightMax));
+			double[] defaultMin = props.containsKey(SUBSTRATE_SYNAPSE_MODEL_PARAMS_MAX) ? ArrayUtil.negate(synapseModelParamsMax) : ArrayUtil.newArray(paramCount, connectionWeightMin);
+			synapseModelParamsMin = props.getDoubleArrayProperty(SUBSTRATE_SYNAPSE_MODEL_PARAMS_MIN, defaultMin);
+			synapseModelParamsRange = new double[paramCount];
+			for (int p = 0; p < paramCount; p++) {
+				synapseModelParamsRange[p] = synapseModelParamsMax[p] - synapseModelParamsMin[p];
 			}
 		}
 		if (neuronParamsEnabled || synapseParamsEnabled) {
@@ -291,7 +304,8 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 										c.maximumEfficacy = connectionWeightMax;
 										// Set parameters for the config.
 										for (int p = 0; p < cppnSynapseParamNames.length; p++) {
-											double v = cppn.getRangedOutput(cppnIDXSynapseParams[p], connectionWeightMin, connectionWeightMax, connectionWeightRange, connectionExprThresh);
+											// TODO provide setting for threshold for params? Currently just set it to 10% of whatever the current param range is.
+											double v = cppn.getRangedOutput(cppnIDXSynapseParams[p], synapseModelParamsMin[p], synapseModelParamsMax[p], synapseModelParamsRange[p], synapseModelParamsRange[p]*0.1);
 											c.setParameterValue(cppnSynapseParamNames[p], v, true);
 										}
 										if (synapseTypesEnabled) {

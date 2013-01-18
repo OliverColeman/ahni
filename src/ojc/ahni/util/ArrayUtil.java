@@ -211,5 +211,16 @@ public class ArrayUtil {
 		if (initialValues != 0) Arrays.fill(a, initialValues);
 		return a;
 	}
+	
+	/**
+	 * Returns a new array that contains the negated values of the given array.
+	 */ 
+	public static double[] negate(double[] a) {
+		double[] n = new double[a.length];
+		for (int i = 0; i < a.length; i++) {
+			n[i] = -a[i];
+		}
+		return n;
+	}
 }
 
