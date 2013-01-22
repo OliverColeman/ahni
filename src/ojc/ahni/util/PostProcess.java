@@ -10,12 +10,22 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Deque;
+import java.util.Iterator;
 import java.util.List;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.AndFileFilter;
+import org.apache.commons.io.filefilter.FileFileFilter;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
+import org.apache.commons.io.filefilter.WildcardFilter;
+import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 
 import ojc.ahni.hyperneat.Properties;
 
 import com.beust.jcommander.Parameter;
+import com.esotericsoftware.wildcard.Paths;
 
 /**
  * Contains utility methods to perform post-processing on the results of a run or multiple runs.
@@ -34,8 +44,8 @@ public class PostProcess {
 		}
 
 		String op = args.removeFirst();
-		if (op.equals("compressAverage") || op.equals("ca") || op.equals("generateStats") || op.equals("gs")) {
-			try {
+		try {
+			if (op.equals("compressAverage") || op.equals("ca") || op.equals("generateStats") || op.equals("gs")) {
 				BufferedReader resultsReader = new BufferedReader(new FileReader(new File(args.removeFirst())));
 				BufferedWriter resultsWriter = new BufferedWriter(new FileWriter(new File(args.removeFirst())));
 	
@@ -44,19 +54,25 @@ public class PostProcess {
 				} else if (op.equals("generateStats") || op.equals("gs")) {
 					generateStats(resultsReader, resultsWriter);
 				}
-	
+				
 				resultsReader.close();
 				resultsWriter.close();
-			} catch (FileNotFoundException e) {
-				System.err.println("Error opening input file.");
-				e.printStackTrace();
-			} catch (IOException e) {
-				System.err.println("Error reading from intput file, or opening or writing to output file:");
-				e.printStackTrace();
 			}
-		}
-		else {
-			printUsageAndExit();
+			else if (op.equals("combineResults") || op.equals("cr")) {
+				String inputFiles = args.removeFirst();
+				BufferedWriter resultsWriter = new BufferedWriter(new FileWriter(new File(args.removeFirst())));
+				combineResults(inputFiles, resultsWriter);
+				resultsWriter.close();
+			}
+			else {
+				printUsageAndExit();
+			}
+		} catch (FileNotFoundException e) {
+			System.err.println("Error opening input file.");
+			e.printStackTrace();
+		} catch (IOException e) {
+			System.err.println("Error reading from intput file, or opening or writing to output file:");
+			e.printStackTrace();
 		}
 	}
 
@@ -83,16 +99,20 @@ public class PostProcess {
 	 * @throws IOException
 	 */
 	public static void compressAverage(BufferedReader resultsReader, BufferedWriter resultsWriter, int size) throws IOException {
-		double[][] data = readResults(resultsReader);
-		for (int run = 0; run < data.length; run++) {
-			int window = data[run].length / size;
+		Results results = new Results(resultsReader);
+		for (int series = 0; series < results.getSeriesCount(); series++) {
+			if (results.hasLabels()) {
+				resultsWriter.write(results.getLabel(series));
+			}
+			int window = results.getItemCount() / size;
 			float accum = 0;
 			int count = 0;
-			for (int i = 0; i < data[run].length; i++) {
-				accum += data[run][i];
+			for (int item = 0; item < results.getItemCount(); item++) {
+				accum += results.getData(series, item);
 				count++;
-				if (count == window || i == data[run].length - 1) {
-					resultsWriter.write((i >= window ? ", " : "") + (accum / count));
+				// If at the end of the window or end of the series.
+				if (count == window || item == results.getItemCount() - 1) {
+					resultsWriter.write((item >= window ? ", " : "") + (accum / count));
 					accum = 0;
 					count = 0;
 				}
@@ -110,59 +130,32 @@ public class PostProcess {
 	 * @throws IOException
 	 */
 	public static void generateStats(BufferedReader resultsReader, BufferedWriter resultsWriter) throws IOException {
-		double[][] rawData = readResults(resultsReader);
-		resultsWriter.write(generateStats(rawData));
+		Statistics stats = new Statistics(new Results(resultsReader));
+		resultsWriter.write(stats.getBasicStats().toString());
 	}
-
+	
 	/**
-	 * Given the results from a set of runs, return a String that contains basic statistics over the runs for each
-	 * generation.
-	 * 
-	 * @param rawData The raw result data, in the format [generation][run].
+	 * Combine the results from multiple runs into one file.
+	 * @param filePattern The path to the result files. The pattern supports the typical glob format, and in 
+	 *   order to match more than one file must necessarily include wildcard characters such as ? or *.
+	 * @param resultsWriter A stream to write the results to.
 	 */
-	public static String generateStats(double[][] rawData) {
-		Statistics data = new Statistics(rawData);
-		DecimalFormat nf = new DecimalFormat("0.0000");
-		StringBuilder output = new StringBuilder();
-		output.append("Mean, ");
-		output.append(ArrayUtil.toString(data.getMean(), ", ", nf));
-		output.append("\nStd. Dev., ");
-		output.append(ArrayUtil.toString(data.getStandardDeviation(), ", ", nf));
-		output.append("\nMinimum, ");
-		output.append(ArrayUtil.toString(data.getMin(), ", ", nf));
-		output.append("\nMaximum, ");
-		output.append(ArrayUtil.toString(data.getMax(), ", ", nf));
-		output.append("\n25th pct., ");
-		output.append(ArrayUtil.toString(data.getPercentile(25), ", ", nf));
-		output.append("\n50th pct., ");
-		output.append(ArrayUtil.toString(data.getPercentile(50), ", ", nf));
-		output.append("\n75th pct., ");
-		output.append(ArrayUtil.toString(data.getPercentile(75), ", ", nf));
-
-		output.append("\n");
-		return output.toString();
-	}
-
-	/**
-	 * Read and return the results from a set of runs.
-	 * 
-	 * @return The result data, in the format [generation][run].
-	 */
-	public static double[][] readResults(BufferedReader resultsReader) throws IOException {
-		ArrayList<String[]> stringData = new ArrayList<String[]>();
-		String line;
-		while ((line = resultsReader.readLine()) != null) {
-			stringData.add(line.replaceAll(" ", "").split(","));
+	public static void combineResults(String filePattern, BufferedWriter resultsWriter) throws IOException {
+		String baseDir = "./";
+		// If absolute path. TODO handle windows absolute path?
+		if (filePattern.charAt(0) == File.separatorChar) {
+			baseDir = File.separator;
+			filePattern = filePattern.substring(1);
 		}
-		int runs = stringData.size();
-		int gens = stringData.get(0).length;
-		double[][] results = new double[gens][runs];
-		for (int r = 0; r < runs; r++) {
-			String[] data = stringData.get(r);
-			for (int g = 0; g < gens; g++) {
-				results[g][r] = Double.parseDouble(data[g]);
-			}
+		Paths paths = new Paths(baseDir, filePattern);
+		List<File> files = paths.getFiles();
+		System.out.println("Processing files:\n  " + ArrayUtil.toString(files.toArray(), "\n  "));
+		Iterator<File> fileItr = files.iterator();
+		Results results = new Results(new BufferedReader(new FileReader(fileItr.next())));
+		while (fileItr.hasNext()) {
+			BufferedReader resultReader = new BufferedReader(new FileReader(fileItr.next()));
+			results.add(new Results(resultReader));
 		}
-		return results;
+		resultsWriter.write(results.toString());
 	}
 }

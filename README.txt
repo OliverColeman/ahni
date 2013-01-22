@@ -10,13 +10,13 @@ https://github.com/OliverColeman/ahni
 BUILDING AND RUNNING
 
 A runnable JAR file can be built from the source files with:
-ant build-jar
+ant runjar
 
 Then to run an experiment:
 java -jar ahni.jar <properties file containing parameters for experiment>
 
 For example:
-java -jar ahni.jar or3.properties
+java -jar ahni.jar properties/or3.properties
 
 See properties/test-pass-through-flip.properties for an example properties 
 file describing the function of each parameter and setting.

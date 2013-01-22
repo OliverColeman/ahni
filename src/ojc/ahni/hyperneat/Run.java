@@ -11,15 +11,14 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.log4j.Logger;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.PropertyConfigurator;
 
 import ojc.ahni.hyperneat.HyperNEATEvolver;
-import ojc.ahni.util.ArrayUtil;
-import ojc.ahni.util.PostProcess;
 import ojc.ahni.util.PropertiesConverter;
+import ojc.ahni.util.Results;
+import ojc.ahni.util.Statistics;
 
 import com.anji.util.Misc;
 import com.beust.jcommander.JCommander;
@@ -39,7 +38,7 @@ import com.beust.jcommander.Parameter;
  * </p>
  */
 public class Run {
-	private static Logger logger = Logger.getLogger(Run.class);
+	private static Logger logger;
 	private static final DecimalFormat nf = new DecimalFormat("0.0000");
 
 	/**
@@ -106,8 +105,6 @@ public class Run {
 
 	/**
 	 * Performs one or more runs.
-	 * 
-	 * @return The final (average) fitness.
 	 */
 	public void run() throws Exception {
 		if (properties == null) {
@@ -123,6 +120,8 @@ public class Run {
 			outputDir = null;
 			resultFileNameBase = null;
 			runLogFile = null;
+			properties.setProperty("log4j.rootLogger", "OFF");
+			configureLog4J(true);
 		}
 		// If no files should be generated (but output to terminal is allowed).
 		else if (noFiles) {
@@ -220,37 +219,35 @@ public class Run {
 		logger.info(numRuns + " runs completed in " + Misc.formatTimeInterval((end - start) / 1000));
 
 		if (resultFileNameBase != null) {
-			String resultPerfFile = resultFileNameBase + "-performance.csv";
-			String resultFitFile = resultFileNameBase + "-fitness.csv";
-
-			BufferedWriter resultFilePerf = new BufferedWriter(new FileWriter(resultPerfFile));
-			BufferedWriter resultFileFit = new BufferedWriter(new FileWriter(resultFitFile));
-			for (int run = 0; run < numRuns; run++) {
-				resultFilePerf.append(ArrayUtil.toString(performance[run], ", ", nf));
-				resultFilePerf.append("\n");
-				resultFileFit.append(ArrayUtil.toString(fitness[run], ", ", nf));
-				resultFileFit.append("\n");
-			}
+			String resultPerfFileName = resultFileNameBase + "-performance.csv";
+			Results resultsPerf = new Results(performance, null);
+			BufferedWriter resultFilePerf = new BufferedWriter(new FileWriter(resultPerfFileName));
+			resultFilePerf.append(resultsPerf.toString());
 			resultFilePerf.close();
+			logger.info("Wrote best performance for each generation in each run to " + resultPerfFileName);
+			
+			String resultFitFileName = resultFileNameBase + "-fitness.csv";
+			Results resultsFitness = new Results(fitness, null);
+			BufferedWriter resultFileFit = new BufferedWriter(new FileWriter(resultFitFileName));
+			resultFileFit.append(resultsFitness.toString());
 			resultFileFit.close();
-			logger.info("Wrote best performance for each generation in each run to " + resultPerfFile);
-			logger.info("Wrote best fitness for each generation in each run to " + resultFitFile);
+			logger.info("Wrote best fitness for each generation in each run to " + resultFitFileName);
 
 			// Only do stats if there's more than one run.
 			if (numRuns > 1) {
-				// Get results in [generation][run] format.
-				double[][] performanceT = ((Array2DRowRealMatrix) (new Array2DRowRealMatrix(performance, false)).transpose()).getDataRef();
-				double[][] fitnessT = ((Array2DRowRealMatrix) (new Array2DRowRealMatrix(fitness, false)).transpose()).getDataRef();
-				String statsPerfFile = resultFileNameBase + "-performance-stats.csv";
-				String statsFitFile = resultFileNameBase + "-fitness-stats.csv";
+				String statsPerfFileName = resultFileNameBase + "-performance-stats.csv";
+				Statistics statsPerf = new Statistics(resultsPerf);
 				BufferedWriter statsFilePerf = new BufferedWriter(new FileWriter(resultFileNameBase + "-performance-stats.csv"));
-				BufferedWriter statsFileFit = new BufferedWriter(new FileWriter(resultFileNameBase + "-fitness-stats.csv"));
-				statsFilePerf.write(PostProcess.generateStats(performanceT));
-				statsFileFit.write(PostProcess.generateStats(fitnessT));
+				statsFilePerf.write(statsPerf.getBasicStats().toString());
 				statsFilePerf.close();
-				statsFileFit.close();
-				logger.info("Wrote statistics for best performance over each run for each generation to " + statsPerfFile);
-				logger.info("Wrote statistics for best fitness over each run for each generation to " + statsFitFile);
+				logger.info("Wrote statistics for best performance over each run for each generation to " + statsPerfFileName);
+				
+				String statsFitnessFileName = resultFileNameBase + "-fitness-stats.csv";
+				Statistics statsFitness = new Statistics(resultsFitness);
+				BufferedWriter statsFileFitness = new BufferedWriter(new FileWriter(resultFileNameBase + "-fitness-stats.csv"));
+				statsFileFitness.write(statsFitness.getBasicStats().toString());
+				statsFileFitness.close();
+				logger.info("Wrote statistics for best fitness over each run for each generation to " + statsFitnessFileName);
 			}
 		}
 	}
@@ -292,12 +289,15 @@ public class Run {
 					}
 				}
 			}
-
-			java.util.Properties log4jProps = new java.util.Properties();
-			log4jProps.putAll(properties);
-			PropertyConfigurator.configure(log4jProps);
-
-			properties.configureLogger();
 		}
+		
+		java.util.Properties log4jProps = new java.util.Properties();
+		log4jProps.putAll(properties);
+		PropertyConfigurator.configure(log4jProps);
+
+		properties.configureLogger();
+		
+		logger = Logger.getLogger(Run.class);
 	}
 }
+

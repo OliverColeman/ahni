@@ -98,9 +98,6 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 		init(props);
 	}
 
-	/**
-	 * @see Configurable#init(Properties)
-	 */
 	@Override
 	public void init(Properties props) {
 		this.properties = props;

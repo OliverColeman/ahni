@@ -43,9 +43,6 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 		init(props);
 	}
 
-	/**
-	 * @see Configurable#init(Properties)
-	 */
 	public void init(ojc.ahni.hyperneat.Properties props) {
 		super.init(props);
 		activationFunction = ActivationFunctionFactory.getInstance().get(props.getProperty(HYPERNEAT_ACTIVATION_FUNCTION_KEY));

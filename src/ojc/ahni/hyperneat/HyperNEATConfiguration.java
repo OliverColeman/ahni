@@ -269,7 +269,6 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 	
 	/**
 	 * Returns the path of the directory where files for this experiment should be written to. Includes a trailing slash.
-	 * @see #logFilesEnabled()
 	 */
 	public String getOutputDirPath() {
 		return props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY, null);

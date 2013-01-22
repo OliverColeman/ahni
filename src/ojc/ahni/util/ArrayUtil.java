@@ -51,7 +51,7 @@ public class ArrayUtil {
 		}
 		return result.toString();
 	}
-
+	
 	/**
 	 * @param a The array to print.
 	 * @param separator A string to separate each element.
@@ -80,7 +80,7 @@ public class ArrayUtil {
 	 * @param separator A string to separate each element.
 	 * @return String representation of the given array.
 	 */
-	public static String toString(String[] a, String separator) {
+	public static<T> String toString(T[] a, String separator) {
 		StringBuffer result = new StringBuffer();
 		if (a.length > 0)
 			result.append(a[0]);

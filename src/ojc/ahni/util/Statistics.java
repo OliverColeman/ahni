@@ -1,5 +1,6 @@
 package ojc.ahni.util;
 
+import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 /**
@@ -15,6 +16,9 @@ public class Statistics {
 	private int runs; // Number of runs represented.
 	private int gens; // Number of generations represented.
 
+	/**
+	 * Creates a new empty Statistics for run results consisting of the given number of generations.
+	 */
 	public Statistics(int generationCount) {
 		this.data = new DescriptiveStatistics[generationCount];
 		for (int g = 0; g < gens; g++) {
@@ -25,16 +29,17 @@ public class Statistics {
 	}
 
 	/**
-	 * Creates a new set of results with the given data.
-	 * 
-	 * @param rawData The raw result data, in the format [generation][run].
+	 * Creates a new Statistics based on the given results.
+	 * @param results The results to generate statistics for.
 	 */
-	public Statistics(double[][] rawData) {
-		runs = rawData[0].length;
-		gens = rawData.length;
+	public Statistics(Results results) {
+		runs = results.getSeriesCount();
+		gens = results.getItemCount();
 		this.data = new DescriptiveStatistics[gens];
+		// Get data in format [generation][run].
+		double[][] dataTranspose = ((Array2DRowRealMatrix) (new Array2DRowRealMatrix(results.getData(), false)).transpose()).getDataRef();
 		for (int g = 0; g < gens; g++) {
-			data[g] = new DescriptiveStatistics(rawData[g]);
+			data[g] = new DescriptiveStatistics(dataTranspose[g]);
 		}
 	}
 
@@ -55,7 +60,7 @@ public class Statistics {
 	/**
 	 * Adds a run to this set of results.
 	 * 
-	 * @param data An array containing the result from each generation of the run. The length of the array is expected
+	 * @param runData An array containing the result from each generation of the run. The length of the array is expected
 	 *            to be the same as getGenerationCount().
 	 */
 	public void addRun(double[] runData) {
@@ -90,7 +95,7 @@ public class Statistics {
 	 * Returns an estimate for the pth percentile over the set of runs at the given generation number.
 	 * 
 	 * @param generation The generation number to retrieve statistics for.
-	 * @param The requested percentile, in the range (0, 100].
+	 * @param p The requested percentile, in the range (0, 100].
 	 */
 	public double getPercentile(int generation, double p) {
 		return data[generation].getPercentile(p);
@@ -188,5 +193,23 @@ public class Statistics {
 			result[g] = data[g].getMax();
 		}
 		return result;
+	}
+	
+	/**
+	 * Returns a Results object that contains basic statistics, including mean, standard deviation, minimum, maximum
+	 * and estimates of 25th, 50th and 75th percentiles.
+	 */
+	public Results getBasicStats() {
+		String[] labels = new String[]{"Mean", "Std. Dev.", "Minimum", "Maximum", "25th pct.", "50th pct.", "75th pct."};
+		int seriesCount = labels.length;
+		double[][] stats = new double[seriesCount][];
+		stats[0] = getMean();
+		stats[1] = getStandardDeviation();
+		stats[2] = getMin();
+		stats[3] = getMax();
+		stats[4] = getPercentile(25);
+		stats[5] = getPercentile(50);
+		stats[6] = getPercentile(75);
+		return new Results(stats, labels);
 	}
 }

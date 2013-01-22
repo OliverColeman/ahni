@@ -84,9 +84,6 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> {
 		init(props);
 	}
 
-	/**
-	 * @see Configurable#init(Properties)
-	 */
 	@Override
 	public void init(Properties props) {
 		// If the properties specify a separate weight output per layer.

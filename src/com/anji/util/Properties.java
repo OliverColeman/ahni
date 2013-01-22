@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -104,7 +105,7 @@ public class Properties extends java.util.Properties {
 	 * @throws IOException
 	 */
 	public void loadFromResourceWithoutLogging(String resource) throws IOException {
-		InputStream in = ClassLoader.getSystemResourceAsStream(resource);
+		FileReader in = new FileReader(resource);
 		load(in);
 		setName(resource);
 	}
