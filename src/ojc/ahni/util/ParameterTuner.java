@@ -160,7 +160,7 @@ public class ParameterTuner {
 				System.out.println("Finished iteration. Current best values are:\n" + Arrays.toString(currentBestVals));
 
 				if (!adjustedAnyParams) { 
-					valAdjustFactor /= 2;
+					valAdjustFactor = (valAdjustFactor-1)/2+1;
 					System.out.println("Value adjust factor is now " + valAdjustFactor);
 					
 				}
