@@ -7,24 +7,11 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.AndFileFilter;
-import org.apache.commons.io.filefilter.FileFileFilter;
-import org.apache.commons.io.filefilter.WildcardFileFilter;
-import org.apache.commons.io.filefilter.WildcardFilter;
-import org.apache.commons.math3.linear.Array2DRowRealMatrix;
-
-import ojc.ahni.hyperneat.Properties;
-
-import com.beust.jcommander.Parameter;
 import com.esotericsoftware.wildcard.Paths;
 
 /**
@@ -59,10 +46,16 @@ public class PostProcess {
 				resultsWriter.close();
 			}
 			else if (op.equals("combineResults") || op.equals("cr")) {
-				String inputFiles = args.removeFirst();
-				BufferedWriter resultsWriter = new BufferedWriter(new FileWriter(new File(args.removeFirst())));
+				if (args.size() != 2) {
+					System.err.println("It looks like you have too many arguments, this is probably because the input result file glob pattern was not enclosed in quoation marks.\n");
+					printUsageAndExit();
+				}
+				String inputFiles = args.removeFirst().replace("\"", "").replace("'", "");
+				File output = new File(args.removeFirst());
+				BufferedWriter resultsWriter = new BufferedWriter(new FileWriter(output));
 				combineResults(inputFiles, resultsWriter);
 				resultsWriter.close();
+				System.out.println("Wrote combined results to " + output.getAbsolutePath());
 			}
 			else {
 				printUsageAndExit();
@@ -84,6 +77,11 @@ public class PostProcess {
 		System.out.println("    ca: For each run, computes averages over some number of generations (the window size) within the run.");
 		System.out.println("        The default number of result values for each run in the output file is 100,");
 		System.out.println("        but a different number of result values can be specified after the name of the output file.");
+		System.out.println("    cr:  Combine the result files from multiple runs into one file.");
+		System.out.println("        The <input file> argument should be the path to the result files as a glob pattern. The pattern ");
+		System.out.println("        supports the typical glob format, and in order to match more than one file must necessarily include");
+		System.out.println("        wildcard characters such as ? or *. NOTE: the input file pattern should be enclosed in quotation");
+		System.out.println("        marks to avoid the shell or Java expanding it automatically."); 
 		System.exit(0);
 	}
 
@@ -149,13 +147,21 @@ public class PostProcess {
 		}
 		Paths paths = new Paths(baseDir, filePattern);
 		List<File> files = paths.getFiles();
-		System.out.println("Processing files:\n  " + ArrayUtil.toString(files.toArray(), "\n  "));
 		Iterator<File> fileItr = files.iterator();
-		Results results = new Results(new BufferedReader(new FileReader(fileItr.next())));
+
+		File f = fileItr.next();
+		System.out.println("Processing " + f.getAbsolutePath());
+		Results results = new Results(new BufferedReader(new FileReader(f)));
+		int resultCount = 1;
+		
 		while (fileItr.hasNext()) {
-			BufferedReader resultReader = new BufferedReader(new FileReader(fileItr.next()));
+			f = fileItr.next();
+			System.out.println("Processing " + f.getAbsolutePath());
+			BufferedReader resultReader = new BufferedReader(new FileReader(f));
 			results.add(new Results(resultReader));
+			resultCount++;
 		}
+		System.out.println("Combined " + resultCount + " results.");
 		resultsWriter.write(results.toString());
 	}
 }
