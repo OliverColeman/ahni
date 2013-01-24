@@ -1,11 +1,25 @@
 package ojc.ahni.util;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.lang.management.ManagementFactory;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+
+import com.esotericsoftware.wildcard.Paths;
 
 import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.hyperneat.Run;
@@ -57,6 +71,7 @@ import ojc.ahni.hyperneat.Run;
  */
 public class ParameterTuner {
 	public static double significanceFactor = 1.01;
+	private static final DecimalFormat nf = new DecimalFormat("0.00000");
 	
 	public static void main(String[] args) {
 		if (args.length == 0) {
@@ -74,9 +89,19 @@ public class ParameterTuner {
 			double[] maxValues = props.getDoubleArrayProperty("parametertuner.maxvalues", ArrayUtil.newArray(propCount, Double.MAX_VALUE));
 			int maxIterations = props.getIntProperty("parametertuner.maxiterations", 100);
 			double valAdjustFactor = props.getDoubleProperty("parametertuner.initialvalueadjustfactor", 2);
-			int numRuns = props.getIntProperty("parametertuner.numruns", 30);
+			int numRuns = props.getIntProperty("parametertuner.numruns", 50);
+			int numGens = props.getIntProperty("parametertuner.numgens", 500);
+			double solvedPerformance = props.getDoubleProperty("parametertuner.solvedperformance", 1);
+			String htCondorTpl = props.getProperty("parametertuner.htcondor", null);
+			
+			if (htCondorTpl != null) {
+				// Clean up generated files from abortive runs.
+				Paths paths = new Paths("./", "pt-condor-*");
+				paths.delete();
+			}
 			
 			props.setProperty("num.runs", "1"); // We'll calculate our own average so we can report progress as we go.
+			props.setProperty("num.generations", "" + numGens);
 			props.setProperty("log4j.rootLogger", "OFF"); // Suppress logging.
 			Logger.getRootLogger().setLevel(Level.OFF);
 			props.remove("random.seed"); // Make sure the runs are randomised.
@@ -85,10 +110,11 @@ public class ParameterTuner {
 			int[] adjustCountDown = new int[propCount];
 			double adjustDownFitness = 0, adjustUpFitness = 0;
 			double adjustDownVal = 0, adjustUpVal = 0;
+			int runLotID = 0;
 
 			System.out.println("Determining initial fitness.");
-			double bestFitness = doRuns(props, args, numRuns);
-			System.out.println("Initial fitness: " + bestFitness);
+			double bestFitness = doRuns(props, numRuns, runLotID++, htCondorTpl);
+			System.out.println("Initial fitness: " + nf.format(bestFitness));
 			
 			for (int i = 0; i < maxIterations; i++) {
 				System.out.println("Start iteration " + i);
@@ -99,37 +125,42 @@ public class ParameterTuner {
 				// Adjust each parameter in turn.
 				for (int p = 0; p < propCount; p++) {
 					String propKey = propsToTune[p];
+					boolean solvedInCurrentGens = false;
 
 					// Sample fitness either side of current parameter value.
 					if (adjustCountDown[p] == 0) {
-						System.out.println("\tTuning " + propKey + " (current value is " + currentBestVals[p] + ").");
+						System.out.println("\tTuning " + propKey + " (current value is " + nf.format(currentBestVals[p]) + ").");
 						double newVal = currentBestVals[p];
 						double newBestFitness = bestFitness;
 
 						adjustDownVal = Math.min(maxValues[p], Math.max(minValues[p], currentBestVals[p] / valAdjustFactor));
 						if (adjustDownVal != currentBestVals[p]) {
 							props.setProperty(propKey, "" + adjustDownVal);
-							adjustDownFitness = doRuns(props, args, numRuns);
+							adjustDownFitness = doRuns(props, numRuns, runLotID++, htCondorTpl);
 							boolean better = adjustDownFitness > bestFitness * significanceFactor;
-							System.out.println("\t\tValue " + adjustDownVal + " gave fitness of " + adjustDownFitness + " (" + (!better ? "not significantly " : "") + "greater than current best).");
+							System.out.println("\t\tValue " + nf.format(adjustDownVal) + " gave fitness of " + nf.format(adjustDownFitness) + " (" + (!better ? "not significantly " : "") + "greater than current best).");
 
 							if (better) {
 								newBestFitness = adjustDownFitness;
 								newVal = adjustDownVal;
 							}
+							
+							solvedInCurrentGens |= adjustDownFitness >= solvedPerformance;
 						}
 
 						adjustUpVal = Math.min(maxValues[p], Math.max(minValues[p], currentBestVals[p] * valAdjustFactor));
 						if (adjustUpVal != currentBestVals[p]) {
 							props.setProperty(propKey, "" + adjustUpVal);
-							adjustUpFitness = doRuns(props, args, numRuns);
+							adjustUpFitness = doRuns(props, numRuns, runLotID++, htCondorTpl);
 							boolean better = adjustUpFitness > bestFitness * significanceFactor && adjustUpFitness > adjustDownFitness;
-							System.out.println("\t\tValue " + adjustUpVal + " gave fitness of " + adjustUpFitness + " (" + (!better ? "not significantly " : "") + "greater than current best and/or downward adjustment).");
+							System.out.println("\t\tValue " + nf.format(adjustUpVal) + " gave fitness of " + nf.format(adjustUpFitness) + " (" + (!better ? "not significantly " : "") + "greater than current best and/or downward adjustment).");
 
 							if (better) {
 								newBestFitness = adjustUpFitness;
 								newVal = adjustUpVal;
 							}
+							
+							solvedInCurrentGens |= adjustUpFitness >= solvedPerformance;
 						}
 
 						// If the fitness was increased by an adjustment.
@@ -149,6 +180,13 @@ public class ParameterTuner {
 
 						// Set parameter to current best value.
 						props.setProperty(propKey, "" + currentBestVals[p]);
+						
+						// Reduce number of generations if solutions are being consistently found in the current number of generations.
+						if (solvedInCurrentGens) {
+							numGens = (int) (numGens * 0.75);
+							props.setProperty("num.generations", "" + numGens);
+							System.out.println("  Reduced number of generations to " + numGens); 
+						}
 					} else {
 						adjustCountDown[p]--;
 						System.out.println("\tSkipping " + propKey + " for " + adjustCountDown[p] + " more iterations.");
@@ -157,13 +195,16 @@ public class ParameterTuner {
 					adjustCountDownZeroExists |= adjustCountDown[p] == 0;
 				}
 
-				System.out.println("Finished iteration. Current best values are:\n" + Arrays.toString(currentBestVals));
+				System.out.println("\nFinished iteration. Current best values are:");
+				for (int p = 0; p < propCount; p++) {
+					System.out.println("  " + propsToTune[p] + " = " + currentBestVals[p]);
+				}
 
 				if (!adjustedAnyParams) { 
 					valAdjustFactor = (valAdjustFactor-1)/2+1;
-					System.out.println("Value adjust factor is now " + valAdjustFactor);
-					
+					System.out.println("\nValue adjust factor is now " + valAdjustFactor);
 				}
+				System.out.println("\n");
 
 				// Make sure that at least one parameter is due to be adjusted. 
 				while (!adjustCountDownZeroExists) {
@@ -183,11 +224,19 @@ public class ParameterTuner {
 		}
 	}
 	
-	private static double doRuns(Properties props, String[] args, int numRuns) throws Exception {
+	
+	private static double doRuns(Properties props, int numRuns, int id, String htCondorTpl) throws Exception {
+		if (htCondorTpl == null) {
+			return doRunsSerial(props, numRuns);
+		}
+		return doRunsHTCondor(props, numRuns, id, htCondorTpl);
+	}
+	
+	private static double doRunsSerial(Properties props, int numRuns) throws Exception {
 		double sumFitness = 0;
 		System.out.print("\t\tStarting " + numRuns + " runs: ");
 		for (int r = 0; r < numRuns; r++) {
-			System.out.print(r + " ");
+			System.out.print(".");
 			Run runner = new Run(props);
 			runner.noOutput = true;
 			runner.run();
@@ -205,7 +254,97 @@ public class ParameterTuner {
 		System.out.println(" Finished runs, memory usage (heap / non-heap / total MB): " + memHeap + " / " + memNonHeap + " / " + (memHeap + memNonHeap));
 		return sumFitness / numRuns;
 	}
+	
+	private static double doRunsHTCondor(Properties props, int numRuns, int id, String htCondorTpl) throws Exception {
+		// Create dir to store temp files.
+		String condorOutDir = "pt-condor-" + id;
+		String condorOutDirSep = condorOutDir + File.separator;
+		(new File(condorOutDir)).mkdir();
+		// Save properties file.
+		props.store(new FileOutputStream(condorOutDirSep + "pt.properties"), "" + id);
+		
+		// Generate condor submit file from template.
+		String[] lines = htCondorTpl.split("\n");
+		Map<String, String> condorSubmit = new HashMap<String, String>();
+		for (String line : lines) {
+			if (!line.trim().isEmpty()) {
+				String[] keyVal = line.split("=", 2);
+				condorSubmit.put(keyVal[0].trim(), keyVal[1].trim());
+			}
+		}
+		condorSubmit.put("universe", "java");
+		condorSubmit.put("arguments", "ojc.ahni.hyperneat.Run -ao -od ./ -f -ar result-$(Process) ./pt.properties");
+		condorSubmit.put("universe", "java");
+		String tif = (condorSubmit.containsKey("transfer_input_files") ? condorSubmit.get("transfer_input_files") + ", " : "") + "pt.properties";
+		condorSubmit.put("transfer_input_files", tif);
+		condorSubmit.put("output", "out-$(Process).txt");
+		condorSubmit.put("error", "err-$(Process).txt");
+		condorSubmit.put("when_to_transfer_output", "ON_EXIT");
+		condorSubmit.put("should_transfer_files", "YES");
+		condorSubmit.remove("queue");
+		BufferedWriter fileWriter = new BufferedWriter(new FileWriter(new File(condorOutDirSep + "submit.txt")));
+		for (Map.Entry<String, String> entry : condorSubmit.entrySet()) {
+			fileWriter.write(entry.getKey() + "=" + entry.getValue() + "\n");
+		}
+		fileWriter.write("queue " + numRuns + "\n");
+		fileWriter.close();
+		
+		// Submit jobs to condor.
+		System.out.print("\t\tStarting " + numRuns + " runs: ");
+		Process condorProcess = Runtime.getRuntime().exec("condor_submit submit.txt", null, new File(condorOutDir));
+		boolean finished = false;
+		int condorProcessReturn = -1;
+		do {
+			Thread.sleep(100);
+			// See if process has finished (waitFor() doesn't seem to work).
+			try {
+				condorProcessReturn = condorProcess.exitValue();
+				finished = true; 
+			}
+			catch (IllegalThreadStateException e) {}
+			
+		} while (!finished);
+		
+		if (condorProcessReturn != 0) {
+			BufferedReader condorProcessOutBuffer = new BufferedReader(new InputStreamReader(condorProcess.getInputStream()));
+			String condorProcessOut = "", s;
+			while ((s = condorProcessOutBuffer.readLine()) != null)
+				condorProcessOut += s + "\n";
+			throw new Exception("Error submitting HTCondor jobs:\n" + condorProcessOut);
+		}
+		
+		// Wait for condor jobs to finish.
+		int currentDoneCount = 0;
+		while (currentDoneCount != numRuns) {
+			Thread.sleep(10000); // Wait for 10 seconds.
+			Paths paths = new Paths(condorOutDir, "result-*-fitness.csv");
+			if (currentDoneCount != paths.count()) {
+				for (int i = 0; i < paths.count() - currentDoneCount; i++) System.out.print(".");
+			}
+			currentDoneCount = paths.count();
+		}
+		System.out.println(" Finished.");
+		
+		// Collate results.
+		Results results = PostProcess.combineResults(condorOutDirSep + "result-*-fitness.csv", false);
+		// Average over last 10 generations from all runs. The last 10 generations are 
+		// used to help compensate for noisy evaluation functions.
+		double result = 0;
+		for (int r = 0; r < numRuns; r++) {
+			for (int g = results.getItemCount()-10; g < results.getItemCount(); g++) {
+				result += results.getData(r, g);
+			}
+		}
+		result /= 10 * numRuns;
+		
+		// Clean up generated files.
+		Paths paths = new Paths("./", condorOutDir);
+		paths.delete();
 
+		return result;
+	}
+	
+	
 	/**
 	 * command line usage
 	 */

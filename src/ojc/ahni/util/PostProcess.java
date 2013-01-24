@@ -97,26 +97,41 @@ public class PostProcess {
 	 * @throws IOException
 	 */
 	public static void compressAverage(BufferedReader resultsReader, BufferedWriter resultsWriter, int size) throws IOException {
-		Results results = new Results(resultsReader);
+		Results resultsIn = new Results(resultsReader);
+		Results resultsOut = compressAverage(resultsIn, size);
+		resultsWriter.write(resultsOut.toString());
+	}
+	
+	/**
+	 * Given a result file from a set of runs, for each run computes averages over some number of generations (the
+	 * window size) within the run. This is useful if the results are to be plotted and the plotting software can't
+	 * handle many thousands of data points.
+	 * 
+	 * @param results results to compress.
+	 * @param size the desired size of the output file (number of result averages). The window size is then computed as
+	 *            ([number of original generations] / size).
+	 * @return the compressed results.
+	 */
+	public static Results compressAverage(Results results, int size) {
+		double[][] cData = new double[results.getSeriesCount()][size];
 		for (int series = 0; series < results.getSeriesCount(); series++) {
-			if (results.hasLabels()) {
-				resultsWriter.write(results.getLabel(series));
-			}
 			int window = results.getItemCount() / size;
 			float accum = 0;
 			int count = 0;
+			int outItemIndex = 0;
 			for (int item = 0; item < results.getItemCount(); item++) {
 				accum += results.getData(series, item);
 				count++;
 				// If at the end of the window or end of the series.
 				if (count == window || item == results.getItemCount() - 1) {
-					resultsWriter.write((item >= window ? ", " : "") + (accum / count));
+					cData[series][outItemIndex] = accum / count;
 					accum = 0;
 					count = 0;
+					outItemIndex++;
 				}
 			}
-			resultsWriter.write("\n");
 		}
+		return new Results(cData, results.getLabels());
 	}
 
 	/**
@@ -139,6 +154,17 @@ public class PostProcess {
 	 * @param resultsWriter A stream to write the results to.
 	 */
 	public static void combineResults(String filePattern, BufferedWriter resultsWriter) throws IOException {
+		Results results = combineResults(filePattern, true);
+		resultsWriter.write(results.toString());
+	}
+	
+	/**
+	 * Combine the results from multiple runs into one Results object.
+	 * @param filePattern The path to the result files. The pattern supports the typical glob format, and in 
+	 *   order to match more than one file must necessarily include wildcard characters such as ? or *.
+	 * @return A Results object containing the combined results.
+	 */
+	public static Results combineResults(String filePattern, boolean verbose) throws IOException {
 		String baseDir = "./";
 		// If absolute path. TODO handle windows absolute path?
 		if (filePattern.charAt(0) == File.separatorChar) {
@@ -150,18 +176,18 @@ public class PostProcess {
 		Iterator<File> fileItr = files.iterator();
 
 		File f = fileItr.next();
-		System.out.println("Processing " + f.getAbsolutePath());
+		if (verbose) System.out.println("Processing " + f.getAbsolutePath());
 		Results results = new Results(new BufferedReader(new FileReader(f)));
 		int resultCount = 1;
 		
 		while (fileItr.hasNext()) {
 			f = fileItr.next();
-			System.out.println("Processing " + f.getAbsolutePath());
+			if (verbose) System.out.println("Processing " + f.getAbsolutePath());
 			BufferedReader resultReader = new BufferedReader(new FileReader(f));
 			results.add(new Results(resultReader));
 			resultCount++;
 		}
-		System.out.println("Combined " + resultCount + " results.");
-		resultsWriter.write(results.toString());
+		if (verbose) System.out.println("Combined " + resultCount + " results.");
+		return results;
 	}
 }

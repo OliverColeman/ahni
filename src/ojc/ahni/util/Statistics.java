@@ -200,16 +200,16 @@ public class Statistics {
 	 * and estimates of 25th, 50th and 75th percentiles.
 	 */
 	public Results getBasicStats() {
-		String[] labels = new String[]{"Mean", "Std. Dev.", "Minimum", "Maximum", "25th pct.", "50th pct.", "75th pct."};
+		String[] labels = new String[]{"Mean", "Std. Dev.", "Minimum", "25th pct.", "50th pct.", "75th pct.", "Maximum"};
 		int seriesCount = labels.length;
 		double[][] stats = new double[seriesCount][];
 		stats[0] = getMean();
 		stats[1] = getStandardDeviation();
 		stats[2] = getMin();
-		stats[3] = getMax();
-		stats[4] = getPercentile(25);
-		stats[5] = getPercentile(50);
-		stats[6] = getPercentile(75);
+		stats[3] = getPercentile(25);
+		stats[4] = getPercentile(50);
+		stats[5] = getPercentile(75);
+		stats[6] = getMax();
 		return new Results(stats, labels);
 	}
 }
