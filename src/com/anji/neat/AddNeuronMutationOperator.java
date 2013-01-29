@@ -25,6 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ojc.ahni.util.ArrayUtil;
+
+import org.jgapcustomised.Allele;
 import org.jgapcustomised.ChromosomeMaterial;
 import org.jgapcustomised.Configuration;
 import org.jgapcustomised.MutationOperator;
@@ -42,7 +45,6 @@ import com.anji.util.Properties;
  * @author Philip Tucker
  */
 public class AddNeuronMutationOperator extends MutationOperator implements Configurable {
-
 	/**
 	 * properties key, add neuron mutation rate
 	 */
@@ -73,6 +75,7 @@ public class AddNeuronMutationOperator extends MutationOperator implements Confi
 	public AddNeuronMutationOperator(double newMutationRate) {
 		super(newMutationRate);
 	}
+	
 
 	/**
 	 * Adds connections according to <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">NEAT </a> add
@@ -81,23 +84,23 @@ public class AddNeuronMutationOperator extends MutationOperator implements Confi
 	 * @see org.jgapcustomised.MutationOperator#mutate(org.jgapcustomised.Configuration,
 	 *      org.jgapcustomised.ChromosomeMaterial, java.util.Set, java.util.Set)
 	 */
-	protected void mutate(Configuration jgapConfig, final ChromosomeMaterial target, Set allelesToAdd, Set allelesToRemove) {
+	protected void mutate(Configuration jgapConfig, final ChromosomeMaterial target, Set<Allele> allelesToAdd, Set<Allele> allelesToRemove) {
 		if ((jgapConfig instanceof NeatConfiguration) == false)
 			throw new AnjiRequiredException("com.anji.neat.NeatConfiguration");
 		NeatConfiguration config = (NeatConfiguration) jgapConfig;
 
-		Map neurons = NeatChromosomeUtility.getNeuronMap(target.getAlleles());
-
-		// neuron can be mutated on any connection
-		List connList = NeatChromosomeUtility.getConnectionList(target.getAlleles());
-		Collections.shuffle(connList, config.getRandomGenerator());
-
-		int numConnections = numMutations(config.getRandomGenerator(), connList.size());
-		Iterator iter = connList.iterator();
-		int count = 0;
-		while (iter.hasNext() && (count++ < numConnections)) {
-			ConnectionAllele oldConnectAllele = (ConnectionAllele) iter.next();
-			addNeuronAtConnection(config, neurons, oldConnectAllele, allelesToAdd, allelesToRemove);
+		List<ConnectionAllele> connList = NeatChromosomeUtility.getConnectionList(target.getAlleles());
+		int numMutations = numMutations(config.getRandomGenerator(), connList.size());
+		if (numMutations > 0) {
+			Map<Long, NeuronAllele> neurons = NeatChromosomeUtility.getNeuronMap(target.getAlleles());
+			// Add neurons at existing connections.
+			Collections.shuffle(connList, config.getRandomGenerator());
+			int count = 0;
+			for (ConnectionAllele oldConnectAllele : connList) {
+				addNeuronAtConnection(config, neurons, oldConnectAllele, allelesToAdd, allelesToRemove);
+				count++;
+				if (count == numMutations) break;
+			}
 		}
 	}
 
@@ -109,11 +112,11 @@ public class AddNeuronMutationOperator extends MutationOperator implements Confi
 	 * @param allelesToRemove <code>Set</code> contains <code>Allele</code> objects
 	 * @return true iff neuron added
 	 */
-	public boolean addNeuronAtConnection(NeatConfiguration config, Map neurons, ConnectionAllele oldConnectAllele, Set allelesToAdd, Set allelesToRemove) {
+	public boolean addNeuronAtConnection(NeatConfiguration config, Map<Long, NeuronAllele> neurons, ConnectionAllele oldConnectAllele, Set<Allele> allelesToAdd, Set<Allele> allelesToRemove) {
 		NeuronAllele newNeuronAllele = config.newNeuronAllele(oldConnectAllele.getInnovationId());
 
 		// check for dupes
-		if (neurons.containsKey(newNeuronAllele.getInnovationId()) == false) {
+		if (!neurons.containsKey(newNeuronAllele.getInnovationId())) {
 			neurons.put(newNeuronAllele.getInnovationId(), newNeuronAllele);
 
 			// and add 2 new connections ...

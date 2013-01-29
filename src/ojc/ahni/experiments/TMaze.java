@@ -162,18 +162,18 @@ public class TMaze extends BulkFitnessFunctionMT implements AHNIEventListener {
 	
 	@Override
 	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
-		return evaluate(genotype, substrate, evalThreadIndex, null);
+		try {
+			return evaluate(genotype, substrate, evalThreadIndex, null);
+		} catch (IOException e) {
+			// IOException is only for writing to log, which is null in this invocation, so shouldn't ever get here...
+			return 0;
+		}
 	}
 	
-	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, NiceWriter logOutput) {
+	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, NiceWriter logOutput) throws IOException {
 		if (logOutput != null) {
-			try {
-				logOutput.put("Map:\n");
-				logOutput.put(map).put("\n");
-			}
-			catch (IOException e) {
-				logger.error("Unable to write to log file: " + e);
-			}
+			logOutput.put("Map:\n");
+			logOutput.put(map).put("\n");
 		}
 		
 		int rewardSwitchTrialsIndex = 0;
@@ -184,28 +184,14 @@ public class TMaze extends BulkFitnessFunctionMT implements AHNIEventListener {
 		int correctTrialCount = 0;
 		int maxSteps = isDouble ? passageLength * 3 + 4 : passageLength * 2 + 2;
 		for (int trial = 0; trial < trialCount; trial++) {
-			if (logOutput != null) {
-				try {
-					logOutput.put("\n=== BEGIN TRIAL " + trial + "===\n");
-				}
-				catch (IOException e) {
-					logger.error("Unable to write to log file: " + e);
-				}
-			}
+			if (logOutput != null) logOutput.put("\n=== BEGIN TRIAL " + trial + "===\n");
 			
 			// If we should switch reward locations now.
 			if (rewardSwitchTrialsIndex < rewardSwitchTrials.length && trial == rewardSwitchTrials[rewardSwitchTrialsIndex]) {
 				rewardSwitchTrialsIndex++;
 				rewardIndex = rewardIndexForSwitch[rewardSwitchTrialsIndex];
 			}
-			if (logOutput != null) {
-				try {
-					logOutput.put("Reward is at " + rewardLocationsX[rewardIndex] + ", " + rewardLocationsY[rewardIndex] + "\n");
-				}
-				catch (IOException e) {
-					logger.error("Unable to write to log file: " + e);
-				}
-			}
+			if (logOutput != null) logOutput.put("Reward is at " + rewardLocationsX[rewardIndex] + ", " + rewardLocationsY[rewardIndex] + "\n");
 			
 			int agentX = startX;
 			int agentY = startY;
@@ -250,16 +236,11 @@ public class TMaze extends BulkFitnessFunctionMT implements AHNIEventListener {
 				int action = ArrayUtil.getMaxIndex(output);
 				
 				if (logOutput != null) {
-					try {
-						logOutput.put("Agent is at " + agentX + ", " + agentY + "\n");
-						logOutput.put("\tInput: " + ArrayUtil.toString(input, ", ", nf) + "\n");
-						logOutput.put("\tOutput: " + ArrayUtil.toString(output, ", ", nf) + "\n");
-						logOutput.put("\tAction: " + action + "\n");
-						logOutput.put("\tCurrent reward: " + trialReward + "  " + (finished ? "finished" : "") + "\n");
-					}
-					catch (IOException e) {
-						logger.error("Unable to write to log file: " + e);
-					}
+					logOutput.put("Agent is at " + agentX + ", " + agentY + "\n");
+					logOutput.put("\tInput: " + ArrayUtil.toString(input, ", ", nf) + "\n");
+					logOutput.put("\tOutput: " + ArrayUtil.toString(output, ", ", nf) + "\n");
+					logOutput.put("\tAction: " + action + "\n");
+					logOutput.put("\tCurrent reward: " + trialReward + "  " + (finished ? "finished" : "") + "\n");
 				}
 												
 				if (action == 1) { // Forward movement.

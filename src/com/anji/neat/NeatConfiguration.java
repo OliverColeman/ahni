@@ -196,7 +196,7 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	protected String[] hiddenActivationTypeRandomAllowed;
 	protected double[] hiddenActivationTypeRandomDistribution;
 	private NeatIdMap neatIdMap;
-
+	
 	/**
 	 * Initialize mutation operators.
 	 * 
@@ -204,7 +204,7 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	 */
 	protected void initMutation() throws InvalidConfigurationException {
 		// remove connection
-		RemoveConnectionMutationOperator removeOperator = (RemoveConnectionMutationOperator) props.singletonObjectProperty(RemoveConnectionMutationOperator.class);
+		RemoveConnectionMutationOperator removeOperator = props.singletonObjectProperty(RemoveConnectionMutationOperator.class);
 		if ((removeOperator.getMutationRate() > 0.0) && (removeOperator.getMaxWeightRemoved() > 0.0)) {
 			addMutationOperator(removeOperator);
 		}
@@ -212,32 +212,38 @@ public class NeatConfiguration extends Configuration implements Configurable {
 		// add topology
 		boolean isTopologyMutationClassic = props.getBooleanProperty(TOPOLOGY_MUTATION_CLASSIC_KEY, true);
 		if (isTopologyMutationClassic) {
-			SingleTopologicalMutationOperator singleOperator = (SingleTopologicalMutationOperator) props.singletonObjectProperty(SingleTopologicalMutationOperator.class);
+			SingleTopologicalMutationOperator singleOperator = props.singletonObjectProperty(SingleTopologicalMutationOperator.class);
 			if (singleOperator.getMutationRate() > 0.0) {
 				addMutationOperator(singleOperator);
 			}
 		} else {
 			// add connection
-			AddConnectionMutationOperator addConnOperator = (AddConnectionMutationOperator) props.singletonObjectProperty(AddConnectionMutationOperator.class);
+			AddConnectionMutationOperator addConnOperator = props.singletonObjectProperty(AddConnectionMutationOperator.class);
 			if (addConnOperator.getMutationRate() > 0.0) {
 				addMutationOperator(addConnOperator);
 			}
 
 			// add neuron
-			AddNeuronMutationOperator addNeuronOperator = (AddNeuronMutationOperator) props.singletonObjectProperty(AddNeuronMutationOperator.class);
+			AddNeuronMutationOperator addNeuronOperator = props.singletonObjectProperty(AddNeuronMutationOperator.class);
 			if (addNeuronOperator.getMutationRate() > 0.0) {
 				addMutationOperator(addNeuronOperator);
+			}
+			
+			// add neuron anywhere
+			AddNeuronAnywhereMutationOperator addNeuronAnywhereOperator = props.singletonObjectProperty(AddNeuronAnywhereMutationOperator.class);
+			if (addNeuronAnywhereOperator.getMutationRate() > 0.0) {
+				addMutationOperator(addNeuronAnywhereOperator);
 			}
 		}
 
 		// modify weight
-		WeightMutationOperator weightOperator = (WeightMutationOperator) props.singletonObjectProperty(WeightMutationOperator.class);
+		WeightMutationOperator weightOperator = props.singletonObjectProperty(WeightMutationOperator.class);
 		if (weightOperator.getMutationRate() > 0.0) {
 			addMutationOperator(weightOperator);
 		}
 
 		// prune
-		PruneMutationOperator pruneOperator = (PruneMutationOperator) props.singletonObjectProperty(PruneMutationOperator.class);
+		PruneMutationOperator pruneOperator = props.singletonObjectProperty(PruneMutationOperator.class);
 		if (pruneOperator.getMutationRate() > 0.0) {
 			addMutationOperator(pruneOperator);
 		}

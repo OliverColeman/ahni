@@ -82,8 +82,8 @@ public class NeatChromosomeUtility {
 	 * @return <code>Collection</code> containing ConnectionGene objects, those in connGenes whose source neuron is
 	 *         srcNeuronGene
 	 */
-	public static Collection extractConnectionAllelesForSrcNeurons(Collection connAlleles, Collection srcNeuronInnovationIds) {
-		Collection result = new ArrayList();
+	public static Collection<ConnectionAllele> extractConnectionAllelesForSrcNeurons(Collection connAlleles, Collection srcNeuronInnovationIds) {
+		Collection<ConnectionAllele> result = new ArrayList<ConnectionAllele>();
 
 		// for every connection ...
 		Iterator connIter = connAlleles.iterator();
@@ -124,7 +124,7 @@ public class NeatChromosomeUtility {
 			if (fullyConnected && (numHidden == 0)) {
 				// Add input -> output connections.
 				for (int i = 0; i < numInputs; ++i) {
-					NeuronAllele srcNeuronAllele = (NeuronAllele) inNeurons.get(i);
+					NeuronAllele srcNeuronAllele = inNeurons.get(i);
 					ConnectionAllele c = config.newConnectionAllele(srcNeuronAllele.getInnovationId(), outNeuron.getInnovationId());
 					if (config != null)
 						c.setToRandomValue(config.getRandomGenerator(), false);
@@ -141,7 +141,7 @@ public class NeatChromosomeUtility {
 
 				// Add input -> hidden connections.
 				for (int i = 0; i < numInputs; ++i) {
-					NeuronAllele srcNeuronAllele = (NeuronAllele) inNeurons.get(i);
+					NeuronAllele srcNeuronAllele = inNeurons.get(i);
 					ConnectionAllele c = config.newConnectionAllele(srcNeuronAllele.getInnovationId(), hidNeuron.getInnovationId());
 					if (config != null)
 						c.setToRandomValue(config.getRandomGenerator(), false);
@@ -150,7 +150,7 @@ public class NeatChromosomeUtility {
 
 				// Add hidden -> output connections
 				for (int j = 0; j < numOutputs; ++j) {
-					NeuronAllele destNeuronAllele = (NeuronAllele) outNeurons.get(j);
+					NeuronAllele destNeuronAllele = outNeurons.get(j);
 					ConnectionAllele c = config.newConnectionAllele(hidNeuron.getInnovationId(), destNeuronAllele.getInnovationId());
 					if (config != null)
 						c.setToRandomValue(config.getRandomGenerator(), false);
@@ -178,7 +178,7 @@ public class NeatChromosomeUtility {
 	 *         objects
 	 * @see NeatChromosomeUtility#getNeuronMap(Collection, NeuronType)
 	 */
-	public static SortedMap getNeuronMap(Collection alleles) {
+	public static SortedMap<Long, NeuronAllele> getNeuronMap(Collection alleles) {
 		return getNeuronMap(alleles, null);
 	}
 
@@ -189,7 +189,7 @@ public class NeatChromosomeUtility {
 	 * @return <code>List</code> containing <code>NeuronGene</code> objects
 	 * @see NeatChromosomeUtility#getNeuronList(Collection, NeuronType)
 	 */
-	public static List getNeuronList(Collection alleles) {
+	public static List<NeuronAllele> getNeuronList(Collection<Allele> alleles) {
 		return getNeuronList(alleles, null);
 	}
 
@@ -229,12 +229,9 @@ public class NeatChromosomeUtility {
 	 * @param type
 	 * @return <code>List</code> contains <code>NeuronAllele</code> objects
 	 */
-	public static List getNeuronList(Collection alleles, NeuronType type) {
-		List result = new ArrayList();
-		Iterator iter = alleles.iterator();
-		while (iter.hasNext()) {
-			Allele allele = (Allele) iter.next();
-
+	public static List<NeuronAllele> getNeuronList(Collection<Allele> alleles, NeuronType type) {
+		List<NeuronAllele> result = new ArrayList<NeuronAllele>();
+		for (Allele allele : alleles) {
 			if (allele instanceof NeuronAllele) {
 				NeuronAllele nAllele = (NeuronAllele) allele;
 
@@ -243,7 +240,7 @@ public class NeatChromosomeUtility {
 					throw new IllegalArgumentException("chromosome contains duplicate neuron gene: " + allele.toString());
 
 				if ((type == null) || nAllele.isType(type))
-					result.add(allele);
+					result.add(nAllele);
 			}
 		}
 		return result;
@@ -256,12 +253,9 @@ public class NeatChromosomeUtility {
 	 * @return <code>SortedMap</code> containing key <code>Long</code> innovation id, value
 	 *         <code>ConnectionAllele</code> objects
 	 */
-	public static SortedMap getConnectionMap(Set alleles) {
-		TreeMap result = new TreeMap();
-		Iterator iter = alleles.iterator();
-		while (iter.hasNext()) {
-			Allele allele = (Allele) iter.next();
-
+	public static SortedMap<Long, ConnectionAllele> getConnectionMap(Set<Allele> alleles) {
+		TreeMap<Long, ConnectionAllele> result = new TreeMap<Long, ConnectionAllele>();
+		for (Allele allele : alleles) {
 			if (allele instanceof ConnectionAllele) {
 				ConnectionAllele connAllele = (ConnectionAllele) allele;
 				Long id = connAllele.getInnovationId();
@@ -270,7 +264,7 @@ public class NeatChromosomeUtility {
 				if (result.containsKey(id))
 					throw new IllegalArgumentException("chromosome contains duplicate connection gene: " + allele.toString());
 
-				result.put(id, allele);
+				result.put(id, connAllele);
 			}
 		}
 		return result;
@@ -282,12 +276,9 @@ public class NeatChromosomeUtility {
 	 * @param alleles <code>Collection</code> contains gene objects
 	 * @return <code>List</code> containing <code>ConnectionGene</code> objects
 	 */
-	public static List<ConnectionAllele> getConnectionList(Collection alleles) {
+	public static List<ConnectionAllele> getConnectionList(Collection<Allele> alleles) {
 		List<ConnectionAllele> result = new ArrayList<ConnectionAllele>();
-		Iterator iter = alleles.iterator();
-		while (iter.hasNext()) {
-			Allele allele = (Allele) iter.next();
-
+		for (Allele allele : alleles) {
 			if (allele instanceof ConnectionAllele) {
 				// sanity check
 				if (result.contains(allele))
@@ -307,8 +298,8 @@ public class NeatChromosomeUtility {
 	 * @return true if <code>srcNeuronId</code> and <code>destNeuronId</code> are connected
 	 * @see NeatChromosomeUtility#neuronsAreConnected(Long, Long, Collection, Set)
 	 */
-	public static boolean neuronsAreConnected(Long srcNeuronId, Long destNeuronId, Collection connGenes) {
-		return neuronsAreConnected(srcNeuronId, destNeuronId, connGenes, new HashSet());
+	public static boolean neuronsAreConnected(Long srcNeuronId, Long destNeuronId, Collection<ConnectionAllele> connGenes) {
+		return neuronsAreConnected(srcNeuronId, destNeuronId, connGenes, new HashSet<Long>());
 	}
 
 	/**
@@ -322,7 +313,7 @@ public class NeatChromosomeUtility {
 	 * @param alreadyTraversedConnIds <code>Set</code> contains <code>Long</code> connection ID objects
 	 * @return returns true if neurons are the same, or a path lies between src and dest in connGenes connected graph
 	 */
-	private static boolean neuronsAreConnected(Long srcNeuronId, Long destNeuronId, Collection allConnAlleles, Set alreadyTraversedConnIds) {
+	private static boolean neuronsAreConnected(Long srcNeuronId, Long destNeuronId, Collection<ConnectionAllele> allConnAlleles, Set<Long> alreadyTraversedConnIds) {
 		// TODO - make connGenes Map key on srcNeuronId
 
 		// Recursively searches connections to see if src and dest are connected
@@ -333,16 +324,12 @@ public class NeatChromosomeUtility {
 		if (srcNeuronId.equals(destNeuronId))
 			return true;
 
-		Iterator connIter = allConnAlleles.iterator();
-		while (connIter.hasNext()) {
-			ConnectionAllele connAllele = (ConnectionAllele) connIter.next();
+		for (ConnectionAllele connAllele : allConnAlleles) {
 			if ((connAllele.getSrcNeuronId().equals(connAllele.getDestNeuronId()) == false) && (connAllele.getSrcNeuronId().equals(srcNeuronId))) {
 				if (neuronsAreConnected(connAllele.getDestNeuronId(), destNeuronId, allConnAlleles, alreadyTraversedConnIds))
 					return true;
 			}
 		}
-
 		return false;
 	}
-
 }

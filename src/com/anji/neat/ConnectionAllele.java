@@ -37,6 +37,9 @@ public class ConnectionAllele extends Allele {
 	 * default connection weight
 	 */
 	public final static double DEFAULT_WEIGHT = 0;
+	/**
+	 * Standard deviation of perturbations to weight values. This is generally set by WeightMutationOperator according to the loaded properties file.
+	 */
 	public static double RANDOM_STD_DEV = 1;
 	private double weight = DEFAULT_WEIGHT;
 

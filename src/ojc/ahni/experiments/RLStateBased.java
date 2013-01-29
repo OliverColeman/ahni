@@ -1,6 +1,12 @@
 package ojc.ahni.experiments;
 
+import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.Chromosome;
@@ -12,7 +18,9 @@ import ojc.ahni.event.AHNIEvent;
 import ojc.ahni.event.AHNIEventListener;
 import ojc.ahni.hyperneat.Properties;
 import ojc.ahni.util.ArrayUtil;
+import ojc.ahni.util.NiceWriter;
 import ojc.ahni.util.Point;
+import sun.net.ProgressSource.State;
 
 public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventListener {
 	private static final long serialVersionUID = 1L;
@@ -56,7 +64,7 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 	/**
 	 * The proportion of states that will contain a reward value greater than 0.
 	 */
-	public static final String REWARD_STATE_RATIO = "fitness.function.rlstate.action.map.ratio";
+	public static final String REWARD_STATE_RATIO = "fitness.function.rlstate.states.reward.ratio";
 	/**
 	 * The number of environments to evaluate candidates against. Increasing this will provide a more accurate evaluation but take longer.
 	 */
@@ -75,6 +83,7 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 
 	@Override
 	public void init(Properties props) {
+		super.init(props);
 		this.properties = props;
 		environmentCount = props.getIntProperty(ENVIRONMENT_COUNT);
 		actionCount = props.getIntProperty(ACTION_COUNT_INITIAL);
@@ -106,6 +115,15 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 	
 	@Override
 	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
+		try {
+			return evaluate(genotype, substrate, evalThreadIndex, null);
+		} catch (IOException e) {
+			// IOException is only for writing to log, which is null in this invocation, so shouldn't ever get here...
+			return 0;
+		}
+	}
+	
+	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, NiceWriter logOutput) throws IOException {
 		// Either the substrate input array has length equal to the maximum state count + the maximum action count + 1,
 		// or the current state count + current action count + 1.
 		int inputActionOffset = stateCount; // Initialise with current state + action count.
@@ -118,16 +136,18 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 		double[] input = new double[substrate.getInputDimension()[0]];
 		
 		double reward = 0;
+		double[] avgRewardForEachTrial = new double[trialCount];
 		for (Environment env : environments) {
 			substrate.reset();
-			double collectedReward = 0;
+			double envReward = 0;
+			double trialReward = 0;
 			int consecutivePerfectTrialCount = 0;
 			for (int trial = 0; trial < trialCount; trial++) {
 				State currentState = env.states[0];
 				int previousAction = 0;
 				boolean[] stateVisited = new boolean[stateCount];
 				stateVisited[currentState.id] = true;
-				collectedReward = 0;
+				trialReward = 0;
 				
 				// The network can perform a number of steps equal to the number of states minus the start state.
 				for (int step = 0; step < stateCount-1; step++) {
@@ -137,7 +157,7 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 					input[inputActionOffset + previousAction] = 1; // Previously performed action.
 					if (!stateVisited[currentState.id]) { // The reward from each state can only be counted once.
 						input[inputRewardOffset] = currentState.reward; // Reward from previous action and resultant state.
-						collectedReward += currentState.reward;
+						trialReward += currentState.reward;
 					}
 					stateVisited[currentState.id] = true;
 					
@@ -149,20 +169,37 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 					currentState = currentState.actionStateMap[action];
 				}
 				
-				// If two perfect trials have been executed then we can probably assume this environment has been mastered.
-				if (collectedReward > 0.999) {
+				// If 5 perfect trials have been executed then we can probably assume this environment has been mastered.
+				/*if (trialReward > 0.999) {
 					consecutivePerfectTrialCount++;
-					if (consecutivePerfectTrialCount == 2) break;
+					if (consecutivePerfectTrialCount == 5) {
+						envReward += trialReward * (trialCount - trial);
+						break;
+					}
 				}
 				else {
 					consecutivePerfectTrialCount = 0;
-				}
+				}*/
+				envReward += trialReward;
+				
+				avgRewardForEachTrial[trial] += trialReward;
 			}
+			reward += envReward / trialCount;
 		}
-		return (int) Math.round(getMaxFitnessValue() * (reward / environmentCount));
+		
+		if (logOutput != null) {
+			for (int trial = 0; trial < trialCount; trial++) {
+				avgRewardForEachTrial[trial] /= environmentCount;
+			}
+			logOutput.put(Arrays.toString(avgRewardForEachTrial));
+		}
+		
+		reward /= environmentCount;
+		return (int) Math.round(getMaxFitnessValue() * reward);
 	}
 	
-	private void increaseDifficulty() {
+	private boolean increaseDifficulty() {
+		boolean increasedDifficulty = false;
 		if (stateCount < props.getIntProperty(STATE_COUNT_MAX)) {
 			String deltaString = props.getProperty(STATE_COUNT_INCREASE_DELTA).trim().toLowerCase();
 			boolean isFactor = deltaString.endsWith("x");
@@ -175,6 +212,7 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 					stateCount = Math.max(1, (int) Math.round(stateCount * delta));
 				}
 			}
+			increasedDifficulty = true;
 		}
 		
 		if (actionCount < props.getIntProperty(ACTION_COUNT_MAX)) {
@@ -189,7 +227,9 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 					actionCount = Math.max(1, (int) Math.round(actionCount * delta));
 				}
 			}
+			increasedDifficulty = true;
 		}
+		return increasedDifficulty;
 	}
 	
 	private class Environment {
@@ -215,8 +255,9 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 				states[s] = new State(s, rewards[s], false);
 			}
 			boolean allRewardStatesVisitable = false;
-			int shortestPath = Integer.MAX_VALUE;
 			do {
+				Deque<State> rewardStatesNotVisited = new ArrayDeque<State>();
+				
 				// Generate random action->state map for each state.
 				double actionMapRatio = properties.getDoubleProperty(ACTION_MAP_RATIO);
 				for (int s = 0; s < stateCount; s++) {
@@ -224,11 +265,46 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 						int nextState = actionMapRatio > random.nextDouble() ? random.nextInt(stateCount) : s;
 						states[s].actionStateMap[a] = states[nextState];
 					}
+					if (rewards[s] > 0) 
+						rewardStatesNotVisited.add(states[s]);
 				}
 				
 				// Ensure all reward states are visitable from the start state.
-				
+				Set<State> visited = new HashSet<State>();
+				Set<State> newlyVisited = new HashSet<State>();
+				newlyVisited.add(states[0]);
+				int stepCount = 0;
+				while (visited.size() != stateCount && !rewardStatesNotVisited.isEmpty() && stepCount <= stateCount+1) {
+					Set<State> newlyFound = new HashSet<State>();
+					for (State s : newlyVisited) {
+						for (State nextState : s.actionStateMap) {
+							if (!visited.contains(nextState) && !newlyVisited.contains(nextState)) {
+								newlyFound.add(nextState);
+							}
+						}
+					}
+					visited.addAll(newlyVisited);
+					rewardStatesNotVisited.removeAll(newlyVisited);
+					newlyVisited = newlyFound;
+					stepCount++;
+				}
+				allRewardStatesVisitable = rewardStatesNotVisited.isEmpty();
 			} while (!allRewardStatesVisitable);
+			
+			//System.out.println(toString());
+			//System.out.println();
+		}
+		
+		public String toString() {
+			StringBuilder sb = new StringBuilder();
+			for (int s = 0; s < stateCount; s++) {
+				sb.append(s + " (" + (float) states[s].reward + ") => ");
+				for (int a = 0; a < actionCount; a++) {
+					sb.append(states[s].actionStateMap[a].id + ", ");
+				}
+				sb.append("\n");
+			}
+			return sb.toString();
 		}
 	}
 	
@@ -252,8 +328,8 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 		if (event.getType() == AHNIEvent.Type.GENERATION_END) {
 			Chromosome bestPerforming = event.getEvolver().getBestPerformingFromLastGen();
 			if (bestPerforming.getPerformanceValue() >= props.getDoubleProperty(DIFFICULTY_INCREASE_PERFORMANCE)) {
-				increaseDifficulty();
-				logger.info("Increased difficulty. State/action counts are now " + stateCount + " / " + actionCount);
+				if (increaseDifficulty())
+					logger.info("Increased difficulty. State/action counts are now " + stateCount + " / " + actionCount);
 			}
 		}
 	}

@@ -63,6 +63,7 @@ public class AddConnectionMutationOperator extends MutationOperator implements C
 	/**
 	 * @see com.anji.util.Configurable#init(com.anji.util.Properties)
 	 */
+	@Override
 	public void init(Properties props) throws Exception {
 		setMutationRate(props.getDoubleProperty(ADD_CONN_MUTATE_RATE_KEY, DEFAULT_MUTATE_RATE));
 		policy = RecurrencyPolicy.load(props);
@@ -116,6 +117,7 @@ public class AddConnectionMutationOperator extends MutationOperator implements C
 	 * @see org.jgapcustomised.MutationOperator#mutate(org.jgapcustomised.Configuration,
 	 *      org.jgapcustomised.ChromosomeMaterial, java.util.Set, java.util.Set)
 	 */
+	@Override
 	protected void mutate(Configuration jgapConfig, final ChromosomeMaterial target, Set allelesToAdd, Set allelesToRemove) {
 		if ((jgapConfig instanceof NeatConfiguration) == false)
 			throw new AnjiRequiredException("com.anji.neat.NeatConfiguration");
@@ -125,7 +127,7 @@ public class AddConnectionMutationOperator extends MutationOperator implements C
 		List neuronList = NeatChromosomeUtility.getNeuronList(target.getAlleles());
 		SortedMap conns = NeatChromosomeUtility.getConnectionMap(target.getAlleles());
 
-		// Determine # neurons to add and iterate randomly through alleles ...
+		// Determine # connections to add and iterate randomly through alleles ...
 		int maxConnectionsToAdd = (neuronList.size() * neuronList.size()) - conns.size();
 		int numConnectionsToAdd = numMutations(config.getRandomGenerator(), maxConnectionsToAdd);
 
@@ -165,7 +167,7 @@ public class AddConnectionMutationOperator extends MutationOperator implements C
 			}
 
 			// ... for which a mutation can occur
-			if (connectionAllowed(src, dest, conns)) {
+			if (connectionAllowed(src, dest, conns.values())) {
 				conns.put(newConn.getInnovationId(), newConn);
 				newConn.setToRandomValue(config.getRandomGenerator(), false);
 				allelesToAdd.add(newConn);
@@ -207,7 +209,7 @@ public class AddConnectionMutationOperator extends MutationOperator implements C
 			}
 
 			// ... for which a mutation can occur
-			if (connectionAllowed(src, dest, conns)) {
+			if (connectionAllowed(src, dest, conns.values())) {
 				conns.put(newConn.getInnovationId(), newConn);
 				newConn.setToRandomValue(config.getRandomGenerator(), false);
 				allelesToAdd.add(newConn);
@@ -226,14 +228,13 @@ public class AddConnectionMutationOperator extends MutationOperator implements C
 	 *         policy; false otherwise.
 	 * @see NeatChromosomeUtility#neuronsAreConnected(Long, Long, Collection)
 	 */
-	private boolean connectionAllowed(NeuronAllele src, NeuronAllele dest, SortedMap conns) {
+	public boolean connectionAllowed(NeuronAllele src, NeuronAllele dest, Collection<ConnectionAllele> conns) {
 		if (RecurrencyPolicy.DISALLOWED.equals(policy)) {
 			if (dest.isType(NeuronType.INPUT) || src.isType(NeuronType.OUTPUT))
 				return false;
-			boolean connected = NeatChromosomeUtility.neuronsAreConnected(dest.getInnovationId(), src.getInnovationId(), conns.values());
+			boolean connected = NeatChromosomeUtility.neuronsAreConnected(dest.getInnovationId(), src.getInnovationId(), conns);
 			return !connected;
 		}
 		return (dest.getActivationType().equals(LinearActivationFunction.NAME));
 	}
-
 }

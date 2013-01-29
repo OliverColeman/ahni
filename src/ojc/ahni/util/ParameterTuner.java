@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -197,12 +199,12 @@ public class ParameterTuner {
 
 				System.out.println("\nFinished iteration. Current best values are:");
 				for (int p = 0; p < propCount; p++) {
-					System.out.println("  " + propsToTune[p] + " = " + currentBestVals[p]);
+					System.out.println("  " + propsToTune[p] + " = " + nf.format(currentBestVals[p]));
 				}
 
 				if (!adjustedAnyParams) { 
 					valAdjustFactor = (valAdjustFactor-1)/2+1;
-					System.out.println("\nValue adjust factor is now " + valAdjustFactor);
+					System.out.println("\nValue adjust factor is now " + nf.format(valAdjustFactor));
 				}
 				System.out.println("\n");
 
@@ -290,27 +292,44 @@ public class ParameterTuner {
 		fileWriter.close();
 		
 		// Submit jobs to condor.
-		System.out.print("\t\tStarting " + numRuns + " runs: ");
+		System.out.print("\t\tStarting " + numRuns + " runs ");
 		Process condorProcess = Runtime.getRuntime().exec("condor_submit submit.txt", null, new File(condorOutDir));
 		boolean finished = false;
 		int condorProcessReturn = -1;
+		InputStreamReader condorProcessOutStream = new InputStreamReader(condorProcess.getInputStream());
+		StringBuilder condorProcessOut = new StringBuilder();
+		int c;
 		do {
 			Thread.sleep(100);
+			
+			// Catch the output.
+			while ((c = condorProcessOutStream.read()) != -1)
+				condorProcessOut.append((char) c);
+
 			// See if process has finished (waitFor() doesn't seem to work).
 			try {
 				condorProcessReturn = condorProcess.exitValue();
-				finished = true; 
+				finished = true;
 			}
 			catch (IllegalThreadStateException e) {}
-			
 		} while (!finished);
 		
+		// Catch any last bits of output.
+		while ((c = condorProcessOutStream.read()) != -1)
+			condorProcessOut.append((char) c);
+		
 		if (condorProcessReturn != 0) {
-			BufferedReader condorProcessOutBuffer = new BufferedReader(new InputStreamReader(condorProcess.getInputStream()));
-			String condorProcessOut = "", s;
-			while ((s = condorProcessOutBuffer.readLine()) != null)
-				condorProcessOut += s + "\n";
 			throw new Exception("Error submitting HTCondor jobs:\n" + condorProcessOut);
+		}
+		
+		Pattern p = Pattern.compile("\\d+ job\\(s\\) submitted to cluster (\\d+)\\.");
+		Matcher m = p.matcher(condorProcessOut.toString());
+		if (m.find()) {
+			String condorClusterID = m.group(1);
+			System.out.print(" (cluster " + condorClusterID + "): ");
+		}
+		else {
+			System.out.println("Unable to determine cluster ID from condor_submit output:\n " + condorProcessOut);
 		}
 		
 		// Wait for condor jobs to finish.

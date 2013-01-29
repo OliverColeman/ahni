@@ -46,15 +46,15 @@ public class WeightMutationOperator extends MutationOperator implements Configur
 	/**
 	 * properties key, perturb weight mutation rate
 	 */
-	private static final String WEIGHT_MUTATE_RATE_KEY = "weight.mutation.rate";
+	public static final String WEIGHT_MUTATE_RATE_KEY = "weight.mutation.rate";
 	/**
 	 * properties key, standard deviation of perturb weight mutation
 	 */
-	private static final String WEIGHT_MUTATE_STD_DEV_KEY = "weight.mutation.std.dev";
+	public static final String WEIGHT_MUTATE_STD_DEV_KEY = "weight.mutation.std.dev";
 	/**
 	 * properties key, the amount to perturb weights by when generating the initial population.
 	 */
-	private static final String WEIGHT_MUTATE_STD_DEV_INITIAL_KEY = "weight.mutation.std.dev.initial";
+	public static final String WEIGHT_MUTATE_STD_DEV_INITIAL_KEY = "weight.mutation.std.dev.initial";
 	/**
 	 * default mutation rate
 	 */
