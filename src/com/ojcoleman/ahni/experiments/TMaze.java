@@ -5,9 +5,7 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -21,12 +19,9 @@ import com.ojcoleman.ahni.event.AHNIEventListener;
 import com.ojcoleman.ahni.hyperneat.HyperNEATConfiguration;
 import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 import com.ojcoleman.ahni.hyperneat.Properties;
-import com.ojcoleman.ahni.nn.BainNN;
 import com.ojcoleman.ahni.util.ArrayUtil;
 import com.ojcoleman.ahni.util.NiceWriter;
 import com.ojcoleman.ahni.util.Point;
-
-import com.ojcoleman.bain.neuron.rate.NeuronCollectionWithBias;
 
 /**
  * Implements the T-maze navigation task similar to that described by: Sebastian Risi and Kenneth O. Stanley (2010) Indirectly Encoding Neural Plasticity as a
