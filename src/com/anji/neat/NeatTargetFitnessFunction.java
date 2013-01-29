@@ -19,11 +19,11 @@
  */
 package com.anji.neat;
 
-import ojc.ahni.hyperneat.HyperNEATEvolver;
 
 import com.anji.integration.ErrorFunction;
 import com.anji.integration.TargetFitnessFunction;
 import com.anji.util.Properties;
+import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 
 /**
  * Fitness function where error is subtracted from max fitness, then squared. Fitness is skewed such that max fitness is

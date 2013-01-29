@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import ojc.ahni.util.ArrayUtil;
 
 import org.jgapcustomised.Allele;
 import org.jgapcustomised.ChromosomeMaterial;
@@ -35,6 +34,7 @@ import org.jgapcustomised.MutationOperator;
 import com.anji.integration.AnjiRequiredException;
 import com.anji.util.Configurable;
 import com.anji.util.Properties;
+import com.ojcoleman.ahni.util.ArrayUtil;
 
 /**
  * Implements NEAT add node mutation inspired by <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">

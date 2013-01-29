@@ -23,7 +23,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-import ojc.ahni.hyperneat.HyperNEATEvolver;
 
 import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.Chromosome;
@@ -31,6 +30,7 @@ import org.jgapcustomised.Chromosome;
 import com.anji.util.Configurable;
 import com.anji.util.Properties;
 import com.anji.util.Randomizer;
+import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 
 /**
  * Assigns random fitness for each chromosome. This can be used for, among other things, modeling genetic drift.

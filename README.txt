@@ -58,13 +58,13 @@ with the run number.
 DEVELOPMENT AND CREATING NEW EXPERIMENTS
 
 To create your own experiments you will most likely want to extend 
-ojc.ahni.hyperneat.HyperNEATFitnessFunction or 
-ojc.ahni.hyperneat.HyperNEATTargetFitnessFunction 
+com.ojcoleman.ahni.hyperneat.HyperNEATFitnessFunction or 
+com.ojcoleman.ahni.hyperneat.HyperNEATTargetFitnessFunction 
 For examples see: 
-ojc.ahni.experiments.TestTargetFitnessFunction and 
-ojc.ahni.experiments.objectrecognition.* 
+com.ojcoleman.ahni.experiments.TestTargetFitnessFunction and 
+com.ojcoleman.ahni.experiments.objectrecognition.* 
 
-The main class is ojc.ahni.hyperneat.Run. It expects a .properties file containing
+The main class is com.ojcoleman.ahni.hyperneat.Run. It expects a .properties file containing
 parameters for NEAT, HyperNEAT, typically the specific experiment being run, 
 and various settings.
 
@@ -88,14 +88,14 @@ AHNI supports the Evolvable Substrate HyperNEAT (ES-HyperNEAT) extension (See
 http://eplex.cs.ucf.edu/ESHyperNEAT/).
 
 Currently only transcription to a Bain NeuralNetwork is supported, via the 
-ojc.ahni.hyperneat.ESHyperNEATTranscriberBain class. Currently 2D 
+com.ojcoleman.ahni.hyperneat.ESHyperNEATTranscriberBain class. Currently 2D 
 substrates and pseudo-3D substrates are supported. See the second properties 
 file mentioned below for a description of pseudo-3D. Real 3D substrates will 
 likely be coming soon (or let me know if you want to implement this ;)). 
 
 See ESHN-bain-test-pass-through.properties and bain-test-parity.properties 
 for usage examples (make sure ann.transcriber.class is set to 
-ojc.ahni.hyperneat.ESHyperNEATTranscriberBain).
+com.ojcoleman.ahni.hyperneat.ESHyperNEATTranscriberBain).
 
 
 NOTES

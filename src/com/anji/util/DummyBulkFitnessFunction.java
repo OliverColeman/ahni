@@ -9,10 +9,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-import ojc.ahni.hyperneat.HyperNEATEvolver;
 
 import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.Chromosome;
+
+import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 
 /**
  * @author Philip Tucker

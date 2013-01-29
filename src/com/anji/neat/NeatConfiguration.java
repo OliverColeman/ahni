@@ -22,8 +22,6 @@ package com.anji.neat;
 import java.io.IOException;
 import java.util.Arrays;
 
-import ojc.ahni.transcriber.HyperNEATTranscriberGridNet;
-import ojc.ahni.util.ArrayUtil;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;
@@ -43,6 +41,8 @@ import com.anji.nn.activationfunction.ActivationFunctionFactory;
 import com.anji.util.Configurable;
 import com.anji.util.Properties;
 import com.anji.util.Randomizer;
+import com.ojcoleman.ahni.transcriber.HyperNEATTranscriberGridNet;
+import com.ojcoleman.ahni.util.ArrayUtil;
 
 /**
  * Extension of JGAP configuration with NEAT-specific features added.

@@ -45,7 +45,7 @@ public class AddNeuronAnywhereMutationOperator extends MutationOperator implemen
 	}
 
 	/**
-	 * @see AddNeuronAnywhereMutationOperator#AddNeuronMutationOperator(double)
+	 * @see AddNeuronAnywhereMutationOperator#AddNeuronAnywhereMutationOperator(double)
 	 */
 	public AddNeuronAnywhereMutationOperator() {
 		this(DEFAULT_MUTATE_RATE);

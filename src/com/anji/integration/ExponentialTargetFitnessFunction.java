@@ -21,9 +21,9 @@ package com.anji.integration;
 
 import java.util.Arrays;
 
-import ojc.ahni.hyperneat.HyperNEATEvolver;
 
 import com.anji.util.Properties;
+import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 
 /**
  * Fitness function where error is exponential; i.e., as the error gets closer to 0, the fitness increases
