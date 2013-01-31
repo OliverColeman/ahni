@@ -28,15 +28,12 @@ import com.ojcoleman.ahni.util.NiceWriter;
  * 
  * @author Oliver Coleman
  */
-public class TargetFitnessFunctionMT extends BulkFitnessFunctionMT implements AHNIEventListener {
+public class TargetFitnessFunctionMT extends BulkFitnessFunctionMT {
 	private static final long serialVersionUID = 1L;
 	private static Logger logger = Logger.getLogger(TargetFitnessFunctionMT.class);
 	
-	private static final String LOG_CHAMP_PERGENS_KEY = HyperNEATTargetFitnessFunction.LOG_CHAMP_PERGENS_KEY;
-	
 	private TargetFitnessCalculator fitnessCalculator;
-	protected int logChampPerGens = -1;
-	
+
 	private double[][] inputPatterns;
 	private double[][] targetOutputPatterns;
 	private double minTargetOutputValue;
@@ -64,9 +61,7 @@ public class TargetFitnessFunctionMT extends BulkFitnessFunctionMT implements AH
 
 	public void init(Properties props) {
 		super.init(props);
-		logChampPerGens = props.getIntProperty(LOG_CHAMP_PERGENS_KEY, logChampPerGens);
 		fitnessCalculator = (TargetFitnessCalculator) props.newObjectProperty(TargetFitnessCalculator.class);
-		props.getEvolver().addEventListener(this);
 	}
 
 	/**
@@ -104,34 +99,26 @@ public class TargetFitnessFunctionMT extends BulkFitnessFunctionMT implements AH
 
 	@Override
 	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
-		return evaluate(genotype, substrate, evalThreadIndex, null);
+		return evaluate(genotype, substrate, null);
 	}
 	
-	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, NiceWriter logOutput) {
-		TargetFitnessCalculator.Results results = fitnessCalculator.evaluate(substrate, inputPatterns, targetOutputPatterns, minTargetOutputValue, maxTargetOutputValue, logOutput);
-		genotype.setPerformanceValue(results.performance);
-		return results.fitness;
-	}
-	
-
 	@Override
-	public void ahniEventOccurred(AHNIEvent event) {
-		if (event.getType() == AHNIEvent.Type.GENERATION_END) {
-			HyperNEATEvolver evolver = event.getEvolver();
-			boolean finished = evolver.evolutionFinished(); 
-			if ((logChampPerGens >= 0 && finished) || (logChampPerGens > 0 && evolver.getGeneration() % logChampPerGens == 0)) {
-				try {
-					Chromosome bestPerforming = evolver.getBestPerformingFromLastGen();
-					NiceWriter outputfile = new NiceWriter(new FileWriter(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : evolver.getGeneration()) + "-evaluation-" + bestPerforming.getId() + ".txt"), "0.00");
-					Activator substrate = generateSubstrate(bestPerforming, null);
-					evaluate(bestPerforming, substrate, 0, outputfile);
-					outputfile.close();
-				} catch (TranscriberException e) {
-					logger.info("Error transcribing best performing individual: "  + Arrays.toString(e.getStackTrace()));
-				} catch (IOException e) {
-					logger.info("Error opening evaluation log file: " + Arrays.toString(e.getStackTrace()));
-				}
+	public int evaluate(Chromosome genotype, Activator substrate, String baseFileName) {
+		if (baseFileName == null) {
+			TargetFitnessCalculator.Results results = fitnessCalculator.evaluate(substrate, inputPatterns, targetOutputPatterns, minTargetOutputValue, maxTargetOutputValue, null);
+			genotype.setPerformanceValue(results.performance);
+			return results.fitness;
+		}
+		else {
+			try {
+				NiceWriter outputFile = new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
+				TargetFitnessCalculator.Results results = fitnessCalculator.evaluate(substrate, inputPatterns, targetOutputPatterns, minTargetOutputValue, maxTargetOutputValue, outputFile);
+				outputFile.close();
+				return results.fitness;
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
+			return 0;
 		}
 	}
 }

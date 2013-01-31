@@ -1,5 +1,8 @@
 package com.ojcoleman.ahni.evaluation;
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -14,9 +17,13 @@ import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
 import com.anji.neat.Evolver;
 import com.anji.util.Randomizer;
+import com.ojcoleman.ahni.event.AHNIEvent;
+import com.ojcoleman.ahni.event.AHNIEventListener;
 import com.ojcoleman.ahni.hyperneat.Configurable;
+import com.ojcoleman.ahni.hyperneat.HyperNEATConfiguration;
 import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 import com.ojcoleman.ahni.hyperneat.Properties;
+import com.ojcoleman.ahni.util.NiceWriter;
 
 /**
  * <p>Provides a base for multi-threaded bulk fitness functions. Provides a multi-threaded framework for performing
@@ -46,13 +53,14 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	 * processor cores and the specified minimum will be used.
 	 */
 	public static final String MAX_THREADS_KEY = "fitness.max_threads";
-
+		
 	protected Properties props;
 	protected Transcriber transcriber;
 	protected int numThreads;
 	protected int evaluatorsFinishedCount;
 	protected Evaluator[] evaluators;
 	protected Iterator<Chromosome> chromosomesIterator;
+	protected int logChampPerGens = -1;
 
 	/**
 	 * This RNG should be used by all sub-classes for all randomness.
@@ -176,7 +184,8 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	 *            cases.
 	 */
 	protected abstract int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex);
-
+	
+	
 	public int getNumThreads() {
 		return numThreads;
 	}

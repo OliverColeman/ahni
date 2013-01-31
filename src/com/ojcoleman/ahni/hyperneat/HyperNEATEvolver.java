@@ -43,9 +43,11 @@ import com.anji.integration.PersistenceEventListener;
 import com.anji.integration.PresentationEventListener;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
+import com.ojcoleman.ahni.evaluation.AHNIFitnessFunction;
 import com.ojcoleman.ahni.event.AHNIEvent;
 import com.ojcoleman.ahni.event.AHNIEventListener;
 import com.ojcoleman.ahni.nn.BainNN;
+import com.ojcoleman.ahni.util.NiceWriter;
 
 /**
  * Configures and performs an AHNI evolutionary run.
@@ -78,6 +80,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 	public static final String LOG_PER_GENERATIONS_KEY = "log.pergenerations";
 	public static final String LOG_CHAMP_TOSTRING_KEY = "log.champ.tostring";
 	public static final String LOG_CHAMP_TOIMAGE_KEY = "log.champ.toimage";
+	public static final String LOG_CHAMP_EVALUATION_KEY = "log.champ.evaluation";
 	public static final String INITIAL_CPPN = "hyperneat.cppn.initial";
 
 	private HyperNEATConfiguration config = null;
@@ -93,7 +96,8 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 	private int logPerGenerations = 1;
 	int logChampToString = -1;
 	int logChampToImage = -1;
-
+	int logChampEvaluation = -1;
+	
 	protected int generation = 0;
 	protected Chromosome fittest = null;
 	protected Chromosome bestPerforming = null;
@@ -159,6 +163,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 		logPerGenerations = props.getIntProperty(LOG_PER_GENERATIONS_KEY, 1);
 		logChampToString = props.getIntProperty(LOG_CHAMP_TOSTRING_KEY, -1);
 		logChampToImage = props.getIntProperty(LOG_CHAMP_TOIMAGE_KEY, -1);
+		logChampEvaluation = props.getIntProperty(LOG_CHAMP_EVALUATION_KEY, -1);
 
 		//
 		// event listeners
@@ -512,6 +517,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 		boolean finished = evolutionFinished();
 		boolean logString = (finished && logChampToString >= 0) || (logChampToString > 0 && generation % logChampToString == 0);
 		boolean logImage = (finished && logChampToImage >= 0) || (logChampToImage > 0 && generation % logChampToImage == 0);
+		boolean logEvaluation = (finished && logChampEvaluation >= 0) || (logChampEvaluation > 0 && generation % logChampEvaluation == 0);
 		String msg = "best performing substrate from " + (finished ? "final generation" : "from generation " + generation);
 		if (logString || logImage) {
 			try {
@@ -520,8 +526,9 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 				if (substrate == null) {
 					logger.warn("Champ substrate is null, which probably means it's been classified as a dud by the transcriber (e.g. perhaps because there are no connections from input to output.");
 				} else {
+					String baseFileName = properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : generation) + "-" + champ.getId();
 					if (logString) {
-						BufferedWriter outputfile = new BufferedWriter(new FileWriter(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : generation) + "-" + champ.getId() + ".txt"));
+						BufferedWriter outputfile = new BufferedWriter(new FileWriter(baseFileName + ".txt"));
 						outputfile.write("String representation of " + msg + ":\n" + substrate);
 						outputfile.close();
 					}
@@ -533,11 +540,15 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 							BufferedImage image = new BufferedImage(800, 800, BufferedImage.TYPE_3BYTE_BGR);
 							boolean success = substrate.render(image.createGraphics(), image.getWidth(), image.getHeight(), 30);
 							if (success) {
-								File outputfile = new File(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : generation) + "-" + champ.getId() + ".png");
+								File outputfile = new File(baseFileName + ".png");
 								ImageIO.write(image, "png", outputfile);
 								logger.info("Rendered " + msg + " to " + outputfile);
 							}
 						}
+					}
+					
+					if (logEvaluation && bulkFitnessFunc instanceof AHNIFitnessFunction) {
+						((AHNIFitnessFunction) bulkFitnessFunc).evaluate(bestPerforming, substrate, baseFileName + "-evaluation");
 					}
 				}
 			} catch (TranscriberException e) {

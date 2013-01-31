@@ -4,9 +4,7 @@ import org.apache.log4j.Logger;
 
 
 import com.anji.integration.ActivatorTranscriber;
-import com.anji.integration.TranscriberException;
 import com.ojcoleman.ahni.evaluation.HyperNEATTargetFitnessFunction;
-import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.transcriber.HyperNEATTranscriber;
 

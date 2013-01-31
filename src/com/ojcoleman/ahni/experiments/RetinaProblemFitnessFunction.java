@@ -1,7 +1,5 @@
 package com.ojcoleman.ahni.experiments;
 
-import java.util.Arrays;
-
 import com.ojcoleman.ahni.evaluation.HyperNEATTargetFitnessFunction;
 import com.ojcoleman.ahni.hyperneat.Properties;
 

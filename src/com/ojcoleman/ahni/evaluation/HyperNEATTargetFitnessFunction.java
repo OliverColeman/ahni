@@ -1,26 +1,12 @@
 package com.ojcoleman.ahni.evaluation;
 
-import java.awt.image.BufferedImage;
-import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.Arrays;
 
-import javax.imageio.ImageIO;
-
-
-import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
 import com.anji.integration.*;
-import com.ojcoleman.ahni.event.AHNIEvent;
-import com.ojcoleman.ahni.event.AHNIEventListener;
-import com.ojcoleman.ahni.hyperneat.HyperNEATConfiguration;
-import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 import com.ojcoleman.ahni.hyperneat.Properties;
-import com.ojcoleman.ahni.nn.BainNN;
 import com.ojcoleman.ahni.util.NiceWriter;
 
 /**
@@ -32,14 +18,9 @@ import com.ojcoleman.ahni.util.NiceWriter;
  * 
  * @author Oliver Coleman
  */
-public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction implements AHNIEventListener {
-	private static Logger logger = Logger.getLogger(HyperNEATTargetFitnessFunction.class);
+public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 	private static final long serialVersionUID = 1L;
-	
-	public static final String LOG_CHAMP_PERGENS_KEY = "fitness.function.log.champ.evaluation.pergenerations";
-	
-	protected int logChampPerGens = -1;
-	
+		
 	private TargetFitnessCalculator fitnessCalculator;
 	
 	private double[][][] inputPatterns;
@@ -69,9 +50,7 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction imp
 
 	public void init(Properties props) {
 		super.init(props);
-		logChampPerGens = props.getIntProperty(LOG_CHAMP_PERGENS_KEY, logChampPerGens);
 		fitnessCalculator = (TargetFitnessCalculator) props.newObjectProperty(TargetFitnessCalculator.class);
-		props.getEvolver().addEventListener(this);
 	}
 
 	/**
@@ -109,35 +88,26 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction imp
 
 	@Override
 	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
-		return evaluate(genotype, substrate, evalThreadIndex, null);
-	}
-	
-	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, NiceWriter logOutput) {
-		TargetFitnessCalculator.Results results = fitnessCalculator.evaluate(substrate, inputPatterns, targetOutputPatterns, minTargetOutputValue, maxTargetOutputValue, logOutput);
-		genotype.setPerformanceValue(results.performance);
-		return results.fitness;
+		return evaluate(genotype, substrate, null);
 	}
 	
 	@Override
-	public void ahniEventOccurred(AHNIEvent event) {
-		if (event.getType() == AHNIEvent.Type.GENERATION_END) {
-			HyperNEATEvolver evolver = event.getEvolver();
-			boolean finished = evolver.evolutionFinished(); 
-			if ((logChampPerGens >= 0 && finished) || (logChampPerGens > 0 && evolver.getGeneration() % logChampPerGens == 0)) {
-				try {
-					Chromosome bestPerforming = evolver.getBestPerformingFromLastGen();
-					Activator substrate = generateSubstrate(bestPerforming, null);
-					if (substrate != null) {
-						NiceWriter outputfile = new NiceWriter(new FileWriter(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : evolver.getGeneration()) + "-evaluation-" + bestPerforming.getId() + ".txt"), "0.00");
-						evaluate(bestPerforming, substrate, 0, outputfile);
-						outputfile.close();
-					}
-				} catch (TranscriberException e) {
-					logger.info("Error transcribing best performing individual: "  + Arrays.toString(e.getStackTrace()));
-				} catch (IOException e) {
-					logger.info("Error opening evaluation log file: " + Arrays.toString(e.getStackTrace()));
-				}
+	public int evaluate(Chromosome genotype, Activator substrate, String baseFileName) {
+		if (baseFileName == null) {
+			TargetFitnessCalculator.Results results = fitnessCalculator.evaluate(substrate, inputPatterns, targetOutputPatterns, minTargetOutputValue, maxTargetOutputValue, null);
+			genotype.setPerformanceValue(results.performance);
+			return results.fitness;
+		}
+		else {
+			try {
+				NiceWriter outputFile = new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
+				TargetFitnessCalculator.Results results = fitnessCalculator.evaluate(substrate, inputPatterns, targetOutputPatterns, minTargetOutputValue, maxTargetOutputValue, outputFile);
+				outputFile.close();
+				return results.fitness;
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
+			return 0;
 		}
 	}
 }

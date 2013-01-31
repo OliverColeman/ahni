@@ -82,7 +82,7 @@ public class Properties extends java.util.Properties {
 	public Properties(String resource) throws IOException {
 		super();
 		loadFromResource(resource);
-		//logger.info("loaded properties from " + resource);
+		// logger.info("loaded properties from " + resource);
 	}
 
 	/**
@@ -141,6 +141,7 @@ public class Properties extends java.util.Properties {
 		String value = super.getProperty(key);
 		if (value == null)
 			throw new IllegalArgumentException("no value for " + key);
+		value = value.trim();
 		log(key, value, null);
 		return value;
 	}
@@ -386,7 +387,7 @@ public class Properties extends java.util.Properties {
 	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects. Note that the constructors for clazz must have arguments
 	 * that are all doubles.
 	 */
-	public<T> T getObjectFromArgsProperty(String key, Class<T> clazz, double[] defaultArgs) {
+	public <T> T getObjectFromArgsProperty(String key, Class<T> clazz, double[] defaultArgs) {
 		return getObjectArrayProperty(key, clazz, defaultArgs)[0];
 	}
 
@@ -395,7 +396,7 @@ public class Properties extends java.util.Properties {
 	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects. Note that the constructors for clazz must have arguments
 	 * that are all doubles.
 	 */
-	public<T> T getObjectFromArgsProperty(String key, Class<T> clazz, T defaultObject, double[] defaultArgs) {
+	public <T> T getObjectFromArgsProperty(String key, Class<T> clazz, T defaultObject, double[] defaultArgs) {
 		return getObjectArrayProperty(key, clazz, (T[]) (new Object[] { defaultObject }), defaultArgs)[0];
 	}
 
@@ -404,7 +405,7 @@ public class Properties extends java.util.Properties {
 	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects. Note that the constructors for clazz must have arguments
 	 * that are all doubles.
 	 */
-	public<T> T[] getObjectArrayProperty(String key, Class<T> clazz, T[] defaultObjects, double[] defaultArgs) {
+	public <T> T[] getObjectArrayProperty(String key, Class<T> clazz, T[] defaultObjects, double[] defaultArgs) {
 		String value = super.getProperty(key);
 		log(key, value, "defaults");
 		if (value == null) {
@@ -442,7 +443,7 @@ public class Properties extends java.util.Properties {
 	 * E.g. (0.0, 2.3), (4, 0.002) would create two Objects. Note that the constructors for clazz must have arguments
 	 * that are all doubles.
 	 */
-	public<T> T[] getObjectArrayProperty(String key, Class<T> clazz, double[] defaultArgs) {
+	public <T> T[] getObjectArrayProperty(String key, Class<T> clazz, double[] defaultArgs) {
 		String value = super.getProperty(key);
 		if (value == null)
 			throw new IllegalArgumentException("no value for " + key);
@@ -524,7 +525,7 @@ public class Properties extends java.util.Properties {
 		while (it.hasNext()) {
 			String key = (String) it.next();
 			if (key.startsWith(prefix)) {
-				newProps.put(key.substring(prefix.length()+1), super.getProperty(key));
+				newProps.put(key.substring(prefix.length() + 1), super.getProperty(key));
 			}
 		}
 		newProps.setName(prefix);
@@ -620,7 +621,7 @@ public class Properties extends java.util.Properties {
 	 * @return Object singleton instance of <code>cl</code> initialized with properties if it is
 	 *         <code>Configurable</code>
 	 */
-	public<T> T singletonObjectProperty(Class<T> aClass) {
+	public <T> T singletonObjectProperty(Class<T> aClass) {
 		// System.err.println(System.identityHashCode(this) + "  " + name +
 		// " singletonObjectProperty(Class aClass)  ENTER");
 		synchronized (classToSingletonsMap) {
@@ -663,7 +664,7 @@ public class Properties extends java.util.Properties {
 	 * @return Object new instance of class <code>cl</code>, initialized with properties if <code>Configurable</code>
 	 *         not found
 	 */
-	public<T> T newObjectProperty(Class<T> aClass) {
+	public <T> T newObjectProperty(Class<T> aClass) {
 		try {
 			T result = aClass.newInstance();
 			if (result instanceof Configurable) {
@@ -860,6 +861,31 @@ public class Properties extends java.util.Properties {
 	}
 
 	/**
+	 * @param key The property name to retrieve the value for.
+	 * @param enumType the class of the Enum to get a value for.
+	 * @param def The default value to return if the given key has not been defined in this Properties object.
+	 * @return the enum constant of the specified enum type with the name specified by the value for the specified
+	 *         property. Specifically. The value is converted to uppercase.
+	 */
+	public <T extends Enum<T>> T getEnumProperty(String key, Class<T> enumType, T def) {
+		if (!containsKey(key))
+			return def;
+		return Enum.valueOf(enumType, getProperty(key).toUpperCase());
+	}
+
+	/**
+	 * @param key The property name to retrieve the value for.
+	 * @param enumType the class of the Enum to get a value for.
+	 * @return the enum constant of the specified enum type with the name specified by the value for the specified
+	 *         property. Specifically.
+	 */
+	public <T extends Enum<T>> T getEnumProperty(String key, Class<T> enumType) {
+		if (!containsKey(key))
+			throw new IllegalArgumentException("no value for " + key);
+		return Enum.valueOf(enumType, getProperty(key).toUpperCase());
+	}
+
+	/**
 	 * @return name of this property set
 	 */
 	public String getName() {
@@ -872,7 +898,7 @@ public class Properties extends java.util.Properties {
 	protected void setName(String aName) {
 		name = aName;
 	}
-	
+
 	public void configureLogger() {
 		if (logger == null)
 			logger = Logger.getLogger(Properties.class.getName());

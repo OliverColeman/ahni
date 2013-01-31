@@ -103,6 +103,17 @@ public class ArrayUtil {
 	}
 	
 	/**
+	 * @param a The array to sum.
+	 * @return The sum over all elements in the array.
+	 */
+	public static long sum(int[] a) {
+		long sum = 0;
+		for (int i = 0; i < a.length; i++)
+			sum += a[i];
+		return sum;
+	}
+
+	/**
 	 * @param a The array to calculate the average for.
 	 * @return The average over all elements in the array.
 	 */

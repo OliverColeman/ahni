@@ -84,6 +84,17 @@ public class NiceWriter extends BufferedWriter {
 		put("]");
 		return this;
 	}
+	public NiceWriter put(boolean[] a) throws IOException {
+		put("[");
+		if (a.length > 0) {
+			put(a[0] ? 1 : 0);
+		}
+		for (int i = 1; i < a.length; i++ ) {
+			put(", ").put(a[i] ? 1 : 0);
+		}
+		put("]");
+		return this;
+	}
 
 	public NiceWriter put(double[][] a) throws IOException {
 		put("[");
@@ -110,6 +121,18 @@ public class NiceWriter extends BufferedWriter {
 	}
 	
 	public NiceWriter put(byte[][] a) throws IOException {
+		put("[");
+		if (a.length > 0) {
+			put("\n\t").put(a[0]);
+		}
+		for (int i = 1; i < a.length; i++ ) {
+			put(",\n\t").put(a[i]);
+		}
+		put("]");
+		return this;
+	}
+	
+	public NiceWriter put(boolean[][] a) throws IOException {
 		put("[");
 		if (a.length > 0) {
 			put("\n\t").put(a[0]);

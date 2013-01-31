@@ -1,11 +1,13 @@
 package com.ojcoleman.ahni.evaluation;
 
 import org.jgapcustomised.BulkFitnessFunction;
+import org.jgapcustomised.Chromosome;
 
+import com.anji.integration.Activator;
 import com.ojcoleman.ahni.util.Point;
 
 /**
- * Interface for fitness functions that provides some extra capabilities used by AHNI.
+ * Base class for fitness functions that provides some extra capabilities used by AHNI.
  */
 public abstract class AHNIFitnessFunction implements BulkFitnessFunction {
 	/**
@@ -38,5 +40,16 @@ public abstract class AHNIFitnessFunction implements BulkFitnessFunction {
 	 */
 	public Point[] getNeuronPositions(int layer, int totalLayerCount) {
 		return null;
+	}
+	
+	/**
+	 * This method may optionally be overridden to perform an evaluation of an individual genotype and output the results to a log.
+	 * The evaluation is not used for any purpose other than generating a record of the evaluation of the given genotype.
+	 * @param genotype the genotype being evaluated. This is not usually required but may be useful in some cases.
+	 * @param substrate the phenotypic substrate of the genotype being evaluated.
+	 * @param baseFileName The base/prefix of the names of log file(s) that should be created. 
+	 */
+	public int evaluate(Chromosome genotype, Activator substrate, String baseFileName) {
+		return 0;
 	}
 }
