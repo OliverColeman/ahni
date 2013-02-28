@@ -1,14 +1,12 @@
 package com.ojcoleman.ahni.evaluation;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.log4j.Logger;
+import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.Chromosome;
 
 import com.anji.integration.Activator;
@@ -17,13 +15,11 @@ import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
 import com.anji.neat.Evolver;
 import com.anji.util.Randomizer;
-import com.ojcoleman.ahni.event.AHNIEvent;
-import com.ojcoleman.ahni.event.AHNIEventListener;
 import com.ojcoleman.ahni.hyperneat.Configurable;
-import com.ojcoleman.ahni.hyperneat.HyperNEATConfiguration;
 import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 import com.ojcoleman.ahni.hyperneat.Properties;
-import com.ojcoleman.ahni.util.NiceWriter;
+import com.ojcoleman.ahni.util.ArrayUtil;
+import com.ojcoleman.ahni.util.CircularFifoBuffer;
 
 /**
  * <p>Provides a base for multi-threaded bulk fitness functions. Provides a multi-threaded framework for performing
@@ -53,7 +49,29 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	 * processor cores and the specified minimum will be used.
 	 */
 	public static final String MAX_THREADS_KEY = "fitness.max_threads";
-		
+	
+	/**
+	 * Property key for specifying additional fitness function classes in
+	 * a multi-objective evaluation. Note that these fitness functions must
+	 * extend BulkFitnessFunctionMT.
+	 */
+	public static final String MULTI_KEY = "fitness.function.multi.class";
+
+	/**
+	 * Property key for specifying the relative weighting of additional fitness functions in
+	 * a multi-objective evaluation. Must be a comma-separated list of weight values/
+	 * The first value should correspond The primary fitness function specified by fitness_function.class
+	 * followed by a weight value for each function specified by fitness.function.multi.class.
+	 */
+	public static final String MULTI_WEIGHTING_KEY = "fitness.function.multi.weighting";
+	
+	/**
+	 * Property key for specifying the probability of including the additional fitness functions in the 
+	 * evaluations each generation. This probability applies to all additional fitness functions equally
+	 * (at the moment probabilities can't be specified for individual fitness functions). Default is 1.
+	 */
+	public static final String MULTI_PROBABILITY_KEY = "fitness.function.multi.probability";
+
 	protected Properties props;
 	protected Transcriber transcriber;
 	protected int numThreads;
@@ -61,6 +79,9 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	protected Evaluator[] evaluators;
 	protected Iterator<Chromosome> chromosomesIterator;
 	protected int logChampPerGens = -1;
+	protected BulkFitnessFunctionMT[] multiFitnessFunctions;
+	protected double[] multiFitnessFunctionsWeights;
+	protected double multiFitnessFunctionProbability;
 
 	/**
 	 * This RNG should be used by all sub-classes for all randomness.
@@ -92,6 +113,15 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	 * The performance being aimed for.
 	 */
 	protected double targetPerformance;
+	
+	/**
+	 * If greater than 1 then use an average of the best performance over this many generations.
+	 */
+	protected int targetPerformanceAverageCount;
+	
+	private CircularFifoBuffer<Double> bestPerformances;
+	
+	private boolean doMultiFitnessThisGeneration = false;
 
 	/**
 	 * Subclasses may override this method to perform initialise tasks. <strong>Make sure to call this method from the
@@ -103,8 +133,11 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		this.props = props;
 		random = ((Randomizer) props.singletonObjectProperty(Randomizer.class)).getRand();
 
-		targetPerformance = props.getFloatProperty(Evolver.PERFORMANCE_TARGET_KEY, 1);
-		targetPerformanceType = props.getProperty(Evolver.PERFORMANCE_TARGET_TYPE_KEY, "higher").toLowerCase().trim().equals("higher") ? 1 : 0;
+		targetPerformance = props.getFloatProperty(HyperNEATEvolver.PERFORMANCE_TARGET_KEY, 1);
+		targetPerformanceType = props.getProperty(HyperNEATEvolver.PERFORMANCE_TARGET_TYPE_KEY, "higher").toLowerCase().trim().equals("higher") ? 1 : 0;
+		targetPerformanceAverageCount = props.getIntProperty(HyperNEATEvolver.PERFORMANCE_TARGET_AVERAGE_KEY, 1);
+		if (targetPerformanceAverageCount < 1) targetPerformanceAverageCount = 1;
+		bestPerformances = new CircularFifoBuffer<Double>(targetPerformanceAverageCount);
 
 		numThreads = Runtime.getRuntime().availableProcessors();
 		int minThreads = props.getIntProperty(MIN_THREADS_KEY, 0);
@@ -113,7 +146,27 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 			numThreads = minThreads;
 		if (maxThreads > 0 && numThreads > maxThreads)
 			numThreads = maxThreads;
-
+		
+		if (props.containsKey(MULTI_KEY)) {
+			String[] mffs = props.getProperty(MULTI_KEY, null).split(",");
+			multiFitnessFunctions = new BulkFitnessFunctionMT[mffs.length];
+			String multiKeyValue = (String) props.remove(MULTI_KEY); // Prevent recursively loading multi fitness functions that extend this class.
+			for (int i = 0; i < mffs.length; i++) {
+				String tempKey = MULTI_KEY + "." + i;
+				props.put(tempKey + ".class", mffs[i].trim());
+				multiFitnessFunctions[i] = (BulkFitnessFunctionMT) props.singletonObjectProperty(tempKey);
+				props.remove(tempKey + ".class");
+			}
+			props.put(MULTI_KEY, multiKeyValue);
+			multiFitnessFunctionsWeights = props.getDoubleArrayProperty(MULTI_WEIGHTING_KEY, new double[]{1});
+			ArrayUtil.normaliseSum(multiFitnessFunctionsWeights);
+		}
+		else {
+			multiFitnessFunctions = new BulkFitnessFunctionMT[0];
+			multiFitnessFunctionsWeights = new double[0];
+		}
+		multiFitnessFunctionProbability = props.getDoubleProperty(MULTI_PROBABILITY_KEY, 1);
+		
 		logger.info("Using " + numThreads + " threads for transcription and evaluation.");
 		evaluators = new Evaluator[numThreads];
 		for (int i = 0; i < numThreads; i++) {
@@ -144,6 +197,8 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		transcriber = (Transcriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
 
 		initialiseEvaluation();
+		
+		doMultiFitnessThisGeneration = random.nextDouble() < multiFitnessFunctionProbability && multiFitnessFunctions.length > 0;
 
 		bestPerformance = targetPerformanceType == 1 ? 0 : Float.MAX_VALUE;
 
@@ -166,11 +221,17 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 
 		lastBestChrom = newBestChrom;
 		lastBestPerformance = bestPerformance;
+		
+		bestPerformances.add(bestPerformance);
+		double avgBestPerformance = ArrayUtil.average(ArrayUtils.toPrimitive(bestPerformances.toArray(new Double[0])));
 
 		endRun = false;
-		// If we've reached the target performance, end the run.
-		if ((targetPerformanceType == 1 && bestPerformance >= targetPerformance) || (targetPerformanceType == 0 && bestPerformance <= targetPerformance)) {
-			endRun = true;
+		// If enough generations have been finished to get an average.
+		if (bestPerformances.isFull()) {
+			// If we've reached the target performance, end the run.
+			if ((targetPerformanceType == 1 && avgBestPerformance >= targetPerformance) || (targetPerformanceType == 0 && avgBestPerformance <= targetPerformance)) {
+				endRun = true;
+			}
 		}
 	}
 
@@ -245,10 +306,23 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 							Activator previousSubstrate = substrate;
 							substrate = generateSubstrate(chrom, substrate);
 							int fitness = 0;
+							double performance = -1;
 							
 							// If a valid substrate could be generated.
 							if (substrate != null) { 
+								// fitnessMulti gives a value in the range [0, 1], comprised of the weighted fitness values provided by all the fitness functions.
 								fitness = evaluate(chrom, substrate, id);
+								performance = chrom.getPerformanceValue();
+								// If we should include additional fitness functions.
+								if (doMultiFitnessThisGeneration) {
+									double fitnessMulti = ((double) fitness / getMaxFitnessValue()) * multiFitnessFunctionsWeights[0];
+									for (int i = 0; i < multiFitnessFunctions.length; i++) {
+										BulkFitnessFunctionMT func = multiFitnessFunctions[i];
+										fitnessMulti += ((double) func.evaluate(chrom, substrate, id) / func.getMaxFitnessValue()) * multiFitnessFunctionsWeights[i + 1];
+									}
+									// Scale to max fitness value.
+									fitness = (int) Math.round(fitnessMulti * getMaxFitnessValue());
+								}
 							}
 							// If the transcriber decided the substrate was a dud then still allow reusing the old substrate.
 							else {
@@ -257,7 +331,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 							
 							chrom.setFitnessValue(fitness);
 							// If the fitness function hasn't explicitly set a performance value.
-							if (chrom.getPerformanceValue() == -1) {
+							if (performance == -1) {
 								chrom.setPerformanceValue((double) fitness / getMaxFitnessValue());
 							}
 							synchronized (this) {
@@ -275,7 +349,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 							chrom.setPerformanceValue(0);
 						}
 					}
-
+					
 					go = false;
 					finishedEvaluating();
 				}
@@ -288,6 +362,8 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 					System.out.println("Exception: " + e);
 				}
 			}
+			
+			System.err.println(id + "exit");
 		}
 
 		public synchronized void go() {

@@ -60,9 +60,10 @@ public abstract class NaturalSelector {
 		Iterator<Species> speciesIter = species.iterator();
 		while (speciesIter.hasNext()) {
 			Species s = speciesIter.next();
-			// Add elites from this species if it's the only species or it hasn't been stagnant for too long or it contains the fittest individual.
-			if (species.size() == 1 || s.getStagnantGenerationsCount() < maxStagnantGenerations || s.containsFittest) {
-				if ((elitismProportion > 0 || elitismMinToSelect > 0) && (s.size() >= elitismMinSpeciesSize || s.getAge() < minAge)) {
+			// Add elites from this species if it's the only species or it hasn't been stagnant for too long 
+			// or it hasn't reached the minimum species age or it contains the population-wide fittest individual.
+			if (species.size() == 1 || s.getStagnantGenerationsCount() < maxStagnantGenerations || s.getAge() < minAge || s.containsFittest) {
+				if ((elitismProportion > 0 || elitismMinToSelect > 0) && (s.size() >= elitismMinSpeciesSize)) {
 					List<Chromosome> elites = s.getElite(elitismProportion, elitismMinToSelect);
 					elite.addAll(elites);
 					// System.out.println("Adding " + elites.size() + " elites from species: " + s.getID());

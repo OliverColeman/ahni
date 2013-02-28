@@ -176,13 +176,21 @@ public class AnjiNet {
 	 * indicates a time step has passed
 	 */
 	public void step() {
-		// populate cache connections with values from previous step
-		// We don't use the Collections iterator functionality because it's slower for small collections.
-		for (int i = 0 ; i < recurrentConns.size(); i++) {
-			recurrentConns.get(i).step();
+		try {
+			// populate cache connections with values from previous step
+			// We don't use the Collections iterator functionality because it's slower for small collections.
+			for (int i = 0 ; i < recurrentConns.size(); i++) {
+				recurrentConns.get(i).step();
+				System.out.println("recurrent!");
+			}
+			for (int i = 0 ; i < allNeurons.size(); i++) {
+				allNeurons.get(i).step();
+			}
 		}
-		for (int i = 0 ; i < allNeurons.size(); i++) {
-			allNeurons.get(i).step();
+		catch (StackOverflowError e) {
+			System.err.println(e.getMessage());
+			e.printStackTrace();
+			System.err.println("step() AnjiNet:\n" + toXml());
 		}
 	}
 
@@ -190,9 +198,16 @@ public class AnjiNet {
 	 * make sure all neurons have been activated for the current cycle; this is to catch neurons with no forward outputs
 	 */
 	public void fullyActivate() {
-		// We don't use the Collections iterator functionality because it's slower for small collections.
-		for (int i = 0 ; i < allNeurons.size(); i++) {
-			allNeurons.get(i).getValue();
+		try {
+			// We don't use the Collections iterator functionality because it's slower for small collections.
+			for (int i = 0 ; i < allNeurons.size(); i++) {
+				allNeurons.get(i).getValue();
+			}
+		}
+		catch (StackOverflowError e) {
+			System.err.println(e.getMessage());
+			e.printStackTrace();
+			System.err.println("fA() AnjiNet:\n" + toXml());
 		}
 	}
 

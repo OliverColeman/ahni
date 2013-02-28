@@ -30,6 +30,7 @@ import com.ojcoleman.ahni.event.*;
 import com.ojcoleman.ahni.hyperneat.HyperNEATConfiguration;
 import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.nn.BainNN;
+import com.ojcoleman.ahni.nn.NNAdaptor;
 import com.ojcoleman.ahni.util.Point;
 
 /**

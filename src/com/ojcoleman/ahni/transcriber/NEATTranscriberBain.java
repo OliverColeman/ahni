@@ -29,6 +29,7 @@ import com.anji.nn.RecurrencyPolicy;
 import com.ojcoleman.ahni.hyperneat.Configurable;
 import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.nn.BainNN;
+import com.ojcoleman.ahni.nn.NNAdaptor;
 
 /**
  * <p>

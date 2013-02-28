@@ -22,6 +22,8 @@
  */
 package com.anji.integration;
 
+import java.util.Map;
+
 import org.jgapcustomised.Chromosome;
 
 import com.anji.util.Configurable;

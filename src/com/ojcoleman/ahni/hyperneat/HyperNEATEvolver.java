@@ -12,7 +12,9 @@ import java.util.ArrayList;
 
 import java.util.Date;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -47,6 +49,8 @@ import com.ojcoleman.ahni.evaluation.AHNIFitnessFunction;
 import com.ojcoleman.ahni.event.AHNIEvent;
 import com.ojcoleman.ahni.event.AHNIEventListener;
 import com.ojcoleman.ahni.nn.BainNN;
+import com.ojcoleman.ahni.nn.NNAdaptor;
+import com.ojcoleman.ahni.transcriber.TranscriberAdaptor;
 import com.ojcoleman.ahni.util.NiceWriter;
 
 /**
@@ -65,6 +69,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 	 */
 	public static final String NUM_GENERATIONS_KEY = "num.generations";
 	public static final String PERFORMANCE_TARGET_TYPE_KEY = "performance.target.type";
+	public static final String PERFORMANCE_TARGET_AVERAGE_KEY = "performance.target.average";
 	public static final String PERFORMANCE_TARGET_KEY = "performance.target";
 	/**
 	 * properties key, fitness function class
@@ -255,6 +260,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 	 */
 	public synchronized double[] run() throws Exception {
 		DecimalFormat nf4 = new DecimalFormat("0.0000");
+		DecimalFormat nf3 = new DecimalFormat("0.000");
 		DecimalFormat nf1 = new DecimalFormat("0.0");
 
 		fittestChromosomes = new Chromosome[numEvolutions];
@@ -374,6 +380,16 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 			}
 
 			if (generation % logPerGenerations == 0) {
+				int avgSize = 0;
+				int maxSize = 0;
+				int minSize = Integer.MAX_VALUE;
+				for (Chromosome c : genotype.getChromosomes()) {
+					avgSize += c.size();
+					if (c.size() > maxSize) maxSize = c.size();
+					if (c.size() < minSize) minSize = c.size();
+				}
+				avgSize /= genotype.getChromosomes().size();
+				
 				double speciationCompatThreshold = genotype.getParameters().getSpeciationThreshold();
 
 				long memTotal = Math.round(runtime.totalMemory() / 1048576);
@@ -387,7 +403,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 					avgGenTime = avgGenTime * 0.9 + duration * 0.1;
 				int eta = (int) Math.round(avgGenTime * (numEvolutions - generation));
 
-				logger.info("Gen: " + generation + "  Fittest: " + fittest.getId() + "  (F: " + nf4.format((double) fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + "  P: " + nf4.format(fittest.getPerformanceValue()) + ")" + "  Best perf: " + bestPerforming.getId() + "  (F: " + nf4.format((double) bestPerforming.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + "  P: " + nf4.format(bestPerforming.getPerformanceValue()) + ")" + "  ZFC: " + genotype.getNumberOfChromosomesWithZeroFitnessFromLastGen() + "  ABSF: " + nf4.format(avgBestSpeciesFitness) + "  S: " + numSpecies + "  NS/ES: " + numNewSpecies + "/" + numExtinctSpecies + "  SCT: " + nf1.format(speciationCompatThreshold) + "  Min/Max SS: " + minSpeciesSize + "/" + maxSpeciesSize + "  Min/Max SA: " + minSpeciesAge + "/" + maxSpeciesAge + "  SNF: " + numSpeciesWithNewFittest + "  Time: " + (int) Math.round(duration) + "s  ETA: " + Misc.formatTimeInterval(eta) + "  Mem: " + memUsed + "MB");
+				logger.info("Gen: " + generation + "  Fittest: " + fittest.getId() + "  (F: " + nf4.format((double) fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + "  P: " + nf4.format(fittest.getPerformanceValue()) + ")" + "  Best perf: " + bestPerforming.getId() + "  (F: " + nf4.format((double) bestPerforming.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + "  P: " + nf4.format(bestPerforming.getPerformanceValue()) + ")" + "  ZFC: " + genotype.getNumberOfChromosomesWithZeroFitnessFromLastGen() + "  ABSF: " + nf4.format(avgBestSpeciesFitness) + "  S: " + numSpecies + "  NS/ES: " + numNewSpecies + "/" + numExtinctSpecies + "  SCT: " + nf1.format(speciationCompatThreshold) + "  Min/Max SS: " + minSpeciesSize + "/" + maxSpeciesSize + "  Min/Max SA: " + minSpeciesAge + "/" + maxSpeciesAge + "  SNF: " + numSpeciesWithNewFittest + "  Min/Avg/Max GS: " + minSize + "/" + avgSize + "/" + maxSize + "  Time: " + nf3.format(duration) + "s  ETA: " + Misc.formatTimeInterval(eta) + "  Mem: " + memUsed + "MB");
 				start = System.currentTimeMillis();
 			}
 			if (properties.logFilesEnabled()) {
@@ -521,8 +537,13 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 		String msg = "best performing substrate from " + (finished ? "final generation" : "from generation " + generation);
 		if (logString || logImage) {
 			try {
+				Map<String, Object> transcribeOptions = new HashMap<String, Object>();
+				transcribeOptions.put("recordCoordinates", Boolean.TRUE);
+				
 				Transcriber<? extends Activator> transcriber = (Transcriber<? extends Activator>) properties.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
-				Activator substrate = transcriber.transcribe(champ, null);
+				
+				Activator substrate = (transcriber instanceof TranscriberAdaptor) ? ((TranscriberAdaptor) transcriber).transcribe(champ, null, transcribeOptions) : transcriber.transcribe(champ, null);
+				
 				if (substrate == null) {
 					logger.warn("Champ substrate is null, which probably means it's been classified as a dud by the transcriber (e.g. perhaps because there are no connections from input to output.");
 				} else {
@@ -534,16 +555,12 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 					}
 
 					if (logImage) {
-						// Performance improvement for BainNN, don't create a buffered image unless the BainNN has
-						// recorded neuron coords.
-						if (!(substrate instanceof BainNN) || ((BainNN) substrate).coordsEnabled()) {
-							BufferedImage image = new BufferedImage(800, 800, BufferedImage.TYPE_3BYTE_BGR);
-							boolean success = substrate.render(image.createGraphics(), image.getWidth(), image.getHeight(), 30);
-							if (success) {
-								File outputfile = new File(baseFileName + ".png");
-								ImageIO.write(image, "png", outputfile);
-								logger.info("Rendered " + msg + " to " + outputfile);
-							}
+						BufferedImage image = new BufferedImage(800, 800, BufferedImage.TYPE_3BYTE_BGR);
+						boolean success = substrate.render(image.createGraphics(), image.getWidth(), image.getHeight(), 30);
+						if (success) {
+							File outputfile = new File(baseFileName + ".png");
+							ImageIO.write(image, "png", outputfile);
+							logger.info("Rendered " + msg + " to " + outputfile);
 						}
 					}
 					

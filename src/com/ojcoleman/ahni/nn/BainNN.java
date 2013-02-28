@@ -1,37 +1,22 @@
 package com.ojcoleman.ahni.nn;
 
 import java.awt.BasicStroke;
-import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.Point;
-import java.awt.Shape;
-import java.awt.geom.AffineTransform;
 import java.awt.geom.Arc2D;
-import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.text.DecimalFormat;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import com.anji.integration.Activator;
-import com.anji.integration.TranscriberException;
-import com.ojcoleman.ahni.transcriber.ESHyperNEATTranscriberBain;
 import com.ojcoleman.ahni.util.ArrayUtil;
 
 import com.ojcoleman.bain.NeuralNetwork;
 import com.ojcoleman.bain.base.ComponentConfiguration;
-import com.ojcoleman.bain.base.NeuronCollection;
 import com.ojcoleman.bain.base.SynapseCollection;
 import com.ojcoleman.bain.neuron.rate.NeuronCollectionWithBias;
 
@@ -47,9 +32,9 @@ import com.ojcoleman.bain.neuron.rate.NeuronCollectionWithBias;
  * are optimised to provide amortised performance over the number of input sequences for layered feed-forward networks.
  * </p>
  */
-public class BainNN implements Activator {
+public class BainNN extends NNAdaptor {
 	private final static Logger logger = Logger.getLogger(BainNN.class);
-
+	
 	/**
 	 * Describes the basic topology of a network.
 	 */
@@ -69,8 +54,6 @@ public class BainNN implements Activator {
 		FEED_FORWARD_NONLAYERED
 	}
 	
-	private static final int X = 0, Y = 1, Z = 2;
-
 	private NeuralNetwork nn;
 	private double[] nnOutputs; // We keep a local reference to this so the Bain neural network doesn't go unnecessarily
 								// fetching input values from a GPU.
@@ -80,12 +63,11 @@ public class BainNN implements Activator {
 	private int[] inputDimensions;
 	private int[] outputDimensions;
 	private int inputSize, outputIndex, outputSize;
-	private int neuronCount, synapseCount;
+	int neuronCount;
+
+	private int synapseCount;
 	private int maxCycleLength;
 
-	private double[][] coords;
-	private double[] coordsMin, coordsMax, coordsRange;
-	
 	private static boolean reportedExecutionModeProblem = false;
 
 	/**
@@ -381,77 +363,11 @@ public class BainNN implements Activator {
 	}
 
 	/**
-	 * Enable storing coordinates for neurons.
-	 */
-	public void enableCoords() {
-		if (coords == null) {
-			coords = new double[neuronCount][3];
-			coordsMin = new double[3];
-			coordsMax = new double[3];
-			coordsRange = new double[3];
-		}
-	}
-	
-	/**
-	 * Returns true iff storing coordinates for neurons has been enabled.
-	 */
-	public boolean coordsEnabled() {
-		return (coords != null);
-	}
-
-	/**
-	 * Returns the x coordinate of the specified neuron.
-	 */
-	public double getXCoord(int neuronIndex) {
-		return coords[neuronIndex][X];
-	}
-
-	/**
-	 * Returns the y coordinate of the specified neuron.
-	 */
-	public double getYCoord(int neuronIndex) {
-		return coords[neuronIndex][Y];
-	}
-
-	/**
-	 * Returns the z coordinate of the specified neuron.
-	 */
-	public double getZCoord(int neuronIndex) {
-		return coords[neuronIndex][Z];
-	}
-
-	/**
-	 * Sets the coordinate of the specified neuron.
-	 */
-	public void setCoords(int neuronIndex, double x, double y) {
-		coords[neuronIndex][X] = x;
-		coords[neuronIndex][Y] = y;
-		updateMinMax(coords[neuronIndex]);
-	}
-
-	/**
-	 * Sets the coordinate of the specified neuron.
-	 */
-	public void setCoords(int neuronIndex, double x, double y, double z) {
-		coords[neuronIndex][X] = x;
-		coords[neuronIndex][Y] = y;
-		coords[neuronIndex][Z] = z;
-		updateMinMax(coords[neuronIndex]);
-	}
-	
-	private void updateMinMax(double[] c) {
-		for (int d = 0; d < c.length; d++) {
-			if (c[d] < coordsMin[d]) coordsMin[d] = c[d]; else if (c[d] > coordsMax[d]) coordsMax[d] = c[d];
-			coordsRange[d] = coordsMax[d] - coordsMin[d];
-		}		
-	}
-	
-	/**
 	 * Returns a string describing this network and its connectivity.
 	 */
 	@Override
 	public String toString() {
-		DecimalFormat nf = new DecimalFormat(" #.###;-#.###");
+		DecimalFormat nf = new DecimalFormat(" 0.00;-0.00");
 		StringBuilder out = new StringBuilder(125 + synapseCount * 30);
 		out.append("Neuron class: " + nn.getNeurons().getClass());
 		out.append("\nSynapse class: " + nn.getSynapses().getClass());
@@ -462,6 +378,9 @@ public class BainNN implements Activator {
 		
 		out.append("\nNeurons:\n\t");
 		NeuronCollectionWithBias biasNeurons = (nn.getNeurons() instanceof NeuronCollectionWithBias) ? (NeuronCollectionWithBias) nn.getNeurons() : null;
+		if (coordsEnabled()) {
+			out.append("Coordinates\t\t");
+		}
 		if (biasNeurons != null) {
 		  out.append("bias\t");
 		}
@@ -472,9 +391,12 @@ public class BainNN implements Activator {
 			}
 		}
 		for (int i = 0; i < neuronCount; i++) {
-			out.append("\n\t");
+			out.append("\n");
+			if (coordsEnabled()) {
+				out.append("\t(" + nf.format(getXCoord(i)) + ", " + nf.format(getYCoord(i)) + ", " + nf.format(getZCoord(i)) + ")");
+			}
 			if (biasNeurons != null) {
-				out.append(nf.format(biasNeurons.getBias(i)));
+				out.append("\t"+nf.format(biasNeurons.getBias(i)));
 			}
 			if (paramNames != null && nn.getNeurons().getComponentConfiguration(i) != null) {
 				out.append("\t" + ArrayUtil.toString(nn.getNeurons().getComponentConfiguration(i).getParameterValues(), "\t", nf));
@@ -515,6 +437,7 @@ public class BainNN implements Activator {
 	/**
 	 * Renders this network as an image.
 	 */
+	@Override
 	public boolean render(Graphics2D g, int width, int height, int nodeSize) {
 		if (!coordsEnabled()) return false;
 		
@@ -526,7 +449,7 @@ public class BainNN implements Activator {
 		Point2D.Double[] nodes = new Point2D.Double[neuronCount];
 		g.setPaint(Color.GREEN);
 		for (int i = 0; i < neuronCount; i++) {
-			nodes[i] = new Point2D.Double(scaleCoord(coords[i][X], X, width)+nodeSize, scaleCoord(coords[i][Y], Y, height)+nodeSize);
+			nodes[i] = new Point2D.Double(scaleXCoord(coords[i].x, width)+nodeSize, scaleYCoord(coords[i].y, height)+nodeSize);
 		}
 		
 		// Create Line2D for each synapse, scaled to pixel location in image.
@@ -535,10 +458,10 @@ public class BainNN implements Activator {
 		g.setPaint(Color.GREEN);
 		for (int i = 0; i < synapseCount; i++) {
 			lines[i] = new Line2D.Double(
-					scaleCoord(coords[synapses.getPreNeuron(i)][X], X, width)+nodeSize,
-					scaleCoord(coords[synapses.getPreNeuron(i)][Y], Y, height)+nodeSize,
-					scaleCoord(coords[synapses.getPostNeuron(i)][X], X, width)+nodeSize,
-					scaleCoord(coords[synapses.getPostNeuron(i)][Y], Y, height)+nodeSize);
+					scaleXCoord(coords[synapses.getPreNeuron(i)].x, width)+nodeSize,
+					scaleYCoord(coords[synapses.getPreNeuron(i)].y, height)+nodeSize,
+					scaleXCoord(coords[synapses.getPostNeuron(i)].x, width)+nodeSize,
+					scaleYCoord(coords[synapses.getPostNeuron(i)].y, height)+nodeSize);
 		}
 		
 		// Determine min and max weights, and lines that pass through other nodes.
@@ -630,7 +553,7 @@ public class BainNN implements Activator {
 			g.fillOval((int) nodes[neuronIndex].getX() - nodeSize/2, (int) nodes[neuronIndex].getY() - nodeSize/2, nodeSize, nodeSize); 
 		}
 		if (nn.getNeurons() instanceof NeuronCollectionWithBias) {
-			NeuronCollectionWithBias<? extends ComponentConfiguration> neurons = (NeuronCollectionWithBias) nn.getNeurons();
+			NeuronCollectionWithBias neurons = (NeuronCollectionWithBias) nn.getNeurons();
 			g.setPaint(Color.WHITE);
 			for (neuronIndex = 0; neuronIndex < neuronCount; neuronIndex++) {
 				float w = (float) neurons.getBias(neuronIndex);
@@ -645,8 +568,12 @@ public class BainNN implements Activator {
 		return true;
 	}
 	// Scale the coordinate to the range [0, 1].
-	private int scaleCoord(double c, int d, int scale) {
-		return (int) Math.round(((c - coordsMin[d]) / coordsRange[d]) * scale);
+	private int scaleXCoord(double c, int scale) {
+		return (int) Math.round(((c - coordsMin.x) / coordsRange.x) * scale);
+	}
+	// Scale the coordinate to the range [0, 1].
+	private int scaleYCoord(double c, int scale) {
+		return (int) Math.round(((c - coordsMin.y) / coordsRange.y) * scale);
 	}
 
 	@Override
@@ -660,7 +587,13 @@ public class BainNN implements Activator {
 	}
 
 	@Override
+	public int getNeuronCount() {
+		return neuronCount;
+	}
+
+	@Override
 	public void dispose() {
 		nn.dispose();
 	}
+
 }

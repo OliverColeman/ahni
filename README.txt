@@ -41,7 +41,8 @@ NS/ES: Number of New Species / Extinct Species this generation.
 SCT: Species Compatibility Threshold  .
 Min/Max SS: The minimum and maximum species sizes.  
 Min/Max SA: The minimum and maximum species ages (in number of generations).  
-SNF: The number of Species with a New Fittest chromosome.  
+SNF: The number of Species with a New Fittest chromosome.
+AS: The average number of neurons and connections within the (CPPN) networks.  
 Time: The duration of the generation in seconds.
 ETA: The estimated run finish time (Days HH:MM:SS).  
 Mem: Total memory usage.

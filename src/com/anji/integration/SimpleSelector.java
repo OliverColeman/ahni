@@ -38,7 +38,7 @@ import org.jgapcustomised.NaturalSelector;
  */
 public class SimpleSelector extends NaturalSelector {
 
-	private List chromosomes = new ArrayList();
+	private List<Chromosome> chromosomes = new ArrayList<Chromosome>();
 
 	/**
 	 * Add <code>a_chromosomeToAdd</code> to set of chromosomes to be evaluated.
@@ -57,8 +57,8 @@ public class SimpleSelector extends NaturalSelector {
 	 * @param a_howManyToSelect
 	 * @return <code>List</code> contains <code>Chromosome</code> objects
 	 */
-	protected List select(Configuration a_activeConfiguration, int a_howManyToSelect) {
-		Collections.sort(chromosomes, new ChromosomeFitnessComparator(false /* asc */, speciatedFitness /*
+	protected List<Chromosome> select(Configuration a_activeConfiguration, int a_howManyToSelect) {
+		Collections.sort(chromosomes, new ChromosomeFitnessComparator<Chromosome>(false /* asc */, speciatedFitness /*
 																										 * speciated
 																										 * fitness
 																										 */));

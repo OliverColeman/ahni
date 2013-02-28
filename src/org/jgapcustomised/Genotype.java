@@ -114,7 +114,7 @@ public class Genotype implements Serializable {
 
 		m_specParms = m_activeConfiguration.getSpeciationParms();
 
-		adjustChromosomeList(a_initialChromosomes, a_activeConfiguration.getPopulationSize());
+		adjustChromosomeList(a_initialChromosomes, a_activeConfiguration.getPopulationSize(), null);
 
 		addChromosomes(a_initialChromosomes);
 
@@ -129,7 +129,7 @@ public class Genotype implements Serializable {
 	 * @param chroms <code>List</code> contains <code>Chromosome</code> objects
 	 * @param targetSize
 	 */
-	private void adjustChromosomeList(List<Chromosome> chroms, int targetSize) {
+	private void adjustChromosomeList(List<Chromosome> chroms, int targetSize, Chromosome popFittest) {
 		List<Chromosome> originals = new ArrayList<Chromosome>(chroms);
 		while (chroms.size() < targetSize) {
 			int idx = chroms.size() % originals.size();
@@ -138,23 +138,19 @@ public class Genotype implements Serializable {
 			chroms.add(clone);
 			orig.getSpecie().add(clone);
 		}
-		int removeIndex = chroms.size() - 1;
-		while (chroms.size() > targetSize) {
+		if (chroms.size() > targetSize) {
 			// remove random chromosomes
 			Collections.shuffle(m_chromosomes, m_activeConfiguration.getRandomGenerator());
-
-			// don't remove elites (they're supposed to survive till next generation)
-			while (removeIndex > 0 && chroms.get(removeIndex).isElite)
-				removeIndex--;
-
-			// remove one
-			Chromosome c = chroms.get(removeIndex);
-			if (c.getSpecie() != null)
-				c.getSpecie().remove(c); // remove from species
-			chroms.remove(removeIndex); // remove from chromosome list
-
-			if (removeIndex > 0)
-				removeIndex--;
+			Iterator<Chromosome> popIter = m_chromosomes.iterator();
+			while (chroms.size() > targetSize && popIter.hasNext()) {
+				Chromosome c = popIter.next();
+				// don't randomly remove elites or population fittest (they're supposed to survive till next generation)
+				if (!c.isElite && !c.equals(popFittest) && (c.getSpecie() == null || !c.getSpecie().getRepresentative().equals(c))) {
+					if (c.getSpecie() != null)
+						c.getSpecie().remove(c); // remove from species
+					popIter.remove();
+				}
+			}
 		}
 	}
 
@@ -217,61 +213,55 @@ public class Genotype implements Serializable {
 
 	/**
 	 * (Re)assigns all chromosomes to a species. If no existing species are compatible with a chromosome a new species
-	 * is created. The fittest chromosome in a species is used as the representative of that species.
+	 * is created.
 	 */
 	protected void speciate() {
+		// If true then chromosomes from previous generations will never be removed from their current species.
+		boolean keepExistingSpecies = true;
+		
 		// sort so fittest are first as the fittest is used as the representative of a species (in case of creating new
 		// species)
-		Collections.sort(m_chromosomes, new ChromosomeFitnessComparator<Chromosome>(false /* asc */, false /*
-																										 * speciated
-																										 * fitness
-																										 */));
+		Collections.sort(m_chromosomes, new ChromosomeFitnessComparator<Chromosome>(false, false));
+		//Collections.shuffle(m_chromosomes, m_activeConfiguration.getRandomGenerator());
 
-		// first determine new species for each chromosome (but don't assign yet)
-		Iterator<Chromosome> chromIter = m_chromosomes.iterator();
-		while (chromIter.hasNext()) {
-			Chromosome chrom = chromIter.next();
-			chrom.resetSpecie();
-			boolean added = false;
-			Species species = null;
-			Iterator<Species> speciesIter = m_species.iterator();
-			while (speciesIter.hasNext() && !added) {
-				species = speciesIter.next();
-				if (species.match(chrom)) {
-					chrom.setSpecie(species);
-					added = true;
+		// First determine new species for each chromosome (but don't assign yet).
+		for (Chromosome chrom : m_chromosomes) {
+			if (!keepExistingSpecies || chrom.getSpecie() == null) {
+				chrom.resetSpecie();
+				boolean added = false;
+				for	(Species species : m_species) {
+					if (species.match(chrom)) {
+						chrom.setSpecie(species);
+						added = true;
+						break;
+					}
 				}
-			}
-			if (!added) {
-				species = new Species(m_activeConfiguration.getSpeciationParms(), chrom); // this also sets the species
-																							// of chrom to the new
-																							// species
-				m_species.add(species);
-				// System.out.println("Added new species");
+				if (!added) {
+					// this also sets the species of chrom to the new species.
+					Species species = new Species(m_activeConfiguration.getSpeciationParms(), chrom); 
+					m_species.add(species);
+					// System.out.println("Added new species");
+				}
 			}
 		}
 
 		// remove chromosomes from all species and record previous fittest
-		Iterator<Species> speciesIter = m_species.iterator();
-		while (speciesIter.hasNext()) {
-			Species species = speciesIter.next();
+		for	(Species species : m_species) {
 			species.setPreviousFittest(species.getFittest());
 			species.clear();
 		}
 
 		// then (re)assign chromosomes to their correct species
-		chromIter = m_chromosomes.iterator();
-		while (chromIter.hasNext()) {
-			Chromosome chrom = chromIter.next();
+		for (Chromosome chrom : m_chromosomes) {
 			Species newSpecies = chrom.getSpecie();
 			chrom.resetSpecie();
-			newSpecies.add(chrom);
+			newSpecies.add(chrom); // Also updates species reference in chrom.
 		}
 
 		// remove empty species (if any), and collect some stats
 		minSpeciesSize = Integer.MAX_VALUE;
 		maxSpeciesSize = 0;
-		speciesIter = m_species.iterator();
+		Iterator<Species> speciesIter = m_species.iterator();
 		while (speciesIter.hasNext()) {
 			Species species = speciesIter.next();
 
@@ -288,61 +278,6 @@ public class Genotype implements Serializable {
 
 				species.originalSize = species.size();
 			}
-		}
-	}
-
-	/**
-	 * (Re)assigns all chromosomes to a species. If no existing species are compatible with a chromosome a new species
-	 * is created. The fittest chromosome in a species is used as the representative of that species. This function
-	 * differs from the original by never removing a chromosome from a species.
-	 */
-	protected void speciate2() {
-		// sort so fittest are first as the fittest is used as the representative of a species (this is in case of
-		// creating new species)
-		Collections.sort(m_chromosomes, new ChromosomeFitnessComparator<Chromosome>(false /* asc */, false /*
-																										 * speciated
-																										 * fitness
-																										 */));
-
-		// determine new species for each chromosome
-		Iterator<Chromosome> chromIter = m_chromosomes.iterator();
-		Iterator<Species> speciesIter;
-		while (chromIter.hasNext()) {
-			Chromosome chrom = chromIter.next();
-			if (chrom.getSpecie() == null) {
-				boolean added = false;
-				Species species = null;
-				speciesIter = m_species.iterator();
-				while (speciesIter.hasNext() && !added) {
-					species = speciesIter.next();
-					if (species.match(chrom)) {
-						species.add(chrom);
-						added = true;
-					}
-				}
-				if (!added) {
-					species = new Species(m_activeConfiguration.getSpeciationParms(), chrom); // this also sets the
-																								// species of chrom to
-																								// the new species
-					m_species.add(species);
-					// System.out.println("Added new species");
-				}
-			}
-		}
-
-		// collect some stats
-		minSpeciesSize = Integer.MAX_VALUE;
-		maxSpeciesSize = 0;
-		speciesIter = m_species.iterator();
-		while (speciesIter.hasNext()) {
-			Species species = speciesIter.next();
-
-			if (species.size() > maxSpeciesSize)
-				maxSpeciesSize = species.size();
-			if (species.size() < minSpeciesSize)
-				minSpeciesSize = species.size();
-
-			species.originalSize = species.size();
 		}
 	}
 
@@ -492,10 +427,10 @@ public class Genotype implements Serializable {
 
 			//long startSelect = System.currentTimeMillis();
 
-			// Speciate population after fitness evaluation. Do this now because we use fittest individuals as
+			// Speciate population.
 			speciate();
 			
-			// attempt to stay within 25% of species count target
+			// attempt to stay within 20% of species count target
 			int targetSpeciesCount = m_specParms.getSpeciationTarget();
 			if ((targetSpeciesCount > 0 && (generation - lastGenChangedSpeciesCompatThreshold > 5) && // don't change
 																										// threshold too
@@ -536,12 +471,19 @@ public class Genotype implements Serializable {
 
 			// Select chromosomes to generate new population from,
 			// and determine elites that will survive unchanged to next generation
+			// Note that speciation must occur before selection to allow using speciated fitness.
 			// ------------------------------------------------------------
 			eliteCount = 0;
 			NaturalSelector selector = m_activeConfiguration.getNaturalSelector();
 			selector.add(m_activeConfiguration, m_species, m_chromosomes);
 			m_chromosomes = selector.select(m_activeConfiguration);
 			selector.empty();
+			
+			// Sometimes the fittest can be removed if its species is too large (when using speciated fitness, 
+			// in selection an individuals fitness is divided by it's species size).
+			if (!m_chromosomes.contains(fittest)) {
+				m_chromosomes.add(fittest);
+			}
 			
 			// System.out.println("Selected: " + m_chromosomes.size());
 
@@ -606,20 +548,20 @@ public class Genotype implements Serializable {
 					m_chromosomes.addAll(s.getChromosomes());
 				}
 			}
-
+			
 			// System.out.println("After cull to elites: " + m_chromosomes.size());
 
 			// add offspring
 			// ------------------------------
 			addChromosomesFromMaterial(offspring);
-
-			//assert (m_chromosomes.contains(fittest));
-
+			
 			// in case we're off due to rounding errors
 			if (m_chromosomes.size() != m_activeConfiguration.getPopulationSize()) {
-				adjustChromosomeList(m_chromosomes, m_activeConfiguration.getPopulationSize());
+				adjustChromosomeList(m_chromosomes, m_activeConfiguration.getPopulationSize(), fittest);
 			}
 			
+			assert (m_chromosomes.contains(fittest));
+
 			// Fire an event to indicate we've finished genetic operators. Among
 			// other things this allows for RAM conservation.
 			// -------------------------------------------------------

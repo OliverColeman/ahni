@@ -296,7 +296,7 @@ public class Neuron implements XmlPersistable {
 			result.append("\" hint-layer=\"").append(layout.getHintLayer());
 			result.append("\" hint-position=\"").append(layout.getHintPosition());
 		}
-		result.append("\" value=\"").append(layout.getValue());
+		//result.append("\" value=\"").append(layout.getValue());
 		result.append("\" step-pending=\"").append(layout.isDirty());
 		result.append("\" activation=\"").append(layout.getActivationFunction().toString()).append("\" />\n");
 

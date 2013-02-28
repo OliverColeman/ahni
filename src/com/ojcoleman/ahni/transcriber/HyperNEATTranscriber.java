@@ -2,7 +2,6 @@ package com.ojcoleman.ahni.transcriber;
 
 import java.util.Arrays;
 
-
 import org.apache.log4j.Logger;
 import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.Chromosome;
@@ -25,7 +24,7 @@ import com.ojcoleman.ahni.util.Range;
  * 
  * @author Oliver Coleman
  */
-public abstract class HyperNEATTranscriber<T extends Activator> implements Transcriber<T>, Configurable {
+public abstract class HyperNEATTranscriber<T extends Activator> extends TranscriberAdaptor<T> implements Configurable {
 	private final static Logger logger = Logger.getLogger(HyperNEATTranscriber.class);
 
 	/**
@@ -57,7 +56,8 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 */
 	public static final String HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD = "ann.hyperneat.connection.expression.threshold";
 	/**
-	 * The minimum weight values in the substrate network. If this is not specified then the negated value of HYPERNEAT_CONNECTION_WEIGHT_MAX will be used. 
+	 * The minimum weight values in the substrate network. If this is not specified then the negated value of
+	 * HYPERNEAT_CONNECTION_WEIGHT_MAX will be used.
 	 */
 	public static final String HYPERNEAT_CONNECTION_WEIGHT_MIN = "ann.hyperneat.connection.weight.min";
 	/**
@@ -98,7 +98,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 * determine the input to the CPPN for a given neuron location). Defaults to [0, 1].
 	 */
 	public static final String RANGE_Z = "ann.hyperneat.range.z";
-
+	
 	/**
 	 * <p>
 	 * The coordinates of neurons in a specified layer. The layer must be specified as part of the property key/name,
@@ -109,6 +109,10 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 * For 2D layers the coordinates should be specified in row-packed order (i.e. one row after another, where a single
 	 * row has the same y index/coordinate). Coordinates must be specified for all neurons in the given layer. If the z
 	 * coordinate is not given it will be set to the default for the layer.
+	 * </p>
+	 * <p>
+	 * This will override neuron positions specified by the fitness function for the specified layer (if it defines
+	 * any).
 	 * </p>
 	 */
 	public static final String NEURON_POSITIONS_FOR_LAYER = "ann.hyperneat.layer.positions";
@@ -132,7 +136,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 	 * reference within. Default is "false".
 	 */
 	public static final String HYPERNEAT_LEO_LOCALITY = "ann.hyperneat.leo.localityseeding";
-
+	
 	/**
 	 * The width of each layer in the substrate.
 	 */
@@ -271,25 +275,25 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		depth = props.getIntProperty(SUBSTRATE_DEPTH);
 		cyclesPerStep = feedForward ? depth - 1 : props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP, 1);
 		enableLEO = props.getBooleanProperty(HYPERNEAT_LEO, enableLEO);
-		
+
 		if (enableLEO && connectionExprThresh != 0) {
 			logger.warn("LEO is enabled but the connection expression threshold is not 0. It is recommended to set the connection expression threshold to 0 when LEO is enabled.");
 		}
-		
+
 		width = getProvisionalLayerSize(props, SUBSTRATE_WIDTH);
 		height = getProvisionalLayerSize(props, SUBSTRATE_HEIGHT);
-		
+
 		rangeX = props.getObjectFromArgsProperty(RANGE_X, Range.class, rangeX, null);
 		rangeY = props.getObjectFromArgsProperty(RANGE_Y, Range.class, rangeY, null);
 		rangeZ = props.getObjectFromArgsProperty(RANGE_Z, Range.class, rangeZ, null);
 
 		// Determine width and height of each layer.
-		BulkFitnessFunction ff = (BulkFitnessFunction) props.singletonObjectProperty(HyperNEATEvolver.FITNESS_FUNCTION_CLASS_KEY);
-		AHNIFitnessFunction aff = (ff instanceof AHNIFitnessFunction) ? (AHNIFitnessFunction) ff : null;
+		BulkFitnessFunction bulkFitnessFunc = (BulkFitnessFunction) props.singletonObjectProperty(HyperNEATEvolver.FITNESS_FUNCTION_CLASS_KEY);
+		AHNIFitnessFunction ahniFitnessFunc = (bulkFitnessFunc instanceof AHNIFitnessFunction) ? (AHNIFitnessFunction) bulkFitnessFunc : null;
 		for (int layer = 0; layer < depth; layer++) {
 			// If the fitness function is to define this layer.
 			if (width[layer] == -1 || height[layer] == -1) {
-				int[] layerDims = aff != null ? aff.getLayerDimensions(layer, depth) : null;
+				int[] layerDims = ahniFitnessFunc != null ? ahniFitnessFunc.getLayerDimensions(layer, depth) : null;
 				if (layerDims != null) {
 					if (width[layer] == -1) {
 						width[layer] = layerDims[0];
@@ -317,8 +321,11 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 				if (neuronPositionsForLayer[layer].length != width[layer] * height[layer]) {
 					throw new IllegalArgumentException("The number of neuron positions specified for " + NEURON_POSITIONS_FOR_LAYER + "." + layer + " does not match the number of neurons for the layer.");
 				}
-			} else if (aff != null) {
-				neuronPositionsForLayer[layer] = aff.getNeuronPositions(layer, depth);
+			}
+			// If the fitness function might define some neuron positions.
+			else if (ahniFitnessFunc != null) {
+				neuronPositionsForLayer[layer] = ahniFitnessFunc.getNeuronPositions(layer, depth);
+				// If the fitness function does define some neuron positions for this layer.
 				if (neuronPositionsForLayer[layer] != null) {
 					if (neuronPositionsForLayer[layer].length != width[layer] * height[layer]) {
 						throw new IllegalArgumentException("The number of neuron positions specified by the fitness function for " + layer + " does not match the number of neurons for the layer.");
@@ -407,12 +414,14 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 
 		cppnTranscriber = (Transcriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
 	}
-	
+
 	/**
-	 * Returns provisional width or height values for each layer of the substrate. 
-	 * Any values that are to be determined by the fitness function have value -1.
+	 * Returns provisional width or height values for each layer of the substrate. Any values that are to be determined
+	 * by the fitness function have value -1.
+	 * 
 	 * @param props The properties to read the size from.
-	 * @param sizeKey Whether to retrieve width or height values, allowed values are {@link #SUBSTRATE_WIDTH} or  {@link #SUBSTRATE_HEIGHT}.
+	 * @param sizeKey Whether to retrieve width or height values, allowed values are {@link #SUBSTRATE_WIDTH} or
+	 *            {@link #SUBSTRATE_HEIGHT}.
 	 * @return An array containing values for the width or height of each layer of the substrate.
 	 */
 	public static int[] getProvisionalLayerSize(Properties props, String sizeKey) {
@@ -424,8 +433,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 			if (sizes.length != depth) {
 				throw new IllegalArgumentException("Number of comma-separated layer dimensions in " + sizeKey + " does not match " + SUBSTRATE_DEPTH + ".");
 			}
-		}
-		else {
+		} else {
 			sizes = new int[depth];
 			Arrays.fill(sizes, -1);
 		}
@@ -562,6 +570,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 			if (depth == 1)
 				z = 0;
 			if (neuronPositionsForLayer[z] == null) {
+				// This will translate from unit ranges.
 				setSourceCoordinates(width[z] > 1 ? (double) x / (width[z] - 1) : 0.5, height[z] > 1 ? (double) y / (height[z] - 1) : 0.5, depth > 1 ? (double) z / (depth - 1) : 0);
 			} else {
 				Point p = neuronPositionsForLayer[z][y * width[z] + x];
@@ -569,7 +578,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 				cppnInput[cppnIdxSX] = p.x;
 				cppnInput[cppnIdxSY] = p.y;
 				if (cppnIdxSZ != -1) {
-					cppnInput[cppnIdxSZ] = p.y;
+					cppnInput[cppnIdxSZ] = p.z;
 				}
 			}
 		}
@@ -633,6 +642,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 			if (depth == 1)
 				z = 0;
 			if (neuronPositionsForLayer[z] == null) {
+				// This will translate from unit ranges.
 				setTargetCoordinates(width[z] > 1 ? (double) x / (width[z] - 1) : 0.5, height[z] > 1 ? (double) y / (height[z] - 1) : 0.5, depth > 1 ? (double) z / (depth - 1) : 0);
 			} else {
 				Point p = neuronPositionsForLayer[z][y * width[z] + x];
@@ -640,9 +650,41 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 				cppnInput[cppnIdxTX] = p.x;
 				cppnInput[cppnIdxTY] = p.y;
 				if (cppnIdxTZ != -1) {
-					cppnInput[cppnIdxTZ] = p.y;
+					cppnInput[cppnIdxTZ] = p.z;
 				}
 			}
+		}
+
+		/**
+		 * Get the coordinates of the neuron specified by the given indices into a grid-based substrate. If the z
+		 * coordinate is not required it will be ignored. If custom coordinates have been specified via
+		 * {@link HyperNEATTranscriber#NEURON_POSITIONS_FOR_LAYER} or by the fitness function these will be returned for
+		 * the affected neurons. Note that if custom coordinates have been specified for a layer then the values of the
+		 * x and y parameters may not correlate linearly to the actual coordinates if the layer does not use a regular
+		 * grid-based layout, however this detail can generally be ignored by subclasses, they can just blindly rely on
+		 * the {@link HyperNEATTranscriber#width} and {@link HyperNEATTranscriber#height} values (see
+		 * {@link HyperNEATTranscriberBain} for an example).
+		 * 
+		 * @param x The index of the target neuron in the X dimension.
+		 * @param y The index of the target neuron in the Y dimension.
+		 * @param z The index of the target neuron in the Z dimension (the layer index).
+		 * @param p A Point can be passed in to avoid the creation of a new Point for every call to this method. If
+		 *            supplied it will be returned. If null then a new Point will be returned.
+		 * @return A Point with the relevant coordinates.
+		 */
+		public Point getCoordinatesForGridIndices(int x, int y, int z, Point p) {
+			if (p == null)
+				p = new Point(0, 0, 0);
+			if (depth == 1)
+				z = 0;
+			if (neuronPositionsForLayer[z] == null) {
+				p.setCoordinates(width[z] > 1 ? (double) x / (width[z] - 1) : 0.5, height[z] > 1 ? (double) y / (height[z] - 1) : 0.5, depth > 1 ? (double) z / (depth - 1) : 0);
+				p.translateFromUnit(rangeX, rangeY, rangeZ);
+			} else {
+				Point cp = neuronPositionsForLayer[z][y * width[z] + x];
+				p.setCoordinates(cp.x, cp.y, cp.z);
+			}
+			return p;
 		}
 
 		/**
@@ -725,11 +767,10 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		public double getWeight() {
 			return cppnOutput[cppnIdxW[0]];
 		}
-		
+
 		/**
-		 * Get the value of the weight. Should be called after calling {@link #query()}.
-		 * The output will be transformed to be within the specified range and may optionally
-		 * have a threshold applied.
+		 * Get the value of the weight. Should be called after calling {@link #query()}. The output will be transformed
+		 * to be within the specified range and may optionally have a threshold applied.
 		 */
 		public double getRangedWeight(double minValue, double maxValue, double valueRange, double threshold) {
 			return getRangedOutput(cppnIdxW[0], minValue, maxValue, valueRange, threshold);
@@ -742,12 +783,11 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		public double getWeight(int sourceLayerIndex) {
 			return cppnOutput[cppnIdxW[sourceLayerIndex]];
 		}
-		
+
 		/**
 		 * Get the value of the weight for the specified layer in a layered feed-forward network encoded with
-		 * {@link #HYPERNEAT_LAYER_ENCODING} set to false. Should be called after calling {@link #query()}.
-		 * The output will be transformed to be within the specified range and may optionally
-		 * have a threshold applied.
+		 * {@link #HYPERNEAT_LAYER_ENCODING} set to false. Should be called after calling {@link #query()}. The output
+		 * will be transformed to be within the specified range and may optionally have a threshold applied.
 		 */
 		public double getRangedWeight(int sourceLayerIndex, double minValue, double maxValue, double valueRange, double threshold) {
 			return getRangedOutput(cppnIdxW[sourceLayerIndex], minValue, maxValue, valueRange, threshold);
@@ -760,12 +800,11 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		public double getBiasWeight() {
 			return cppnOutput[cppnIdxB[0]];
 		}
-		
+
 		/**
 		 * Get the value of the weight for a bias connection. Should be called after calling {@link #query()}. The bias
-		 * is usually queried for a target neuron after setting the source coordinate values to 0.
-		 * The output will be transformed to be within the specified range and may optionally
-		 * have a threshold applied.
+		 * is usually queried for a target neuron after setting the source coordinate values to 0. The output will be
+		 * transformed to be within the specified range and may optionally have a threshold applied.
 		 */
 		public double getRangedBiasWeight(double minValue, double maxValue, double valueRange, double threshold) {
 			return getRangedOutput(cppnIdxB[0], minValue, maxValue, valueRange, threshold);
@@ -783,9 +822,8 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		/**
 		 * Get the value of the weight for a bias connection for the specified layer in a layered feed-forward network
 		 * encoded with {@link #HYPERNEAT_LAYER_ENCODING} set to false. Should be called after calling {@link #query()}.
-		 * The bias is usually queried for a target neuron after setting the source coordinate values to 0.
-		 * The output will be transformed to be within the specified range and may optionally
-		 * have a threshold applied.
+		 * The bias is usually queried for a target neuron after setting the source coordinate values to 0. The output
+		 * will be transformed to be within the specified range and may optionally have a threshold applied.
 		 */
 		public double getRangedBiasWeight(int sourceLayerIndex, double minValue, double maxValue, double valueRange, double threshold) {
 			return getRangedOutput(cppnIdxB[sourceLayerIndex], minValue, maxValue, valueRange, threshold);
@@ -815,40 +853,63 @@ public abstract class HyperNEATTranscriber<T extends Activator> implements Trans
 		public double getOutput(int index) {
 			return cppnOutput[index];
 		}
-		
+
 		/**
 		 * Get the value of the output with the given index. This is useful for sub-classes of HyperNEATTranscriber that
-		 * add additional outputs to the CPPN. The output will be transformed to be within the specified range and may optionally
-		 * have a threshold applied.
+		 * add additional outputs to the CPPN. The output will be transformed to be within the specified range and may
+		 * optionally have a threshold applied.
 		 */
 		public double getRangedOutput(int index, double minValue, double maxValue, double valueRange, double threshold) {
 			double output = cppnOutput[index];
 			if (cppnOutputUnitBounded) {
 				// Scale to range [minValue, maxValue].
 				output = output * valueRange + minValue;
-			}
-			else if (cppnOutputPlusMinusUnitBounded) {
+			} else if (cppnOutputPlusMinusUnitBounded) {
 				// Scale to range [minValue, maxValue].
 				output = ((output + 1) * 0.5) * valueRange + minValue;
-			}
-			else {
+			} else {
 				// Truncate to range [minValue, maxValue].
 				output = Math.min(maxValue, Math.max(minValue, output));
 			}
-			
+
 			// If thresholding is to be applied.
-			if (threshold > 0) { 
+			if (threshold > 0) {
 				if (Math.abs(output) > threshold) {
 					if (output > 0)
 						output = (output - threshold) * (maxValue / (maxValue - threshold));
 					else
 						output = (output + threshold) * (minValue / (minValue + threshold));
-				}
-				else {
+				} else {
 					output = 0;
 				}
 			}
 			return output;
+		}
+
+		/**
+		 * Determine which output from the CPPN over the set of outputs specified by the given set of indices has the
+		 * highest output value. If the length of the given indices array is 1 then the single specified output is
+		 * treated as a binary output.
+		 * 
+		 * @param indices An array containing index values into the CPPN output array.
+		 * @return The index into the given indices array for the corresponding output with the highest output value, or
+		 *         if a single output is being treated as a binary output then 0 if the output represents 'false' and 1
+		 *         if the output represents 'true'. The actual output values corresponding to 'false' and 'true' depend
+		 *         on the range of the output: if the minimum output value is less than 0 then an output less than or
+		 *         equal to 0 is interpreted as false, otherwise an output value less than half the maximum output value
+		 *         is interpreted as 'false'.
+		 */
+		public int getSelectorValue(int[] indices) {
+			if (indices.length > 1) {
+				int hi = 0;
+				for (int i = 1; i < indices.length; i++)
+					if (getOutput(indices[i]) > getOutput(indices[hi]))
+						hi = i;
+				return hi;
+			}
+			if (cppnActivator.getMinResponse() < 0)
+				return getOutput(indices[0]) > 0 ? 1 : 0;
+			return getOutput(indices[0]) >= (cppnActivator.getMaxResponse() / 2) ? 1 : 0;
 		}
 	}
 

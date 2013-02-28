@@ -214,7 +214,7 @@ public class Species {
 		Iterator<Chromosome> it = chromosomes.iterator();
 		while (it.hasNext()) {
 			Chromosome e = it.next();
-			if (!e.isElite && e != popFittest) {
+			if (!e.isElite && !e.equals(popFittest)) {
 				e.resetSpecie();
 				it.remove();
 			}

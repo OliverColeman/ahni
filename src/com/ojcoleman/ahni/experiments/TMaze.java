@@ -73,7 +73,8 @@ public class TMaze extends BulkFitnessFunctionMT {
 	 */
 	public static final String REWARD_CRASH = "fitness.function.tmaze.reward.crash";
 	/**
-	 * Reward value given upon failing to return home (used in fitness calculation).
+	 * Reward value given upon failing to return home (used in fitness calculation). If this is set to 0
+	 * then the agent is not required to return home.
 	 */
 	public static final String REWARD_FAIL_RETURN_HOME = "fitness.function.tmaze.reward.failreturnhome";
 	/**
@@ -187,6 +188,7 @@ public class TMaze extends BulkFitnessFunctionMT {
 		startY = 2;
 	}
 
+	@Override
 	public void initialiseEvaluation() {
 		// Set-up when reward switches should occur for this set of trials.
 		rewardSwitchTrials = new int[rewardSwitchCount];
@@ -195,7 +197,8 @@ public class TMaze extends BulkFitnessFunctionMT {
 		int randomRange = (int) Math.round(switchTrials * rewardSwitchVariation);
 		rewardIndexForSwitchList.add(0);
 		for (int i = 0; i < rewardSwitchCount; i++) {
-			rewardSwitchTrials[i] = Math.round(switchTrials * (i + 1) + random.nextInt(randomRange + 1) * 2 - randomRange);
+			rewardSwitchTrials[i] = Math.round(switchTrials * (i + 1));
+			if (randomRange > 0) rewardSwitchTrials[i] += random.nextInt(randomRange + 1) * 2 - randomRange;
 			rewardIndexForSwitchList.add((i + 1) % rewardLocationsX.length);
 		}
 		if (rewardSwitchVariation > 0) {
@@ -220,6 +223,7 @@ public class TMaze extends BulkFitnessFunctionMT {
 	public int evaluate(Chromosome genotype, Activator substrate, String baseFileName) {
 		try {
 			NiceWriter logOutput = baseFileName == null ? null : new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
+			StringBuilder logSummary = logOutput == null ? null : new StringBuilder();
 			
 			if (logOutput != null) {
 				logOutput.put("Map:\n");
@@ -231,11 +235,16 @@ public class TMaze extends BulkFitnessFunctionMT {
 			double[] input = new double[4];
 			int[] walls = new int[4];
 			double reward = 0;
-			int correctTrialCount = 0;
-			int maxSteps = isDouble ? passageLength * 6 + 15 : passageLength * 4 + 10;
+			int correctTrialCount = 0, highRewardCount = 0, lowRewardCount = 0, crashCount = 0, failReturnHomeCount = 0;
+			int maxSteps = isDouble ? passageLength * 6 + 12 : passageLength * 4 + 8;
+			if (rewardFailReturnHome == 0) { // If returning home is not required.
+				maxSteps = isDouble ? passageLength * 3 + 5 : passageLength * 2 + 3;
+			}
 			for (int trial = 0; trial < trialCount; trial++) {
-				if (logOutput != null)
+				if (logOutput != null) {
 					logOutput.put("\n=== BEGIN TRIAL " + trial + "===\n");
+					logSummary.append("Trial " + trial + "\n");
+				}
 	
 				// If we should switch reward locations now.
 				if (rewardSwitchTrialsIndex < rewardSwitchTrials.length && trial == rewardSwitchTrials[rewardSwitchTrialsIndex]) {
@@ -261,21 +270,36 @@ public class TMaze extends BulkFitnessFunctionMT {
 							trialReward += rewardHigh;
 							input[3] = rewardHighColour;
 							collectedHighReward = true;
+							highRewardCount++;
+							if (logSummary != null) logSummary.append("\tHigh reward collected.\n");
 						} else {
 							trialReward += rewardLow;
 							input[3] = rewardLowColour;
+							lowRewardCount++;
+							if (logSummary != null) logSummary.append("\tLow reward collected.\n");
 						}
 						collectedReward = true;
+						if (rewardFailReturnHome == 0) { // If returning home is not required.
+							finished = true;
+							if (rewardLowColour == rewardHighColour || collectedHighReward)
+								correctTrialCount++;
+						}
 					} else if (collectedReward && agentX == startX && agentY == startY) {
 						// If collected reward and returned home.
 						finished = true;
-						if (collectedHighReward) correctTrialCount++;
+						if (rewardLowColour == rewardHighColour || collectedHighReward)
+							correctTrialCount++;
+						if (logSummary != null) logSummary.append("\tReturned home.\n");
 					} else if (!map[agentX][agentY]) { // If it's hit a wall.
 						trialReward += rewardCrash;
 						finished = true;
-					} else if (step > maxSteps) { // If it's taken too long then it's taken a wrong turn.
+						crashCount++;
+						if (logSummary != null) logSummary.append("\tCrashed.\n");
+					} else if (step >= maxSteps) { // If it's taken too long then it's taken a wrong turn.
 						trialReward += rewardFailReturnHome;
 						finished = true;
+						failReturnHomeCount++;
+						if (logSummary != null) logSummary.append("\tFailed to return home.\n");
 					}
 	
 					// Detect walls in each direction. 1 indicates a wall, 0 passage.
@@ -348,13 +372,23 @@ public class TMaze extends BulkFitnessFunctionMT {
 				reward += trialReward;
 			}
 			
-			if (logOutput != null) logOutput.close();
 			
-			double minPossibleReward = trialCount * Math.min(rewardCrash, 0);
-			double maxPossibleReward = trialCount * rewardHigh;
-			double possibleRewardRange = maxPossibleReward - minPossibleReward;
-			genotype.setPerformanceValue((double) correctTrialCount / trialCount);
-			return (int) Math.round(getMaxFitnessValue() * ((reward - minPossibleReward) / possibleRewardRange));
+			reward /= trialCount;
+			double minPossibleReward = Math.min(Math.min(rewardCrash, rewardFailReturnHome), 0);
+			double possibleRewardRange = rewardHigh - minPossibleReward;
+			int fitness = (int) Math.round(getMaxFitnessValue() * ((reward - minPossibleReward) / possibleRewardRange));
+			// Highest performance is reached when all trials are correct except those where the reward was moved.
+			double performance = (double) correctTrialCount / (trialCount - rewardSwitchCount - 1);
+			//if (performance > 1) performance = 1; // Unlikely but possible.
+			
+			if (logOutput != null) {
+				logOutput.put("\n=== Summary ===\n" + logSummary);
+				logOutput.put("\n=== Stats ===\nfitness: " + fitness + "\nperformance: " + performance + "\nhigh reward count: " + highRewardCount + "\nlow reward count: " + lowRewardCount + "\ncrash count: " + crashCount + "\nfail return home count: " + failReturnHomeCount + "\n");
+				logOutput.close();
+			}
+
+			genotype.setPerformanceValue(performance);
+			return fitness;
 		}
 		catch (IOException e) {
 			e.printStackTrace();
@@ -390,20 +424,28 @@ public class TMaze extends BulkFitnessFunctionMT {
 		Point[] positions = null;
 		if (layer == 0) { // Input layer.
 			positions = new Point[4];
-			// Sensors.
-			for (int i = 0; i < 3; i++) {
-				positions[i] = new Point((double) i / 2, 0.25, 0);
+			if (inputType == InputType.RANGE) {
+				// Range sensors.
+				for (int i = 0; i < 3; i++) {
+					positions[i] = new Point((double) i / 2, 0, 0);
+				}
+				// "Colour/reward" signal.
+				positions[3] = new Point(0.5, 1, 0);
 			}
-			// "Colour/reward" signal.
-			positions[3] = new Point(0.5, 0, 0);
+			else { // FEATURES
+				positions[0] = new Point(0, 0, 0);
+				positions[1] = new Point(0, 1, 0);
+				positions[2] = new Point(1, 0, 0);
+				positions[3] = new Point(1, 1, 0);
+			}
 		} else if (layer == totalLayerCount - 1) { // Output layer.
 			if (outputType == OutputType.SINGLE) {
-				positions = new Point[] { new Point(0.5, 1, 0) };
+				positions = new Point[] { new Point(0.5, 0.5, 1) };
 			} else {
 				positions = new Point[3];
 				// Action to perform next (left, forward, right).
 				for (int i = 0; i < 3; i++) {
-					positions[i] = new Point((double) i / 2, 1, 0);
+					positions[i] = new Point((double) i / 2, 0.5, 1);
 				}
 			}
 		}

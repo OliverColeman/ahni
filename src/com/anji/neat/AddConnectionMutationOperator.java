@@ -235,6 +235,7 @@ public class AddConnectionMutationOperator extends MutationOperator implements C
 			boolean connected = NeatChromosomeUtility.neuronsAreConnected(dest.getInnovationId(), src.getInnovationId(), conns);
 			return !connected;
 		}
-		return (dest.getActivationType().equals(LinearActivationFunction.NAME));
+		//return (dest.getActivationType().equals(LinearActivationFunction.NAME));
+		return true;
 	}
 }

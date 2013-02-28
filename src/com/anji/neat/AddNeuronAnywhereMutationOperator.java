@@ -67,7 +67,6 @@ public class AddNeuronAnywhereMutationOperator extends MutationOperator implemen
 		List<NeuronAllele> neurons = NeatChromosomeUtility.getNeuronList(target.getAlleles());
 		List<ConnectionAllele> connections = NeatChromosomeUtility.getConnectionList(target.getAlleles());
 
-		
 		// Add neurons.
 		int numMutations = numMutations(config.getRandomGenerator(), neurons.size());
 		for (int i = 0; i < numMutations; i++) {
@@ -88,9 +87,12 @@ public class AddNeuronAnywhereMutationOperator extends MutationOperator implemen
 				ConnectionAllele newConn = config.newConnectionAllele(src.getInnovationId(), newNeuronAllele.getInnovationId());
 				newConn.setToRandomValue(random, false);
 				allelesToAdd.add(newConn);
+				connections.add(newConn);
+				
 				newConn = config.newConnectionAllele(newNeuronAllele.getInnovationId(), dest.getInnovationId());
 				newConn.setWeight(random.nextDouble() * ConnectionAllele.RANDOM_STD_DEV * 0.1); // Make it a small weight.
 				allelesToAdd.add(newConn);
+				connections.add(newConn);
 				connected = true;
 			}
 		}
