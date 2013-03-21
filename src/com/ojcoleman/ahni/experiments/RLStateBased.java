@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -67,11 +69,15 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 	 * The number of environments to evaluate candidates against. Increasing this will provide a more accurate evaluation but take longer.
 	 */
 	public static final String ENVIRONMENT_COUNT = "fitness.function.rlstate.environment.count";
+	/**
+	 * The fraction of environments that should be replaced with new environments per generation. This is evaluated probabilistically.
+	 */
+	public static final String ENVIRONMENT_CHANGE_RATE = "fitness.function.rlstate.environment.replacerate";
+	
 	//public static final String TRIAL_COUNT = "fitness.function.rlstate.trial.count";
 	
-	private Properties properties;
-	
 	private int environmentCount;
+	private double environmentReplaceProb;
 	private int trialCount;
 	private int stateCount;
 	private int actionCount;
@@ -82,27 +88,32 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 	@Override
 	public void init(Properties props) {
 		super.init(props);
-		this.properties = props;
 		environmentCount = props.getIntProperty(ENVIRONMENT_COUNT);
+		environmentReplaceProb = props.getDoubleProperty(ENVIRONMENT_CHANGE_RATE);
 		actionCount = props.getIntProperty(ACTION_COUNT_INITIAL);
 		stateCount = props.getIntProperty(STATE_COUNT_INITIAL);
 		actionCountMax = props.getIntProperty(ACTION_COUNT_MAX);
 		stateCountMax = props.getIntProperty(STATE_COUNT_MAX);
 		//trialCount = props.getIntProperty(TRIAL_COUNT);
-		trialCount = stateCount * actionCount;
-		
+		// Allow for 5 extra trials to allow the agent to try every possible combination of actions from each state 
+		// and then performing 5 perfect trials, at which point we declare the environment as solved by the agent.
+		trialCount = stateCount * actionCount + 5;
+		logger.info("RLStateBased trial count: " + trialCount);
 		environments = new Environment[environmentCount];
 		for (int e = 0; e < environments.length; e++) {
 			environments[e] = new Environment();
+			environments[e].setUp();
 		}
 		
 		((Properties) props).getEvolver().addEventListener(this);
 	}
 	
 	public void initialiseEvaluation() {
-		// Create new environments every generation.
+		// Create (some) new environments every generation.
 		for (Environment e : environments) {
-			e.setUp();
+			if (environmentReplaceProb > random.nextDouble()) {
+				e.setUp();
+			}
 		}
 	}
 	
@@ -135,6 +146,7 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 		
 		double reward = 0;
 		double[] avgRewardForEachTrial = new double[trialCount];
+		int solvedCount = 0;
 		for (Environment env : environments) {
 			substrate.reset();
 			double envReward = 0;
@@ -148,6 +160,8 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 				trialReward = 0;
 				
 				// The network can perform a number of steps equal to the number of states minus the start state.
+				// The challenge is to find a sequence of actions (of which there is at least one) to visit all 
+				// the states containing a reward.
 				for (int step = 0; step < stateCount-1; step++) {
 					// Set up the inputs to the network.
 					Arrays.fill(input, 0);
@@ -157,27 +171,41 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 						input[inputRewardOffset] = currentState.reward; // Reward from previous action and resultant state.
 						trialReward += currentState.reward;
 					}
+										
 					stateVisited[currentState.id] = true;
 					
-					// Ask the network what it wants to do next.
+					// Ask the network what it wants to do next, and let it know the reward for the current state.
 					double[] output = substrate.next(input);
+					
+					// If the maximum reward has been reached, end the trial.
+					if (trialReward == 1) {
+						break;
+					}
 					
 					// The action to perform is the one corresponding to the output with the highest output value.
 					int action = ArrayUtil.getMaxIndex(output);
-					currentState = currentState.actionStateMap[action];
+					// If a new state is defined for the current state and specified action.
+					if (currentState.actionStateMap[action] != null) {
+						currentState = currentState.actionStateMap[action];
+					}
 				}
 				
 				// If 5 perfect trials have been executed then we can probably assume this environment has been mastered.
-				/*if (trialReward > 0.999) {
+				if (trialReward > 0.999) {
 					consecutivePerfectTrialCount++;
 					if (consecutivePerfectTrialCount == 5) {
-						envReward += trialReward * (trialCount - trial);
-						break;
+						solvedCount++;
+						// Fill in values for trials we're skipping.
+						for (int t = trial; t < trialCount; t++) {
+							avgRewardForEachTrial[trial] += trialReward;
+							envReward += trialReward;
+						}
+						break; // breaks out of for (int trial = 0; trial < trialCount; trial++)
 					}
 				}
 				else {
 					consecutivePerfectTrialCount = 0;
-				}*/
+				}
 				envReward += trialReward;
 				
 				avgRewardForEachTrial[trial] += trialReward;
@@ -192,6 +220,7 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 			logOutput.put(Arrays.toString(avgRewardForEachTrial));
 		}
 		
+		genotype.setPerformanceValue((double) solvedCount / environmentCount);
 		reward /= environmentCount;
 		return (int) Math.round(getMaxFitnessValue() * reward);
 	}
@@ -234,8 +263,7 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 		private State[] states;
 		
 		private void setUp() {
-			states = new State[stateCount];
-			// Generate reward value for each state.
+			// Generate random reward value for each state.
 			double[] rewards = ArrayUtil.newRandom(stateCount, random);
 			rewards[0] = 0; // First state has no reward.
 			// Optionally only allow some proportion of states to have a reward.
@@ -248,49 +276,47 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 			}
 			// Total reward over all states equals 1.
 			ArrayUtil.normaliseSum(rewards);
+			
 			// Create states.
+			states = new State[stateCount];
 			for (int s = 0; s < stateCount; s++) {
 				states[s] = new State(s, rewards[s], false);
 			}
-			boolean allRewardStatesVisitable = false;
-			do {
-				Deque<State> rewardStatesNotVisited = new ArrayDeque<State>();
-				
-				// Generate random action->state map for each state.
-				double actionMapRatio = properties.getDoubleProperty(ACTION_MAP_RATIO);
-				for (int s = 0; s < stateCount; s++) {
-					for (int a = 0; a < actionCount; a++) {
-						int nextState = actionMapRatio > random.nextDouble() ? random.nextInt(stateCount) : s;
-						states[s].actionStateMap[a] = states[nextState];
-					}
-					if (rewards[s] > 0) 
-						rewardStatesNotVisited.add(states[s]);
-				}
-				
-				// Ensure all reward states are visitable from the start state.
-				Set<State> visited = new HashSet<State>();
-				Set<State> newlyVisited = new HashSet<State>();
-				newlyVisited.add(states[0]);
-				int stepCount = 0;
-				while (visited.size() != stateCount && !rewardStatesNotVisited.isEmpty() && stepCount <= stateCount+1) {
-					Set<State> newlyFound = new HashSet<State>();
-					for (State s : newlyVisited) {
-						for (State nextState : s.actionStateMap) {
-							if (!visited.contains(nextState) && !newlyVisited.contains(nextState)) {
-								newlyFound.add(nextState);
-							}
-						}
-					}
-					visited.addAll(newlyVisited);
-					rewardStatesNotVisited.removeAll(newlyVisited);
-					newlyVisited = newlyFound;
-					stepCount++;
-				}
-				allRewardStatesVisitable = rewardStatesNotVisited.isEmpty();
-			} while (!allRewardStatesVisitable);
 			
-			//System.out.println(toString());
-			//System.out.println();
+			// Create a random path visiting all states. This ensures the environment is solvable.
+			List<Integer> order = new ArrayList<Integer>(stateCount);
+			for (int i = 1; i < stateCount; i++) {
+				order.add(i);
+			}
+			Collections.shuffle(order, random);
+			order.add(0, 0);
+			for (int i = 0; i < stateCount; i++) {
+				states[order.get(i)].actionStateMap[random.nextInt(actionCount)] = states[order.get((i+1)%stateCount)];
+			}
+			
+			// Add some extra random state transitions.
+			double mapRatio = props.getDoubleProperty(ACTION_MAP_RATIO);
+			// Account for already-assigned action for path created above.
+			// (We want (actionCount-1) * mapRatio == 1, as we iterate over all possible actions minus 1 below).
+			mapRatio = (mapRatio * actionCount - 1) / (actionCount - 1);
+			for (int state = 0; state < stateCount; state++) {
+				State[] map = states[state].actionStateMap;
+				// For each action (minus the one assigned for the path created above).
+				for (int a = 0; a < actionCount-1; a++) {
+					// If a mapping should be created.
+					if (mapRatio > random.nextDouble()) {
+						// Randomly select an unmapped action.
+						int action = random.nextInt(actionCount);
+						while (map[action] != null) action = random.nextInt(actionCount);
+						// Randomly select a state other than this one.
+						int nextState = random.nextInt(stateCount);
+						while (nextState == state) nextState = random.nextInt(stateCount);
+						map[action] = states[nextState];
+					}
+				}
+			}
+			
+			//System.err.println(toString());
 		}
 		
 		public String toString() {
@@ -298,7 +324,7 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 			for (int s = 0; s < stateCount; s++) {
 				sb.append(s + " (" + (float) states[s].reward + ") => ");
 				for (int a = 0; a < actionCount; a++) {
-					sb.append(states[s].actionStateMap[a].id + ", ");
+					sb.append((states[s].actionStateMap[a] == null ? "-" : states[s].actionStateMap[a].id) + ", ");
 				}
 				sb.append("\n");
 			}
@@ -308,14 +334,12 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 	
 	private class State {
 		private int id;
-		private State[] actionStateMap;
+		private State[] actionStateMap; // Map from actions performed in this state to other states.
 		private double reward;
-		private boolean isFinish;
 		
 		public State(int id, double reward, boolean isFinish) {
 			this.id = id;
 			this.reward = reward;
-			this.isFinish = isFinish;
 			actionStateMap = new State[actionCount];
 		}
 	}
@@ -350,19 +374,22 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 			positions = new Point[stateCountMax + actionCountMax + 1];
 			// Current state.
 			for (int i = 0; i < stateCountMax; i++) {
+				// Horizontal along bottom. 
 				positions[i] = new Point((double) i / (stateCountMax - 1), 0, 0);
 			}
 			// Previously performed action.
 			for (int i = 0; i < actionCountMax; i++) {
+				// Horizontal along middle.
 				positions[stateCountMax + i] = new Point((double) i / (actionCountMax - 1), 0.5, 0);
 			}
-			// Reinforcement signal.
+			// Reinforcement signal, at top-middle.
 			positions[stateCountMax + actionCountMax] = new Point(0.5, 1, 0);
 		}
 		else if (layer == totalLayerCount - 1) { // Output layer.
 			positions = new Point[actionCountMax];
 			// Action to perform next.
 			for (int i = 0; i < actionCountMax; i++) {
+				// Horizontal along middle.
 				positions[i] = new Point((double) i / (actionCountMax - 1), 0.5, 1);
 			}
 		}

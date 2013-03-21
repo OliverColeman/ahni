@@ -2,7 +2,7 @@ package com.ojcoleman.ahni.experiments;
 
 import com.ojcoleman.ahni.evaluation.HyperNEATTargetFitnessFunction;
 import com.ojcoleman.ahni.hyperneat.Properties;
-
+import com.ojcoleman.ahni.util.Point;
 
 
 /**
@@ -107,5 +107,29 @@ public class RetinaProblemFitnessFunction extends HyperNEATTargetFitnessFunction
 		}
 
 		setPatterns(inputPatterns, targetOutputPatterns, outputMinValue, outputMaxValue);
+	}
+	
+	@Override
+	public int[] getLayerDimensions(int layer, int totalLayerCount) {
+		if (layer == 0) { // Input layer.
+			return new int[] { 4, 2 };
+		}
+		else if (layer == totalLayerCount - 1) { // Output layer.
+			return new int[] { 2, 1 };
+		}
+		return null;
+	}
+
+	@Override
+	public Point[] getNeuronPositions(int layer, int totalLayerCount) {
+		// Coordinates are given in unit ranges and translated to whatever range is specified by the
+		// experiment properties.
+		Point[] positions = null;
+		if (layer == totalLayerCount - 1) { // Output layer.
+			positions = new Point[2];
+			positions[0] = new Point(1.0 / 6.0, 0.5, 1);
+			positions[1] = new Point(5.0 / 6.0, 0.5, 1);
+		}
+		return positions;
 	}
 }

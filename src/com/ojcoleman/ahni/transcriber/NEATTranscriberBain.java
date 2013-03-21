@@ -13,11 +13,14 @@ import com.ojcoleman.bain.NeuralNetwork;
 import com.ojcoleman.bain.base.ComponentCollection;
 import com.ojcoleman.bain.base.NeuronCollection;
 import com.ojcoleman.bain.base.SynapseCollection;
+import com.ojcoleman.bain.base.SynapseConfiguration;
+import com.ojcoleman.bain.neuron.rate.NeuronCollectionWithBias;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.Chromosome;
 
 import com.amd.aparapi.Kernel;
+import com.anji.integration.Activator;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
 import com.anji.neat.ConnectionAllele;
@@ -36,7 +39,7 @@ import com.ojcoleman.ahni.nn.NNAdaptor;
  * Constructs a <a href="https://github.com/OliverColeman/bain">Bain</a> neural network from a chromosome using the NEAT
  * encoding scheme. An {@link com.anji.integration.ActivatorTranscriber} should be used to construct an instance of this
  * class. {@link com.anji.integration.ActivatorTranscriber#newActivator(Chromosome)} is then used to get the resulting
- * network.
+ * network. To use the HyperNEAT encoding scheme see {@link HyperNEATTranscriberBain}.
  * </p>
  * <p>
  * Bain neural networks are not well suited to feed-forward networks as every neuron and synapse must be
@@ -47,13 +50,9 @@ import com.ojcoleman.ahni.nn.NNAdaptor;
  * 
  * @author Oliver Coleman
  */
-public class NEATTranscriberBain implements Transcriber<BainNN>, Configurable {
+public class NEATTranscriberBain extends TranscriberAdaptor<BainNN> implements Configurable {
 	private final static Logger logger = Logger.getLogger(NEATTranscriberBain.class);
 
-	public static final String SIMULATION_RESOLUTION_KEY = "ann.bain.resolution";
-	public static final String EXECUTION_MODE_KEY = "ann.bain.executionmode";
-	public static final String NEURON_MODEL_KEY = "ann.bain.neuron.model";
-	public static final String SYNAPSE_MODEL_KEY = "ann.bain.synapse.model";
 	/**
 	 * For networks with recurrent connections, the number of activation cycles to perform each time the network is
 	 * presented with new input and queried for its output.
@@ -141,24 +140,18 @@ public class NEATTranscriberBain implements Transcriber<BainNN>, Configurable {
 
 		NeuronCollection neurons = null;
 		SynapseCollection synapses = null;
-		String neuronModelClass = props.getProperty(NEURON_MODEL_KEY, "com.ojcoleman.bain.neuron.rate.SigmoidNeuronCollection");
-		String synapseModelClass = props.getProperty(SYNAPSE_MODEL_KEY, "com.ojcoleman.bain.synapse.rate.FixedSynapseCollection");
+		String neuronModelClass = props.getProperty(TranscriberAdaptor.SUBSTRATE_NEURON_MODEL, "com.ojcoleman.bain.neuron.rate.SigmoidNeuronCollection");
+		String synapseModelClass = props.getProperty(TranscriberAdaptor.SUBSTRATE_SYNAPSE_MODEL, "com.ojcoleman.bain.synapse.rate.FixedSynapseCollection");
 		try {
-			neurons = (NeuronCollection) ComponentCollection.createCollection(neuronModelClass, neuronCount);
-			// If the neuron collection is configurable and the configuration has a default preset.
-			if (neurons.getConfigSingleton() != null && neurons.getConfigSingleton().getPreset(0) != null) {
-				neurons.addConfiguration(neurons.getConfigSingleton().getPreset(0));
-			}
+			neurons = BainNN.createNeuronCollection(neuronModelClass, neuronCount, true, neuronTypesEnabled, neuronParamsEnabled);
 		} catch (Exception e) {
+			e.printStackTrace();
 			throw new TranscriberException("Error creating neurons for Bain neural network. Have you specified the name of the neuron collection class correctly, including the containing packages?", e);
 		}
 		try {
-			synapses = (SynapseCollection) ComponentCollection.createCollection(synapseModelClass, synapseCount);
-			// If the synapse collection is configurable and the configuration has a default preset.
-			if (synapses.getConfigSingleton() != null && synapses.getConfigSingleton().getPreset(0) != null) {
-				synapses.addConfiguration(neurons.getConfigSingleton().getPreset(0));
-			}
+			synapses = BainNN.createSynapseCollection(synapseModelClass, synapseCount, synapseTypesEnabled, synapseParamsEnabled, connectionWeightMin, connectionWeightMax);
 		} catch (Exception e) {
+			e.printStackTrace();
 			throw new TranscriberException("Error creating synapses for Bain neural network. Have you specified the name of the synapse collection class correctly, including the containing packages?", e);
 		}
 
@@ -208,9 +201,9 @@ public class NEATTranscriberBain implements Transcriber<BainNN>, Configurable {
 			cyclesPerStep = props.getIntProperty(RECURRENT_CYCLES_KEY, 1);
 		}
 
-		int simRes = props.getIntProperty(SIMULATION_RESOLUTION_KEY, 1000);
+		int simRes = props.getIntProperty(BainNN.SUBSTRATE_SIMULATION_RESOLUTION, 1000);
 		// If feed-forward, cycles per step is depth-1.
-		String execModeName = props.getProperty(EXECUTION_MODE_KEY, null);
+		String execModeName = props.getProperty(BainNN.SUBSTRATE_EXECUTION_MODE, null);
 		Kernel.EXECUTION_MODE execMode = execModeName == null ? null : Kernel.EXECUTION_MODE.valueOf(execModeName);
 		NeuralNetwork nn = new NeuralNetwork(simRes, neurons, synapses, execMode);
 		int[] inputDims = new int[] { inNeuronAlleles.size() };

@@ -299,7 +299,7 @@ public class TMaze extends BulkFitnessFunctionMT {
 						trialReward += rewardFailReturnHome;
 						finished = true;
 						failReturnHomeCount++;
-						if (logSummary != null) logSummary.append("\tFailed to return home.\n");
+						if (logSummary != null) logSummary.append("\tFailed to return home, or took too long.\n");
 					}
 	
 					// Detect walls in each direction. 1 indicates a wall, 0 passage.
@@ -377,13 +377,13 @@ public class TMaze extends BulkFitnessFunctionMT {
 			double minPossibleReward = Math.min(Math.min(rewardCrash, rewardFailReturnHome), 0);
 			double possibleRewardRange = rewardHigh - minPossibleReward;
 			int fitness = (int) Math.round(getMaxFitnessValue() * ((reward - minPossibleReward) / possibleRewardRange));
-			// Highest performance is reached when all trials are correct except those where the reward was moved.
-			double performance = (double) correctTrialCount / (trialCount - rewardSwitchCount - 1);
-			//if (performance > 1) performance = 1; // Unlikely but possible.
+			// Highest performance is reached when all trials are correct except those where the reward was moved and the agent had to explore all possible options.
+			double performance = (double) correctTrialCount / (trialCount - ((rewardSwitchCount+1) * (isDouble ? 3 : 1)));
+			if (performance > 1) performance = 1; // Sometimes there's a lucky one.
 			
 			if (logOutput != null) {
 				logOutput.put("\n=== Summary ===\n" + logSummary);
-				logOutput.put("\n=== Stats ===\nfitness: " + fitness + "\nperformance: " + performance + "\nhigh reward count: " + highRewardCount + "\nlow reward count: " + lowRewardCount + "\ncrash count: " + crashCount + "\nfail return home count: " + failReturnHomeCount + "\n");
+				logOutput.put("\n=== Stats ===\nfitness: " + fitness + "\nperformance: " + performance + "\nhigh reward count: " + highRewardCount + "\nlow reward count: " + lowRewardCount + "\ncrash count: " + crashCount + "\nfail return home (or took too long) count: " + failReturnHomeCount + "\n");
 				logOutput.close();
 			}
 

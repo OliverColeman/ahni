@@ -147,6 +147,13 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		if (maxThreads > 0 && numThreads > maxThreads)
 			numThreads = maxThreads;
 		
+		logger.info("Using " + numThreads + " threads for transcription and evaluation.");
+		evaluators = new Evaluator[numThreads];
+		for (int i = 0; i < numThreads; i++) {
+			evaluators[i] = new Evaluator(i);
+			evaluators[i].start();
+		}
+		
 		if (props.containsKey(MULTI_KEY)) {
 			String[] mffs = props.getProperty(MULTI_KEY, null).split(",");
 			multiFitnessFunctions = new BulkFitnessFunctionMT[mffs.length];
@@ -156,6 +163,12 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 				props.put(tempKey + ".class", mffs[i].trim());
 				multiFitnessFunctions[i] = (BulkFitnessFunctionMT) props.singletonObjectProperty(tempKey);
 				props.remove(tempKey + ".class");
+				
+				// Dispose of evaluator threads in the additional fitness function (we'll use our own).
+				for (Evaluator e : multiFitnessFunctions[i].evaluators) {
+					e.dispose();
+				}
+				
 			}
 			props.put(MULTI_KEY, multiKeyValue);
 			multiFitnessFunctionsWeights = props.getDoubleArrayProperty(MULTI_WEIGHTING_KEY, new double[]{1});
@@ -166,13 +179,6 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 			multiFitnessFunctionsWeights = new double[0];
 		}
 		multiFitnessFunctionProbability = props.getDoubleProperty(MULTI_PROBABILITY_KEY, 1);
-		
-		logger.info("Using " + numThreads + " threads for transcription and evaluation.");
-		evaluators = new Evaluator[numThreads];
-		for (int i = 0; i < numThreads; i++) {
-			evaluators[i] = new Evaluator(i);
-			evaluators[i].start();
-		}
 	}
 
 	/**
@@ -264,9 +270,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 
 	private synchronized void finishedEvaluating() {
 		evaluatorsFinishedCount++;
-		// System.out.println("finishedEvaluating: " + evaluatorsFinishedCount);
 		notifyAll();
-		// System.out.println("finishedEvaluating exit");
 	}
 
 	protected class Evaluator extends Thread {
@@ -362,8 +366,6 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 					System.out.println("Exception: " + e);
 				}
 			}
-			
-			System.err.println(id + "exit");
 		}
 
 		public synchronized void go() {
@@ -372,7 +374,8 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		}
 		
 		public synchronized void dispose() {
-			substrate.dispose();
+			if (substrate != null)
+				substrate.dispose();
 			finish = true;
 			notifyAll();
 		}
@@ -402,6 +405,9 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	public void dispose() {
 		for (Evaluator e : evaluators) {
 			e.dispose();
+		}
+		for (BulkFitnessFunctionMT f : multiFitnessFunctions) {
+			f.dispose();
 		}
 	}
 

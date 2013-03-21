@@ -6,6 +6,7 @@ import java.awt.Graphics2D;
 import java.awt.geom.Arc2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
+import java.lang.reflect.InvocationTargetException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,11 +14,15 @@ import java.util.Arrays;
 import org.apache.log4j.Logger;
 
 import com.anji.integration.Activator;
+import com.anji.integration.TranscriberException;
 import com.ojcoleman.ahni.util.ArrayUtil;
 
 import com.ojcoleman.bain.NeuralNetwork;
+import com.ojcoleman.bain.base.ComponentCollection;
 import com.ojcoleman.bain.base.ComponentConfiguration;
+import com.ojcoleman.bain.base.NeuronCollection;
 import com.ojcoleman.bain.base.SynapseCollection;
+import com.ojcoleman.bain.base.SynapseConfiguration;
 import com.ojcoleman.bain.neuron.rate.NeuronCollectionWithBias;
 
 /**
@@ -34,6 +39,10 @@ import com.ojcoleman.bain.neuron.rate.NeuronCollectionWithBias;
  */
 public class BainNN extends NNAdaptor {
 	private final static Logger logger = Logger.getLogger(BainNN.class);
+	
+	public static final String SUBSTRATE_EXECUTION_MODE = "ann.transcriber.bain.executionmode";
+	public static final String SUBSTRATE_SIMULATION_RESOLUTION = "ann.transcriber.bain.resolution";
+
 	
 	/**
 	 * Describes the basic topology of a network.
@@ -358,7 +367,6 @@ public class BainNN extends NNAdaptor {
 		else {
 			logger.debug("Error determining depth of non-layered feed forward Bain network, stopping at apparent depth of " + maxCycleLength + ", perhaps the network contains cycles? Switching to recurrent topology mode with " + stepsPerStep + " activation cycles per step.");
 			this.topology = Topology.RECURRENT;
-			
 		}
 	}
 
@@ -371,8 +379,8 @@ public class BainNN extends NNAdaptor {
 		StringBuilder out = new StringBuilder(125 + synapseCount * 30);
 		out.append("Neuron class: " + nn.getNeurons().getClass());
 		out.append("\nSynapse class: " + nn.getSynapses().getClass());
-		out.append("\nNeuron count: " + neuronCount);
-		out.append("\nSynapse count: " + synapseCount);
+		out.append("\nNeuron count: " + neuronCount + "  Populated size: " + nn.getNeurons().getSizePopulated());
+		out.append("\nSynapse count: " + synapseCount + "  Populated size: " + nn.getSynapses().getSizePopulated());
 		out.append("\nTopology type: " + topology);
 		out.append("\nCycles per step: " + stepsPerStep);
 		
@@ -595,5 +603,28 @@ public class BainNN extends NNAdaptor {
 	public void dispose() {
 		nn.dispose();
 	}
+	
+	
+	public static NeuronCollection createNeuronCollection(String modelClass, int size, boolean enableBias, boolean typesEnabled, boolean paramsEnabled) throws IllegalArgumentException, SecurityException, InstantiationException, IllegalAccessException, ClassNotFoundException, InvocationTargetException, NoSuchMethodException {
+		NeuronCollection neurons = (NeuronCollection) ComponentCollection.createCollection(modelClass, size);
+		if (enableBias && !(neurons instanceof NeuronCollectionWithBias)) {
+			throw new IllegalArgumentException("Error creating Bain neural network: bias for neurons is enabled but the specified neuron class does not support bias (it does not extend NeuronCollectionWithBias).");
+		}
+		// If we're not setting neuron model parameters and the neuron collection is configurable and the configuration has a default preset.
+		if (!(paramsEnabled || typesEnabled) && neurons.getConfigSingleton() != null && neurons.getConfigSingleton().getPreset(0) != null) {
+			neurons.addConfiguration(neurons.getConfigSingleton().getPreset(0));
+		}
+		return neurons;
+	}
 
+	public static SynapseCollection createSynapseCollection(String modelClass, int size, boolean typesEnabled, boolean paramsEnabled, double minWeight, double maxWeight) throws IllegalArgumentException, SecurityException, InstantiationException, IllegalAccessException, ClassNotFoundException, InvocationTargetException, NoSuchMethodException {
+		SynapseCollection synapses = (SynapseCollection) ComponentCollection.createCollection(modelClass, size);
+		// If we're not setting synapse model parameters and the synapse collection is configurable and the configuration has a default preset.
+		if (!(paramsEnabled || typesEnabled) && synapses.getConfigSingleton() != null && synapses.getConfigSingleton().getPreset(0) != null) {
+			synapses.addConfiguration(synapses.getConfigSingleton().getPreset(0));
+			((SynapseConfiguration) synapses.getConfiguration(0)).minimumEfficacy = minWeight;
+			((SynapseConfiguration) synapses.getConfiguration(0)).maximumEfficacy = maxWeight;
+		}
+		return synapses;
+	}
 }

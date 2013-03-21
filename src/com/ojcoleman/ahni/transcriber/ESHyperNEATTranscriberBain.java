@@ -16,6 +16,7 @@ import javax.imageio.ImageIO;
 
 import com.ojcoleman.bain.NeuralNetwork;
 import com.ojcoleman.bain.base.ComponentCollection;
+import com.ojcoleman.bain.base.ComponentConfiguration;
 import com.ojcoleman.bain.base.NeuronCollection;
 import com.ojcoleman.bain.base.SynapseCollection;
 import com.ojcoleman.bain.neuron.rate.NeuronCollectionWithBias;
@@ -31,6 +32,7 @@ import com.ojcoleman.ahni.hyperneat.HyperNEATConfiguration;
 import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.nn.BainNN;
 import com.ojcoleman.ahni.nn.NNAdaptor;
+import com.ojcoleman.ahni.transcriber.HyperNEATTranscriber.CPPN;
 import com.ojcoleman.ahni.util.Point;
 
 /**
@@ -48,7 +50,7 @@ import com.ojcoleman.ahni.util.Point;
  * 
  * @author Oliver Coleman
  */
-public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> implements AHNIEventListener {
+public class ESHyperNEATTranscriberBain extends HyperNEATTranscriberBainBase implements AHNIEventListener {
 	private final static Logger logger = Logger.getLogger(ESHyperNEATTranscriberBain.class);
 
 	public static final String ES_HYPERNEAT_ITERATIONS = "ann.eshyperneat.iterations";
@@ -112,11 +114,30 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 			props.put(SUBSTRATE_DEPTH, "2");
 		}
 
-		depth = props.getIntProperty(SUBSTRATE_DEPTH);
-		
 		if (props.containsKey(ES_HYPERNEAT_INPUT_POSITIONS) || props.containsKey(ES_HYPERNEAT_OUTPUT_POSITIONS)) {
 			throw new IllegalArgumentException("The properties " + ES_HYPERNEAT_INPUT_POSITIONS + " and " + ES_HYPERNEAT_OUTPUT_POSITIONS + " are no longer supported. Please use " + NEURON_POSITIONS_FOR_LAYER + ".");
 		}
+		
+		// There are no real layers.
+		boolean warn = props.getBooleanProperty(HYPERNEAT_LAYER_ENCODING, false);
+		props.put(HYPERNEAT_LAYER_ENCODING, "true");
+		if (warn) {
+			logger.info("Forcing " + HYPERNEAT_LAYER_ENCODING + " to true (there are no real layers in ES-HyperNEAT substrate).");
+		}
+
+		
+		super.init(props);
+		
+		// If the properties file or fitness function have defined positions for input or output layer.
+		if (neuronPositionsForLayer[0] != null) {
+			inputNeurons = copyCoords(neuronPositionsForLayer[0], Neuron.INPUT);
+		}
+		if (neuronPositionsForLayer[depth-1] != null) {
+			outputNeurons = copyCoords(neuronPositionsForLayer[depth-1], Neuron.OUTPUT);
+		}
+		
+		/*
+		depth = props.getIntProperty(SUBSTRATE_DEPTH);
 		
 		if (props.containsKey(NEURON_POSITIONS_FOR_LAYER + ".0")) {
 			inputNeurons = extractCoords(Neuron.INPUT);
@@ -144,16 +165,10 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 				throw new IllegalArgumentException("Neither input and output layer dimensions or input and output neuron coordinates have been specified.");
 			}
 		}
-		
-		// There are no real layers.
-		boolean warn = props.getBooleanProperty(HYPERNEAT_LAYER_ENCODING, false);
-		props.put(HYPERNEAT_LAYER_ENCODING, "true");
-		if (warn) {
-			logger.info("Forcing " + HYPERNEAT_LAYER_ENCODING + " to true (there are no real layers in ES-HyperNEAT substrate).");
-		}
-		
+				
 		super.init(props);
-		
+		*/
+				
 		// Automatically generate input neuron coordinates if they were not specified.
 		if (inputNeurons == null) {
 			inputNeurons = generateCoords(width[0], height[0], Neuron.INPUT);
@@ -184,13 +199,22 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 		((Properties) props).getEvolver().addEventListener(this);
 	}
 
-	private ArrayList<Neuron> extractCoords(int type) {
+	/*private ArrayList<Neuron> extractCoords(int type) {
 		double z = pseudo3D ? (type == Neuron.INPUT ? 0 : 1) : 0;
 		Point defaultCoords = new Point(0, 0, z);
 		defaultCoords.translateFromUnit(rangeX, rangeY, rangeZ);
 		double[] defaultArgs = new double[] { defaultCoords.x, defaultCoords.y, defaultCoords.z };
 		int layer = type == Neuron.INPUT ? 0 : depth-1;
 		Point[] points = properties.getObjectArrayProperty(NEURON_POSITIONS_FOR_LAYER + "." + layer, Point.class, defaultArgs);
+		ArrayList<Neuron> neurons = new ArrayList<Neuron>(points.length);
+		for (int i = 0; i < points.length; i++) {
+			points[i].translateToUnit(rangeX, rangeY, rangeZ);
+			neurons.add(new Neuron(points[i].x, points[i].y, points[i].z, type));
+		}
+		return neurons;
+	}*/
+	
+	private ArrayList<Neuron> copyCoords(Point[] points, int type) {
 		ArrayList<Neuron> neurons = new ArrayList<Neuron>(points.length);
 		for (int i = 0; i < points.length; i++) {
 			points[i].translateToUnit(rangeX, rangeY, rangeZ);
@@ -420,53 +444,42 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 			return null; // Indicate that this substrate should have zero fitness.
 		}
 		
+		//logger.info(neuronCount + ", " + synapseCount);
+		
 
 		// Create Bain NeuralNetwork.
 		NeuronCollection neurons = null;
 		SynapseCollection synapses = null;
-		String neuronModelClass = properties.getProperty(HyperNEATTranscriberBain.SUBSTRATE_NEURON_MODEL, "com.ojcoleman.bain.neuron.rate.SigmoidNeuronCollection");
-		String synapseModelClass = properties.getProperty(HyperNEATTranscriberBain.SUBSTRATE_SYNAPSE_MODEL, "com.ojcoleman.bain.synapse.rate.FixedSynapseCollection");
+		String neuronModelClass = properties.getProperty(TranscriberAdaptor.SUBSTRATE_NEURON_MODEL, "com.ojcoleman.bain.neuron.rate.SigmoidNeuronCollection");
+		String synapseModelClass = properties.getProperty(TranscriberAdaptor.SUBSTRATE_SYNAPSE_MODEL, "com.ojcoleman.bain.synapse.rate.FixedSynapseCollection");
 		try {
-			neurons = (NeuronCollection) ComponentCollection.createCollection(neuronModelClass, neuronCount);
-			if (enableBias && !(neurons instanceof NeuronCollectionWithBias)) {
-				throw new TranscriberException("Error creating Bain neural network: bias for neurons is enabled but the specified neuron class does not support bias (it does not extend NeuronCollectionWithBias).");
-			}
-			// If the neuron collection is configurable and the configuration has a default preset.
-			if (neurons.getConfigSingleton() != null && neurons.getConfigSingleton().getPreset(0) != null) {
-				neurons.addConfiguration(neurons.getConfigSingleton().getPreset(0));
-			}
+			neurons = BainNN.createNeuronCollection(neuronModelClass, neuronCount, enableBias, neuronTypesEnabled, neuronParamsEnabled);
 		} catch (Exception e) {
+			e.printStackTrace();
 			throw new TranscriberException("Error creating neurons for Bain neural network. Have you specified the name of the neuron collection class correctly, including the containing packages?", e);
 		}
 		try {
-			synapses = (SynapseCollection) ComponentCollection.createCollection(synapseModelClass, synapseCount);
-			// If the synapse collection is configurable and the configuration has a default preset.
-			if (synapses.getConfigSingleton() != null && synapses.getConfigSingleton().getPreset(0) != null) {
-				synapses.addConfiguration(neurons.getConfigSingleton().getPreset(0));
-			}
+			synapses = BainNN.createSynapseCollection(synapseModelClass, synapseCount, synapseTypesEnabled, synapseParamsEnabled, connectionWeightMin, connectionWeightMax);
 		} catch (Exception e) {
+			e.printStackTrace();
 			throw new TranscriberException("Error creating synapses for Bain neural network. Have you specified the name of the synapse collection class correctly, including the containing packages?", e);
 		}
 
 		// Determine index in Bain NN for all neurons (Bain NNs connectivity is specified by indices rather than object references).
 		int indexInBainNN = 0;
 		for (Neuron point : inputNeuronPositionsCopy) {
-			point.indexInBainNN = indexInBainNN++;
+			point.indexInBainNN = indexInBainNN;
+			setNeuronParameters(point, neurons, indexInBainNN, cppn, true);
+			indexInBainNN++;
 		}
 		for (Neuron point : hiddenNeurons.values()) {
 			point.indexInBainNN = indexInBainNN;
-			if (enableBias) {
-				cppn.query(0, 0, point.x, point.y);
-				((NeuronCollectionWithBias) neurons).setBias(indexInBainNN, cppn.getBiasWeight());
-			}
+			setNeuronParameters(point, neurons, indexInBainNN, cppn, true);
 			indexInBainNN++;
 		}
 		for (Neuron point : outputNeuronPositionsCopy) {
 			point.indexInBainNN = indexInBainNN;
-			if (enableBias) {
-				cppn.query(0, 0, point.x, point.y);
-				((NeuronCollectionWithBias) neurons).setBias(indexInBainNN, cppn.getBiasWeight());
-			}
+			setNeuronParameters(point, neurons, indexInBainNN, cppn, true);
 			indexInBainNN++;
 		}
 		assert (indexInBainNN == neuronCount);
@@ -479,12 +492,17 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 			assert (c.target.indexInBainNN < neuronCount);
 			synapses.setPreAndPostNeurons(ci, c.source.indexInBainNN, c.target.indexInBainNN);
 			synapseWeights[ci] = c.weight;
+			if (synapseParamsEnabled || synapseTypesEnabled) {
+				cppn.query(c.source, c.target);
+				setSynapseParameters(synapses, ci, cppn, c.weight, true);
+			}
 			ci++;
 		}
+		assert (ci == synapseCount);
 		synapses.setEfficaciesModified();
 
-		int simRes = properties.getIntProperty(HyperNEATTranscriberBain.SUBSTRATE_SIMULATION_RESOLUTION, 1000);
-		String execModeName = properties.getProperty(HyperNEATTranscriberBain.SUBSTRATE_EXECUTION_MODE, null);
+		int simRes = properties.getIntProperty(BainNN.SUBSTRATE_SIMULATION_RESOLUTION, 1000);
+		String execModeName = properties.getProperty(BainNN.SUBSTRATE_EXECUTION_MODE, null);
 		Kernel.EXECUTION_MODE execMode = execModeName == null ? null : Kernel.EXECUTION_MODE.valueOf(execModeName);
 		NeuralNetwork nn = new NeuralNetwork(simRes, neurons, synapses, execMode);
 		int[] inputDims = new int[] { inputCount, 1 };
@@ -492,6 +510,9 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 		int maxRecurrentCycles = properties.getIntProperty(HyperNEATTranscriberBain.SUBSTRATE_MAX_RECURRENT_CYCLE, 1000000);
 		try {
 			BainNN network = new BainNN(nn, inputDims, outputDims, cyclesPerStep, feedForward ? BainNN.Topology.FEED_FORWARD_NONLAYERED : BainNN.Topology.RECURRENT, "network " + genotype.getId(), maxRecurrentCycles);
+			if (feedForward && network.getTopology().equals(BainNN.Topology.RECURRENT)) {
+				return null;
+			}
 			if (properties.getBooleanProperty(ES_HYPERNEAT_RECORD_COORDINATES, false)) {
 				network.enableCoords();
 				int neuronIndex = 0;
@@ -543,7 +564,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 			throw new TranscriberException(e.getMessage(), e.getCause());
 		}
 	}
-
+	
 	private class Neuron extends Point {
 		public static final int INPUT = 1, HIDDEN = 2, OUTPUT = 3;
 		public int type;
@@ -668,10 +689,14 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 			// Get CPPN output for each child.
 			for (int ci = 0; ci < 4; ci++) {
 				QuadPoint child = parent.children[ci];
-				if (outgoing) // Querying connection from input or hidden node.
+				if (outgoing) { // Querying connection from input or hidden node.
 					child.cppnValue = cppn.query(n, child); // Outgoing connectivity pattern.
-				else // Querying connection to output node.
+					//child.cppnValue = cppn.getRangedWeight();
+				}
+				else { // Querying connection to output node.
 					child.cppnValue = cppn.query(child, n); // Incoming connectivity pattern.
+					//child.cppnValue = cppn.getRangedWeight();
+				}
 				
 				if (enableLEO)
 					child.leo = cppn.getLEO();
@@ -840,7 +865,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriber<BainNN> imp
 		else if (event.getType() == AHNIEvent.Type.EVALUATION_END) {
 			avgNeuronCount /= popSize;
 			avgSynapseCount /= popSize;
-			logger.info("Network size (average / maximum) (neurons, synapses): " + avgNeuronCount + ", " + avgSynapseCount + " / " + maxNeuronCount + ", " + maxSynapseCount + ".   " + (noPathFromInputToOutputCount > 0 ? (noPathFromInputToOutputCount + " networks have no path from the input layer to the output layer.") : ""));
+			//logger.info("Network size (average / maximum) (neurons, synapses): " + avgNeuronCount + ", " + avgSynapseCount + " / " + maxNeuronCount + ", " + maxSynapseCount + ".   " + (noPathFromInputToOutputCount > 0 ? (noPathFromInputToOutputCount + " networks have no path from the input layer to the output layer.") : ""));
 		}
 	}
 	

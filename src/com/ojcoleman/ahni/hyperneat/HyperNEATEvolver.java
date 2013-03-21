@@ -320,8 +320,9 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 
 			previousSpeciesCount = genotype.getSpecies().size();
 
-			// nextSequence generation
+			// Perform one evolutionary generation: evaluate individuals, generate new population.
 			fittest = genotype.evolve();
+			
 			bestPerforming = genotype.getBestPerforming();
 
 			// result data

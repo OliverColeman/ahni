@@ -14,6 +14,7 @@ import com.ojcoleman.ahni.evaluation.AHNIFitnessFunction;
 import com.ojcoleman.ahni.hyperneat.Configurable;
 import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 import com.ojcoleman.ahni.hyperneat.Properties;
+import com.ojcoleman.ahni.util.ArrayUtil;
 import com.ojcoleman.ahni.util.Point;
 import com.ojcoleman.ahni.util.Range;
 
@@ -52,18 +53,10 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 */
 	public static final String HYPERNEAT_LAYER_ENCODING = "ann.hyperneat.useinputlayerencoding";
 	/**
-	 * The minimum CPPN output required to produce a non-zero weight in the substrate network.
+	 * The minimum CPPN output required to produce a non-zero weight in the substrate network. Actual weight values will
+	 * scale from [0, ann.transcriber.connection.weight.max] or [ann.transcriber.connection.weight.min, 0].
 	 */
 	public static final String HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD = "ann.hyperneat.connection.expression.threshold";
-	/**
-	 * The minimum weight values in the substrate network. If this is not specified then the negated value of
-	 * HYPERNEAT_CONNECTION_WEIGHT_MAX will be used.
-	 */
-	public static final String HYPERNEAT_CONNECTION_WEIGHT_MIN = "ann.hyperneat.connection.weight.min";
-	/**
-	 * The maximum weight values in the substrate network.
-	 */
-	public static final String HYPERNEAT_CONNECTION_WEIGHT_MAX = "ann.hyperneat.connection.weight.max";
 	/**
 	 * Limits the incoming connections to a target neuron to include those from source neurons within the specified
 	 * range of the target neuron. Set this to -1 to disable it.
@@ -98,7 +91,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 * determine the input to the CPPN for a given neuron location). Defaults to [0, 1].
 	 */
 	public static final String RANGE_Z = "ann.hyperneat.range.z";
-	
+
 	/**
 	 * <p>
 	 * The coordinates of neurons in a specified layer. The layer must be specified as part of the property key/name,
@@ -127,7 +120,14 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 * Connectivity to Encourage Modularity in HyperNEAT. In Proceedings of the Genetic and Evolutionary Computation
 	 * Conference (GECCO 2011). Default is "false".
 	 * 
+	 * @see #HYPERNEAT_LEO_THRESHOLD
 	 * @see #HYPERNEAT_LEO_LOCALITY
+	 */
+	public static final String HYPERNEAT_LEO_THRESHOLD = "ann.hyperneat.leo.threshold";
+	/**
+	 * Set a threshold for the Link Expression Output (LEO). Default is 0.
+	 * 
+	 * @see #HYPERNEAT_LEO
 	 */
 	public static final String HYPERNEAT_LEO = "ann.hyperneat.leo";
 	/**
@@ -136,7 +136,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 * reference within. Default is "false".
 	 */
 	public static final String HYPERNEAT_LEO_LOCALITY = "ann.hyperneat.leo.localityseeding";
-	
+
 	/**
 	 * The width of each layer in the substrate.
 	 */
@@ -195,14 +195,6 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 */
 	protected double connectionExprThresh = 0.2;
 	/**
-	 * The minimum connection weight in the substrate.
-	 */
-	protected double connectionWeightMin;
-	/**
-	 * The maximum connection weight in the substrate.
-	 */
-	protected double connectionWeightMax;
-	/**
 	 * Limits the incoming connections to a target neuron to include those from source neurons within the specified
 	 * range of the target neuron. A value of -1 indicates that this is disabled.
 	 */
@@ -223,6 +215,10 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 */
 	protected boolean enableLEO = false;
 	/**
+	 * If true indicates that Link Expression Output is enabled.
+	 */
+	protected double leoThreshold = 0;
+	/**
 	 * The number of inputs to the CPPN.
 	 * 
 	 * @see #getCPPNInputCount()
@@ -240,20 +236,36 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 */
 	protected Transcriber cppnTranscriber;
 
-	// Index of target and source coordinate inputs in CPPN input vector.
-	int cppnIdxTX = -1, cppnIdxTY = -1, cppnIdxTZ = -1, cppnIdxSX = -1, cppnIdxSY = -1, cppnIdxSZ = -1;
-	// Index of delta and angle inputs in CPPN input vector.
-	int cppnIdxDX = -1, cppnIdxDY = -1, cppnIdxDZ = -1, cppnIdxAn = -1;
-	// Index of output signals in CPPN output vector.
-	int[] cppnIdxW = new int[0]; // weights (either a single output for all layers or one output per layer)
-	int[] cppnIdxB = new int[0]; // bias (either a single output for all layers or one output per layer)
-	int[] cppnIdxL = new int[0]; // link expression (either a single output for all layers or one output per layer)
-
 	/**
 	 * Subclasses may set this to "force" or "prevent" before calling super.init(Properties) to either force or prevent
 	 * the use of Z coordinate inputs for the CPPN (both source and target neuron Z coordinates will be affected).
 	 */
 	protected String zCoordsForCPPN = "";
+
+	private double connectionWeightRange;
+
+	// Index of target and source coordinate inputs in CPPN input vector.
+	private int cppnIdxTX = -1, cppnIdxTY = -1, cppnIdxTZ = -1, cppnIdxSX = -1, cppnIdxSY = -1, cppnIdxSZ = -1;
+	// Index of delta and angle inputs in CPPN input vector.
+	private int cppnIdxDX = -1, cppnIdxDY = -1, cppnIdxDZ = -1, cppnIdxAn = -1;
+	// Index of output signals in CPPN output vector.
+	private int[] cppnIdxBias = new int[0]; // bias (either a single output for all layers or one output per layer OR
+											// neuron
+	// type)
+	private int[] cppnIdxWeight = new int[0]; // weights (either a single output for all layers or one output per layer
+												// OR
+	// synapse type)
+	private int[] cppnIdxLEO = new int[0]; // link expression (either a single output for all layers or one output per
+											// layer OR
+	// synapse type)
+
+	// The set of CPPN outputs that determine which neuron or synapse type should be used.
+	private int[] cppnIDXNeuronTypeSelector = new int[1]; // Indices into CPPN output array
+	private int[] cppnIDXSynapseTypeSelector = new int[1]; // Indices into CPPN output array
+
+	// The index of CPPN outputs for neuron and synapse model parameters, format is [type][param].
+	private int[][] cppnIDXNeuronParams = new int[0][0];
+	private int[][] cppnIDXSynapseParams = new int[0][0];
 
 	/**
 	 * This method should be called from overriding methods.
@@ -261,6 +273,20 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 * @see Configurable#init(Properties)
 	 */
 	public void init(Properties props) {
+		super.init(props);
+
+		// If the properties specify a separate weight output per layer.
+		if (!props.getBooleanProperty(HYPERNEAT_LAYER_ENCODING, layerEncodingIsInput)) {
+			if (neuronParamsEnabled || synapseParamsEnabled) {
+				logger.warn("Separate neuron and synapse model parameter outputs per layer are not currently supported, forcing " + HYPERNEAT_LAYER_ENCODING + " to true.");
+				props.setProperty(HYPERNEAT_LAYER_ENCODING, "true");
+			}
+			if (neuronTypesEnabled || synapseTypesEnabled) {
+				logger.warn("Separate bias and weight outputs for each neuron and synapse type per layer are not currently supported, forcing " + HYPERNEAT_LAYER_ENCODING + " to true.");
+				props.setProperty(HYPERNEAT_LAYER_ENCODING, "true");
+			}
+		}
+
 		feedForward = props.getBooleanProperty(HYPERNEAT_FEED_FORWARD);
 		enableBias = props.getBooleanProperty(HYPERNEAT_ENABLE_BIAS);
 		includeDelta = props.getBooleanProperty(HYPERNEAT_INCLUDE_DELTA);
@@ -269,12 +295,12 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		// layerEncodingIsInput must be used for recurrent networks.
 		layerEncodingIsInput = !feedForward ? true : layerEncodingIsInput;
 		connectionExprThresh = props.getDoubleProperty(HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD, connectionExprThresh);
-		connectionWeightMax = props.getDoubleProperty(HYPERNEAT_CONNECTION_WEIGHT_MAX);
-		connectionWeightMin = props.getDoubleProperty(HYPERNEAT_CONNECTION_WEIGHT_MIN, -connectionWeightMax);
+		connectionWeightRange = connectionWeightMax - connectionWeightMin;
 		connectionRange = props.getIntProperty(HYPERNEAT_CONNECTION_RANGE, -1);
 		depth = props.getIntProperty(SUBSTRATE_DEPTH);
 		cyclesPerStep = feedForward ? depth - 1 : props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP, 1);
 		enableLEO = props.getBooleanProperty(HYPERNEAT_LEO, enableLEO);
+		leoThreshold = props.getDoubleProperty(HYPERNEAT_LEO_THRESHOLD, leoThreshold);
 
 		if (enableLEO && connectionExprThresh != 0) {
 			logger.warn("LEO is enabled but the connection expression threshold is not 0. It is recommended to set the connection expression threshold to 0 when LEO is enabled.");
@@ -341,7 +367,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		}
 
 		// Determine CPPN input size and mapping.
-		cppnInputCount = 1; // Bias always has index 0.
+		cppnInputCount = 1; // Bias input always has index 0.
 		cppnIdxSX = cppnInputCount++;
 		cppnIdxSY = cppnInputCount++;
 		cppnIdxTX = cppnInputCount++;
@@ -373,40 +399,101 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		// Determine CPPN output size and mapping.
 		cppnOutputCount = 0;
 		if (layerEncodingIsInput) { // same output for all layers
-			cppnIdxW = new int[1];
-			cppnIdxW[0] = cppnOutputCount++; // weight value
-			logger.info("CPPN: Added single weight output.");
-
-			if (enableBias) {
-				cppnIdxB = new int[1];
-				cppnIdxB[0] = cppnOutputCount++; // bias value
-				logger.info("CPPN: Added single bias output.");
+			// The CPPN only needs to specify the neuron type to use if there is more than one type.
+			if (neuronModelTypeCount > 1) {
+				// If there are only two neuron types then we can use a single CPPN output to specify which to
+				// use,
+				// otherwise use a "whichever has the highest output value" encoding to specify the type.
+				cppnIDXNeuronTypeSelector = new int[neuronModelTypeCount > 2 ? neuronModelTypeCount : 1];
+				for (int i = 0; i < cppnIDXNeuronTypeSelector.length; i++) {
+					cppnIDXNeuronTypeSelector[i] = cppnOutputCount++;
+				}
+				logger.info("CPPN: Added " + cppnIDXNeuronTypeSelector.length + " neuron type selector outputs.");
 			}
+
+			// If a bias output is enabled (to set the bias for substrate neurons).
+			if (enableBias) {
+				cppnIdxBias = new int[neuronModelTypeCount];
+				for (int i = 0; i < neuronModelTypeCount; i++) {
+					cppnIdxBias[i] = cppnOutputCount++;
+				}
+				logger.info("CPPN: Added " + neuronModelTypeCount + " bias output(s).");
+			}
+
+			// The CPPN only needs to specify the synapse type to use if there is more than one type.
+			if (synapseModelTypeCount > 1) {
+				// If there are only two synapse types then we can use a single CPPN output to specify which to
+				// use,
+				// otherwise use a "whichever has the highest output value" encoding to specify the type.
+				cppnIDXSynapseTypeSelector = new int[synapseModelTypeCount > 2 ? synapseModelTypeCount : 1];
+				for (int i = 0; i < cppnIDXSynapseTypeSelector.length; i++) {
+					cppnIDXSynapseTypeSelector[i] = cppnOutputCount++;
+				}
+				logger.info("CPPN: Added " + cppnIDXSynapseTypeSelector.length + " synapse type selector outputs.");
+			}
+
+			cppnIdxWeight = new int[synapseModelTypeCount];
+			for (int i = 0; i < synapseModelTypeCount; i++) {
+				cppnIdxWeight[i] = cppnOutputCount++;
+			}
+			logger.info("CPPN: Added " + synapseModelTypeCount + " weight output(s).");
 
 			if (enableLEO) {
-				cppnIdxL = new int[1];
-				cppnIdxL[0] = cppnOutputCount++; // bias value
-				logger.info("CPPN: Added single link expression output.");
+				cppnIdxLEO = new int[synapseModelTypeCount];
+				for (int i = 0; i < synapseModelTypeCount; i++) {
+					cppnIdxLEO[i] = cppnOutputCount++;
+				}
+				logger.info("CPPN: Added " + synapseModelTypeCount + " link expression output(s) (LEO).");
 			}
-		} else { // one output per layer
+
+			// If neuron model parameter outputs are enabled (to set the parameters for substrate neurons (other than
+			// bias)).
+			if (neuronParamsEnabled) {
+				int paramCount = getNeuronParameterCount();
+				if (paramCount > 0) {
+					cppnIDXNeuronParams = new int[neuronModelTypeCount][paramCount];
+					for (int t = 0; t < neuronModelTypeCount; t++) {
+						for (int p = 0; p < paramCount; p++) {
+							cppnIDXNeuronParams[t][p] = cppnOutputCount++;
+						}
+					}
+					logger.info("CPPN: Added " + neuronModelTypeCount + " x " + paramCount + " = " + (neuronModelTypeCount * paramCount) + " neuron parameter outputs (number of neuron model types times number of parameters).");
+				}
+			}
+
+			// If synapse model parameter outputs are enabled (to set the parameters for substrate synapses (other than
+			// weight)).
+			if (synapseParamsEnabled) {
+				int paramCount = getSynapseParameterCount();
+				if (paramCount > 0) {
+					cppnIDXSynapseParams = new int[synapseModelTypeCount][paramCount];
+					for (int t = 0; t < synapseModelTypeCount; t++) {
+						for (int p = 0; p < paramCount; p++) {
+							cppnIDXSynapseParams[t][p] = cppnOutputCount++;
+						}
+					}
+					logger.info("CPPN: Added " + synapseModelTypeCount + " x " + paramCount + " = " + (synapseModelTypeCount * paramCount) + " synapse parameter outputs (number of synapse model types times number of parameters).");
+				}
+			}
+		} else { // (!layerEncodingIsInput), one output per layer
 			int layerOutputCount = Math.max(1, depth - 1); // Allow for depth of 1 (2D horizontal substrate)
-			cppnIdxW = new int[layerOutputCount];
+			cppnIdxWeight = new int[layerOutputCount];
 			for (int w = 0; w < layerOutputCount; w++)
-				cppnIdxW[w] = cppnOutputCount++; // weight value
+				cppnIdxWeight[w] = cppnOutputCount++; // weight value
 			logger.info("CPPN: Added " + layerOutputCount + " weight outputs.");
 
 			if (enableBias) {
-				cppnIdxB = new int[layerOutputCount];
+				cppnIdxBias = new int[layerOutputCount];
 				for (int w = 0; w < layerOutputCount; w++)
-					cppnIdxB[w] = cppnOutputCount++; // bias value
+					cppnIdxBias[w] = cppnOutputCount++; // bias value
 				logger.info("CPPN: Added " + layerOutputCount + " bias outputs.");
 			}
 
 			if (enableLEO) {
-				cppnIdxL = new int[layerOutputCount];
+				cppnIdxLEO = new int[layerOutputCount];
 				for (int w = 0; w < layerOutputCount; w++)
-					cppnIdxL[w] = cppnOutputCount++; // leo value
-				logger.info("CPPN: Added " + layerOutputCount + " link expression outputs.");
+					cppnIdxLEO[w] = cppnOutputCount++; // leo value
+				logger.info("CPPN: Added " + layerOutputCount + " link expression outputs (LEO).");
 			}
 		}
 
@@ -510,6 +597,20 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 			cppnOutputUnitBounded = cppnMin == 0 && cppnMax == 1;
 			cppnOutputPlusMinusUnitBounded = cppnMin == -1 && cppnMax == 1;
 		}
+		
+		/**
+		 * Set the inputs to the CPPN for the source coordinates to 0. This is useful when querying the CPPN for a single
+		 * point in the substrate rather than for a connection (which is from one point to another). The coordinates for
+		 * the single point should be set via the setTargetCoordinates methods. 
+		 */
+		public void resetSourceCoordinates() {
+			cppnInput[cppnIdxSX] = 0;
+			cppnInput[cppnIdxSY] = 0;
+			if (cppnIdxSZ != -1) {
+				cppnInput[cppnIdxSZ] = 0;
+			}
+		}
+
 
 		/**
 		 * Set the coordinates of the source neuron in a two-dimensional substrate with dimensions with range [0, 1]
@@ -765,68 +866,72 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		 * Get the value of the weight. Should be called after calling {@link #query()}.
 		 */
 		public double getWeight() {
-			return cppnOutput[cppnIdxW[0]];
+			return cppnOutput[cppnIdxWeight[0]];
 		}
 
 		/**
 		 * Get the value of the weight. Should be called after calling {@link #query()}. The output will be transformed
 		 * to be within the specified range and may optionally have a threshold applied.
 		 */
-		public double getRangedWeight(double minValue, double maxValue, double valueRange, double threshold) {
-			return getRangedOutput(cppnIdxW[0], minValue, maxValue, valueRange, threshold);
+		public double getRangedWeight() {
+			return getRangedOutput(cppnIdxWeight[0], connectionWeightMin, connectionWeightMax, connectionWeightRange, connectionExprThresh);
 		}
 
 		/**
-		 * Get the value of the weight for the specified layer in a layered feed-forward network encoded with
-		 * {@link #HYPERNEAT_LAYER_ENCODING} set to false. Should be called after calling {@link #query()}.
+		 * Get the value of a connection weight, either within a specified layer (in a layered feed-forward network
+		 * encoded with {@link #HYPERNEAT_LAYER_ENCODING} set to false), OR for the specified synapse type index. Should
+		 * be called after calling {@link #query()}.
 		 */
-		public double getWeight(int sourceLayerIndex) {
-			return cppnOutput[cppnIdxW[sourceLayerIndex]];
+		public double getWeight(int index) {
+			return cppnOutput[cppnIdxWeight[index]];
 		}
 
 		/**
-		 * Get the value of the weight for the specified layer in a layered feed-forward network encoded with
-		 * {@link #HYPERNEAT_LAYER_ENCODING} set to false. Should be called after calling {@link #query()}. The output
-		 * will be transformed to be within the specified range and may optionally have a threshold applied.
+		 * Get the value of a connection weight, either within a specified layer (in a layered feed-forward network
+		 * encoded with {@link #HYPERNEAT_LAYER_ENCODING} set to false), OR for the specified synapse type index. Should
+		 * be called after calling {@link #query()}. The output will be transformed to be within the specified range and
+		 * may optionally have a threshold applied.
 		 */
-		public double getRangedWeight(int sourceLayerIndex, double minValue, double maxValue, double valueRange, double threshold) {
-			return getRangedOutput(cppnIdxW[sourceLayerIndex], minValue, maxValue, valueRange, threshold);
+		public double getRangedWeight(int index) {
+			return getRangedOutput(cppnIdxWeight[index], connectionWeightMin, connectionWeightMax, connectionWeightRange, connectionExprThresh);
 		}
 
 		/**
-		 * Get the value of the weight for a bias connection. Should be called after calling {@link #query()}. The bias
-		 * is usually queried for a target neuron after setting the source coordinate values to 0.
+		 * Get the bias value for a neuron. Should be called after calling {@link #query()}. The bias is usually queried
+		 * for a target neuron after setting the source coordinate values to 0.
 		 */
 		public double getBiasWeight() {
-			return cppnOutput[cppnIdxB[0]];
+			return cppnOutput[cppnIdxBias[0]];
 		}
 
 		/**
-		 * Get the value of the weight for a bias connection. Should be called after calling {@link #query()}. The bias
-		 * is usually queried for a target neuron after setting the source coordinate values to 0. The output will be
-		 * transformed to be within the specified range and may optionally have a threshold applied.
+		 * Get the bias value for a neuron. Should be called after calling {@link #query()}. The bias is usually queried
+		 * for a target neuron after setting the source coordinate values to 0. The output will be transformed to be
+		 * within the specified range and may optionally have a threshold applied.
 		 */
-		public double getRangedBiasWeight(double minValue, double maxValue, double valueRange, double threshold) {
-			return getRangedOutput(cppnIdxB[0], minValue, maxValue, valueRange, threshold);
+		public double getRangedBiasWeight() {
+			return getRangedOutput(cppnIdxBias[0], connectionWeightMin, connectionWeightMax, connectionWeightRange, connectionExprThresh);
 		}
 
 		/**
-		 * Get the value of the weight for a bias connection for the specified layer in a layered feed-forward network
-		 * encoded with {@link #HYPERNEAT_LAYER_ENCODING} set to false. Should be called after calling {@link #query()}.
-		 * The bias is usually queried for a target neuron after setting the source coordinate values to 0.
+		 * Get the bias value for a neuron, either within a specified layer (in a layered feed-forward network encoded
+		 * with {@link #HYPERNEAT_LAYER_ENCODING} set to false), OR for the specified neuron type index. Should be
+		 * called after calling {@link #query()}. The bias is usually queried for a target neuron after setting the
+		 * source coordinate values to 0.
 		 */
-		public double getBiasWeight(int sourceLayerIndex) {
-			return cppnOutput[cppnIdxB[sourceLayerIndex]];
+		public double getBiasWeight(int index) {
+			return cppnOutput[cppnIdxBias[index]];
 		}
 
 		/**
-		 * Get the value of the weight for a bias connection for the specified layer in a layered feed-forward network
-		 * encoded with {@link #HYPERNEAT_LAYER_ENCODING} set to false. Should be called after calling {@link #query()}.
-		 * The bias is usually queried for a target neuron after setting the source coordinate values to 0. The output
-		 * will be transformed to be within the specified range and may optionally have a threshold applied.
+		 * Get the bias value for a neuron, either within a specified layer (in a layered feed-forward network encoded
+		 * with {@link #HYPERNEAT_LAYER_ENCODING} set to false), OR for the specified neuron type index. Should be
+		 * called after calling {@link #query()}. The bias is usually queried for a target neuron after setting the
+		 * source coordinate values to 0. The output will be transformed to be within the specified range and may
+		 * optionally have a threshold applied.
 		 */
-		public double getRangedBiasWeight(int sourceLayerIndex, double minValue, double maxValue, double valueRange, double threshold) {
-			return getRangedOutput(cppnIdxB[sourceLayerIndex], minValue, maxValue, valueRange, threshold);
+		public double getRangedBiasWeight(int index) {
+			return getRangedOutput(cppnIdxBias[index], connectionWeightMin, connectionWeightMax, connectionWeightRange, connectionExprThresh);
 		}
 
 		/**
@@ -834,16 +939,52 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		 * {@link #query()}.
 		 */
 		public double getLEO() {
-			return cppnOutput[cppnIdxL[0]];
+			return cppnOutput[cppnIdxLEO[0]];
 		}
 
 		/**
-		 * Get the value of the link expression output (see {@link #HYPERNEAT_LEO}) for the specified layer in a layered
-		 * feed-forward network encoded with {@link #HYPERNEAT_LAYER_ENCODING} set to false. Should be called after
-		 * calling {@link #query()}.
+		 * Get the value of the link expression output (see {@link #HYPERNEAT_LEO}), either within a specified layer (in
+		 * a layered feed-forward network encoded with {@link #HYPERNEAT_LAYER_ENCODING} set to false), OR for the
+		 * specified synapse type index. Should be called after calling {@link #query()}.
 		 */
-		public double getLEO(int sourceLayerIndex) {
-			return cppnOutput[cppnIdxL[sourceLayerIndex]];
+		public double getLEO(int index) {
+			return cppnOutput[cppnIdxLEO[index]];
+		}
+
+		/**
+		 * Get the value of a neuron model parameter output for the specified neuron type and parameter. Should be
+		 * called after calling {@link #query()}.
+		 */
+		public double getNeuronParam(int type, int paramIndex) {
+			return cppnOutput[cppnIDXNeuronParams[type][paramIndex]];
+		}
+
+		/**
+		 * Get the value of a neuron model parameter output for the specified neuron type and parameter. Should be
+		 * called after calling {@link #query()}. The output will be transformed to be within the specified range and
+		 * may optionally have a threshold applied. TODO provide setting for threshold for parameters? Currently it's
+		 * set to 5% of whatever the current parameter range is.
+		 */
+		public double getRangedNeuronParam(int type, int paramIndex) {
+			return getRangedOutput(cppnIDXNeuronParams[type][paramIndex], neuronModelParamsMin[paramIndex], neuronModelParamsMax[paramIndex], neuronModelParamsRange[paramIndex], neuronModelParamsThreshold[paramIndex]);
+		}
+
+		/**
+		 * Get the value of a synapse model parameter output for the specified synapse type and parameter. Should be
+		 * called after calling {@link #query()}.
+		 */
+		public double getSynapseParam(int type, int paramIndex) {
+			return cppnOutput[cppnIDXSynapseParams[type][paramIndex]];
+		}
+
+		/**
+		 * Get the value of a synapse model parameter output for the specified synapse type and parameter. Should be
+		 * called after calling {@link #query()}. The output will be transformed to be within the specified range and
+		 * may optionally have a threshold applied. TODO provide setting for threshold for parameters? Currently it's
+		 * set to 5% of whatever the current parameter range is.
+		 */
+		public double getRangedSynapseParam(int type, int paramIndex) {
+			return getRangedOutput(cppnIDXSynapseParams[type][paramIndex], synapseModelParamsMin[paramIndex], synapseModelParamsMax[paramIndex], synapseModelParamsRange[paramIndex], synapseModelParamsThreshold[paramIndex]);
 		}
 
 		/**
@@ -884,6 +1025,28 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 				}
 			}
 			return output;
+		}
+
+		/**
+		 * Get the neuron type index. May be used as an index into {@link #neuronModelTypes} and for the type argument
+		 * in methods like {@link #getNeuronParam(int, int)} and {@link #getBiasWeight(int)} (and the associated
+		 * "Ranged" methods.
+		 * 
+		 * @see #getSelectorValue(int[]))
+		 */
+		public int getNeuronTypeIndex() {
+			return neuronModelTypeCount > 1 ? getSelectorValue(cppnIDXNeuronTypeSelector) : 0;
+		}
+
+		/**
+		 * Get the synapse type index. May be used as an index into {@link #synapseModelTypes} and for the type argument
+		 * in methods like {@link #getSynapseParam(int, int)}, {@link #getWeight(int)} and {@link #getLEO(int)} (and the
+		 * associated "Ranged" methods.
+		 * 
+		 * @see #getSelectorValue(int[]))
+		 */
+		public int getSynapseTypeIndex() {
+			return synapseModelTypeCount > 1 ? getSelectorValue(cppnIDXSynapseTypeSelector) : 0;
 		}
 
 		/**
@@ -1009,7 +1172,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 * @return an array containing the indexes in the CPPN outputs for the weight value(s).
 	 */
 	public int[] getCPPNIndexWeight() {
-		return cppnIdxW;
+		return cppnIdxWeight;
 	}
 
 	/**
@@ -1017,7 +1180,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 *         not enabled.
 	 */
 	public int[] getCPPNIndexBiasOutput() {
-		return cppnIdxB;
+		return cppnIdxBias;
 	}
 
 	/**
@@ -1025,6 +1188,6 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 *         Returns [-1] if this output is not enabled.
 	 */
 	public int[] getCPPNIndexLEO() {
-		return cppnIdxL;
+		return cppnIdxLEO;
 	}
 }
