@@ -27,13 +27,14 @@ line looks something like this:
 
 INFO  Gen: 635  Fittest: 320278  (F: 0.0069  P: 0.4375)  Best perf: 321496  
 (F: 0.0057  P: 0.4414)  ZFC: 0  ABSF: 0.0053  S: 26  NS/ES: 0/0  SCT: 0.7  
-Min/Max SS: 12/29  Min/Max SA: 7/636  SNF: 12  Time: 0s  ETA: 0 00:04:57  
-Mem: 119MB
+Min/Max SS: 12/29  Min/Max SA: 7/636  SNF: 12  Min/Avg/Max GS: 63/127/168  
+Time: 0s  ETA: 0 00:04:57  Mem: 119MB
 
 The various labels are:
 Gen: Current generation number.
 Fittest: The ID of fittest chromosome (it's fitness level, and performance)
-Best perf: The ID of the  chromosome with highest performance (it's fitness level, and performance)
+Best perf: The ID of the  chromosome with highest performance (it's fitness 
+    level, and performance)
 ZFC: Zero Fitness Count, number of chromosomes with a fitness of 0.
 ABSF: Average Best Species Fitness
 S: The number of species.
@@ -42,6 +43,8 @@ SCT: Species Compatibility Threshold  .
 Min/Max SS: The minimum and maximum species sizes.  
 Min/Max SA: The minimum and maximum species ages (in number of generations).  
 SNF: The number of Species with a New Fittest chromosome.
+Min/Avg/Max GS: The minimum, average and maximum (CPPN) genome size (total
+    number of nodes and connections). 
 AS: The average number of neurons and connections within the (CPPN) networks.  
 Time: The duration of the generation in seconds.
 ETA: The estimated run finish time (Days HH:MM:SS).  
@@ -65,11 +68,12 @@ For examples see:
 com.ojcoleman.ahni.experiments.TestTargetFitnessFunction and 
 com.ojcoleman.ahni.experiments.objectrecognition.* 
 
-The main class is com.ojcoleman.ahni.hyperneat.Run. It expects a .properties file containing
-parameters for NEAT, HyperNEAT, typically the specific experiment being run, 
-and various settings.
+The main class is com.ojcoleman.ahni.hyperneat.Run. It expects a .properties 
+file containing parameters for NEAT, HyperNEAT, typically the specific 
+experiment being run, and various settings.
 
-API documentation is available at http://olivercoleman.github.com/ahni/doc/index.html
+API documentation is available at 
+http://olivercoleman.github.com/ahni/doc/index.html
 
 
 HyperNEAT-LEO
@@ -132,10 +136,6 @@ following changes were made to ANJI:
 ANJI makes use of a customised version of the JGAP library. Unfortunately
 this precludes an easy upgrade to more recent versions of JGAP, just in case
 you were thinking about it.
-
-No, the package names don't follow the Java conventions of reversed URLs, it
-didn't make much sense for someone like me as there aren't any domains that I
-want to attach the project to.
 
 AHNI was originally written for my Honours project:  
 Coleman, O.J.: Evolving neural networks for visual processing, 
