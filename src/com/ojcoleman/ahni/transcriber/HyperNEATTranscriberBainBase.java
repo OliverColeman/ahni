@@ -18,7 +18,7 @@ import com.ojcoleman.ahni.util.Point;
 public abstract class HyperNEATTranscriberBainBase extends HyperNEATTranscriber<BainNN> {
 	/**
 	 * Set the parameters for a neuron, specifying the neuron coordinates directly (see
-	 * {@link CPPN#setTargetCoordinates(double, double, double)}).
+	 * {@link HyperNEATTranscriber.CPPN#setTargetCoordinates(double, double, double)}).
 	 * 
 	 * @param x The x coordinate, range should be [0, 1].
 	 * @param y The y coordinate, range should be [0, 1].
@@ -37,7 +37,7 @@ public abstract class HyperNEATTranscriberBainBase extends HyperNEATTranscriber<
 
 	/**
 	 * Set the parameters for a neuron, specifying the neuron coordinates with grid indices into the substrate (see
-	 * {@link CPPN#setTargetCoordinatesFromGridIndices(int, int, int)}).
+	 * {@link HyperNEATTranscriber.CPPN#setTargetCoordinatesFromGridIndices(int, int, int)}).
 	 * 
 	 * @param x The index of the target neuron in the X dimension.
 	 * @param y The index of the target neuron in the Y dimension.
@@ -56,7 +56,7 @@ public abstract class HyperNEATTranscriberBainBase extends HyperNEATTranscriber<
 
 	/**
 	 * Set the parameters for a neuron, specifying the neuron coordinates with a Point (see
-	 * {@link CPPN#setTargetCoordinates(Point)}).
+	 * {@link HyperNEATTranscriber.CPPN#setTargetCoordinates(Point)}).
 	 * 
 	 * @param point The coordinates for the neuron.
 	 * @param neurons The neuron collection to set parameters for.
@@ -113,7 +113,7 @@ public abstract class HyperNEATTranscriberBainBase extends HyperNEATTranscriber<
 	
 	/**
 	 * Set the parameters for a synapse. NOTE: It is assumed that the source and target coordinates have already been
-	 * set for the CPPN and that {@link CPPN#query()} or one of the other query methods has been called.
+	 * set for the CPPN and that {@link HyperNEATTranscriber.CPPN#query()} or one of the other query methods has been called.
 	 * 
 	 * @param synapses The synapse collection to set parameters for.
 	 * @param bainIndex The index into the synapse collection to specify the synapse to set parameters for.

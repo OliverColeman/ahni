@@ -311,7 +311,7 @@ public abstract class TranscriberAdaptor<T extends Activator> implements Transcr
 	 * 
 	 * @param c chromosome to transcribe
 	 * @param substrate An existing phenotype substrate to reuse
-	 * @param A set of transcriver specific options. May be null.
+	 * @param options A set of transcriber specific options. May be null.
 	 * @return phenotype
 	 * @throws TranscriberException
 	 */

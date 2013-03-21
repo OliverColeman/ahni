@@ -1032,7 +1032,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		 * in methods like {@link #getNeuronParam(int, int)} and {@link #getBiasWeight(int)} (and the associated
 		 * "Ranged" methods.
 		 * 
-		 * @see #getSelectorValue(int[]))
+		 * @see #getSelectorValue(int[])
 		 */
 		public int getNeuronTypeIndex() {
 			return neuronModelTypeCount > 1 ? getSelectorValue(cppnIDXNeuronTypeSelector) : 0;
@@ -1043,7 +1043,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		 * in methods like {@link #getSynapseParam(int, int)}, {@link #getWeight(int)} and {@link #getLEO(int)} (and the
 		 * associated "Ranged" methods.
 		 * 
-		 * @see #getSelectorValue(int[]))
+		 * @see #getSelectorValue(int[])
 		 */
 		public int getSynapseTypeIndex() {
 			return synapseModelTypeCount > 1 ? getSelectorValue(cppnIDXSynapseTypeSelector) : 0;
