@@ -8,6 +8,7 @@ com.anji.run
 com.anji.util
 com.ojcoleman.ahni
 com.ojcoleman.ahni.evaluation
+com.ojcoleman.ahni.evaluation.mocostfunctions
 com.ojcoleman.ahni.event
 com.ojcoleman.ahni.experiments
 com.ojcoleman.ahni.experiments.objectrecognition
