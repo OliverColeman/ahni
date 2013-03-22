@@ -18,8 +18,8 @@ java -jar ahni.jar <properties file containing parameters for experiment>
 For example:
 java -jar ahni.jar properties/or3.properties
 
-See properties/test-pass-through-flip.properties for an example properties 
-file describing the function of each parameter and setting.
+See properties/bain-test-pass-through-flip.properties for an example 
+properties file describing the function of each parameter and setting.
 
 By default a line containing a brief summary of the current progress is sent 
 to the log (which for most example .properties files goes to the console). The

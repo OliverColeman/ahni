@@ -1,31 +1,19 @@
 package com.ojcoleman.ahni.transcriber;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 
 import com.ojcoleman.bain.NeuralNetwork;
-import com.ojcoleman.bain.base.ComponentCollection;
-import com.ojcoleman.bain.base.ComponentConfiguration;
 import com.ojcoleman.bain.base.NeuronCollection;
-import com.ojcoleman.bain.base.SynapseConfiguration;
-import com.ojcoleman.bain.neuron.rate.NeuronCollectionWithBias;
 import com.ojcoleman.bain.base.SynapseCollection;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
 import com.amd.aparapi.Kernel;
-import com.anji.integration.Activator;
-import com.anji.integration.AnjiActivator;
-import com.anji.integration.AnjiNetTranscriber;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
-import com.anji.nn.*;
 import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.nn.BainNN;
-import com.ojcoleman.ahni.nn.NNAdaptor;
-import com.ojcoleman.ahni.transcriber.HyperNEATTranscriber.CPPN;
-import com.ojcoleman.ahni.util.ArrayUtil;
 import com.ojcoleman.ahni.util.Point;
 
 /**
@@ -134,18 +122,34 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 		
 		int synapseIndex = 0;
 		
-		// query CPPN for substrate connection weights
-		for (int tz = 0; tz < depth; tz++) {
+		// query CPPN for substrate neuron parameters.
+		boolean[] neuronDisabled = new boolean[neuronCount];
+		for (int z = 0; z < depth; z++) {
+			for (int y = 0; y < height[z]; y++) {
+				for (int x = 0; x < width[z]; x++) {
+					cppn.resetSourceCoordinates();
+					cppn.setTargetCoordinatesFromGridIndices(x, y, z);
+					cppn.query();
+					
+					int bainNeuronIndex = getBainNeuronIndex(x, y, z);
+					int neuronType = cppn.getNeuronTypeIndex();
+					int outputIndex = layerEncodingIsInput ? neuronType : z;
+					
+					setNeuronParameters(neurons, bainNeuronIndex, cppn, createNewPhenotype);
+					neuronDisabled[bainNeuronIndex] = enableNEO && cppn.getNEO(outputIndex) <= neoThreshold;
+					// If substrate is null then this is set below after we create the initial substrate.
+					if (substrate != null) {
+						substrate.setNeuronDisabled(bainNeuronIndex, neuronDisabled[bainNeuronIndex]);
+					}
+				}
+			}
+		}
+		
+		// query CPPN for substrate synapse parameters.
+		for (int tz = 1; tz < depth; tz++) {
 			for (int ty = 0; ty < height[tz]; ty++) {
 				for (int tx = 0; tx < width[tz]; tx++) {
 					int bainNeuronIndexTarget = getBainNeuronIndex(tx, ty, tz);
-					
-					setNeuronParameters(tx, ty, tz, neurons, bainNeuronIndexTarget, cppn, createNewPhenotype);
-					
-					// We don't allow connections to the first layer, since this is purely an input layer.
-					// (However we still want to allow setting parameters for neurons in the first layer in the above code).
-					if (tz == 0)
-						continue;
 					
 					// Iteration over layers for the source neuron is only used for recurrent networks.
 					for (int sz = (feedForward ? tz - 1 : 0); sz < (feedForward ? tz : depth); sz++) {
@@ -156,18 +160,17 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 
 								int bainNeuronIndexSource = feedForward ? getBainNeuronIndex(sx, sy, sz) : getBainNeuronIndex(sx, sy, sz);
 								int synapseType = cppn.getSynapseTypeIndex();
+								int outputIndex = layerEncodingIsInput ? synapseType : sz;
 								
 								synapses.setPreAndPostNeurons(synapseIndex, bainNeuronIndexSource, bainNeuronIndexTarget);
 								
+								// Synapse is disabled if the source or target neurons are disabled, or if the LEO specifies it.
+								boolean disabled = neuronDisabled[bainNeuronIndexTarget] || neuronDisabled[bainNeuronIndexSource] || enableLEO && cppn.getLEO(outputIndex) <= leoThreshold;
+										
 								// Determine weight for synapse from source to target.
-								double weightVal = 0;
-								int outputIndex = layerEncodingIsInput ? synapseType : sz;
-								if (!enableLEO || enableLEO && cppn.getLEO(outputIndex) > leoThreshold) {
-									weightVal = cppn.getRangedWeight(outputIndex);
-								}
-								synapseWeights[synapseIndex] = weightVal;
+								synapseWeights[synapseIndex] = disabled ? 0 : cppn.getRangedWeight(outputIndex);
 								
-								setSynapseParameters(synapses, synapseIndex, cppn, weightVal, createNewPhenotype);
+								setSynapseParameters(synapses, synapseIndex, cppn, disabled, createNewPhenotype);
 
 								/* The getBainSynapseIndex methods aren't used, and currently aren't correct.
 								if (feedForward) {
@@ -185,6 +188,9 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 		} // tz
 		synapses.setEfficaciesModified();
 		
+		// Remove unused synapses from simulation calculations.
+		synapses.compress();
+		
 		if (createNewPhenotype) {
 			int simRes = properties.getIntProperty(BainNN.SUBSTRATE_SIMULATION_RESOLUTION, 1000);
 			String execModeName = properties.getProperty(BainNN.SUBSTRATE_EXECUTION_MODE, null);
@@ -200,14 +206,17 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 			}
 			if (recordCoords) {
 				substrate.enableCoords();
-				Point p = new Point();
-				for (int tz = 0; tz < depth; tz++) {
-					for (int ty = 0; ty < height[tz]; ty++) {
-						for (int tx = 0; tx < width[tz]; tx++) {
-							int bainNeuronIndex = getBainNeuronIndex(tx, ty, tz);
+			}
+			Point p = new Point();
+			for (int tz = 0; tz < depth; tz++) {
+				for (int ty = 0; ty < height[tz]; ty++) {
+					for (int tx = 0; tx < width[tz]; tx++) {
+						int bainNeuronIndex = getBainNeuronIndex(tx, ty, tz);
+						if (recordCoords) {
 							cppn.getCoordinatesForGridIndices(tx, ty, tz, p);
 							substrate.setCoords(bainNeuronIndex, p.x, p.y, p.z);
 						}
+						substrate.setNeuronDisabled(bainNeuronIndex, neuronDisabled[bainNeuronIndex]);
 					}
 				}
 			}
@@ -215,11 +224,9 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 			
 		} else {
 			substrate.setName("network " + genotype.getId());
+			substrate.setStepsPerStepForNonLayeredFF();
 		}
-		
-		// Remove unused synapses from simulation calculations.
-		synapses.compress();
-		
+				
 		// This will cause the kernels to update configuration variables and push all relevant data to the OpenCL device if necessary.
 		neurons.init();
 		synapses.init();

@@ -31,6 +31,8 @@ public abstract class HyperNEATTranscriberBainBase extends HyperNEATTranscriber<
 	protected void setNeuronParameters(double x, double y, double z, NeuronCollection neurons, int bainIndex, CPPN cppn, boolean addNewConfig) {
 		if (enableBias || neuronTypesEnabled || neuronParamsEnabled) {
 			cppn.setTargetCoordinates(x, y, z);
+			cppn.resetSourceCoordinates();
+			cppn.query();
 			setNeuronParameters(neurons, bainIndex, cppn, addNewConfig);
 		}
 	}
@@ -50,6 +52,8 @@ public abstract class HyperNEATTranscriberBainBase extends HyperNEATTranscriber<
 	protected void setNeuronParameters(int x, int y, int z, NeuronCollection neurons, int bainIndex, CPPN cppn, boolean addNewConfig) {
 		if (enableBias || neuronTypesEnabled || neuronParamsEnabled) {
 			cppn.setTargetCoordinatesFromGridIndices(x, y, z);
+			cppn.resetSourceCoordinates();
+			cppn.query();
 			setNeuronParameters(neurons, bainIndex, cppn, addNewConfig);
 		}
 	}
@@ -67,17 +71,22 @@ public abstract class HyperNEATTranscriberBainBase extends HyperNEATTranscriber<
 	protected void setNeuronParameters(Point point, NeuronCollection neurons, int bainIndex, CPPN cppn, boolean addNewConfig) {
 		if (enableBias || neuronTypesEnabled || neuronParamsEnabled) {
 			cppn.setTargetCoordinates(point);
+			cppn.resetSourceCoordinates();
+			cppn.query();
 			setNeuronParameters(neurons, bainIndex, cppn, addNewConfig);
 		}
 	}
-
-	private void setNeuronParameters(NeuronCollection neurons, int bainIndex, CPPN cppn, boolean addNewConfig) {
-		// cppn.setSourceCoordinates(point);
-		// Is setting source coords to 0 instead of same as target coords better? Setting to 0 is the way it's done in
-		// the original HyperNEAT.
-		cppn.resetSourceCoordinates();
-		cppn.query();
-
+	
+	/**
+	 * Set the parameters for a neuron. NOTE: It is assumed that the source and target coordinates have already been
+	 * set for the CPPN and that {@link HyperNEATTranscriber.CPPN#query()} or one of the other query methods has been called.
+	 * 
+	 * @param neurons The neuron collection to set parameters for.
+	 * @param bainIndex The index into the neuron collection to specify the neuron to set parameters for.
+	 * @param cppn The CPPN to use to generate parameter values for the given neuron.
+	 * @param addNewConfig Whether to add a new configuration object to the neuron collection (Set to TRUE if creating a new neuron collection).
+	 */
+	public void setNeuronParameters(NeuronCollection neurons, int bainIndex, CPPN cppn, boolean addNewConfig) {
 		int neuronType = cppn.getNeuronTypeIndex();
 
 		if (enableBias) {
@@ -118,10 +127,10 @@ public abstract class HyperNEATTranscriberBainBase extends HyperNEATTranscriber<
 	 * @param synapses The synapse collection to set parameters for.
 	 * @param bainIndex The index into the synapse collection to specify the synapse to set parameters for.
 	 * @param cppn The CPPN to use to generate parameter values for the given neuron.
-	 * @param weightVal The weight value for the synapse (used for the synapse disable parameter, see {@link TranscriberAdaptor#SUBSTRATE_SYNAPSE_MODEL_DISABLE_PARAM}).
-	 *  @param addNewConfig Whether to add a new configuration object to the synapse collection (Set to TRUE if creating a new synapse collection).
+	 * @param disabled Whether the synapse should be disabled (by setting the parameter specified by {@link #synapseDisableParamName} to 0).
+	 * @param addNewConfig Whether to add a new configuration object to the synapse collection (Set to TRUE if creating a new synapse collection).
 	 */
-	public void setSynapseParameters(SynapseCollection synapses, int bainIndex, CPPN cppn, double weightVal, boolean addNewConfig) {
+	public void setSynapseParameters(SynapseCollection synapses, int bainIndex, CPPN cppn, boolean disabled, boolean addNewConfig) {
 		if (synapseParamsEnabled || synapseTypesEnabled) {
 			int synapseType = cppn.getSynapseTypeIndex();
 			
@@ -139,7 +148,7 @@ public abstract class HyperNEATTranscriberBainBase extends HyperNEATTranscriber<
 				double v = cppn.getRangedSynapseParam(synapseType, p);
 				c.setParameterValue(synapseParamNames[p], v, true);
 			}
-			if (synapseDisableParamName != null && synapses.getEfficacy(bainIndex) == 0) {
+			if (synapseDisableParamName != null && disabled) {
 				c.setParameterValue(synapseDisableParamName, 0, true);
 			}
 			

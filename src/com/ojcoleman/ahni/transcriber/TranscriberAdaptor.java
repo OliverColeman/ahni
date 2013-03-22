@@ -88,8 +88,8 @@ public abstract class TranscriberAdaptor<T extends Activator> implements Transcr
 	public static final String SUBSTRATE_SYNAPSE_MODEL_PARAMS_THRESHOLD = "ann.transcriber.synapse.model.params.expression.threshold";
 	/**
 	 * Property to specify which parameter in the synapse model will be set to 0 if the connection should not be
-	 * plastic. This is typically applied to a "learning rate" parameter. Usage and allowable values are
-	 * implementation dependent.
+	 * enabled or plastic. This is typically applied to a "learning rate" parameter. Usage and allowable values are
+	 * implementation dependent. The criteria for whether a synapse should be enabled is implementation dependent.
 	 */
 	public static final String SUBSTRATE_SYNAPSE_MODEL_DISABLE_PARAM = "ann.transcriber.synapse.model.plasticitydisableparam";
 	/**

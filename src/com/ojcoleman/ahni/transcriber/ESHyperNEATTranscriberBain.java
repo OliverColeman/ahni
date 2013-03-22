@@ -494,7 +494,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriberBainBase imp
 			synapseWeights[ci] = c.weight;
 			if (synapseParamsEnabled || synapseTypesEnabled) {
 				cppn.query(c.source, c.target);
-				setSynapseParameters(synapses, ci, cppn, c.weight, true);
+				setSynapseParameters(synapses, ci, cppn, false, true);
 			}
 			ci++;
 		}
