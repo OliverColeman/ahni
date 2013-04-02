@@ -145,11 +145,14 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 			}
 		}
 		
-		// query CPPN for substrate synapse parameters.
+		// Query CPPN for substrate synapse parameters.
+		// Start at tz=1: don't allow connections to inputs.
 		for (int tz = 1; tz < depth; tz++) {
 			for (int ty = 0; ty < height[tz]; ty++) {
 				for (int tx = 0; tx < width[tz]; tx++) {
 					int bainNeuronIndexTarget = getBainNeuronIndex(tx, ty, tz);
+					
+					cppn.setTargetCoordinatesFromGridIndices(tx, ty, tz);
 					
 					// Iteration over layers for the source neuron is only used for recurrent networks.
 					for (int sz = (feedForward ? tz - 1 : 0); sz < (feedForward ? tz : depth); sz++) {
