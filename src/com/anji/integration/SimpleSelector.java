@@ -30,6 +30,7 @@ import org.jgapcustomised.Chromosome;
 import org.jgapcustomised.ChromosomeFitnessComparator;
 import org.jgapcustomised.Configuration;
 import org.jgapcustomised.NaturalSelector;
+import org.jgapcustomised.Species;
 
 /**
  * Selects chromosomes based directly on fitness value, as opposed to a statistical probability.
@@ -48,6 +49,58 @@ public class SimpleSelector extends NaturalSelector {
 	 */
 	protected void add(Configuration a_activeConfigurator, Chromosome a_chromosomeToAdd) {
 		chromosomes.add(a_chromosomeToAdd);
+	}
+	
+	@Override
+	/**
+	 * Modified version of {@link org.jgapcustomised.NaturalSelector#select(Configuration)} that
+	 * selects a number of parents for each species based on the species fitness (similarly to 
+	 * handling of elites). Rounding errors are handled by randomly selecting parents from the 
+	 * population or randomly removing selected members.
+	 */
+	public List<Chromosome> select(Configuration config) {
+		// start with elites
+		List<Chromosome> result = new ArrayList<Chromosome>(elite);
+
+		int numToSelect = (int) Math.round(numChromosomes * getSurvivalRate());
+
+		// determine parents for each species.
+		Iterator<Species> speciesIter = species.iterator();
+		while (speciesIter.hasNext()) {
+			Species s = speciesIter.next();
+			// Add parents from this species if it's the only species or it hasn't been stagnant for too long 
+			// or it hasn't reached the minimum species age or it contains the population-wide fittest individual.
+			if (species.size() == 1 || s.getStagnantGenerationsCount() < maxStagnantGenerations || s.getAge() < minAge || s.containsFittest) {
+				if ((elitismProportion > 0 || elitismMinToSelect > 0) && (s.size() >= elitismMinSpeciesSize)) {
+					int numToSelectFromSpecies = (int) Math.round(getSurvivalRate() * s.size()) - s.getEliteCount();
+					if (numToSelectFromSpecies > 0) {
+						List<Chromosome> selected = s.getTop(numToSelectFromSpecies);
+						result.addAll(selected);
+					}
+				}
+			}
+		}
+
+		if (result.size() > numToSelect) {
+			// remove randomly selected chromosomes.
+			Collections.shuffle(result, config.getRandomGenerator());
+			int numToRemove = result.size() - numToSelect;
+			for (int i = 0; i < numToRemove; i++) {
+				result.remove(result.size()-1);
+			}
+		} else if (result.size() < numToSelect) {
+			// Just select some more from population at large. 
+			Collections.shuffle(result, config.getRandomGenerator());
+			Iterator<Chromosome> it = chromosomes.iterator();
+			while (it.hasNext() && result.size() < numToSelect) {
+				Chromosome c = it.next();
+				if (!c.isElite && !(result.contains(c))) {
+					result.add(it.next());
+				}
+			}
+		}
+
+		return result;
 	}
 
 	/**

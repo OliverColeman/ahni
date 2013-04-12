@@ -412,7 +412,8 @@ public class Genotype implements Serializable {
 			if (previousFittest != null) {
 				int oldFitnessPercent = (previousFittestFitness * 100) / maxFitness;
 				int newFitnessPercent = (fittest.getFitnessValue() * 100) / maxFitness;
-				if (oldFitnessPercent > (newFitnessPercent + 5)) // if dropped more than 5%
+				//if (oldFitnessPercent > (newFitnessPercent + 5)) // if dropped more than 5%
+				if (oldFitnessPercent > (newFitnessPercent)) // if dropped
 					logger.info("(Fitness drop in percent:" + oldFitnessPercent + " > " + newFitnessPercent + ")");
 			}
 			
@@ -487,7 +488,7 @@ public class Genotype implements Serializable {
 			
 			// System.out.println("Selected: " + m_chromosomes.size());
 
-			// cull species down to contain only remaining chromosomes.
+			// cull species down to contain only parent chromosomes.
 			Iterator<Species> speciesIter = m_species.iterator();
 			while (speciesIter.hasNext()) {
 				Species s = speciesIter.next();

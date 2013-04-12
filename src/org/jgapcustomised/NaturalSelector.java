@@ -34,16 +34,16 @@ import java.util.List;
  * those with lesser fitness values, but it's not guaranteed.
  */
 public abstract class NaturalSelector {
-	private int numChromosomes;
-	private double survivalRate = 0;
-	private double elitismProportion = 0.1f;
-	private int elitismMinToSelect = 1;
-	private int elitismMinSpeciesSize = 5;
-	private int maxStagnantGenerations = 0;
-	private int minAge = 10;
+	protected int numChromosomes;
+	protected double survivalRate = 0;
+	protected double elitismProportion = 0.1f;
+	protected int elitismMinToSelect = 1;
+	protected int elitismMinSpeciesSize = 5;
+	protected int maxStagnantGenerations = 0;
+	protected int minAge = 10;
 	protected boolean speciatedFitness = true;
-	private List<Chromosome> elite = new ArrayList<Chromosome>();
-	private boolean maxStagnantGenerationsMaintainFittest = false;
+	protected List<Chromosome> elite = new ArrayList<Chromosome>();
+	protected List<Species> species;
 
 	/**
 	 * If elitism is enabled, places appropriate chromosomes in <code>elite</code> list. Elitism follows methodology in
@@ -55,6 +55,7 @@ public abstract class NaturalSelector {
 	 */
 	public final void add(Configuration config, List<Species> species, List<Chromosome> chroms) {
 		numChromosomes += chroms.size();
+		this.species = species;
 		
 		// determine elites for each species
 		Iterator<Species> speciesIter = species.iterator();
@@ -64,7 +65,9 @@ public abstract class NaturalSelector {
 			// or it hasn't reached the minimum species age or it contains the population-wide fittest individual.
 			if (species.size() == 1 || s.getStagnantGenerationsCount() < maxStagnantGenerations || s.getAge() < minAge || s.containsFittest) {
 				if ((elitismProportion > 0 || elitismMinToSelect > 0) && (s.size() >= elitismMinSpeciesSize)) {
-					List<Chromosome> elites = s.getElite(elitismProportion, elitismMinToSelect);
+					// If min age not reached then make sure at least one elite selected.
+					int numToSelect = (s.getAge() < minAge && elitismMinToSelect == 0) ? 1 : elitismMinToSelect;
+					List<Chromosome> elites = s.getElite(elitismProportion, numToSelect);
 					elite.addAll(elites);
 					// System.out.println("Adding " + elites.size() + " elites from species: " + s.getID());
 				}
@@ -117,8 +120,8 @@ public abstract class NaturalSelector {
 		int numToSelect = (int) ((numChromosomes * getSurvivalRate()) + 0.5);
 
 		if (result.size() > numToSelect) {
-			// remove least fittest (not species fitness sharing) from selected
-			Collections.sort(result, new ChromosomeFitnessComparator<Chromosome>(true /* asc */, false /* speciated fitness */));
+			// remove least fittest from selected
+			Collections.sort(result, new ChromosomeFitnessComparator<Chromosome>(true /* asc */, speciatedFitness /* speciated fitness */));
 			int numToRemove = result.size() - numToSelect;
 			for (int i = 0; i < numToRemove; ++i) {
 				result.remove(0);
@@ -218,9 +221,5 @@ public abstract class NaturalSelector {
 
 	public void setMinAge(int minAge) {
 		this.minAge = minAge;
-	}
-
-	public void setMaxStagnantGenerationsMaintainFittest(boolean maintainFittest) {
-		this.maxStagnantGenerationsMaintainFittest  = maintainFittest;
 	}
 }

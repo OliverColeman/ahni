@@ -333,7 +333,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 			bestPerformingChromosomes[generation] = bestPerforming;
 			bestFitnesses[generation] = (double) fittest.getFitnessValue() / maxFitness;
 			bestPerformances[generation] = bestPerforming.getPerformanceValue();
-
+			
 			int numSpecies = genotype.getSpecies().size();
 			int minSpeciesSize = Integer.MAX_VALUE;
 			int maxSpeciesSize = 0;
@@ -409,6 +409,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 			}
 			if (properties.logFilesEnabled()) {
 				logChamp(bestPerforming);
+				//logChamp(fittest);
 			}
 
 			fireEvent(new AHNIEvent(AHNIEvent.Type.GENERATION_END, this, this));
@@ -536,7 +537,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 		boolean logImage = (finished && logChampToImage >= 0) || (logChampToImage > 0 && generation % logChampToImage == 0);
 		boolean logEvaluation = (finished && logChampEvaluation >= 0) || (logChampEvaluation > 0 && generation % logChampEvaluation == 0);
 		String msg = "best performing substrate from " + (finished ? "final generation" : "from generation " + generation);
-		if (logString || logImage) {
+		if (logString || logImage || logImage) {
 			try {
 				Map<String, Object> transcribeOptions = new HashMap<String, Object>();
 				transcribeOptions.put("recordCoordinates", Boolean.TRUE);

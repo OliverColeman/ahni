@@ -34,14 +34,10 @@ import org.jgapcustomised.event.EventManager;
 import org.jgapcustomised.impl.CloneReproductionOperator;
 import org.jgapcustomised.impl.WeightedRouletteSelector;
 
-import com.anji.integration.ActivatorTranscriber;
 import com.anji.integration.SimpleSelector;
-import com.anji.nn.activationfunction.ActivationFunction;
-import com.anji.nn.activationfunction.ActivationFunctionFactory;
 import com.anji.util.Configurable;
 import com.anji.util.Properties;
 import com.anji.util.Randomizer;
-import com.ojcoleman.ahni.transcriber.HyperNEATTranscriberGridNet;
 import com.ojcoleman.ahni.util.ArrayUtil;
 
 /**
@@ -295,7 +291,6 @@ public class NeatConfiguration extends Configuration implements Configurable {
 		selector.setElitismMinSpeciesSize(props.getIntProperty(ELITISM_MIN_SPECIE_SIZE_KEY, 5));
 		selector.setSpeciatedFitness(props.getBooleanProperty(SPECIATED_FITNESS_KEY, true));
 		selector.setMaxStagnantGenerations(props.getIntProperty(MAX_STAGNANT_GENERATIONS_KEY, 999999));
-		selector.setMaxStagnantGenerationsMaintainFittest(props.getBooleanProperty(MAX_STAGNANT_MAINTAIN_FITTEST_GENERATIONS_KEY, false));
 		selector.setMinAge(props.getIntProperty(MINIMUM_AGE_KEY, 10));
 		setNaturalSelector(selector);
 

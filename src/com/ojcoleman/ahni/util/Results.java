@@ -63,6 +63,7 @@ public class Results {
 		String[] lineSplit = line.replaceAll(" ", "").split(",");
 		if (NumberUtils.isNumber(lineSplit[0])) {
 			stringData.add(lineSplit);
+			labels = new String[lineSplit.length];
 		}
 		else {
 			labels = lineSplit;

@@ -157,7 +157,7 @@ public class Species {
 		if (chromosomes.contains(aChromosome))
 			return false;
 		aChromosome.setSpecie(this);
-		if (fittest != null && aChromosome.m_fitnessValue > fittest.m_fitnessValue)
+		if (fittest == null || aChromosome.m_fitnessValue > fittest.m_fitnessValue)
 			fittest = aChromosome;
 		return chromosomes.add(aChromosome);
 	}
@@ -325,6 +325,9 @@ public class Species {
 	}
 
 	/**
+	 * Determine and return the top specified proportion of chromosomes in this species. The returned 
+	 * chromosomes are marked as being elite and all other chromosomes in this species are marked as
+	 * not elite.
 	 * @param proportion The proportion of Chromosomes to select, range (0, 1).
 	 * @param minToSelect The minimum number of Chromosomes to select. Use 0 for no minimum.
 	 * @return top proportion (or minToSelect, which ever is greater) of fittest Chromosomes in this species.
@@ -355,6 +358,21 @@ public class Species {
 		// System.out.println("selected " + result.size() +
 		// " chroms as elite from species of size " + chromosomes.size());
 
+		return result;
+	}
+	
+	/**
+	 * @param proportion The proportion of Chromosomes to select, range (0, 1).
+	 * @return top proportion of fittest Chromosomes in this species.
+	 */
+	public List<Chromosome> getTop(int numToSelect) {
+		Collections.sort(chromosomes, new ChromosomeFitnessComparator(false /* asc */, false /* speciated fitness */));
+		List<Chromosome> result = new ArrayList<Chromosome>(numToSelect);
+		Iterator<Chromosome> it = chromosomes.iterator();
+		// get numToSelect parents
+		while (it.hasNext() && (result.size() < numToSelect)) {
+			result.add(it.next());
+		}
 		return result;
 	}
 
