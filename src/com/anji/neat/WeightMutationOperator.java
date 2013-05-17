@@ -19,6 +19,7 @@
  */
 package com.anji.neat;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -97,30 +98,40 @@ public class WeightMutationOperator extends MutationOperator implements Configur
 		}
 		NeatConfiguration config = (NeatConfiguration) jgapConfig;
 
-		List<ConnectionAllele> conns = NeatChromosomeUtility.getConnectionList(target.getAlleles());
-		Collections.shuffle(conns, config.getRandomGenerator());
+		// If bias is provided via an input to the network then just get connection alleles, otherwise get connection and neuron alleles.
+		List<Allele> alleles = config.biasViaInput() ? NeatChromosomeUtility.getConnectionList(target.getAlleles()) : new ArrayList(target.getAlleles());
+		Collections.shuffle(alleles, config.getRandomGenerator());
 
-		int numMutations = numMutations(config.getRandomGenerator(), conns.size());
-		Iterator<ConnectionAllele> iter = conns.iterator();
+		int numMutations = numMutations(config.getRandomGenerator(), alleles.size());
+		Iterator<Allele> iter = alleles.iterator();
 		int i = 0;
 
-		while ((i++ < numMutations) && iter.hasNext()) {
-			ConnectionAllele origAllele = iter.next();
-
-			double delta = config.getRandomGenerator().nextGaussian() * getStdDev();
-			double nextWeight = origAllele.getWeight() + delta;
-
-			if (nextWeight > config.getMaxConnectionWeight()) {
-				nextWeight = config.getMaxConnectionWeight();
-			} else if (nextWeight < config.getMinConnectionWeight()) {
-				nextWeight = config.getMinConnectionWeight();
+		while ((i < numMutations) && iter.hasNext()) {
+			Allele origAllele = iter.next();
+			boolean isNeuron = origAllele instanceof NeuronAllele;
+			boolean isConnection = origAllele instanceof ConnectionAllele;
+			if (isNeuron || isConnection) {
+				double currentValue = isConnection ? ((ConnectionAllele) origAllele).getWeight() : ((NeuronAllele) origAllele).getBias();
+				double nextValue = currentValue + config.getRandomGenerator().nextGaussian() * getStdDev();
+	
+				if (nextValue > config.getMaxConnectionWeight()) {
+					nextValue = config.getMaxConnectionWeight();
+				} else if (nextValue < config.getMinConnectionWeight()) {
+					nextValue = config.getMinConnectionWeight();
+				}
+	
+				Allele newAllele = origAllele.cloneAllele();
+				if (isConnection) {
+					((ConnectionAllele) newAllele).setWeight(nextValue);
+				}
+				else {
+					((NeuronAllele) newAllele).setBias(nextValue);
+				}
+	
+				genesToRemove.add(origAllele);
+				genesToAdd.add(newAllele);
+				i++;
 			}
-
-			ConnectionAllele newAllele = (ConnectionAllele) origAllele.cloneAllele();
-			newAllele.setWeight(nextWeight);
-
-			genesToRemove.add(origAllele);
-			genesToAdd.add(newAllele);
 		}
 	}
 

@@ -113,12 +113,16 @@ public class NeatChromosomeUtility {
 		List<ConnectionAllele> conns = new ArrayList<ConnectionAllele>();
 
 		// Input neurons.
-		for (int i = 0; i < numInputs; ++i)
+		for (int i = 0; i < numInputs; ++i) {
 			inNeurons.add(config.newNeuronAllele(NeuronType.INPUT));
+		}
 
 		// Output neurons.
 		for (int j = 0; j < numOutputs; ++j) {
 			NeuronAllele outNeuron = config.newNeuronAllele(NeuronType.OUTPUT);
+			if (!config.biasViaInput()) {
+				outNeuron.setToRandomValue(config.getRandomGenerator(), false);
+			}
 			outNeurons.add(outNeuron);
 
 			if (fullyConnected && (numHidden == 0)) {
@@ -137,6 +141,9 @@ public class NeatChromosomeUtility {
 		if (fullyConnected) {
 			for (int k = 0; k < numHidden; ++k) {
 				NeuronAllele hidNeuron = config.newNeuronAllele(NeuronType.HIDDEN);
+				if (!config.biasViaInput()) {
+					hidNeuron.setToRandomValue(config.getRandomGenerator(), false);
+				}
 				hidNeurons.add(hidNeuron);
 
 				// Add input -> hidden connections.

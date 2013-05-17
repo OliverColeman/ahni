@@ -122,7 +122,7 @@ public class AnjiNetTranscriber implements Transcriber<AnjiActivator>, Configura
 		SortedMap<Long, NeuronAllele> inNeuronAlleles = NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.INPUT);
 		List<Neuron> inNeurons = new ArrayList<Neuron>();
 		for (NeuronAllele neuronAllele : inNeuronAlleles.values()) {
-			Neuron n = new Neuron(ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType()));
+			Neuron n = new Neuron(ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType()), neuronAllele.getBias());
 			n.setId(neuronAllele.getInnovationId().longValue());
 			inNeurons.add(n);
 			allNeurons.put(neuronAllele.getInnovationId(), n);
@@ -132,7 +132,7 @@ public class AnjiNetTranscriber implements Transcriber<AnjiActivator>, Configura
 		SortedMap<Long, NeuronAllele> outNeuronAlleles = NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.OUTPUT);
 		List<Neuron> outNeurons = new ArrayList<Neuron>();
 		for (NeuronAllele neuronAllele : outNeuronAlleles.values()) {
-			Neuron n = new Neuron(ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType()));
+			Neuron n = new Neuron(ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType()), neuronAllele.getBias());
 			n.setId(neuronAllele.getInnovationId().longValue());
 			outNeurons.add(n);
 			allNeurons.put(neuronAllele.getInnovationId(), n);
@@ -141,7 +141,7 @@ public class AnjiNetTranscriber implements Transcriber<AnjiActivator>, Configura
 		// hidden neurons
 		SortedMap<Long, NeuronAllele> hiddenNeuronAlleles = NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.HIDDEN);
 		for (NeuronAllele neuronAllele : hiddenNeuronAlleles.values()) {
-			Neuron n = new Neuron(ActivationFunctionFactory.valueOf(neuronAllele.getActivationType()));
+			Neuron n = new Neuron(ActivationFunctionFactory.valueOf(neuronAllele.getActivationType()), neuronAllele.getBias());
 			n.setId(neuronAllele.getInnovationId().longValue());
 			allNeurons.put(neuronAllele.getInnovationId(), n);
 		}

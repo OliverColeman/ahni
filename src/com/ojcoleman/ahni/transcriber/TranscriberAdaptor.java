@@ -9,6 +9,7 @@ import com.anji.integration.Activator;
 import com.anji.integration.AnjiNetTranscriber;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
+import com.anji.neat.NeatConfiguration;
 import com.ojcoleman.ahni.evaluation.AHNIFitnessFunction;
 import com.ojcoleman.ahni.hyperneat.Configurable;
 import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
@@ -218,7 +219,7 @@ public abstract class TranscriberAdaptor<T extends Activator> implements Transcr
 	 */
 	protected int synapseModelTypeCount = 1; // Always has to be at least one type.
 	
-	
+	private Properties props;
 
 	/**
 	 * This method should be called from overriding methods.
@@ -226,9 +227,10 @@ public abstract class TranscriberAdaptor<T extends Activator> implements Transcr
 	 * @see Configurable#init(Properties)
 	 */
 	public void init(Properties props) {
+		this.props = props;
+		
 		connectionWeightMax = props.getDoubleProperty(HYPERNEAT_CONNECTION_WEIGHT_MAX);
 		connectionWeightMin = props.getDoubleProperty(HYPERNEAT_CONNECTION_WEIGHT_MIN, -connectionWeightMax);
-
 
 		// If multiple neuron types are enabled.
 		if (props.containsKey(TranscriberAdaptor.SUBSTRATE_NEURON_MODEL_TYPES)) {
@@ -347,4 +349,21 @@ public abstract class TranscriberAdaptor<T extends Activator> implements Transcr
 		return synapseParamNames.length;
 	}
 
+	/**
+	 * May be overridden to specify how many input neurons the Chromosome should encode.
+	 * This default implementation returns the value specified by the property {@link com.anji.neat.NeatConfiguration.STIMULUS_SIZE_KEY} if 
+	 * given, otherwise {@link com.anji.neat.NeatConfiguration.DEFAULT_STIMULUS_SIZE}.
+	 */
+	public int getChromosomeInputNeuronCount() {
+		return props.getShortProperty(NeatConfiguration.STIMULUS_SIZE_KEY, NeatConfiguration.DEFAULT_STIMULUS_SIZE);
+	}
+	
+	/**
+	 * May be overridden to specify how many output neurons the Chromosome should encode.
+	 * This default implementation returns the value specified by the property {@link com.anji.neat.NeatConfiguration.RESPONSE_SIZE_KEY} if 
+	 * given, otherwise {@link com.anji.neat.NeatConfiguration.DEFAULT_RESPONSE_SIZE}.
+	 */
+	public int getChromosomeOutputNeuronCount() {
+		return props.getShortProperty(NeatConfiguration.RESPONSE_SIZE_KEY, NeatConfiguration.DEFAULT_RESPONSE_SIZE);
+	}
 }

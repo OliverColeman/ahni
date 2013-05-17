@@ -16,6 +16,8 @@
  * 02111-1307 USA
  * 
  * created by Philip Tucker on Feb 16, 2003
+ * 
+ * Modified by Oliver Coleman 2013-04-25 - Added bias
  */
 package com.anji.neat;
 
@@ -35,6 +37,8 @@ import com.anji.nn.activationfunction.ActivationFunction;
 public class NeuronAllele extends Allele {
 
 	private NeuronGene neuronGene;
+	
+	private double bias = ConnectionAllele.DEFAULT_WEIGHT;
 
 	/**
 	 * for hibernate
@@ -46,32 +50,40 @@ public class NeuronAllele extends Allele {
 	/**
 	 * @param aNeuronGene
 	 */
-	public NeuronAllele(NeuronGene aNeuronGene) {
+	public NeuronAllele(NeuronGene aNeuronGene, double bias) {
 		super(aNeuronGene);
-
+		
 		neuronGene = aNeuronGene;
+		this.bias = bias;
 	}
 
 	/**
 	 * @see org.jgapcustomised.Allele#cloneAllele()
 	 */
 	public Allele cloneAllele() {
-		return new NeuronAllele(neuronGene);
+		NeuronAllele allele = new NeuronAllele(neuronGene, bias);
+		return allele;
 	}
 
 	/**
-	 * @see Allele#setToRandomValue(Random,boolean)
+	 * Set bias to random value from a Gaussian distribution determined by {@link ConnectionAllele#RANDOM_STD_DEV}
+	 * 
+	 * @param a_numberGenerator
+	 * @param onlyPerturbFromCurrentValue if true then the bias is perturbed from its current value.
 	 */
 	public void setToRandomValue(Random a_numberGenerator, boolean onlyPerturbFromCurrentValue) {
-		// noop
+		if (onlyPerturbFromCurrentValue)
+			bias += a_numberGenerator.nextGaussian() * ConnectionAllele.RANDOM_STD_DEV;
+		else
+			bias = a_numberGenerator.nextGaussian() * ConnectionAllele.RANDOM_STD_DEV;
 	}
 
 	/**
 	 * @param aTarget should be <code>NeuronAllele</code> with same gene TODO - activation type and slope
 	 * @see org.jgapcustomised.Allele#distance(org.jgapcustomised.Allele)
 	 */
-	public double distance(Allele aTarget) {
-		return 0;
+	public double distance(Allele target) {
+		return Math.abs(bias - ((NeuronAllele) target).getBias());
 	}
 
 	/**
@@ -98,5 +110,25 @@ public class NeuronAllele extends Allele {
 	public String getActivationType() {
 		return neuronGene.getActivationType();
 	}
+	
+	/**
+	 * @return connection bias
+	 */
+	public double getBias() {
+		return bias;
+	}
 
+	/**
+	 * @param aBias new connection bias
+	 */
+	public void setBias(double aBias) {
+		bias = aBias;
+	}
+
+	/**
+	 * @see Object#toString()
+	 */
+	public String toString() {
+		return neuronGene.toString() + " [" + bias + "]";
+	}
 }

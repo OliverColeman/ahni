@@ -95,7 +95,7 @@ public class SimpleSelector extends NaturalSelector {
 			while (it.hasNext() && result.size() < numToSelect) {
 				Chromosome c = it.next();
 				if (!c.isElite && !(result.contains(c))) {
-					result.add(it.next());
+					result.add(c);
 				}
 			}
 		}

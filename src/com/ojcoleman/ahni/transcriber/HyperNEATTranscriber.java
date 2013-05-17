@@ -10,6 +10,7 @@ import com.anji.integration.Activator;
 import com.anji.integration.AnjiNetTranscriber;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
+import com.anji.neat.NeatConfiguration;
 import com.ojcoleman.ahni.evaluation.AHNIFitnessFunction;
 import com.ojcoleman.ahni.hyperneat.Configurable;
 import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
@@ -270,13 +271,13 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 * the use of Z coordinate inputs for the CPPN (both source and target neuron Z coordinates will be affected).
 	 */
 	protected String zCoordsForCPPN = "";
-
+	
 	private double connectionWeightRange;
 
 	// Index of target and source coordinate inputs in CPPN input vector.
 	private int cppnIdxTX = -1, cppnIdxTY = -1, cppnIdxTZ = -1, cppnIdxSX = -1, cppnIdxSY = -1, cppnIdxSZ = -1;
 	// Index of delta and angle inputs in CPPN input vector.
-	private int cppnIdxDX = -1, cppnIdxDY = -1, cppnIdxDZ = -1, cppnIdxAn = -1;
+	private int cppnIdxDX = -1, cppnIdxDY = -1, cppnIdxDZ = -1, cppnIdxAn = -1, cppnIdxBiasInput = -1;
 
 	// Index of output signals in CPPN output vector.
 	
@@ -303,7 +304,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 */
 	public void init(Properties props) {
 		super.init(props);
-
+		
 		// If the properties specify a separate weight output per layer.
 		if (!props.getBooleanProperty(HYPERNEAT_LAYER_ENCODING, layerEncodingIsInput)) {
 			if (neuronParamsEnabled || synapseParamsEnabled) {
@@ -398,12 +399,16 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		}
 
 		// Determine CPPN input size and mapping.
-		cppnInputCount = 1; // Bias input always has index 0.
+		cppnInputCount = 0; 
+		if (props.getConfig().biasViaInput()) {
+			// Add bias input to CPPN if internal bias not used.
+			cppnIdxBiasInput = cppnInputCount++;
+		}
 		cppnIdxSX = cppnInputCount++;
 		cppnIdxSY = cppnInputCount++;
 		cppnIdxTX = cppnInputCount++;
 		cppnIdxTY = cppnInputCount++;
-		logger.info("CPPN: Added bias, sx, sy, tx, ty inputs.");
+		logger.info("CPPN: Added " + (cppnIdxBiasInput != -1 ? "bias, " : "") + "sx, sy, tx, ty inputs.");
 		if (zCoordsForCPPN.equals("force") || (!zCoordsForCPPN.equals("prevent") && (feedForward && layerEncodingIsInput && depth > 2 || !feedForward && depth > 1))) {
 			cppnIdxTZ = cppnInputCount++;
 			logger.info("CPPN: Added tz input.");
@@ -620,8 +625,27 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		return cppnInputCount;
 	}
 
+	/**
+	 * The number of outputs from the CPPN.
+	 */
 	public short getCPPNOutputCount() {
 		return cppnOutputCount;
+	}
+	
+	/**
+	 * Returns same value as getCPPNInputCount().
+	 */
+	@Override
+	public int getChromosomeInputNeuronCount() {
+		return getCPPNInputCount();
+	}
+	
+	/**
+	 * Returns same value as getCPPNOutputCount().
+	 */
+	@Override
+	public int getChromosomeOutputNeuronCount() {
+		return getCPPNOutputCount();
 	}
 
 	/**
@@ -637,7 +661,9 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 
 		public CPPN(Chromosome genotype) throws TranscriberException {
 			cppnActivator = cppnTranscriber.transcribe(genotype);
-			cppnInput[0] = 1; // Bias.
+			if (cppnIdxBiasInput != -1) {
+				cppnInput[cppnIdxBiasInput] = 1; // Bias.
+			}
 			cppnMin = cppnActivator.getMinResponse();
 			cppnMax = cppnActivator.getMaxResponse();
 			cppnRange = cppnMax - cppnMin;

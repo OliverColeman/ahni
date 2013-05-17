@@ -178,7 +178,7 @@ public class Results {
 	}
 	
 	/**
-	 * Adds (concatenates) the data series from the given Results to this Results.
+	 * Adds (concatenates) the given data to this Results.
 	 * The total number of series in this Results will be increased by the number of series in the given Results.
 	 * @param seriesData The data to add. This is only copied by reference.
 	 * @param label The label for the added data series. May be null.

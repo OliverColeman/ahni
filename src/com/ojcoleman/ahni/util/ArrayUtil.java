@@ -189,6 +189,19 @@ public class ArrayUtil {
 		int width = unpacked[0].length;
 		int height = unpacked.length;
 		double[] packed = new double[width * height];
+		return pack(unpacked, packed);
+	}
+	
+	/** 
+	 * Row-packs the values in the given 2D array into the given 1D array.
+	 * @param unpacked The unpacked array.
+	 * @param packed The array to copy the result into.
+	 * @return a reference to the array passed in for parameter packed.
+	 * @see #unpack(double[], int, int, int)
+	 */
+	public static double[] pack(double[][] unpacked, double[] packed) {
+		int width = unpacked[0].length;
+		int height = unpacked.length;
 		int i = 0;
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
@@ -208,6 +221,20 @@ public class ArrayUtil {
 	 */
 	public static double[][] unpack(double[] packed, int width, int height, int outputIndex) {
 		double[][] unpacked = new double[height][width];
+		return unpack(packed, unpacked, outputIndex); 
+	}
+	
+	/** 
+	 * Unpacks the values in the given 1D array into the given 2D array, row-first.
+	 * @param packed The packed array.
+	 * @param an array to copy the result into. Should have dimensions [height/rows][width/columns].
+	 * @param outputIndex The index to start reading from in the packed array.
+	 * @return a reference to the array passed in for parameter unpacked.
+	 * @see #pack(double[][])
+	 */
+	public static double[][] unpack(double[] packed, double[][] unpacked, int outputIndex) {
+		int width = unpacked[0].length;
+		int height = unpacked.length;
 		int i = outputIndex;
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {

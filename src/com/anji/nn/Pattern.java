@@ -124,13 +124,6 @@ public class Pattern {
 	}
 
 	/**
-	 * set values to 0
-	 */
-	public void clear() {
-		Arrays.fill(values, 0);
-	}
-
-	/**
 	 * Set stimulus values.
 	 * 
 	 * @param someValues

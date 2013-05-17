@@ -186,6 +186,8 @@ public class Neuron implements XmlPersistable {
 	 * protected for <code>TestNeuron</code> only
 	 */
 	protected double value;
+	
+	private double bias = 0;
 
 	private boolean dirty; // indicates value has not been updated for the current
 	
@@ -203,11 +205,12 @@ public class Neuron implements XmlPersistable {
 	 * @param aFunc
 	 * @throws IllegalArgumentException
 	 */
-	public Neuron(ActivationFunction aFunc) throws IllegalArgumentException {
+	public Neuron(ActivationFunction aFunc, double bias) throws IllegalArgumentException {
 		super();
 		if (aFunc == null)
 			throw new IllegalArgumentException("activation function can not be null");
 		func = aFunc;
+		this.bias = bias; 
 		nonIntegrating = func instanceof ActivationFunctionNonIntegrating;
 		reset();
 	}
@@ -244,7 +247,7 @@ public class Neuron implements XmlPersistable {
 				}
 				value = func2.apply(input);
 			} else {
-				double sum = 0;
+				double sum = bias;
 				for (int i = 0; i < incomingConns.size(); i++) {
 					sum += incomingConns.get(i).read();
 				}
@@ -262,6 +265,20 @@ public class Neuron implements XmlPersistable {
 	public void reset() {
 		value = 0;
 		dirty = true;
+	}
+	
+	/**
+	 * @return the bias
+	 */
+	public double getBias() {
+		return bias;
+	}
+
+	/**
+	 * @param bias the bias to set
+	 */
+	public void setBias(double bias) {
+		this.bias = bias;
 	}
 
 	/**

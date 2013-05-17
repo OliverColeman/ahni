@@ -135,7 +135,7 @@ public class BainNN extends NNAdaptor {
 		this.name = name;
 		this.neuronCount = nn.getNeurons().getSize();
 		this.synapseCount = nn.getSynapses().getSize();
-		;
+		
 		this.maxCycleLength = Math.min(neuronCount, maxCycleLength);
 		inputSize = 1;
 		for (int i = 0; i < inputDimensions.length; i++) {
@@ -166,9 +166,16 @@ public class BainNN extends NNAdaptor {
 	public Object next() {
 		return next((double[]) null);
 	}
-
+	
 	@Override
 	public double[] next(double[] stimuli) {
+		double[] outputs = new double[outputSize];
+		next(stimuli, outputs);
+		return outputs;
+	}
+	
+	@Override
+	public void next(double[] stimuli, double[] output) {
 		if (topology == Topology.FEED_FORWARD_NONLAYERED) {
 			// For non-layered FF networks we have to run the network stepsPerStep times to propagate the
 			// signals all the way through, while making sure the input neurons have the stimuli values
@@ -188,16 +195,21 @@ public class BainNN extends NNAdaptor {
 			}
 			nn.run(stepsPerStep);
 		}
-		double[] outputs = new double[outputSize];
-		System.arraycopy(nn.getNeurons().getOutputs(), outputIndex, outputs, 0, outputSize);
+		
+		System.arraycopy(nn.getNeurons().getOutputs(), outputIndex, output, 0, outputSize);
 		checkExecMode();
-		return outputs;
 	}
 
 	@Override
 	public double[][] nextSequence(double[][] stimuli) {
+		double[][] result = new double[stimuli.length][outputSize];
+		nextSequence(stimuli, result);
+		return result;
+	}
+	
+	@Override
+	public void nextSequence(double[][] stimuli, double[][] result) {
 		int stimuliCount = stimuli.length;
-		double[][] result = new double[stimuliCount][outputSize];
 		// Optmisation for layered FF networks.
 
 		if (topology == Topology.FEED_FORWARD_LAYERED) {
@@ -217,19 +229,32 @@ public class BainNN extends NNAdaptor {
 			}
 		}
 		checkExecMode();
-		return result;
+	}
+	
+	@Override
+	public double[][] next(double[][] stimuli) {
+		double[][] output = new double[outputDimensions[1]][outputDimensions[0]];
+		next(stimuli, output);
+		return output;
 	}
 
 	@Override
-	public double[][] next(double[][] stimuli) {
-		return ArrayUtil.unpack(next(ArrayUtil.pack(stimuli)), outputDimensions[0], outputDimensions[1], 0);
+	public void next(double[][] stimuli, double[][] output) {
+		// TODO avoid creating new array in call to pack.
+		ArrayUtil.unpack(next(ArrayUtil.pack(stimuli)), output, 0);
 	}
 
 	@Override
 	public double[][][] nextSequence(double[][][] stimuli) {
+		double[][][] result = new double[stimuli.length][outputDimensions[1]][outputDimensions[0]];
+		nextSequence(stimuli, result);
+		return result;
+	}
+	
+	@Override
+	public void nextSequence(double[][][] stimuli, double[][][] result) {
 		int stimuliCount = stimuli.length;
-		double[][][] result = new double[stimuliCount][][];
-
+		
 		// Optmisation for layered FF networks.
 		if (topology == Topology.FEED_FORWARD_LAYERED) {
 			for (int stimuliIndex = 0, responseIndex = 1 - stepsPerStep; stimuliIndex < stimuliCount + stepsPerStep - 1; stimuliIndex++, responseIndex++) {
@@ -239,16 +264,15 @@ public class BainNN extends NNAdaptor {
 				}
 				nn.step();
 				if (responseIndex >= 0) {
-					result[responseIndex] = ArrayUtil.unpack(nnOutputs, outputDimensions[0], outputDimensions[1], outputIndex);
+					ArrayUtil.unpack(nnOutputs, result[responseIndex], outputIndex);
 				}
 			}
 		} else {
 			for (int s = 0; s < stimuliCount; s++) {
-				result[s] = next(stimuli[s]);
+				next(stimuli[s], result[s]);
 			}
 		}
 		checkExecMode();
-		return result;
 	}
 
 	private void checkExecMode() {
@@ -426,7 +450,7 @@ public class BainNN extends NNAdaptor {
 			}
 		}
 		for (int i = 0; i < neuronCount; i++) {
-			out.append("\n\t" + (neuronDisabled[i] ? "0" : "1"));
+			out.append("\n\t" + (neuronDisabled[i] ? "0" : "1") + "\t");
 			if (coordsEnabled()) {
 				out.append("\t(" + nf.format(getXCoord(i)) + ", " + nf.format(getYCoord(i)) + ", " + nf.format(getZCoord(i)) + ")");
 			}

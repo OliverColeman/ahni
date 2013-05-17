@@ -148,7 +148,7 @@ public class XmlPersistableAllele implements XmlPersistable {
 				throw new IllegalArgumentException("invalid activation function type: " + str);
 		}
 
-		return new NeuronAllele(new NeuronGene(type, id, activationType));
+		return new NeuronAllele(new NeuronGene(type, id, activationType), 0);
 	}
 
 	/**

@@ -6,9 +6,15 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.*;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,10 +22,10 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.PropertyConfigurator;
 
-
 import com.anji.util.Misc;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import com.ojcoleman.ahni.experiments.RLRecurrentNetworkBased;
 import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 import com.ojcoleman.ahni.util.PropertiesConverter;
 import com.ojcoleman.ahni.util.Results;
@@ -41,6 +47,13 @@ import com.ojcoleman.ahni.util.Statistics;
 public class Run {
 	private static Logger logger;
 	private static final DecimalFormat nf = new DecimalFormat("0.0000");
+	
+	/**
+	 * Optional property key. ID of current experiment (constant over all runs). Must be an integer value (Long is acceptable).
+	 * If not given then current system time in milliseconds is used.
+	 */
+	private static final String EXPERIMENT_ID_KEY = "experiment.id";
+	
 
 	/**
 	 * Disable all output to files and terminal.
@@ -66,19 +79,18 @@ public class Run {
 	public List<Properties> propertiesFiles = new ArrayList<Properties>(1);
 
 	Properties properties;
-	
+
 	/**
-	 * The best performance for each generation for each run, in the format [run][generation].
-	 * This will only be populated after {@link #run()} has completed.
+	 * The best performance for each generation for each run, in the format [run][generation]. This will only be
+	 * populated after {@link #run()} has completed.
 	 */
 	public double[][] performance;
-	
+
 	/**
-	 * The best fitness for each generation for each run, in the format [run][generation].
-	 * This will only be populated after {@link #run()} has completed.
+	 * The best fitness for each generation for each run, in the format [run][generation]. This will only be populated
+	 * after {@link #run()} has completed.
 	 */
 	public double[][] fitness;
-
 
 	/**
 	 * @param args
@@ -111,10 +123,14 @@ public class Run {
 		if (properties == null) {
 			properties = propertiesFiles.get(0);
 		}
-
-		long experimentID = System.currentTimeMillis();
+		
 		String runLogFile = properties.getProperty("log4j.appender.RunLog.File", null);
-
+		
+		if (!properties.containsKey(EXPERIMENT_ID_KEY)) {
+			properties.setProperty(EXPERIMENT_ID_KEY, "" + System.currentTimeMillis());
+		}
+		long experimentID = properties.getLongProperty(EXPERIMENT_ID_KEY);
+		
 		// If there should be no output whatsoever.
 		if (noOutput) {
 			properties.remove(HyperNEATConfiguration.OUTPUT_DIR_KEY);
@@ -226,7 +242,7 @@ public class Run {
 			resultFilePerf.append(resultsPerf.toString());
 			resultFilePerf.close();
 			logger.info("Wrote best performance for each generation in each run to " + resultPerfFileName);
-			
+
 			String resultFitFileName = resultFileNameBase + "-fitness.csv";
 			Results resultsFitness = new Results(fitness, null);
 			BufferedWriter resultFileFit = new BufferedWriter(new FileWriter(resultFitFileName));
@@ -242,7 +258,7 @@ public class Run {
 				statsFilePerf.write(statsPerf.getBasicStats().toString());
 				statsFilePerf.close();
 				logger.info("Wrote statistics for best performance over each run for each generation to " + statsPerfFileName);
-				
+
 				String statsFitnessFileName = resultFileNameBase + "-fitness-stats.csv";
 				Statistics statsFitness = new Statistics(resultsFitness);
 				BufferedWriter statsFileFitness = new BufferedWriter(new FileWriter(resultFileNameBase + "-fitness-stats.csv"));
@@ -291,14 +307,100 @@ public class Run {
 				}
 			}
 		}
-		
+
 		java.util.Properties log4jProps = new java.util.Properties();
 		log4jProps.putAll(properties);
 		PropertyConfigurator.configure(log4jProps);
 
 		properties.configureLogger();
-		
+
 		logger = Logger.getLogger(Run.class);
 	}
-}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 
+	/*
+	static class EnvRunSet implements Callable<Boolean> {
+		private final Properties properties;
+		private final long seed;
+
+		EnvRunSet(Properties properties, long seed) {
+			this.properties = properties;
+			this.seed = seed;
+		}
+
+		@Override
+		public Boolean call() {
+			properties.setProperty("fitness.function.rlrnn.seed", "" + seed);
+
+			int numRuns = properties.getIntProperty(HyperNEATConfiguration.NUM_RUNS_KEY);
+
+			boolean envSolved = false;
+			int runCount = -1, finalGen = -1;
+			long start = System.currentTimeMillis();
+			for (int run = 0; run < numRuns; run++) {
+				Properties runProps = new Properties(properties);
+				HyperNEATEvolver evolver = (HyperNEATEvolver) runProps.singletonObjectProperty(HyperNEATEvolver.class);
+				double[] performance;
+				try {
+					performance = evolver.run();
+				} catch (Exception e) {
+					e.printStackTrace();
+					return false;
+				}
+				finalGen = evolver.getGeneration();
+				evolver.dispose();
+
+				envSolved = performance[performance.length - 1] >= 0.9;
+				if (envSolved) {
+					runCount = run + 1;
+					break;
+				}
+			}
+			long finish = System.currentTimeMillis();
+			
+			System.out.println((envSolved ? ("  solved after " + runCount + " runs at generation " + finalGen + ".") : "  not solved.") + " Took " + ((finish-start)/60000f) + " minutes.");
+
+			return envSolved;
+		}
+	}
+
+	public void modifiedRun() throws Exception {
+		if (properties == null) {
+			properties = propertiesFiles.get(0);
+		}
+
+		properties.remove(HyperNEATConfiguration.OUTPUT_DIR_KEY);
+		properties.setProperty("log4j.rootLogger", "OFF");
+		configureLog4J(true);
+
+		int envCount = 50;
+		ArrayList<EnvRunSet> envTasks = new ArrayList<EnvRunSet>(envCount);
+		Random r = new Random();
+		for (int e = 0; e < envCount; e++) {
+			envTasks.add(new EnvRunSet(new Properties(properties), r.nextLong()));
+		}
+
+		ExecutorService executor = Executors.newFixedThreadPool(8);
+		List<Future<Boolean>> results = executor.invokeAll(envTasks);
+		executor.shutdown();
+
+		int envSolvedCount = 0;
+		for (Future<Boolean> result : results) {
+			if (result.get())
+				envSolvedCount++;
+		}
+
+		System.out.println("\nSOLVED " + envSolvedCount + " ENVIRONMENTS OF SIZE " + properties.getIntProperty(RLRecurrentNetworkBased.SIZE));
+	}
+	 */
+}

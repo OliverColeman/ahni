@@ -1,6 +1,8 @@
 package com.ojcoleman.ahni.hyperneat;
 
 import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.jgapcustomised.BulkFitnessFunction;
 
@@ -13,6 +15,7 @@ import com.anji.integration.Transcriber;
  */
 public class Properties extends com.anji.util.Properties {
 	private static final long serialVersionUID = 1L;
+	
 	private HyperNEATEvolver evolver;
 	
 	/**

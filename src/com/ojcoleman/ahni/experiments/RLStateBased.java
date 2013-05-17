@@ -61,8 +61,7 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 	public static final String ACTION_COUNT_MAX = "fitness.function.rlstate.actions.maximum";
 	/**
 	 * The performance indicating when the environment size/difficulty should be increased as the current size has been
-	 * sufficiently mastered. Performance is calculated as a proportion of the maximum possible fitness (which is the
-	 * sum of
+	 * sufficiently mastered.
 	 */
 	public static final String DIFFICULTY_INCREASE_PERFORMANCE = "fitness.function.rlstate.difficulty.increase.performance";
 	/**
@@ -288,7 +287,9 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 			//return (int) Math.round(getMaxFitnessValue() * reward);
 			//return (int) Math.round(getMaxFitnessValue() * (genotype.getPerformanceValue() * 0.75 + reward * 0.25));
 			//return (int) Math.round(getMaxFitnessValue() * genotype.getPerformanceValue());
-			return (int) Math.round(getMaxFitnessValue() * avgRewardForEachTrial[trialCount-1]); // Result of final trials.
+			//return (int) Math.round(getMaxFitnessValue() * avgRewardForEachTrial[trialCount-1]); // Result of final trials.
+			// Result of final trials and percentage solved.
+			return (int) Math.round(getMaxFitnessValue() * (avgRewardForEachTrial[trialCount-1] * 0.5 + genotype.getPerformanceValue() * 0.5)); 
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -304,11 +305,12 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 			if (delta >= 1) {
 				if (!isFactor) {
 					stateCount += (int) Math.round(delta);
+					increasedDifficulty = true;
 				} else if (delta > 1) {
 					stateCount = Math.max(1, (int) Math.round(stateCount * delta));
+					increasedDifficulty = true;
 				}
 			}
-			increasedDifficulty = true;
 		}
 
 		if (actionCount < props.getIntProperty(ACTION_COUNT_MAX)) {
@@ -318,11 +320,12 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 			if (delta >= 1) {
 				if (!isFactor) {
 					actionCount += (int) Math.round(delta);
+					increasedDifficulty = true;
 				} else if (delta > 1) {
 					actionCount = Math.max(1, (int) Math.round(actionCount * delta));
+					increasedDifficulty = true;
 				}
 			}
-			increasedDifficulty = true;
 		}
 		return increasedDifficulty;
 	}

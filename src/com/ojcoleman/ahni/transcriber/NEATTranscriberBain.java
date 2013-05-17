@@ -1,9 +1,11 @@
 package com.ojcoleman.ahni.transcriber;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -17,6 +19,7 @@ import com.ojcoleman.bain.base.SynapseConfiguration;
 import com.ojcoleman.bain.neuron.rate.NeuronCollectionWithBias;
 
 import org.apache.log4j.Logger;
+import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.Chromosome;
 
 import com.amd.aparapi.Kernel;
@@ -25,11 +28,14 @@ import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
 import com.anji.neat.ConnectionAllele;
 import com.anji.neat.NeatChromosomeUtility;
+import com.anji.neat.NeatConfiguration;
 import com.anji.neat.NeuronAllele;
 import com.anji.neat.NeuronType;
 
 import com.anji.nn.RecurrencyPolicy;
+import com.ojcoleman.ahni.evaluation.AHNIFitnessFunction;
 import com.ojcoleman.ahni.hyperneat.Configurable;
+import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.nn.BainNN;
 import com.ojcoleman.ahni.nn.NNAdaptor;
@@ -61,6 +67,8 @@ public class NEATTranscriberBain extends TranscriberAdaptor<BainNN> implements C
 
 	private Properties props;
 	private RecurrencyPolicy recurrencyPolicy = RecurrencyPolicy.BEST_GUESS;
+	
+	private int inputSize = -1, outputSize = -1;
 
 	public NEATTranscriberBain() {
 	}
@@ -73,8 +81,42 @@ public class NEATTranscriberBain extends TranscriberAdaptor<BainNN> implements C
 	 * @see Configurable#init(Properties)
 	 */
 	public void init(Properties props) {
+		super.init(props);
+		
 		this.props = props;
 		recurrencyPolicy = RecurrencyPolicy.load(props);
+		
+		// If this appears to be a "HyperNEAT compatible" properties file, attempt to determine substrate 
+		// input and output size from layer dimensions unless these are explicitly specified in properties. 
+		if (props.containsKey(HyperNEATTranscriber.SUBSTRATE_DEPTH) && !(props.containsKey(NeatConfiguration.STIMULUS_SIZE_KEY) || props.containsKey(NeatConfiguration.RESPONSE_SIZE_KEY))) {
+			int depth = props.getIntProperty(HyperNEATTranscriber.SUBSTRATE_DEPTH);
+			int[] width = HyperNEATTranscriber.getProvisionalLayerSize(props, HyperNEATTranscriber.SUBSTRATE_WIDTH);
+			int[] height = HyperNEATTranscriber.getProvisionalLayerSize(props, HyperNEATTranscriber.SUBSTRATE_HEIGHT);
+			
+			// Determine width and height of input and output layer if available.
+			BulkFitnessFunction bulkFitnessFunc = (BulkFitnessFunction) props.singletonObjectProperty(HyperNEATEvolver.FITNESS_FUNCTION_CLASS_KEY);
+			AHNIFitnessFunction ahniFitnessFunc = (bulkFitnessFunc instanceof AHNIFitnessFunction) ? (AHNIFitnessFunction) bulkFitnessFunc : null;
+			for (int layer = 0; layer < depth; layer += depth-1) {
+				// If the fitness function is to define this layer.
+				if (width[layer] == -1 || height[layer] == -1) {
+					int[] layerDims = ahniFitnessFunc != null ? ahniFitnessFunc.getLayerDimensions(layer, depth) : null;
+					if (layerDims != null) {
+						if (width[layer] == -1) {
+							width[layer] = layerDims[0];
+						}
+						if (height[layer] == -1) {
+							height[layer] = layerDims[1];
+						}
+						logger.info("Fitness function defines dimensions for layer " + layer + ": " + width[layer] + "x" + height[layer]);
+					} else {
+						throw new IllegalArgumentException("Properties specify that fitness function should specify layer dimensions for layer " + layer + " but fitness function does not specify this.");
+					}
+				}
+			}
+			
+			inputSize = width[0] * height[0];
+			outputSize = width[depth-1] * height[depth-1];
+		}
 	}
 
 	/**
@@ -100,44 +142,21 @@ public class NEATTranscriberBain extends TranscriberAdaptor<BainNN> implements C
 	 * @throws TranscriberException
 	 */
 	public BainNN newBainNN(Chromosome genotype) throws TranscriberException {
-		// Map from innovation ID to neuron ID in Bain network.
-		Map<Long, Integer> allNeurons = new HashMap<Long, Integer>();
-		int bainNeuronID = 0;
-
-		// Input neurons
-		SortedMap<Long, NeuronAllele> inNeuronAlleles = (SortedMap<Long, NeuronAllele>) NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.INPUT);
-		Iterator<NeuronAllele> nit = inNeuronAlleles.values().iterator();
-		while (nit.hasNext()) {
-			NeuronAllele neuronAllele = nit.next();
-			allNeurons.put(neuronAllele.getInnovationId(), bainNeuronID);
-			bainNeuronID++;
-		}
-
-		// Hidden neurons
-		SortedMap<Long, NeuronAllele> hiddenNeuronAlleles = (SortedMap<Long, NeuronAllele>) NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.HIDDEN);
-		nit = hiddenNeuronAlleles.values().iterator();
-		while (nit.hasNext()) {
-			NeuronAllele neuronAllele = nit.next();
-			allNeurons.put(neuronAllele.getInnovationId(), bainNeuronID);
-			bainNeuronID++;
-		}
-
-		// Output neurons
-		SortedMap<Long, NeuronAllele> outNeuronAlleles = (SortedMap<Long, NeuronAllele>) NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.OUTPUT);
-		HashSet<Integer> outNeuronIDs = new HashSet<Integer>();
-		nit = outNeuronAlleles.values().iterator();
-		while (nit.hasNext()) {
-			NeuronAllele neuronAllele = nit.next();
-			outNeuronIDs.add(bainNeuronID);
-			allNeurons.put(neuronAllele.getInnovationId(), bainNeuronID);
-			bainNeuronID++;
-		}
-
+		List<NeuronAllele> neuronAlleles = new LinkedList<NeuronAllele>();
+		List<NeuronAllele> inputNeuronAlleles = NeatChromosomeUtility.getNeuronList(genotype.getAlleles(), NeuronType.INPUT);
+		List<NeuronAllele> outputNeuronAlleles = NeatChromosomeUtility.getNeuronList(genotype.getAlleles(), NeuronType.OUTPUT);
+		
+		// Collect together all neuron alleles, with input first, hidden next, and output last (this is the order than Bain networks should be in).
+		neuronAlleles.addAll(inputNeuronAlleles);
+		neuronAlleles.addAll(NeatChromosomeUtility.getNeuronList(genotype.getAlleles(), NeuronType.HIDDEN));
+		neuronAlleles.addAll(outputNeuronAlleles);
+		
+		// Get all connection alleles.
 		List<ConnectionAllele> remainingConnAlleles = NeatChromosomeUtility.getConnectionList(genotype.getAlleles());
-
-		int neuronCount = allNeurons.size();
+		
+		int neuronCount = neuronAlleles.size();
 		int synapseCount = remainingConnAlleles.size();
-
+		
 		NeuronCollection neurons = null;
 		SynapseCollection synapses = null;
 		String neuronModelClass = props.getProperty(TranscriberAdaptor.SUBSTRATE_NEURON_MODEL, "com.ojcoleman.bain.neuron.rate.SigmoidNeuronCollection");
@@ -155,14 +174,28 @@ public class NEATTranscriberBain extends TranscriberAdaptor<BainNN> implements C
 			throw new TranscriberException("Error creating synapses for Bain neural network. Have you specified the name of the synapse collection class correctly, including the containing packages?", e);
 		}
 
-		// For each neuron store the list of neurons which have connections to it.
-		Map<Integer, Set<Integer>> neuronSourceIDs = new HashMap<Integer, Set<Integer>>();
-		for (Integer id : allNeurons.values()) {
-			neuronSourceIDs.put(id, new HashSet<Integer>());
+		Map<Long, Integer> allNeurons = new HashMap<Long, Integer>(); // Map from innovation ID to neuron ID in Bain network, and get bias values.
+		Collection<Long> outputInnoIDs = new ArrayList<Long>(); // Collect a list of output neuron innovation IDs for later use.
+		int bainNeuronID = 0;
+		Iterator<NeuronAllele> nit = neuronAlleles.iterator();
+		boolean biasNeuronModel = neurons instanceof NeuronCollectionWithBias;
+		while (nit.hasNext()) {
+			NeuronAllele neuronAllele = nit.next();
+			allNeurons.put(neuronAllele.getInnovationId(), bainNeuronID);
+
+			if (biasNeuronModel) {
+				((NeuronCollectionWithBias) neurons).setBias(bainNeuronID, neuronAllele.getBias());
+			}
+			
+			if (neuronAllele.getType() == NeuronType.OUTPUT) {
+				outputInnoIDs.add(neuronAllele.getInnovationId());
+			}
+			
+			bainNeuronID++;
 		}
 
 		// Connections.
-		Set<Long> currentNeuronInnovationIds = new HashSet<Long>(outNeuronAlleles.keySet());
+		Set<Long> currentNeuronInnovationIds = new HashSet<Long>(outputInnoIDs);
 		Set<Long> nextNeuronInnovationIds = new HashSet<Long>();
 		Iterator<ConnectionAllele> cit;
 		int bainConnectionID = 0;
@@ -178,7 +211,6 @@ public class NEATTranscriberBain extends TranscriberAdaptor<BainNN> implements C
 				synapses.setPreAndPostNeurons(bainConnectionID, src, dest);
 				synapses.setEfficacy(bainConnectionID, connAllele.getWeight());
 				nextNeuronInnovationIds.add(connAllele.getSrcNeuronId());
-				neuronSourceIDs.get(dest).add(src);
 				bainConnectionID++;
 			}
 			currentNeuronInnovationIds.clear();
@@ -206,8 +238,8 @@ public class NEATTranscriberBain extends TranscriberAdaptor<BainNN> implements C
 		String execModeName = props.getProperty(BainNN.SUBSTRATE_EXECUTION_MODE, null);
 		Kernel.EXECUTION_MODE execMode = execModeName == null ? null : Kernel.EXECUTION_MODE.valueOf(execModeName);
 		NeuralNetwork nn = new NeuralNetwork(simRes, neurons, synapses, execMode);
-		int[] inputDims = new int[] { inNeuronAlleles.size() };
-		int[] outputDims = new int[] { outNeuronAlleles.size() };
+		int[] inputDims = new int[] { inputNeuronAlleles.size() };
+		int[] outputDims = new int[] { outputNeuronAlleles.size() };
 		try {
 			return new BainNN(nn, inputDims, outputDims, cyclesPerStep, topology, "network " + genotype.getId(), 1000);
 		} catch (Exception e) {
@@ -221,4 +253,17 @@ public class NEATTranscriberBain extends TranscriberAdaptor<BainNN> implements C
 	public Class getPhenotypeClass() {
 		return BainNN.class;
 	}
+	
+	@Override
+	public int getChromosomeInputNeuronCount() {
+		if (inputSize == -1) return super.getChromosomeInputNeuronCount(); 
+		return inputSize;
+	}
+	
+	@Override
+	public int getChromosomeOutputNeuronCount() {
+		if (outputSize == -1) return super.getChromosomeOutputNeuronCount(); 
+		return outputSize;
+	}
+	
 }

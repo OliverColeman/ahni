@@ -481,8 +481,8 @@ public class Genotype implements Serializable {
 			selector.empty();
 			
 			// Sometimes the fittest can be removed if its species is too large (when using speciated fitness, 
-			// in selection an individuals fitness is divided by it's species size).
-			if (!m_chromosomes.contains(fittest)) {
+			// in selection an individuals fitness is divided by it's species size)?
+			if (fittest.getSpecie().getStagnantGenerationsCount() < selector.maxStagnantGenerations && !m_chromosomes.contains(fittest)) {
 				m_chromosomes.add(fittest);
 			}
 			

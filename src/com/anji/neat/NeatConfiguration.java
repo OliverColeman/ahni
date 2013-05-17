@@ -180,6 +180,12 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	 */
 	public final static String INITIAL_TOPOLOGY_ACTIVATION_RANDOM_PROBABILITIES_KEY = "initial.topology.activation.random.probabilities";
 	
+	/**
+	 * properties key, if "true" then bias should be provided to the network via an input, with value set by fitness function (old way of doing it), 
+	 * if "false" then the neurons will use internal bias values (new way). Default is "true".
+	 */
+	public final static String BIAS_VIA_INPUT_KEY = "bias.via.input";
+
 
 	private Properties props;
 	protected CloneReproductionOperator cloneOper = null;
@@ -191,6 +197,7 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	protected String hiddenActivationType;
 	protected String[] hiddenActivationTypeRandomAllowed;
 	protected double[] hiddenActivationTypeRandomDistribution;
+	protected boolean biasViaInput = true;
 	private NeatIdMap neatIdMap;
 	
 	/**
@@ -269,6 +276,8 @@ public class NeatConfiguration extends Configuration implements Configurable {
 			logger.error(msg, e);
 			throw new InvalidConfigurationException(msg);
 		}
+		
+		biasViaInput = props.getBooleanProperty(BIAS_VIA_INPUT_KEY, biasViaInput);
 
 		// make sure numbers add up
 		double survivalRate = props.getDoubleProperty(SURVIVAL_RATE_KEY, DEFAULT_SURVIVAL_RATE);
@@ -422,7 +431,7 @@ public class NeatConfiguration extends Configuration implements Configurable {
 		} else {
 			funcType = hiddenActivationType;
 		}		
-		return newNeuronAllele(type, nextInnovationId(), funcType);
+		return newNeuronAllele(type, nextInnovationId(), funcType, 0);
 	}
 
 	/**
@@ -439,11 +448,11 @@ public class NeatConfiguration extends Configuration implements Configurable {
 			id = nextInnovationId();
 			neatIdMap.putNeuronId(connectionId, id);
 		}
-		return newNeuronAllele(NeuronType.HIDDEN, id, hiddenActivationType);
+		return newNeuronAllele(NeuronType.HIDDEN, id, hiddenActivationType, 0);
 	}
 	
 	// Provides special handling for funcType == "random"
-	private NeuronAllele newNeuronAllele(NeuronType type, Long id, String funcType) {
+	private NeuronAllele newNeuronAllele(NeuronType type, Long id, String funcType, double bias) {
 		if (funcType.equals("random")) {
 			double p = getRandomGenerator().nextDouble();
 			int index = 0;
@@ -452,7 +461,7 @@ public class NeatConfiguration extends Configuration implements Configurable {
 		}
 
 		NeuronGene gene = new NeuronGene(type, id, funcType);
-		return new NeuronAllele(gene);
+		return new NeuronAllele(gene, bias);
 	}
 
 	/**
@@ -517,6 +526,15 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	 */
 	public double getMinConnectionWeight() {
 		return minConnectionWeight;
+	}
+	
+	/**
+	 * Returns true if bias should be provided to the network via an input with value set by fitness function (old way of doing it), 
+	 * or false then the neurons will use internal bias values (new way).
+	 * @see #BIAS_VIA_INPUT_KEY
+	 */
+	public boolean biasViaInput() {
+		return biasViaInput;
 	}
 
 	/**

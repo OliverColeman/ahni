@@ -12,6 +12,8 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.commons.lang3.math.NumberUtils;
+
 import com.esotericsoftware.wildcard.Paths;
 
 /**
@@ -57,6 +59,18 @@ public class PostProcess {
 				resultsWriter.close();
 				System.out.println("Wrote combined results to " + output.getAbsolutePath());
 			}
+			else if (op.equals("extractFinal") || op.equals("ef")) {
+				if (args.size() != 2) {
+					System.err.println("It looks like you have too many arguments, this is probably because the input result file glob pattern was not enclosed in quoation marks.\n");
+					printUsageAndExit();
+				}
+				String inputFiles = args.removeFirst().replace("\"", "").replace("'", "");
+				File output = new File(args.removeFirst());
+				BufferedWriter resultsWriter = new BufferedWriter(new FileWriter(output));
+				extractFinal(inputFiles, resultsWriter);
+				resultsWriter.close();
+				System.out.println("Wrote extracted results to " + output.getAbsolutePath());
+			}
 			else {
 				printUsageAndExit();
 			}
@@ -72,12 +86,18 @@ public class PostProcess {
 	private static void printUsageAndExit() {
 		System.out.println("The post process utility performs post processing on a result file from a set of runs.");
 		System.out.println("Usage:\n<post process command> <op> <input file> [<output file>] [options]");
-		System.out.println("  op may be generateStats (ga) or compressAverage (ca).");
+		System.out.println("  op may be generateStats (ga), compressAverage (ca) or extractFinal (ef).");
 		System.out.println("    gs: calculates basic statistics over all runs for each generation.");
 		System.out.println("    ca: For each run, computes averages over some number of generations (the window size) within the run.");
 		System.out.println("        The default number of result values for each run in the output file is 100,");
 		System.out.println("        but a different number of result values can be specified after the name of the output file.");
 		System.out.println("    cr:  Combine the result files from multiple runs into one file.");
+		System.out.println("        The <input file> argument should be the path to the result files as a glob pattern. The pattern ");
+		System.out.println("        supports the typical glob format, and in order to match more than one file must necessarily include");
+		System.out.println("        wildcard characters such as ? or *. NOTE: the input file pattern should be enclosed in quotation");
+		System.out.println("        marks to avoid the shell or Java expanding it automatically."); 
+		System.out.println("    ef:  Combine the final line from multiple result files into one file. There will be one line for each");
+		System.out.println("        result file in the output file.");
 		System.out.println("        The <input file> argument should be the path to the result files as a glob pattern. The pattern ");
 		System.out.println("        supports the typical glob format, and in order to match more than one file must necessarily include");
 		System.out.println("        wildcard characters such as ? or *. NOTE: the input file pattern should be enclosed in quotation");
@@ -189,5 +209,40 @@ public class PostProcess {
 		}
 		if (verbose) System.out.println("Combined " + resultCount + " results.");
 		return results;
+	}
+	
+	/**
+	 * Combine the final line from multiple result files into one file. There will be one line for each result file in the output file.
+	 * @param filePattern The path to the result files. The pattern supports the typical glob format, and in 
+	 *   order to match more than one file must necessarily include wildcard characters such as ? or *.
+	 * @param resultsWriter A stream to write the results to.
+	 */
+	public static void extractFinal(String filePattern, BufferedWriter resultsWriter) throws IOException {
+		String baseDir = "./";
+		// If absolute path. TODO handle windows absolute path?
+		if (filePattern.charAt(0) == File.separatorChar) {
+			baseDir = File.separator;
+			filePattern = filePattern.substring(1);
+		}
+		Paths paths = new Paths(baseDir, filePattern);
+		List<File> files = paths.getFiles();
+		Iterator<File> fileItr = files.iterator();
+		int resultCount = 0;
+		while (fileItr.hasNext()) {
+			File f = fileItr.next();
+			System.out.println("Processing " + f.getAbsolutePath());
+			BufferedReader resultReader = new BufferedReader(new FileReader(f));
+			resultsWriter.write(extractLastLine(resultReader) + "\n");
+			resultCount++;
+		}
+		System.out.println("Combined final lines from " + resultCount + " results.");
+	}
+
+	private static String extractLastLine(BufferedReader input) throws IOException {
+		String lastLine = null, line = null;
+		while ((line = input.readLine()) != null) {
+			lastLine = line;
+		}
+		return lastLine;
 	}
 }

@@ -101,4 +101,73 @@ public abstract class NNAdaptor implements Activator {
 	public boolean render(Graphics2D g, int width, int height, int nodeSize) {
 		return false;
 	}
+	
+	
+	/**
+	 * Retrieve the output from network for the given input. 
+	 * This method accepts an array to store the output of the network in, rather than possibly
+	 * creating a new output array for every call. This default implementation simply copies
+	 * the output of {@link #next(double[])} to the given output array, but sub-classes may
+	 * override this method more efficiently. 
+	 *   
+	 * @param stimuli The input to the network.
+	 * @param output An array to put the output from the network in.
+	 */
+	public void next(double[] stimuli, double[] output) {
+		double[] o = next(stimuli);
+		System.arraycopy(o, 0, output, 0, o.length);
+	}
+
+	/**
+	 * Retrieve a set of output vectors from network for the given sequence of input vectors. 
+	 * This method accepts an array to store the output of the network in, rather than possibly
+	 * creating a new output array for every call. This default implementation simply copies
+	 * the output of {@link #next(double[][])} to the given output array, but sub-classes may
+	 * override this method more efficiently. 
+	 *   
+	 * @param stimuli An array of input vector arrays.
+	 * @param output An array of output vector arrays to put the sequence of output vector values in.
+	 */
+	public void nextSequence(double[][] stimuli, double[][] output) {
+		double[][] o = nextSequence(stimuli);
+		for (int i = 0; i < stimuli.length; i++) {
+			System.arraycopy(o[i], 0, output[i], 0, o[i].length);
+		}
+	}
+
+	/**
+	 * Retrieve the output from network for the given input. 
+	 * This method accepts an array to store the output of the network in, rather than possibly
+	 * creating a new output array for every call. This default implementation simply copies
+	 * the output of {@link #next(double[][])} to the given output array, but sub-classes may
+	 * override this method more efficiently. 
+	 *   
+	 * @param stimuli The input to the network.
+	 * @param output An array to put the output from the network in.
+	 */
+	public void next(double[][] stimuli, double[][] output) {
+		double[][] o = next(stimuli);
+		for (int i = 0; i < stimuli.length; i++) {
+			System.arraycopy(o[i], 0, output[i], 0, o[i].length);
+		}
+	}
+
+	/**
+	 * Retrieve a set of output matrices from network for the given sequence of input matrices. 
+	 * This method accepts an array to store the output of the network in, rather than possibly
+	 * creating a new output array for every call. This default implementation simply copies
+	 * the output of {@link #nextSequence(double[][][])} to the given output array, but sub-classes may
+	 * override this method more efficiently. 
+	 *   
+	 * @param stimuli An array of input matrix arrays.
+	 * @param output An array of output matrix arrays to put the sequence of output matrix values in.
+	 */
+	public void nextSequence(double[][][] stimuli, double[][][] output) {
+		double[][][] o = nextSequence(stimuli);
+		for (int i = 0; i < o.length; i++) {
+			for (int j = 0; j < o[i].length; j++) {
+				System.arraycopy(o[i][j], 0, output[i][j], 0, o[i][j].length);
+			}
+		}
+	}
 }

@@ -408,7 +408,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 				start = System.currentTimeMillis();
 			}
 			if (properties.logFilesEnabled()) {
-				logChamp(bestPerforming);
+				logChamp(bestPerforming, false);
 				//logChamp(fittest);
 			}
 
@@ -531,12 +531,13 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 		}
 	}
 
-	private void logChamp(Chromosome champ) {
+	public void logChamp(Chromosome champ, boolean force) {
 		boolean finished = evolutionFinished();
-		boolean logString = (finished && logChampToString >= 0) || (logChampToString > 0 && generation % logChampToString == 0);
-		boolean logImage = (finished && logChampToImage >= 0) || (logChampToImage > 0 && generation % logChampToImage == 0);
-		boolean logEvaluation = (finished && logChampEvaluation >= 0) || (logChampEvaluation > 0 && generation % logChampEvaluation == 0);
-		String msg = "best performing substrate from " + (finished ? "final generation" : "from generation " + generation);
+		boolean finishedOrForce = force || evolutionFinished();
+		boolean logString = (finishedOrForce && logChampToString >= 0) || (logChampToString > 0 && generation % logChampToString == 0);
+		boolean logImage = (finishedOrForce && logChampToImage >= 0) || (logChampToImage > 0 && generation % logChampToImage == 0);
+		boolean logEvaluation = (finishedOrForce && logChampEvaluation >= 0) || (logChampEvaluation > 0 && generation % logChampEvaluation == 0);
+		String msg = "best performing substrate from " + (finishedOrForce ? "final generation" : "from generation " + generation);
 		if (logString || logImage || logImage) {
 			try {
 				Map<String, Object> transcribeOptions = new HashMap<String, Object>();

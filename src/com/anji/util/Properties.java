@@ -29,9 +29,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.regexp.RE;
+
+import com.ojcoleman.ahni.util.ArrayUtil;
 
 /**
  * Beefed up version of java.util.Properties used to manage configuration parameters. Adds convenience functions for
@@ -45,6 +50,25 @@ public class Properties extends java.util.Properties {
 	 * made public for unit tests
 	 */
 	public final static String CLASS_SUFFIX = ".class";
+	
+	/**
+	 * Optional property key. If set to "true" then substitutions present in property values will be enabled. 
+	 * Substitutions have the format $([key]), where [key] is the key of another property present in the set of 
+	 * properties, for example:
+	 * <code>
+	 * myProp1=foo
+	 * myProp2=$(myProp2)
+	 * </code> 
+	 * will replace "$(myProp2)" with "foo". Multiple substitutions may be used for the same property, and other 
+	 * characters may surround a substitution:
+	 * <code>
+	 * myProp1=foo
+	 * myProp2=bar$(myProp1)baz
+	 * myProp3=$(myProp2)$(myProp3)
+	 * </code>
+	 */ 
+	private static final String SUBSTITUTION_ENABLE_KEY = "substitution.enable";
+	
 
 	private static Logger logger;
 
@@ -55,6 +79,8 @@ public class Properties extends java.util.Properties {
 	private HashMap<Class, Object> classToSingletonsMap = new HashMap<Class, Object>();
 
 	private String name = "default";
+	
+	private boolean enableSubstitution = false;
 
 	/**
 	 * default constructor
@@ -71,6 +97,7 @@ public class Properties extends java.util.Properties {
 	public Properties(java.util.Properties values) {
 		super();
 		putAll(values);
+		enableSubstitution = containsKey(SUBSTITUTION_ENABLE_KEY) && super.getProperty(SUBSTITUTION_ENABLE_KEY).toLowerCase().equals("true");
 	}
 
 	/**
@@ -96,6 +123,7 @@ public class Properties extends java.util.Properties {
 		java.util.Properties log4jProps = new java.util.Properties();
 		log4jProps.putAll(this);
 		PropertyConfigurator.configure(log4jProps);
+		enableSubstitution = containsKey(SUBSTITUTION_ENABLE_KEY) && super.getProperty(SUBSTITUTION_ENABLE_KEY).toLowerCase().equals("true");
 	}
 
 	/**
@@ -108,6 +136,7 @@ public class Properties extends java.util.Properties {
 		FileReader in = new FileReader(resource);
 		load(in);
 		setName(resource);
+		enableSubstitution = containsKey(SUBSTITUTION_ENABLE_KEY) && super.getProperty(SUBSTITUTION_ENABLE_KEY).toLowerCase().equals("true");
 	}
 
 	/**
@@ -121,7 +150,7 @@ public class Properties extends java.util.Properties {
 	private void log(String key, String value, String defaultValue) {
 		if (logger != null) {
 			synchronized (loggedProps) {
-				if (loggedProps.contains(key) == false) {
+				if (!loggedProps.contains(key)) {
 					StringBuffer log = new StringBuffer("Properties: ");
 					log.append(key).append(" == ").append(value);
 					if (value == null)
@@ -138,11 +167,9 @@ public class Properties extends java.util.Properties {
 	 * @return String property value corresponding to <code>key</code>; throws runtime exception if key not found
 	 */
 	public String getProperty(String key) {
-		String value = super.getProperty(key);
+		String value = getProperty(key, null);
 		if (value == null)
 			throw new IllegalArgumentException("no value for " + key);
-		value = value.trim();
-		log(key, value, null);
 		return value;
 	}
 
@@ -151,10 +178,10 @@ public class Properties extends java.util.Properties {
 	 * @return boolean property value corresponding to <code>key</code>; throws runtime exception if key not found
 	 */
 	public boolean getBooleanProperty(String key) {
-		String value = super.getProperty(key);
+		String value = getProperty(key);
 		if (value == null)
 			throw new IllegalArgumentException("no value for " + key);
-		log(key, value, null);
+		
 		return Boolean.valueOf(value).booleanValue();
 	}
 
@@ -165,10 +192,10 @@ public class Properties extends java.util.Properties {
 	 */
 	public long getLongProperty(String key) {
 		try {
-			String value = super.getProperty(key);
+			String value = getProperty(key);
 			if (value == null)
 				throw new IllegalArgumentException("no value for " + key);
-			log(key, value, null);
+			
 			return Long.parseLong(value);
 		} catch (NumberFormatException e) {
 			throw new IllegalArgumentException("bad value for property " + key + ": " + e);
@@ -182,10 +209,10 @@ public class Properties extends java.util.Properties {
 	 */
 	public int getIntProperty(String key) {
 		try {
-			String value = super.getProperty(key);
+			String value = getProperty(key);
 			if (value == null)
 				throw new IllegalArgumentException("no value for " + key);
-			log(key, value, null);
+			
 			return Integer.parseInt(value);
 		} catch (NumberFormatException e) {
 			throw new IllegalArgumentException("bad value for property " + key + ": " + e);
@@ -199,10 +226,10 @@ public class Properties extends java.util.Properties {
 	 */
 	public short getShortProperty(String key) {
 		try {
-			String value = super.getProperty(key);
+			String value = getProperty(key);
 			if (value == null)
 				throw new IllegalArgumentException("no value for " + key);
-			log(key, value, null);
+			
 			return Short.parseShort(value);
 		} catch (NumberFormatException e) {
 			throw new IllegalArgumentException("bad value for property " + key + ": " + e);
@@ -216,10 +243,10 @@ public class Properties extends java.util.Properties {
 	 */
 	public double getFloatProperty(String key) {
 		try {
-			String value = super.getProperty(key);
+			String value = getProperty(key);
 			if (value == null)
 				throw new IllegalArgumentException("no value for " + key);
-			log(key, value, null);
+			
 			return Float.parseFloat(value);
 		} catch (NumberFormatException e) {
 			throw new IllegalArgumentException("bad value for property " + key + ": " + e);
@@ -233,10 +260,10 @@ public class Properties extends java.util.Properties {
 	 */
 	public double getDoubleProperty(String key) {
 		try {
-			String value = super.getProperty(key);
+			String value = getProperty(key);
 			if (value == null)
 				throw new IllegalArgumentException("no value for " + key);
-			log(key, value, null);
+			
 			return Double.parseDouble(value);
 		} catch (NumberFormatException e) {
 			throw new IllegalArgumentException("bad value for property " + key + ": " + e);
@@ -250,6 +277,21 @@ public class Properties extends java.util.Properties {
 	 */
 	public String getProperty(String key, String defaultVal) {
 		String value = super.getProperty(key);
+		if (value != null && enableSubstitution) {
+			if (value.contains("$(")) {
+				Matcher m = Pattern.compile("\\$\\((.*)\\)").matcher(value);
+				while (m.find()) {
+					String subKey = m.group(1);
+					if (containsKey(subKey)) {
+						value = value.replace("$(" + subKey + ")", getProperty(subKey));
+					}
+					else {
+						throw new IllegalArgumentException("Bad substitution in property " + key + ": could not find referenced property " + subKey + "."); 
+					}
+				}
+				setProperty(key, value);
+			}
+		}
 		log(key, value, defaultVal);
 		return (value == null) ? defaultVal : value;
 	}
@@ -260,8 +302,7 @@ public class Properties extends java.util.Properties {
 	 * @return boolean property value corresponding to <code>key</code>., or <code>defaultVal</code> if key not found
 	 */
 	public boolean getBooleanProperty(String key, boolean defaultVal) {
-		String value = super.getProperty(key);
-		log(key, value, Boolean.toString(defaultVal));
+		String value = getProperty(key, defaultVal ? "true" : "false");
 		return (value == null) ? defaultVal : Boolean.valueOf(value).booleanValue();
 	}
 
@@ -271,8 +312,7 @@ public class Properties extends java.util.Properties {
 	 * @return long property value corresponding to <code>key</code>., or <code>defaultVal</code> if key not found
 	 */
 	public long getLongProperty(String key, long defaultVal) {
-		String value = super.getProperty(key);
-		log(key, value, Long.toString(defaultVal));
+		String value = getProperty(key, ""+defaultVal);
 		return (value == null) ? defaultVal : Long.parseLong(value);
 	}
 
@@ -282,8 +322,7 @@ public class Properties extends java.util.Properties {
 	 * @return int property value corresponding to <code>key</code>., or <code>defaultVal</code> if key not found
 	 */
 	public int getIntProperty(String key, int defaultVal) {
-		String value = super.getProperty(key);
-		log(key, value, Integer.toString(defaultVal));
+		String value = getProperty(key, ""+defaultVal);
 		return (value == null) ? defaultVal : Integer.parseInt(value);
 	}
 
@@ -293,8 +332,7 @@ public class Properties extends java.util.Properties {
 	 * @return short property value corresponding to <code>key</code>., or <code>defaultVal</code> if key not found
 	 */
 	public short getShortProperty(String key, short defaultVal) {
-		String value = super.getProperty(key);
-		log(key, value, Short.toString(defaultVal));
+		String value = getProperty(key, ""+defaultVal);
 		return (value == null) ? defaultVal : Short.parseShort(value);
 	}
 
@@ -304,8 +342,7 @@ public class Properties extends java.util.Properties {
 	 * @return double property value corresponding to <code>key</code>., or <code>defaultVal</code> if key not found
 	 */
 	public float getFloatProperty(String key, float defaultVal) {
-		String value = super.getProperty(key);
-		log(key, value, Float.toString(defaultVal));
+		String value = getProperty(key, ""+defaultVal);
 		return (value == null) ? defaultVal : Float.parseFloat(value);
 	}
 
@@ -315,8 +352,7 @@ public class Properties extends java.util.Properties {
 	 * @return double property value corresponding to <code>key</code>., or <code>defaultVal</code> if key not found
 	 */
 	public double getDoubleProperty(String key, double defaultVal) {
-		String value = super.getProperty(key);
-		log(key, value, Double.toString(defaultVal));
+		String value = getProperty(key, ""+defaultVal);
 		return (value == null) ? defaultVal : Double.parseDouble(value);
 	}
 
@@ -324,8 +360,7 @@ public class Properties extends java.util.Properties {
 	 * Retrieve an array of int values from a comma-separated list.
 	 */
 	public int[] getIntArrayProperty(String key, int[] defaultVal) {
-		String value = super.getProperty(key);
-		log(key, value, Arrays.toString(defaultVal));
+		String value = getProperty(key, defaultVal == null ? null : java.util.Arrays.toString(defaultVal));
 		if (value == null)
 			return defaultVal;
 		return getIntArrayFromString(value);
@@ -335,10 +370,10 @@ public class Properties extends java.util.Properties {
 	 * Retrieve an array of int values from a comma-separated list.
 	 */
 	public int[] getIntArrayProperty(String key) {
-		String value = super.getProperty(key);
+		String value = getProperty(key);
 		if (value == null)
 			throw new IllegalArgumentException("no value for " + key);
-		log(key, value, null);
+		
 		return getIntArrayFromString(value);
 	}
 
@@ -355,8 +390,7 @@ public class Properties extends java.util.Properties {
 	 * Retrieve an array of double values from a comma-separated list.
 	 */
 	public double[] getDoubleArrayProperty(String key, double[] defaultVal) {
-		String value = super.getProperty(key);
-		log(key, value, java.util.Arrays.toString(defaultVal));
+		String value = getProperty(key, defaultVal == null ? null : java.util.Arrays.toString(defaultVal));
 		if (value == null)
 			return defaultVal;
 		return getDoubleArrayFromString(value);
@@ -366,10 +400,10 @@ public class Properties extends java.util.Properties {
 	 * Retrieve an array of double values from a comma-separated list.
 	 */
 	public double[] getDoubleArrayProperty(String key) {
-		String value = super.getProperty(key);
+		String value = getProperty(key);
 		if (value == null)
 			throw new IllegalArgumentException("no value for " + key);
-		log(key, value, null);
+		
 		return getDoubleArrayFromString(value);
 	}
 
@@ -406,8 +440,7 @@ public class Properties extends java.util.Properties {
 	 * that are all doubles.
 	 */
 	public <T> T[] getObjectArrayProperty(String key, Class<T> clazz, T[] defaultObjects, double[] defaultArgs) {
-		String value = super.getProperty(key);
-		log(key, value, "defaults");
+		String value = getProperty(key, defaultArgs == null ? null : java.util.Arrays.toString(defaultArgs));
 		if (value == null) {
 			return defaultObjects;
 		}
@@ -444,7 +477,7 @@ public class Properties extends java.util.Properties {
 	 * that are all doubles.
 	 */
 	public <T> T[] getObjectArrayProperty(String key, Class<T> clazz, double[] defaultArgs) {
-		String value = super.getProperty(key);
+		String value = getProperty(key, defaultArgs == null ? null : java.util.Arrays.toString(defaultArgs));
 		if (value == null)
 			throw new IllegalArgumentException("no value for " + key);
 		return getObjectArrayProperty(key, clazz, null, defaultArgs);
@@ -503,7 +536,7 @@ public class Properties extends java.util.Properties {
 			String key = (String) it.next();
 			if (key.startsWith(prefix)) {
 				result.remove(key);
-				newProps.put(key.substring(prefix.length()), super.getProperty(key));
+				newProps.put(key.substring(prefix.length()), getProperty(key));
 			}
 		}
 		result.putAll(newProps);
@@ -525,7 +558,7 @@ public class Properties extends java.util.Properties {
 		while (it.hasNext()) {
 			String key = (String) it.next();
 			if (key.startsWith(prefix)) {
-				newProps.put(key.substring(prefix.length() + 1), super.getProperty(key));
+				newProps.put(key.substring(prefix.length() + 1), getProperty(key));
 			}
 		}
 		newProps.setName(prefix);
@@ -538,10 +571,10 @@ public class Properties extends java.util.Properties {
 	 *         found
 	 */
 	public File getDirProperty(String key) {
-		String value = super.getProperty(key);
+		String value = getProperty(key);
 		if (value == null)
 			throw new IllegalArgumentException("no value for " + key);
-		log(key, value, null);
+		
 		File result = new File(value);
 		if (result.exists()) {
 			if (result.isDirectory() == false)
@@ -560,10 +593,10 @@ public class Properties extends java.util.Properties {
 	 * @throws FileNotFoundException
 	 */
 	public FileInputStream getFileInputProperty(String key) throws FileNotFoundException {
-		String value = super.getProperty(key);
+		String value = getProperty(key);
 		if (value == null)
 			throw new IllegalArgumentException("no value for " + key);
-		log(key, value, null);
+		
 		return new FileInputStream(value);
 	}
 
@@ -574,10 +607,10 @@ public class Properties extends java.util.Properties {
 	 * @throws FileNotFoundException
 	 */
 	public FileOutputStream getFileOutputProperty(String key) throws FileNotFoundException {
-		String value = super.getProperty(key);
+		String value = getProperty(key);
 		if (value == null)
 			throw new IllegalArgumentException("no value for " + key);
-		log(key, value, null);
+		
 		return new FileOutputStream(value);
 	}
 
@@ -587,10 +620,10 @@ public class Properties extends java.util.Properties {
 	 *         throws runtime exception if key not found
 	 */
 	public InputStream getResourceProperty(String key) {
-		String value = super.getProperty(key);
+		String value = getProperty(key);
 		if (value == null)
 			throw new IllegalArgumentException("no value for " + key);
-		log(key, value, null);
+		
 		return ClassLoader.getSystemResourceAsStream(value);
 	}
 
@@ -686,10 +719,10 @@ public class Properties extends java.util.Properties {
 	 */
 	public Class getClassProperty(String key) {
 		try {
-			String value = super.getProperty(key);
+			String value = getProperty(key);
 			if (value == null)
 				throw new IllegalArgumentException("no value for " + key);
-			log(key, value, null);
+			
 			Class myClass = Class.forName(value);
 			return myClass;
 		} catch (RuntimeException e) {
@@ -706,8 +739,7 @@ public class Properties extends java.util.Properties {
 	 *         <code>key</code>; returns <code>defaultVal</code> if key not found
 	 */
 	public Class getClassProperty(String key, Class defaultVal) {
-		String val = super.getProperty(key);
-		log(key, val, defaultVal.toString());
+		String val = getProperty(key, defaultVal == null ? null : defaultVal.getName());
 		if (val == null)
 			return defaultVal;
 
@@ -829,9 +861,8 @@ public class Properties extends java.util.Properties {
 	 * @return <code>List</code> contains initialized objects
 	 */
 	public List<Object> newObjectListProperty(String key, List<Object> defaultList) {
-		String val = super.getProperty(key);
+		String val = getProperty(key);
 		if (val == null) {
-			log(key, val, defaultList == null ? "null" : defaultList.toString());
 			return defaultList;
 		}
 
@@ -842,7 +873,6 @@ public class Properties extends java.util.Properties {
 			Object o = newObjectProperty(objectName);
 			results.add(o);
 		}
-		log(key, val, null);
 		return results;
 	}
 
