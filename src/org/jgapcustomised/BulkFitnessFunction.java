@@ -32,25 +32,28 @@ import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
  * consideration. This abstract class should be extended and the <code>evaluate(List)</code> method implemented to
  * evaluate each of the Chromosomes given in an array and set their fitness values prior to returning.
  */
-public interface BulkFitnessFunction extends Serializable {
+public abstract class BulkFitnessFunction implements Serializable {
 	/**
 	 * Calculates and sets the fitness values on each of the given Chromosomes via their setFitnessValue() method. May also
 	 * set the performance of a Chromosome if this is calculated independently of fitness. 
 	 * @param subjects {@link Chromosome} objects for which the fitness values must be computed and set.
 	 */
-	public void evaluate(List<Chromosome> subjects);
-
-	/**
-	 * @return Maximum possible fitness value this function will return
-	 */
-	public int getMaxFitnessValue();
+	public abstract void evaluate(List<Chromosome> subjects);
 
 	/**
 	 * @return Return true when an evolutionary run should be completed before the maximum number of generations is complete, false otherwise.
 	 */
-	public boolean endRun();
+	public abstract boolean endRun();
+	
+	/**
+	 * @return Returns the number of objectives being employed. This is only valid for fitness functions and 
+	 * {@link NaturalSelector}s that handle multiple objectives. This default implementation returns 1. 
+	 */
+	public int getObjectiveCount() {
+		return 1;
+	}
 
-	public void dispose();
+	public abstract void dispose();
 
 	/**
 	 * <p><em>Deprecated in favour of event listeners such as {@link org.jgapcustomised.event.GeneticEventListener}
@@ -60,5 +63,5 @@ public interface BulkFitnessFunction extends Serializable {
 	 * @param evolver Methods on this object can be used to obtain the fittest and best performing Chromosomes evolved during the run.
 	 */
 	@Deprecated
-	public void evolutionFinished(HyperNEATEvolver evolver);
+	public abstract void evolutionFinished(HyperNEATEvolver evolver);
 }

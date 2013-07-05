@@ -22,9 +22,14 @@
  */
 package org.jgapcustomised.impl;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.jgapcustomised.Chromosome;
+import org.jgapcustomised.ChromosomeFitnessComparator;
+import org.jgapcustomised.ChromosomeMaterial;
 import org.jgapcustomised.Configuration;
 import org.jgapcustomised.ReproductionOperator;
 
@@ -43,7 +48,7 @@ public class CloneReproductionOperator extends ReproductionOperator {
 	 * @param offspring <code>List</code> contains ChromosomeMaterial objects
 	 * @see org.jgapcustomised.ReproductionOperator#reproduce(Configuration, List, int, List)
 	 */
-	protected void reproduce(Configuration config, List parents, int numOffspring, List offspring) {
+	protected void reproduce(final Configuration config, final List<Chromosome> parents, int numOffspring, List<ChromosomeMaterial> offspring) {
 		reproduce(parents, numOffspring, offspring);
 	}
 
@@ -54,11 +59,13 @@ public class CloneReproductionOperator extends ReproductionOperator {
 	 * @param numOffspring
 	 * @param offspring <code>List</code> contains <code>ChromosomeMaterial</code> objects
 	 */
-	public static void reproduce(List parents, int numOffspring, List offspring) {
-		// TODO - sort parents by fitness to favor fittest?
-		int parentsSize = parents.size();
-		for (int i = 0; i < numOffspring; ++i) {
-			Chromosome parent = (Chromosome) parents.get(i % parentsSize);
+	@SuppressWarnings("unchecked")
+	public static void reproduce(final List<Chromosome> parents, int numOffspring, List<ChromosomeMaterial> offspring) {
+		// Sort fittest first to ensure we include these (and more than once if numOffspring is greater than number of parents).
+		List<Chromosome> parentsSorted = new ArrayList<Chromosome>(parents);
+		Collections.sort(parentsSorted, new ChromosomeFitnessComparator(false, false));
+		for (int i = 0; i < numOffspring; i++) {
+			Chromosome parent = parentsSorted.get(i % parentsSorted.size());
 			offspring.add(parent.cloneMaterial());
 		}
 	}

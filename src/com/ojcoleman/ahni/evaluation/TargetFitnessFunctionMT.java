@@ -63,23 +63,6 @@ public class TargetFitnessFunctionMT extends BulkFitnessFunctionMT {
 		super.init(props);
 		fitnessCalculator = (TargetFitnessCalculator) props.newObjectProperty(TargetFitnessCalculator.class);
 	}
-
-	/**
-	 * @return maximum possible fitness value for this function.
-	 */
-	public int getMaxFitnessValue() {
-		return fitnessCalculator.getMaxFitnessValue();
-	}
-
-	/**
-	 * Sets the maximum possible fitness value this function will return. Default is 1000000 which is fine for nearly
-	 * all purposes.
-	 * 
-	 * @param newMaxFitnessValue The new maximum fitness.
-	 */
-	protected void setMaxFitnessValue(int newMaxFitnessValue) {
-		fitnessCalculator.setMaxFitnessValue(newMaxFitnessValue);
-	}
 	
 	/**
 	 * Set the input and target output pattern pairs to use for evaluations.
@@ -98,18 +81,18 @@ public class TargetFitnessFunctionMT extends BulkFitnessFunctionMT {
 	}
 
 	@Override
-	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
-		return evaluate(genotype, substrate, null);
+	protected double evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
+		return evaluate(genotype, substrate, null, false, false);
 	}
 	
 	@Override
-	public int evaluate(Chromosome genotype, Activator substrate, String baseFileName) {
+	public double evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
 		if (baseFileName == null) {
 			TargetFitnessCalculator.Results results = fitnessCalculator.evaluate(substrate, inputPatterns, targetOutputPatterns, minTargetOutputValue, maxTargetOutputValue, null);
 			genotype.setPerformanceValue(results.performance);
 			return results.fitness;
 		}
-		else {
+		else if (logText) {
 			try {
 				NiceWriter outputFile = new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
 				TargetFitnessCalculator.Results results = fitnessCalculator.evaluate(substrate, inputPatterns, targetOutputPatterns, minTargetOutputValue, maxTargetOutputValue, outputFile);
@@ -118,7 +101,7 @@ public class TargetFitnessFunctionMT extends BulkFitnessFunctionMT {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			return 0;
 		}
+		return 0;
 	}
 }

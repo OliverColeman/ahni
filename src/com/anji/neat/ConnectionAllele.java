@@ -128,4 +128,12 @@ public class ConnectionAllele extends Allele {
 	public Long getDestNeuronId() {
 		return connectionGene.getDestNeuronId();
 	}
+
+	@Override
+	public boolean isEquivalent(Allele otherAllele) {
+		if (!(otherAllele instanceof ConnectionAllele))
+			return false;
+		ConnectionAllele other = (ConnectionAllele) otherAllele;
+		return getSrcNeuronId() == other.getSrcNeuronId() && getDestNeuronId() == other.getDestNeuronId() && weight == other.weight;
+	}
 }

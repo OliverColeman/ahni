@@ -79,7 +79,7 @@ public class Evaluator {
 		Iterator it = chroms.iterator();
 		while (it.hasNext()) {
 			Chromosome chrom = (Chromosome) it.next();
-			logger.info(chrom.toString() + ": fitness = " + chrom.getFitnessValue() + "/" + fitnessFunc.getMaxFitnessValue());
+			logger.info(chrom.toString() + ": fitness = " + chrom.getFitnessValue());
 		}
 	}
 

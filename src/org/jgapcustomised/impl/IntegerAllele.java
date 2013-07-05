@@ -587,4 +587,11 @@ public class IntegerAllele extends Allele {
 		}
 	}
 
+
+	@Override
+	public boolean isEquivalent(Allele otherAllele) {
+		if (!(otherAllele instanceof IntegerAllele))
+			return false;
+		return m_value == ((IntegerAllele) otherAllele).m_value;
+	}
 }

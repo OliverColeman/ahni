@@ -49,7 +49,6 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 	// unique directory for images for this run
 	String imageDir;
 
-	private static int maxFitnessValue = 1000000;
 	private static int numTrials = 200;
 
 	private Properties properties;
@@ -80,7 +79,6 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 	private boolean[] targetPresent;
 	private BufferedImage[] stimuliImages;
 
-	private double maxDistance;
 	private Path2D.Float[] shapes;
 	private Path2D.Float target;
 
@@ -127,7 +125,6 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 												// board
 		int maxXDelta = inputWidth - deltaAdjust;
 		int maxYDelta = inputHeight - deltaAdjust;
-		maxDistance = (double) Math.sqrt(maxXDelta * maxXDelta + maxYDelta * maxYDelta);
 
 		if (saveImages) {
 			// unique directory for images for this run
@@ -278,13 +275,6 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 	}
 
 	/**
-	 * @return maximum possible fitness value for this function
-	 */
-	public int getMaxFitnessValue() {
-		return maxFitnessValue;
-	}
-
-	/**
 	 * Initialise data for the current evaluation run (for each generation).
 	 */
 	public void initialiseEvaluation() {
@@ -365,7 +355,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 		canvas.draw(s);
 	}
 
-	protected int evaluate(Chromosome genotype, Activator activator, int threadIndex) {
+	protected double evaluate(Chromosome genotype, Activator activator, int threadIndex) {
 		GridNet substrate = (GridNet) activator;
 		double[][][] responses = substrate.nextSequence(stimuli);
 		/*
@@ -559,7 +549,7 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 			}
 		}
 
-		return (int) Math.round(fitness * maxFitnessValue);
+		return fitness;
 	}
 
 	@Override

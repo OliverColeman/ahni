@@ -580,7 +580,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriberBainBase imp
 
 	public class QuadPoint extends Point {
 		public double cppnValue; // stores the CPPN value
-		public double leo; // stores the CPPN LEO output value (if LEO enabled). 
+		public boolean leo; // stores the CPPN LEO output value (if LEO enabled). 
 		public double width; // width of this quad tree square
 		public QuadPoint[] children;
 		public int level; // the level in the quad tree
@@ -698,8 +698,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriberBainBase imp
 					//child.cppnValue = cppn.getRangedWeight();
 				}
 				
-				if (enableLEO)
-					child.leo = cppn.getLEO();
+				child.leo = cppn.getLEO();
 				
 				/*if (firstTime) {
 					int hwI = (int) Math.round(childWidth * w);
@@ -760,7 +759,7 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriberBainBase imp
 			double childVariance = variance(child, tempStorageForCPPNValues);
 			if (childVariance >= varianceThreshold) {
 				pruneAndExpress(cppn, neuron, connections, child, outgoing, tempStorageForCPPNValues);
-			} else if (!enableLEO || child.leo > 0) { // If LEO disabled this should always happen for at least the leaf nodes because their variance is zero.
+			} else if (child.leo) { // If LEO disabled this should always happen for at least the leaf nodes because their variance is zero.
 				// Determine if point is in a band by checking neighbour CPPN values.
 				double width = root.width;
 				if (outgoing) {

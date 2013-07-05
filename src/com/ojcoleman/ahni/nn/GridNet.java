@@ -21,6 +21,7 @@ import java.awt.Graphics2D;
 import com.anji.integration.Activator;
 import com.anji.nn.activationfunction.ActivationFunction;
 import com.anji.nn.activationfunction.ActivationFunctionFactory;
+import com.ojcoleman.ahni.nn.BainNN.Topology;
 
 public class GridNet implements Activator {
 
@@ -839,5 +840,11 @@ public class GridNet implements Activator {
 
 	@Override
 	public void dispose() {
+	}
+	
+
+	@Override
+	public boolean isRecurrent() {
+		return !isFeedForward();
 	}
 }

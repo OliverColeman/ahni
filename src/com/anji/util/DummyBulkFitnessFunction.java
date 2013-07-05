@@ -18,7 +18,7 @@ import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 /**
  * @author Philip Tucker
  */
-public class DummyBulkFitnessFunction implements BulkFitnessFunction {
+public class DummyBulkFitnessFunction extends BulkFitnessFunction {
 
 	private Random rand = null;
 
@@ -39,7 +39,7 @@ public class DummyBulkFitnessFunction implements BulkFitnessFunction {
 	}
 
 	private void evaluate(Chromosome a_subject) {
-		a_subject.setFitnessValue(rand.nextInt(100));
+		a_subject.setFitnessValue(rand.nextDouble());
 	}
 
 	/**
@@ -51,17 +51,6 @@ public class DummyBulkFitnessFunction implements BulkFitnessFunction {
 			Chromosome c = (Chromosome) it.next();
 			evaluate(c);
 		}
-	}
-
-	/**
-	 * @see org.jgapcustomised.BulkFitnessFunction#getMaxFitnessValue()
-	 */
-	public int getMaxFitnessValue() {
-		return 100;
-	}
-
-	public double getPerformanceFromFitnessValue(int fitness) {
-		return (double) fitness / getMaxFitnessValue();
 	}
 
 	public boolean endRun() {

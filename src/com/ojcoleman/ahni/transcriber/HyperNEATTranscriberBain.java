@@ -136,7 +136,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 					int outputIndex = layerEncodingIsInput ? neuronType : z;
 					
 					setNeuronParameters(neurons, bainNeuronIndex, cppn, createNewPhenotype);
-					neuronDisabled[bainNeuronIndex] = enableNEO && cppn.getNEO(outputIndex) <= neoThreshold;
+					neuronDisabled[bainNeuronIndex] = !cppn.getNEO(outputIndex);
 					// If substrate is null then this is set below after we create the initial substrate.
 					if (substrate != null) {
 						substrate.setNeuronDisabled(bainNeuronIndex, neuronDisabled[bainNeuronIndex]);
@@ -168,8 +168,8 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 								synapses.setPreAndPostNeurons(synapseIndex, bainNeuronIndexSource, bainNeuronIndexTarget);
 								
 								// Synapse is disabled if the source or target neurons are disabled, or if the LEO specifies it.
-								boolean disabled = neuronDisabled[bainNeuronIndexTarget] || neuronDisabled[bainNeuronIndexSource] || enableLEO && cppn.getLEO(outputIndex) <= leoThreshold;
-										
+								boolean disabled = neuronDisabled[bainNeuronIndexTarget] || neuronDisabled[bainNeuronIndexSource] || !cppn.getLEO(outputIndex);
+								
 								// Determine weight for synapse from source to target.
 								synapseWeights[synapseIndex] = disabled ? 0 : cppn.getRangedWeight(outputIndex);
 								

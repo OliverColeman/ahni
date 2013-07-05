@@ -74,10 +74,8 @@ public class ConsoleLogEventListener implements GeneticEventListener, Configurab
 		if (GeneticEvent.GENOTYPE_EVOLVED_EVENT.equals(event.getEventName())) {
 			Genotype genotype = (Genotype) event.getSource();
 			Chromosome fittest = genotype.getFittestChromosome();
-			double maxFitnessValue = (config.getBulkFitnessFunction() != null) ? config.getBulkFitnessFunction().getMaxFitnessValue() : config.getFitnessFunction().getMaxFitnessValue();
-			double fitness = (maxFitnessValue == 0) ? fittest.getFitnessValue() : (fittest.getFitnessValue() / maxFitnessValue);
 			out.println("species count: " + genotype.getSpecies().size());
-			out.println("fittest chromosome: " + fittest.getId() + ", score == " + fitness + " and # genes == " + fittest.size());
+			out.println("fittest chromosome: " + fittest.getId() + ", score == " + fittest.getFitnessValue() + " and # genes == " + fittest.size());
 		}
 	}
 

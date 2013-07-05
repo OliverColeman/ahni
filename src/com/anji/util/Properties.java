@@ -390,7 +390,7 @@ public class Properties extends java.util.Properties {
 	 * Retrieve an array of double values from a comma-separated list.
 	 */
 	public double[] getDoubleArrayProperty(String key, double[] defaultVal) {
-		String value = getProperty(key, defaultVal == null ? null : java.util.Arrays.toString(defaultVal));
+		String value = getProperty(key, defaultVal == null ? null : java.util.Arrays.toString(defaultVal).replaceAll("[\\[\\]]", ""));
 		if (value == null)
 			return defaultVal;
 		return getDoubleArrayFromString(value);

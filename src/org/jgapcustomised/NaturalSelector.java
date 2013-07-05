@@ -44,6 +44,7 @@ public abstract class NaturalSelector {
 	protected boolean speciatedFitness = true;
 	protected List<Chromosome> elite = new ArrayList<Chromosome>();
 	protected List<Species> species;
+	protected Chromosome bestPerforming;
 
 	/**
 	 * If elitism is enabled, places appropriate chromosomes in <code>elite</code> list. Elitism follows methodology in
@@ -53,49 +54,33 @@ public abstract class NaturalSelector {
 	 * @param config
 	 * @param chroms <code>List</code> contains Chromosome objects
 	 */
-	public final void add(Configuration config, List<Species> species, List<Chromosome> chroms) {
+	public void add(Configuration config, List<Species> species, List<Chromosome> chroms, Chromosome bestPerforming) {
 		numChromosomes += chroms.size();
 		this.species = species;
+		this.bestPerforming = bestPerforming;
 		
 		// determine elites for each species
 		Iterator<Species> speciesIter = species.iterator();
 		while (speciesIter.hasNext()) {
 			Species s = speciesIter.next();
-			// Add elites from this species if it's the only species or it hasn't been stagnant for too long 
-			// or it hasn't reached the minimum species age or it contains the population-wide fittest individual.
-			if (species.size() == 1 || s.getStagnantGenerationsCount() < maxStagnantGenerations || s.getAge() < minAge || s.containsFittest) {
-				if ((elitismProportion > 0 || elitismMinToSelect > 0) && (s.size() >= elitismMinSpeciesSize)) {
-					// If min age not reached then make sure at least one elite selected.
-					int numToSelect = (s.getAge() < minAge && elitismMinToSelect == 0) ? 1 : elitismMinToSelect;
-					List<Chromosome> elites = s.getElite(elitismProportion, numToSelect);
-					elite.addAll(elites);
-					// System.out.println("Adding " + elites.size() + " elites from species: " + s.getID());
-				}
+			if (s.containsBestPerforming || 
+					(elitismProportion > 0 || elitismMinToSelect > 0) &&
+					s.size() >= elitismMinSpeciesSize &&
+					(species.size() == 1 || s.getStagnantGenerationsCount() < maxStagnantGenerations || s.getAge() < minAge)) {
+				List<Chromosome> elites = s.getElite(elitismProportion, elitismMinToSelect, bestPerforming.getSpecie() == s ? bestPerforming : null);
+				elite.addAll(elites);
 			}
-			// else {
-			// System.out.println("Not adding species, too stagnant, ID: " + s.getID());
-			// }
 		}
-
-		Iterator<Chromosome> chromIter = chroms.iterator();
-		while (chromIter.hasNext()) {
-			Chromosome c = chromIter.next();
-			Species specie = c.getSpecie();
-
+		
+		assert(elite.contains(bestPerforming));
+		
+		// Add remaining non-elite to list to select parents from (by subclass).
+		for (Chromosome c : chroms) {
 			// don't add if it's already in the list of elites
 			if (!c.isElite) {
-				// if this individual's species hasn't been stagnant for too long or there's only one 
-				// species at the moment or the species contains the fittest individual, add it to the pool.
-				if (species.size() == 1 || specie == null || (specie != null && specie.getStagnantGenerationsCount() < maxStagnantGenerations || specie.containsFittest)) {
-					add(config, c);
-				}
+				add(config, c);
 			}
-			// else {
-			// System.out.println("Not adding chrom: already in elites");
-			// }
 		}
-
-		// System.out.println("selected " + elite.size() + " chroms as elite");
 	}
 
 	/**
@@ -152,6 +137,7 @@ public abstract class NaturalSelector {
 	public void empty() {
 		numChromosomes = 0;
 		elite.clear();
+		bestPerforming = null;
 		emptyImpl();
 	}
 

@@ -85,8 +85,8 @@ public class Generation implements XmlPersistable {
 	}
 
 	private void cacheXml() {
-		int maxFitness = Integer.MIN_VALUE;
-		int minFitness = Integer.MAX_VALUE;
+		double maxFitness = 1;
+		double minFitness = 0;
 		int maxComplexity = Integer.MIN_VALUE;
 		int minComplexity = Integer.MAX_VALUE;
 
@@ -100,7 +100,7 @@ public class Generation implements XmlPersistable {
 
 		while (iter.hasNext()) {
 			Chromosome chrom = (Chromosome) iter.next();
-			int thisChromFitness = chrom.getFitnessValue();
+			double thisChromFitness = chrom.getFitnessValue();
 			runningFitnessTotal += thisChromFitness;
 			int thisChromComplexity = chrom.size();
 			runningComplexityTotal += thisChromComplexity;

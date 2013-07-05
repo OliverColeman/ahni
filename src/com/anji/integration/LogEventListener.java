@@ -67,15 +67,13 @@ public class LogEventListener implements GeneticEventListener, Configurable {
 		if (GeneticEvent.GENOTYPE_EVOLVED_EVENT.equals(event.getEventName())) {
 			Genotype genotype = (Genotype) event.getSource();
 			Chromosome fittest = genotype.getFittestChromosome();
-			double maxFitnessValue = (config.getBulkFitnessFunction() != null) ? config.getBulkFitnessFunction().getMaxFitnessValue() : config.getFitnessFunction().getMaxFitnessValue();
-			double fitness = (maxFitnessValue == 0) ? fittest.getFitnessValue() : (fittest.getFitnessValue() / maxFitnessValue);
 			// logger.info( "species count: " + genotype.getSpecies().size() );
 			List chroms = genotype.getChromosomes();
 			Iterator iter = chroms.iterator();
 			int maxFitnessCount = 0;
 			while (iter.hasNext()) {
 				Chromosome c = (Chromosome) iter.next();
-				if (c.getFitnessValue() == maxFitnessValue) {
+				if (c.getFitnessValue() == 1) {
 					// logger.info( "max: id=" + c.getId() + " score=" + fitness + " size=" + c.size() );
 					++maxFitnessCount;
 				}

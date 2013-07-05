@@ -127,4 +127,9 @@ public interface Activator extends XmlPersistable {
 	 * Release any resources associated with this Activator.
 	 */
 	public void dispose();
+	
+	/**
+	 * Returns true iff the topology of the network has recurrent connections.
+	 */
+	public abstract boolean isRecurrent();
 }

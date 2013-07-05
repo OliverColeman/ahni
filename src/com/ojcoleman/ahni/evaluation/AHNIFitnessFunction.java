@@ -9,7 +9,7 @@ import com.ojcoleman.ahni.util.Point;
 /**
  * Base class for fitness functions that provides some extra capabilities used by AHNI.
  */
-public abstract class AHNIFitnessFunction implements BulkFitnessFunction {
+public abstract class AHNIFitnessFunction extends BulkFitnessFunction {
 	/**
 	 * Sub-classes may override this to return the dimensions of the given layer.
 	 * 
@@ -47,9 +47,12 @@ public abstract class AHNIFitnessFunction implements BulkFitnessFunction {
 	 * The evaluation is not used for any purpose other than generating a record of the evaluation of the given genotype.
 	 * @param genotype the genotype being evaluated. This is not usually required but may be useful in some cases.
 	 * @param substrate the phenotypic substrate of the genotype being evaluated.
-	 * @param baseFileName The base/prefix of the names of log file(s) that should be created. 
+	 * @param baseFileName The base/prefix of the names of log file(s) that should be created.
+	 * @param logText If true then text representations should be output.
+	 * @param logImage If true then image representations should be output.
+	 * @return A value in the range [0, 1].
 	 */
-	public int evaluate(Chromosome genotype, Activator substrate, String baseFileName) {
+	public double evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
 		return 0;
 	}
 }

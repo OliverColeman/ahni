@@ -211,6 +211,46 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 	public boolean equals(Object other) {
 		return compareTo(other) == 0;
 	}
+	
+	/**
+	 * Compares this Chromosome against the specified object. The result is true if and the argument is an instance of
+	 * the Chromosome class and has a set of genes with equal values (eg connection weight, activation type) to this one.
+	 * 
+	 * @param other The object to compare against.
+	 * @return true if the objects are the same, false otherwise.
+	 */
+	public boolean isEquivalent(ChromosomeMaterial other) {
+		// First, if the other ChromosomeMaterial is null, then this chromosome
+		// is automatically the "greater" Chromosome.
+		// ---------------------------------------------------------------
+		if (other == null) {
+			return false;
+		}
+
+		ChromosomeMaterial otherChromosome = (ChromosomeMaterial) other;
+		SortedSet otherAlleles = otherChromosome.m_alleles;
+
+		// If the other Chromosome doesn't have the same number of genes,
+		// then whichever has more is the "greater" Chromosome.
+		// --------------------------------------------------------------
+		if (otherAlleles.size() != m_alleles.size()) {
+			return false;
+		}
+
+		// Next, compare the gene values (alleles) for differences. If
+		// one of the genes is not equal, then we return the result of its
+		// comparison.
+		// ---------------------------------------------------------------
+		Iterator iter = m_alleles.iterator();
+		Iterator otherIter = otherAlleles.iterator();
+		while (iter.hasNext() && otherIter.hasNext()) {
+			Allele allele = (Allele) iter.next();
+			Allele otherAllele = (Allele) otherIter.next();
+			if (!allele.isEquivalent(otherAllele))
+				return false;
+		}
+		return true;
+	}
 
 	/**
 	 * Compares the given Chromosome to this Chromosome. This chromosome is considered to be "less than" the given

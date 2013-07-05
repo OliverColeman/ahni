@@ -54,7 +54,6 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
 	private String champsImageDir;
 	private String compositesImageDir;
 
-	private static int maxFitnessValue = 1000000;
 	private static int numTrials = 200;
 
 	private double fitnessWeightPC = 1;
@@ -267,13 +266,6 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
 	}
 
 	/**
-	 * @return maximum possible fitness value for this function
-	 */
-	public int getMaxFitnessValue() {
-		return maxFitnessValue;
-	}
-
-	/**
 	 * Initialise data for the current evaluation run (for each generation).
 	 */
 	public void initialiseEvaluation() {
@@ -352,7 +344,7 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
 		canvas.draw(s);
 	}
 
-	protected int evaluate(Chromosome genotype, Activator activator, int threadIndex) {
+	protected double evaluate(Chromosome genotype, Activator activator, int threadIndex) {
 		GridNet substrate = (GridNet) activator;
 		double[][][] responses = substrate.nextSequence(stimuli);
 
@@ -492,7 +484,7 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
 
 		}
 
-		return (int) Math.round(fitness * maxFitnessValue);
+		return fitness;
 	}
 
 	@Override

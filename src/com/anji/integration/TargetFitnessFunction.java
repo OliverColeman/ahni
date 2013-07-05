@@ -37,7 +37,7 @@ import com.anji.util.Randomizer;
  * 
  * @author Philip Tucker
  */
-public abstract class TargetFitnessFunction implements BulkFitnessFunction, Configurable {
+public abstract class TargetFitnessFunction extends BulkFitnessFunction implements Configurable {
 
 	protected static Logger logger = Logger.getLogger(TargetFitnessFunction.class);
 

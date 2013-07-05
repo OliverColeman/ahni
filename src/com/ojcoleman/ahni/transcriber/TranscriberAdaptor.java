@@ -280,7 +280,7 @@ public abstract class TranscriberAdaptor<T extends Activator> implements Transcr
 				for (int p = 0; p < paramCount; p++) {
 					neuronModelParamsRange[p] = neuronModelParamsMax[p] - neuronModelParamsMin[p];
 				}
-				neuronModelParamsThreshold = props.getDoubleArrayProperty(TranscriberAdaptor.SUBSTRATE_NEURON_MODEL_PARAMS_THRESHOLD, ArrayUtil.newArray(paramCount, 0));
+				neuronModelParamsThreshold = props.getDoubleArrayProperty(TranscriberAdaptor.SUBSTRATE_NEURON_MODEL_PARAMS_THRESHOLD, ArrayUtil.newArray(paramCount, 0d));
 			}
 		}
 	
@@ -298,7 +298,7 @@ public abstract class TranscriberAdaptor<T extends Activator> implements Transcr
 				for (int p = 0; p < paramCount; p++) {
 					synapseModelParamsRange[p] = synapseModelParamsMax[p] - synapseModelParamsMin[p];
 				}
-				synapseModelParamsThreshold = props.getDoubleArrayProperty(TranscriberAdaptor.SUBSTRATE_SYNAPSE_MODEL_PARAMS_THRESHOLD, ArrayUtil.newArray(paramCount, 0));
+				synapseModelParamsThreshold = props.getDoubleArrayProperty(TranscriberAdaptor.SUBSTRATE_SYNAPSE_MODEL_PARAMS_THRESHOLD, ArrayUtil.newArray(paramCount, 0d));
 			}
 	
 			synapseDisableParamName = props.getProperty(TranscriberAdaptor.SUBSTRATE_SYNAPSE_MODEL_DISABLE_PARAM, null);
@@ -351,8 +351,8 @@ public abstract class TranscriberAdaptor<T extends Activator> implements Transcr
 
 	/**
 	 * May be overridden to specify how many input neurons the Chromosome should encode.
-	 * This default implementation returns the value specified by the property {@link com.anji.neat.NeatConfiguration.STIMULUS_SIZE_KEY} if 
-	 * given, otherwise {@link com.anji.neat.NeatConfiguration.DEFAULT_STIMULUS_SIZE}.
+	 * This default implementation returns the value specified by the property {@link com.anji.neat.NeatConfiguration#STIMULUS_SIZE_KEY} if 
+	 * given, otherwise {@link com.anji.neat.NeatConfiguration#DEFAULT_STIMULUS_SIZE}.
 	 */
 	public int getChromosomeInputNeuronCount() {
 		return props.getShortProperty(NeatConfiguration.STIMULUS_SIZE_KEY, NeatConfiguration.DEFAULT_STIMULUS_SIZE);
@@ -360,8 +360,8 @@ public abstract class TranscriberAdaptor<T extends Activator> implements Transcr
 	
 	/**
 	 * May be overridden to specify how many output neurons the Chromosome should encode.
-	 * This default implementation returns the value specified by the property {@link com.anji.neat.NeatConfiguration.RESPONSE_SIZE_KEY} if 
-	 * given, otherwise {@link com.anji.neat.NeatConfiguration.DEFAULT_RESPONSE_SIZE}.
+	 * This default implementation returns the value specified by the property {@link com.anji.neat.NeatConfiguration#RESPONSE_SIZE_KEY} if 
+	 * given, otherwise {@link com.anji.neat.NeatConfiguration#DEFAULT_RESPONSE_SIZE}.
 	 */
 	public int getChromosomeOutputNeuronCount() {
 		return props.getShortProperty(NeatConfiguration.RESPONSE_SIZE_KEY, NeatConfiguration.DEFAULT_RESPONSE_SIZE);

@@ -253,7 +253,7 @@ public class FilePersistence implements Persistence {
 		}
 
 		ChromosomeMaterial material = new ChromosomeMaterial(genes, primaryParentId, secondaryParentId);
-		return (id == null) ? new Chromosome(material, config.nextChromosomeId()) : new Chromosome(material, id);
+		return (id == null) ? new Chromosome(material, config.nextChromosomeId(), config.getObjectiveCount()) : new Chromosome(material, id, config.getObjectiveCount());
 	}
 
 	/**

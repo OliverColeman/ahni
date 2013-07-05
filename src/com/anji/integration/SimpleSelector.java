@@ -59,46 +59,46 @@ public class SimpleSelector extends NaturalSelector {
 	 * population or randomly removing selected members.
 	 */
 	public List<Chromosome> select(Configuration config) {
-		// start with elites
-		List<Chromosome> result = new ArrayList<Chromosome>(elite);
+		List<Chromosome> result = new ArrayList<Chromosome>();
 
-		int numToSelect = (int) Math.round(numChromosomes * getSurvivalRate());
-
-		// determine parents for each species.
-		Iterator<Species> speciesIter = species.iterator();
-		while (speciesIter.hasNext()) {
-			Species s = speciesIter.next();
-			// Add parents from this species if it's the only species or it hasn't been stagnant for too long 
-			// or it hasn't reached the minimum species age or it contains the population-wide fittest individual.
-			if (species.size() == 1 || s.getStagnantGenerationsCount() < maxStagnantGenerations || s.getAge() < minAge || s.containsFittest) {
-				if ((elitismProportion > 0 || elitismMinToSelect > 0) && (s.size() >= elitismMinSpeciesSize)) {
+		int numToSelect = (int) Math.round(numChromosomes * getSurvivalRate()) - elite.size();
+		if (numToSelect > 0) {
+			// determine parents for each species.
+			Iterator<Species> speciesIter = species.iterator();
+			while (speciesIter.hasNext()) {
+				Species s = speciesIter.next();
+				// Add parents from this species if it's the only species or it hasn't been stagnant for too long 
+				// or it hasn't reached the minimum species age or it contains the population-wide fittest individual.
+				if (species.size() == 1 || s.getStagnantGenerationsCount() < maxStagnantGenerations || s.getAge() < minAge || s.containsBestPerforming) {
 					int numToSelectFromSpecies = (int) Math.round(getSurvivalRate() * s.size()) - s.getEliteCount();
 					if (numToSelectFromSpecies > 0) {
-						List<Chromosome> selected = s.getTop(numToSelectFromSpecies);
+						List<Chromosome> selected = s.getTop(numToSelectFromSpecies, false);
 						result.addAll(selected);
 					}
 				}
 			}
-		}
-
-		if (result.size() > numToSelect) {
-			// remove randomly selected chromosomes.
-			Collections.shuffle(result, config.getRandomGenerator());
-			int numToRemove = result.size() - numToSelect;
-			for (int i = 0; i < numToRemove; i++) {
-				result.remove(result.size()-1);
-			}
-		} else if (result.size() < numToSelect) {
-			// Just select some more from population at large. 
-			Collections.shuffle(result, config.getRandomGenerator());
-			Iterator<Chromosome> it = chromosomes.iterator();
-			while (it.hasNext() && result.size() < numToSelect) {
-				Chromosome c = it.next();
-				if (!c.isElite && !(result.contains(c))) {
-					result.add(c);
+	
+			// Adjust for rounding errors.
+			if (result.size() > numToSelect) {
+				// Randomly remove from parents.
+				Collections.shuffle(result, config.getRandomGenerator());
+				while (result.size() > numToSelect) {
+					result.remove(result.size() - 1);
+				}
+			} else if (result.size() < numToSelect) {
+				// Just select some more from population (minus elites) at large. 
+				Collections.shuffle(chromosomes, config.getRandomGenerator());
+				Iterator<Chromosome> it = chromosomes.iterator();
+				while (it.hasNext() && result.size() < numToSelect) {
+					Chromosome c = it.next();
+					if (!(result.contains(c))) {
+						result.add(c);
+					}
 				}
 			}
 		}
+		
+		result.addAll(elite);
 
 		return result;
 	}

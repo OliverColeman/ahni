@@ -68,8 +68,10 @@ public class Genotype implements Serializable {
 	protected int targetPerformanceType;
 	protected Chromosome fittest = null;
 	protected Chromosome bestPerforming = null;
-	protected int zeroFitnessCount = 0;
-	protected int eliteCount = 0;
+	protected int zeroPerformanceCount = 0;
+	
+	Chromosome previousFittest = null;
+	Chromosome previousBestPerforming = null;
 
 	protected int maxSpeciesSize, minSpeciesSize;
 
@@ -134,7 +136,7 @@ public class Genotype implements Serializable {
 		while (chroms.size() < targetSize) {
 			int idx = chroms.size() % originals.size();
 			Chromosome orig = originals.get(idx);
-			Chromosome clone = new Chromosome(orig.cloneMaterial(), m_activeConfiguration.nextChromosomeId());
+			Chromosome clone = new Chromosome(orig.cloneMaterial(), m_activeConfiguration.nextChromosomeId(), m_activeConfiguration.getObjectiveCount());
 			chroms.add(clone);
 			orig.getSpecie().add(clone);
 		}
@@ -145,7 +147,7 @@ public class Genotype implements Serializable {
 			while (chroms.size() > targetSize && popIter.hasNext()) {
 				Chromosome c = popIter.next();
 				// don't randomly remove elites or population fittest (they're supposed to survive till next generation)
-				if (!c.isElite && !c.equals(popFittest) && (c.getSpecie() == null || !c.getSpecie().getRepresentative().equals(c))) {
+				if (!c.isElite && c != popFittest && (c.getSpecie() == null || c.getSpecie().getRepresentative() != c)) {
 					if (c.getSpecie() != null)
 						c.getSpecie().remove(c); // remove from species
 					popIter.remove();
@@ -176,7 +178,7 @@ public class Genotype implements Serializable {
 		Iterator<ChromosomeMaterial> iter = chromosomeMaterial.iterator();
 		while (iter.hasNext()) {
 			ChromosomeMaterial cMat = iter.next();
-			Chromosome chrom = new Chromosome(cMat, m_activeConfiguration.nextChromosomeId());
+			Chromosome chrom = new Chromosome(cMat, m_activeConfiguration.nextChromosomeId(), m_activeConfiguration.getObjectiveCount());
 			m_chromosomes.add(chrom);
 		}
 	}
@@ -247,7 +249,7 @@ public class Genotype implements Serializable {
 
 		// remove chromosomes from all species and record previous fittest
 		for	(Species species : m_species) {
-			species.setPreviousFittest(species.getFittest());
+			species.setPreviousBestPerforming(species.getBestPerforming());
 			species.clear();
 		}
 
@@ -311,7 +313,7 @@ public class Genotype implements Serializable {
 		// --------------------------------------------------------------
 		Iterator<Chromosome> iter = getChromosomes().iterator();
 		Chromosome fittestChromosome = iter.next();
-		int fittestValue = fittestChromosome.getFitnessValue();
+		double fittestValue = fittestChromosome.getFitnessValue();
 
 		while (iter.hasNext()) {
 			Chromosome chrom = iter.next();
@@ -324,14 +326,11 @@ public class Genotype implements Serializable {
 		return fittestChromosome;
 	}
 
-	Chromosome previousFittest = null;
-	int previousFittestFitness = 0;
-
 	/**
 	 * Performs one generation cycle, evaluating fitness, selecting survivors, repopulting with offspring, and mutating
 	 * new population. This is a modified version of original JGAP method which changes order of operations and splits
 	 * <code>GeneticOperator</code> into <code>ReproductionOperator</code> and <code>MutationOperator</code>. New order
-	 * of operations:
+	 * of operations (this is probably out of date now):
 	 * <ol>
 	 * <li>assign <b>fitness </b> to all members of population with <code>BulkFitnessFunction</code> or
 	 * <code>FitnessFunction</code></li>
@@ -344,20 +343,14 @@ public class Genotype implements Serializable {
 	 */
 	public synchronized Chromosome evolve() {
 		try {
-			//long start = System.currentTimeMillis();
-
 			m_activeConfiguration.lockSettings();
 			BulkFitnessFunction bulkFunction = m_activeConfiguration.getBulkFitnessFunction();
-			int maxFitness = bulkFunction.getMaxFitnessValue();
 			Iterator<Chromosome> it;
 			
-			// Reset performance values.
-			it = m_chromosomes.iterator();
-			while (it.hasNext()) {
-				it.next().setPerformanceValue(-1);
+			// Reset evaluation data for all members of the population.
+			for (Chromosome c : m_chromosomes) {
+				c.resetEvaluationData();
 			}
-
-			//long startEval = System.currentTimeMillis();
 			
 			// Fire an event to indicate we're now evaluating all chromosomes.
 			// -------------------------------------------------------
@@ -382,10 +375,84 @@ public class Genotype implements Serializable {
 					c.setFitnessValue(fitness);
 				}
 			}
+			
+			// Fire an event to indicate we've evaluated all chromosomes.
+			// -------------------------------------------------------
+			m_activeConfiguration.getEventManager().fireGeneticEvent(new GeneticEvent(GeneticEvent.GENOTYPE_EVALUATED_EVENT, this));
 
-			//long finishEval = System.currentTimeMillis();
 
-			// find fittest and best performing
+			// Speciate population.
+			speciate();
+			
+			
+			// Attempt to maintain species count target
+			int targetSpeciesCount = m_specParms.getSpeciationTarget();
+			// don't change threshold too frequently.
+			int maxAdjustFreq = m_activeConfiguration.getPopulationSize() / 20;
+			if (targetSpeciesCount > 0 && m_species.size() != targetSpeciesCount && (generation - lastGenChangedSpeciesCompatThreshold > maxAdjustFreq)) {
+				// adjust number of species by altering speciation threshold if necessary
+				if (m_species.size() > targetSpeciesCount) {
+					m_specParms.setSpeciationThreshold(m_specParms.getSpeciationThreshold() + m_specParms.getSpeciationThresholdChange());
+				} else { // m_species.size() < targetSpeciesCount
+					// Don't adjust below 0.1
+					if (m_specParms.getSpeciationThreshold() > 0.1 + m_specParms.getSpeciationThresholdChange())
+						m_specParms.setSpeciationThreshold(m_specParms.getSpeciationThreshold() - m_specParms.getSpeciationThresholdChange());
+				}
+				lastGenChangedSpeciesCompatThreshold = generation;
+			}
+			
+			
+			// Remove clones from population. We do this after speciation.
+			for (Species s : m_species) {
+				List<Chromosome> removed = s.cullClones();
+				m_chromosomes.removeAll(removed);
+			}
+			
+			
+			// Find best performing individual.
+			if (previousBestPerforming != null && m_chromosomes.contains(previousBestPerforming)) {
+				// Attempt to reuse previous bestPerforming if available.
+				bestPerforming = previousBestPerforming;
+			}
+			else {
+				bestPerforming = null;
+			}
+			Collections.sort(m_chromosomes, new ChromosomePerformanceComparator(targetPerformanceType == 0));
+			if (bestPerforming == null || m_chromosomes.get(0).getPerformanceValue() != bestPerforming.getPerformanceValue()) {
+				bestPerforming = m_chromosomes.get(0);
+			}
+			previousBestPerforming = bestPerforming;
+			// Set which species contains the best performing individual.
+			for (Species s : m_species) {
+				s.containsBestPerforming = false;
+			}
+			bestPerforming.getSpecie().containsBestPerforming = true;
+			
+			
+			// Determine zero performance count.
+			zeroPerformanceCount = 0;
+			for (Chromosome c : m_chromosomes) {
+				if (c.getPerformanceValue() == 0 || Double.isNaN(c.getPerformanceValue())) {
+					zeroPerformanceCount++;
+				}
+			}
+			
+			
+			// Select chromosomes to generate new population from,
+			// and determine elites that will survive unchanged to next generation
+			// Note that speciation must occur before selection to allow using speciated fitness.
+			// ------------------------------------------------------------
+			NaturalSelector selector = m_activeConfiguration.getNaturalSelector();
+			selector.add(m_activeConfiguration, m_species, m_chromosomes, bestPerforming);
+			m_chromosomes = selector.select(m_activeConfiguration);
+			selector.empty();
+			
+			assert m_species.contains(bestPerforming.getSpecie()) : "Species containing global bestPerforming removed from species list.";
+			assert m_chromosomes.contains(bestPerforming) : "Global bestPerforming removed from population." + bestPerforming;
+			
+			
+			// Find fittest individual (this has been moved from just below bulkFunction.evaluate(m_chromosomes) because now the
+			// selector can change the overall fitness, which is what we're using here.
 			if (previousFittest != null && m_chromosomes.contains(previousFittest)) {
 				// Attempt to reuse previous fittest if available.
 				fittest = previousFittest;
@@ -393,132 +460,44 @@ public class Genotype implements Serializable {
 			else {
 				fittest = null;
 			}
-			bestPerforming = null;
-			zeroFitnessCount = 0;
 			for (Chromosome c : m_chromosomes) {
 				if (fittest == null || fittest.getFitnessValue() < c.getFitnessValue()) {
 					fittest = c;
 				}
-				if (bestPerforming == null || ((targetPerformanceType == 1 && bestPerforming.getPerformanceValue() < c.getPerformanceValue()) || (targetPerformanceType == 0 && bestPerforming.getPerformanceValue() > c.getPerformanceValue())) || (bestPerforming.getPerformanceValue() == c.getPerformanceValue() && bestPerforming.getFitnessValue() < c.getFitnessValue())) {
-					bestPerforming = c;
-					// System.out.println("bpv="+bestPerforming.getPerformanceValue());
-				}
-				if (c.getFitnessValue() <= 1) {
-					zeroFitnessCount++;
-				}
 			}
-
-			// check if best fitness has dropped a lot (indication that evaluation function is too inconsistent)
-			if (previousFittest != null) {
-				int oldFitnessPercent = (previousFittestFitness * 100) / maxFitness;
-				int newFitnessPercent = (fittest.getFitnessValue() * 100) / maxFitness;
-				//if (oldFitnessPercent > (newFitnessPercent + 5)) // if dropped more than 5%
-				if (oldFitnessPercent > (newFitnessPercent)) // if dropped
-					logger.info("(Fitness drop in percent:" + oldFitnessPercent + " > " + newFitnessPercent + ")");
-			}
-			
-			//logger.info("Fittest: \n" + fittest.cloneMaterial().toString());
-			
 			previousFittest = fittest;
-			previousFittestFitness = fittest.getFitnessValue();
-
-			// Fire an event to indicate we've evaluated all chromosomes.
-			// -------------------------------------------------------
-			m_activeConfiguration.getEventManager().fireGeneticEvent(new GeneticEvent(GeneticEvent.GENOTYPE_EVALUATED_EVENT, this));
-
-			//long startSelect = System.currentTimeMillis();
-
-			// Speciate population.
-			speciate();
 			
-			// attempt to stay within 20% of species count target
-			int targetSpeciesCount = m_specParms.getSpeciationTarget();
-			if ((targetSpeciesCount > 0 && (generation - lastGenChangedSpeciesCompatThreshold > 5) && // don't change
-																										// threshold too
-																										// frequently
-			(Math.abs(m_species.size() - targetSpeciesCount) > Math.round(0.2 * targetSpeciesCount)))
-			// || (generation - lastGenChangedSpeciesCompatThreshold > 100) //force respeciation every 100 generations
-			) {
-
-				if (targetSpeciesCount > 0) {
-					// adjust number of species by altering speciation threshold if necessary
-					if (m_species.size() > targetSpeciesCount) {
-						m_specParms.setSpeciationThreshold(m_specParms.getSpeciationThreshold() + m_specParms.getSpeciationThresholdChange());
-						// System.out.println("\tSpeciation threshold increased to " +
-						// m_specParms.getSpeciationThreshold() + "   current species count: " + m_species.size());
-					} else if (m_species.size() < targetSpeciesCount && m_specParms.getSpeciationThreshold() > 0.1 + m_specParms.getSpeciationThresholdChange()) {
-						m_specParms.setSpeciationThreshold(m_specParms.getSpeciationThreshold() - m_specParms.getSpeciationThresholdChange());
-						// System.out.println("\tSpeciation threshold reduced to " +
-						// m_specParms.getSpeciationThreshold() + "   current species count: " + m_species.size());
-					}
-				}
-
-				// int oldSpeciesCount = m_species.size();
-				// respeciate();
-				// logger.info("Respeciating: species count was " + oldSpeciesCount + ", is now " + m_species.size() +
-				// " (target=" + targetSpeciesCount + "). Speciation threshold is now " +
-				// m_specParms.getSpeciationThreshold());
-
-				//logger.info("Adjusted species compatability threshold to " + m_specParms.getSpeciationThreshold());
-
-				lastGenChangedSpeciesCompatThreshold = generation;
-			}
-			
-			// Set which species contains the fittest individual.
-			for (Species s : m_species) {
-				s.containsFittest = false;
-			}
-			fittest.getSpecie().containsFittest = true;
-
-			// Select chromosomes to generate new population from,
-			// and determine elites that will survive unchanged to next generation
-			// Note that speciation must occur before selection to allow using speciated fitness.
-			// ------------------------------------------------------------
-			eliteCount = 0;
-			NaturalSelector selector = m_activeConfiguration.getNaturalSelector();
-			selector.add(m_activeConfiguration, m_species, m_chromosomes);
-			m_chromosomes = selector.select(m_activeConfiguration);
-			selector.empty();
-			
-			// Sometimes the fittest can be removed if its species is too large (when using speciated fitness, 
-			// in selection an individuals fitness is divided by it's species size)?
-			if (fittest.getSpecie().getStagnantGenerationsCount() < selector.maxStagnantGenerations && !m_chromosomes.contains(fittest)) {
-				m_chromosomes.add(fittest);
-			}
-			
-			// System.out.println("Selected: " + m_chromosomes.size());
-
-			// cull species down to contain only parent chromosomes.
+			// cull species down to contain only parent chromosomes and calculate the average (shared) fitness value for each species.
 			Iterator<Species> speciesIter = m_species.iterator();
 			while (speciesIter.hasNext()) {
 				Species s = speciesIter.next();
+				
+				// Set the average species fitness using its full complement of individuals from this generation.
+				s.calculateAverageFitness();
 
 				// remove any individuals not in m_chromosomes from the species
 				s.cull(m_chromosomes);
 				if (s.isEmpty()) {
 					s.originalSize = 0;
 					speciesIter.remove();
-					// System.out.println("Removed species (none selected): " + s.getID() + "  age: " + s.getAge());
-				} else {
-					eliteCount += s.getEliteCount();
 				}
 			}
 			if (m_species.isEmpty()) {
 				logger.info("All species removed!");
 			}
 			
-			//long finishSelect = System.currentTimeMillis();
+			assert m_species.contains(bestPerforming.getSpecie()) : "Species containing global bestPerforming removed from species list.";
+			assert m_chromosomes.contains(bestPerforming) : "Global bestPerforming removed from population.";
+			
 
 			// Repopulate the population of species and chromosomes with those selected
 			// by the natural selector
 			// -------------------------------------------------------
-
 			// Fire an event to indicate we're starting genetic operators. Among
 			// other things this allows for RAM conservation.
 			m_activeConfiguration.getEventManager().fireGeneticEvent(new GeneticEvent(GeneticEvent.GENOTYPE_START_GENETIC_OPERATORS_EVENT, this));
 
-			//long startReprod = System.currentTimeMillis();
-
+			
 			// Execute Reproduction Operators.
 			// -------------------------------------
 			List<ChromosomeMaterial> offspring = new ArrayList<ChromosomeMaterial>();
@@ -526,20 +505,20 @@ public class Genotype implements Serializable {
 				operator.reproduce(m_activeConfiguration, m_species, offspring);
 			}
 
+			
 			// Execute Mutation Operators.
 			// -------------------------------------
 			for (MutationOperator operator : m_activeConfiguration.getMutationOperators()) {
 				operator.mutate(m_activeConfiguration, offspring);
 			}
 			
-			//long finishReprod = System.currentTimeMillis();
 
-			// cull population down to just elites (only elites survive to next gen)
+			// Cull population down to just elites (only elites survive to next gen)
 			m_chromosomes.clear();
 			speciesIter = m_species.iterator();
 			while (speciesIter.hasNext()) {
 				Species s = speciesIter.next();
-				s.cullToElites(fittest);
+				s.cullToElites(bestPerforming);
 				if (s.isEmpty()) {
 					s.originalSize = 0;
 					speciesIter.remove();
@@ -550,46 +529,41 @@ public class Genotype implements Serializable {
 				}
 			}
 			
-			// System.out.println("After cull to elites: " + m_chromosomes.size());
-
-			// add offspring
+			assert m_chromosomes.contains(bestPerforming) : "Global bestPerforming removed from population.";
+			assert m_species.contains(bestPerforming.getSpecie()) : "Species containing global bestPerforming removed from species list.";
+			
+			
+			// Add offspring
 			// ------------------------------
 			addChromosomesFromMaterial(offspring);
 			
-			// in case we're off due to rounding errors
+			// In case we're off due to rounding errors
 			if (m_chromosomes.size() != m_activeConfiguration.getPopulationSize()) {
-				adjustChromosomeList(m_chromosomes, m_activeConfiguration.getPopulationSize(), fittest);
+				adjustChromosomeList(m_chromosomes, m_activeConfiguration.getPopulationSize(), bestPerforming);
 			}
 			
-			assert (m_chromosomes.contains(fittest));
+			assert m_chromosomes.contains(bestPerforming) : "Global bestPerforming removed from population.";
 
+			
 			// Fire an event to indicate we've finished genetic operators. Among
 			// other things this allows for RAM conservation.
 			// -------------------------------------------------------
 			m_activeConfiguration.getEventManager().fireGeneticEvent(new GeneticEvent(GeneticEvent.GENOTYPE_FINISH_GENETIC_OPERATORS_EVENT, this));
 
+			
 			// Fire an event to indicate we've performed an evolution.
 			// -------------------------------------------------------
 			m_activeConfiguration.getEventManager().fireGeneticEvent(new GeneticEvent(GeneticEvent.GENOTYPE_EVOLVED_EVENT, this));
 
+			
 			generation++;
-
-			//long finish = System.currentTimeMillis();
-
-			//double timeTotal = (finish - start) / 1000f;
-			//double timeEval = (finishEval - startEval) / 1000f;
-			//double timeSelect = (finishSelect - startSelect) / 1000f;
-			//double timeReprod = (finishReprod - startReprod) / 1000f;
-
-			// System.out.println("Time total: " + timeTotal + ", eval: " + timeEval + " (" + (timeEval/timeTotal) +
-			// "), select: " + timeSelect + "(" + (timeSelect/timeTotal) + "), reprod: " + timeReprod + "(" +
-			// (timeReprod/timeTotal) + ")");
 		} catch (InvalidConfigurationException e) {
 			throw new RuntimeException("bad config", e);
 		}
+		
+		assert m_chromosomes.contains(bestPerforming) : "Global bestPerforming removed from population.";
 
 		return fittest;
-		// return bestPerforming;
 	}
 
 	public Chromosome getFittest() {
@@ -600,8 +574,8 @@ public class Genotype implements Serializable {
 		return bestPerforming;
 	}
 	
-	public int getNumberOfChromosomesWithZeroFitnessFromLastGen() {
-		return zeroFitnessCount;
+	public int getNumberOfChromosomesWithZeroPerformanceFromLastGen() {
+		return zeroPerformanceCount;
 	}
 
 	public SpeciationParms getParameters() {
@@ -666,7 +640,7 @@ public class Genotype implements Serializable {
 
 		for (int i = 0; i < populationSize; i++) {
 			ChromosomeMaterial material = ChromosomeMaterial.randomInitialChromosomeMaterial(a_activeConfiguration);
-			chroms.add(new Chromosome(material, a_activeConfiguration.nextChromosomeId()));
+			chroms.add(new Chromosome(material, a_activeConfiguration.nextChromosomeId(), a_activeConfiguration.getObjectiveCount()));
 		}
 
 		return new Genotype(props, a_activeConfiguration, chroms);
@@ -679,7 +653,7 @@ public class Genotype implements Serializable {
 			Chromosome chrom = iter.next();
 			fitness += chrom.getFitnessValue();
 		}
-		return (double) ((double) fitness / ((long) m_activeConfiguration.getBulkFitnessFunction().getMaxFitnessValue() * (long) m_chromosomes.size()));
+		return fitness / m_chromosomes.size();
 	}
 
 	/**

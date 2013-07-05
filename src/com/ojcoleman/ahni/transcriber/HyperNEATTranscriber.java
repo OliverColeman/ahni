@@ -135,6 +135,14 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	public static final String HYPERNEAT_LEO_THRESHOLD = "ann.hyperneat.leo.threshold";
 
 	/**
+	 * Enable multiplying the threshold for the Link Expression Output (LEO) by the square of the distance between the
+	 * source and target neurons. Default is false.
+	 * 
+	 * @see #HYPERNEAT_LEO_THRESHOLD
+	 */
+	public static final String HYPERNEAT_LEO_THRESHOLD_DISTANCE = "ann.hyperneat.leo.threshold.factordistance";
+
+	/**
 	 * Enable or disable seeding of the initial population of {@link org.jgapcustomised.Chromosome}s to incorporate a
 	 * bias towards local connections via the Link Expression Output (LEO), see {@link #HYPERNEAT_LEO} and the article
 	 * reference within. Default is "false".
@@ -241,6 +249,11 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 */
 	protected double leoThreshold = 0;
 	/**
+	 * If true the threshold for the Link Expression Output (LEO) is multiplied by the square of the distance between the
+	 * source and target neurons.
+	 */
+	protected boolean leoThresholdFactorDistance = false;
+	/**
 	 * If true indicates that Neuron Expression Output is enabled.
 	 */
 	protected boolean enableNEO = false;
@@ -271,7 +284,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 * the use of Z coordinate inputs for the CPPN (both source and target neuron Z coordinates will be affected).
 	 */
 	protected String zCoordsForCPPN = "";
-	
+
 	private double connectionWeightRange;
 
 	// Index of target and source coordinate inputs in CPPN input vector.
@@ -280,7 +293,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	private int cppnIdxDX = -1, cppnIdxDY = -1, cppnIdxDZ = -1, cppnIdxAn = -1, cppnIdxBiasInput = -1;
 
 	// Index of output signals in CPPN output vector.
-	
+
 	// bias (either a single output for all layers or one output per layer OR neuron type)
 	private int[] cppnIdxBias = new int[0];
 	// weights (either a single output for all layers or one output per layer OR synapse type)
@@ -304,7 +317,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 */
 	public void init(Properties props) {
 		super.init(props);
-		
+
 		// If the properties specify a separate weight output per layer.
 		if (!props.getBooleanProperty(HYPERNEAT_LAYER_ENCODING, layerEncodingIsInput)) {
 			if (neuronParamsEnabled || synapseParamsEnabled) {
@@ -331,6 +344,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		cyclesPerStep = feedForward ? depth - 1 : props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP, 1);
 		enableLEO = props.getBooleanProperty(HYPERNEAT_LEO, enableLEO);
 		leoThreshold = props.getDoubleProperty(HYPERNEAT_LEO_THRESHOLD, leoThreshold);
+		leoThresholdFactorDistance = props.getBooleanProperty(HYPERNEAT_LEO_THRESHOLD_DISTANCE, leoThresholdFactorDistance);
 		enableNEO = props.getBooleanProperty(HYPERNEAT_NEO, enableNEO);
 		neoThreshold = props.getDoubleProperty(HYPERNEAT_NEO_THRESHOLD, neoThreshold);
 
@@ -399,8 +413,8 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		}
 
 		// Determine CPPN input size and mapping.
-		cppnInputCount = 0; 
-		if (props.getConfig().biasViaInput()) {
+		cppnInputCount = 0;
+		if (props.getBooleanProperty(NeatConfiguration.BIAS_VIA_INPUT_KEY, true)) {
 			// Add bias input to CPPN if internal bias not used.
 			cppnIdxBiasInput = cppnInputCount++;
 		}
@@ -481,7 +495,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 				}
 				logger.info("CPPN: Added " + synapseModelTypeCount + " link expression output(s) (LEO).");
 			}
-			
+
 			if (enableNEO) {
 				cppnIdxNEO = new int[neuronModelTypeCount];
 				for (int i = 0; i < neuronModelTypeCount; i++) {
@@ -539,7 +553,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 					cppnIdxLEO[w] = cppnOutputCount++; // leo value
 				logger.info("CPPN: Added " + layerOutputCount + " link expression outputs (LEO).");
 			}
-			
+
 			if (enableNEO) {
 				cppnIdxNEO = new int[layerOutputCount];
 				for (int i = 0; i < layerOutputCount; i++) {
@@ -631,7 +645,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	public short getCPPNOutputCount() {
 		return cppnOutputCount;
 	}
-	
+
 	/**
 	 * Returns same value as getCPPNInputCount().
 	 */
@@ -639,7 +653,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	public int getChromosomeInputNeuronCount() {
 		return getCPPNInputCount();
 	}
-	
+
 	/**
 	 * Returns same value as getCPPNOutputCount().
 	 */
@@ -658,6 +672,10 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		protected double cppnMin, cppnMax, cppnRange;
 		protected boolean cppnOutputUnitBounded;
 		protected boolean cppnOutputPlusMinusUnitBounded;
+		/**
+		 * Squared length of the current synapse (set when query() called).
+		 */
+		protected double synapseLengthSquared = 0;
 
 		public CPPN(Chromosome genotype) throws TranscriberException {
 			cppnActivator = cppnTranscriber.transcribe(genotype);
@@ -859,6 +877,8 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 			}
 			return p;
 		}
+		
+		double dx = 0, dy = 0, dz = 0;
 
 		/**
 		 * Query this CPPN.
@@ -866,11 +886,21 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		 * @return The value of the (first) weight output. Other outputs can be retrieved with the various get methods.
 		 */
 		public double query() {
-			if (includeDelta) {
-				cppnInput[cppnIdxDX] = cppnInput[cppnIdxSX] - cppnInput[cppnIdxTX];
-				cppnInput[cppnIdxDY] = cppnInput[cppnIdxSY] - cppnInput[cppnIdxTY];
-				if (cppnIdxDZ != -1) {
-					cppnInput[cppnIdxDZ] = cppnInput[cppnIdxSZ] - cppnInput[cppnIdxTZ];
+			if (includeDelta || leoThresholdFactorDistance) {
+				dx = cppnInput[cppnIdxSX] - cppnInput[cppnIdxTX];
+				dy = cppnInput[cppnIdxSY] - cppnInput[cppnIdxTY];
+				dz = cppnIdxDZ != -1 ? cppnInput[cppnIdxSZ] - cppnInput[cppnIdxTZ] : 0;
+				
+				if (leoThresholdFactorDistance) {
+					synapseLengthSquared = dx * dx + dy * dy + dz * dz;
+				}
+
+				if (includeDelta) {
+					cppnInput[cppnIdxDX] = dx;
+					cppnInput[cppnIdxDY] = dy;
+					if (cppnIdxDZ != -1) {
+						cppnInput[cppnIdxDZ] = dz;
+					}
 				}
 			}
 			if (includeAngle) {
@@ -1008,36 +1038,38 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 
 		/**
 		 * Get the value of the link expression output (see {@link #HYPERNEAT_LEO}). Should be called after calling
-		 * {@link #query()}.
+		 * {@link #query()}. If LEO is not enabled true is returned.
 		 */
-		public double getLEO() {
-			return cppnOutput[cppnIdxLEO[0]];
+		public boolean getLEO() {
+			return getLEO(0);
 		}
 
 		/**
 		 * Get the value of the link expression output (see {@link #HYPERNEAT_LEO}), either within a specified layer (in
 		 * a layered feed-forward network encoded with {@link #HYPERNEAT_LAYER_ENCODING} set to false), OR for the
-		 * specified synapse type index. Should be called after calling {@link #query()}.
+		 * specified synapse type index. Should be called after calling {@link #query()}. If LEO is not enabled true is
+		 * returned.
 		 */
-		public double getLEO(int index) {
-			return cppnOutput[cppnIdxLEO[index]];
+		public boolean getLEO(int index) {
+			return !enableLEO || cppnOutput[cppnIdxLEO[index]] > leoThreshold * (leoThresholdFactorDistance ? synapseLengthSquared : 1);
 		}
 
 		/**
 		 * Get the value of the neuron expression output (see {@link #HYPERNEAT_NEO}). Should be called after calling
-		 * {@link #query()}.
+		 * {@link #query()}. If NEO is not enabled true is returned.
 		 */
-		public double getNEO() {
-			return cppnOutput[cppnIdxNEO[0]];
+		public boolean getNEO() {
+			return getNEO(0);
 		}
 
 		/**
-		 * Get the value of the neuron expression output (see {@link #HYPERNEAT_NEO}), either within a specified layer (in
-		 * a layered feed-forward network encoded with {@link #HYPERNEAT_LAYER_ENCODING} set to false), OR for the
-		 * specified neuron type index. Should be called after calling {@link #query()}.
+		 * Get the value of the neuron expression output (see {@link #HYPERNEAT_NEO}), either within a specified layer
+		 * (in a layered feed-forward network encoded with {@link #HYPERNEAT_LAYER_ENCODING} set to false), OR for the
+		 * specified neuron type index. Should be called after calling {@link #query()}. If NEO is not enabled true is
+		 * returned.
 		 */
-		public double getNEO(int index) {
-			return cppnOutput[cppnIdxNEO[index]];
+		public boolean getNEO(int index) {
+			return !enableNEO || cppnOutput[cppnIdxNEO[index]] > neoThreshold;
 		}
 
 		/**

@@ -92,7 +92,6 @@ public class TargetFitnessCalculator implements Configurable {
 	 */
 	public static final String FITNESS_ACCEPTABLE_ERROR_KEY = "fitness.function.error.acceptable";
 
-	private int maxFitnessValue = 1000000; // The maximum possible fitness value.
 	private ErrorType errorTypeTrial = ErrorType.RMSE;
 	private ErrorType errorTypeOutput = ErrorType.SAE;
 	private String fitnessConversionType = "proportional";
@@ -141,23 +140,6 @@ public class TargetFitnessCalculator implements Configurable {
 		}
 
 		acceptableError = props.getDoubleProperty(FITNESS_ACCEPTABLE_ERROR_KEY, acceptableError);
-	}
-
-	/**
-	 * @return maximum possible fitness value for this function.
-	 */
-	public int getMaxFitnessValue() {
-		return maxFitnessValue;
-	}
-
-	/**
-	 * Sets the maximum possible fitness value this function will return. Default is 1000000 which is fine for nearly
-	 * all purposes.
-	 * 
-	 * @param newMaxFitnessValue The new maximum fitness.
-	 */
-	public void setMaxFitnessValue(int newMaxFitnessValue) {
-		maxFitnessValue = newMaxFitnessValue;
 	}
 
 	/**
@@ -286,8 +268,8 @@ public class TargetFitnessCalculator implements Configurable {
 
 		Results results = new Results();
 		double proportionalPerformance = 1 - (totalError / maxError);
-		results.proportionalFitness = (int) Math.round(proportionalPerformance * maxFitnessValue);
-		results.inverseFitness = (int) Math.round(maxFitnessValue / (1 + totalError));
+		results.proportionalFitness = proportionalPerformance;
+		results.inverseFitness = 1.0 / (1 + totalError);
 		results.percentCorrect = (double) percentCorrect / trialCount;
 		results.fitness = fitnessConversionType.equals("proportional") ? results.proportionalFitness : results.inverseFitness;
 		results.performance = performanceMetric.equals("proportional") ? proportionalPerformance : results.percentCorrect;
@@ -308,7 +290,7 @@ public class TargetFitnessCalculator implements Configurable {
 		 * 
 		 * @see TargetFitnessCalculator#FITNESS_CONVERSION_TYPE_KEY
 		 */
-		public int fitness;
+		public double fitness;
 		/**
 		 * The "performance", as calculated according to {@link TargetFitnessCalculator#FITNESS_PERFORMANCE_TYPE_KEY}.
 		 */
@@ -318,13 +300,13 @@ public class TargetFitnessCalculator implements Configurable {
 		 * 
 		 * @see TargetFitnessCalculator#FITNESS_CONVERSION_TYPE_KEY
 		 */
-		public int inverseFitness;
+		public double inverseFitness;
 		/**
 		 * The fitness value calculated from the error using the proportional conversion method.
 		 * 
 		 * @see TargetFitnessCalculator#FITNESS_CONVERSION_TYPE_KEY
 		 */
-		public int proportionalFitness;
+		public double proportionalFitness;
 		/**
 		 * The percentage of trials for which the correct output was given. A trial is considered correct if each output
 		 * is with the range given by the target output value +/- the error margin specified given by

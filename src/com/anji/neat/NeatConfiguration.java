@@ -25,6 +25,7 @@ import java.util.Arrays;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;
+import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.ChromosomeMaterial;
 import org.jgapcustomised.Configuration;
 import org.jgapcustomised.IdFactory;
@@ -121,7 +122,7 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	 */
 	public final static String SPECIATION_THRESHOLD_KEY = "speciation.threshold";
 	/**
-	 * properties key, speciation target (# species)
+	 * properties key, target number of species, default is popul.size / 15.
 	 */
 	public final static String SPECIATION_TARGET_KEY = "speciation.target";
 	/**
@@ -133,7 +134,7 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	 */
 	public final static String ELITISM_PROPORTION_KEY = "selector.elitism.proportion";
 	/**
-	 * properties key, minimum number of elite members to select from a species
+	 * properties key, minimum number of elite members to select from a species, default is the number of objectives defined by fitness function.
 	 */
 	public final static String ELITISM_MIN_TO_SELECT_KEY = "selector.elitism.min.to.select";
 	/**
@@ -147,7 +148,11 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	
 
 	/**
-	 * properties key, enable weighted selection process
+	 * properties key, the NaturalSelector to use to perform the selection process. Default is com.anji.integration.SimpleSelector.
+	 */
+	public final static String SELECTOR_CLASS_KEY = "selector.class";
+	/**
+	 * properties key, enable weighted selection process. Deprecated, use SELECTOR_CLASS_KEY (selector.class).
 	 */
 	public final static String WEIGHTED_SELECTOR_KEY = "selector.roulette";
 	/**
@@ -197,7 +202,6 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	protected String hiddenActivationType;
 	protected String[] hiddenActivationTypeRandomAllowed;
 	protected double[] hiddenActivationTypeRandomDistribution;
-	protected boolean biasViaInput = true;
 	private NeatIdMap neatIdMap;
 	
 	/**
@@ -277,8 +281,7 @@ public class NeatConfiguration extends Configuration implements Configurable {
 			throw new InvalidConfigurationException(msg);
 		}
 		
-		biasViaInput = props.getBooleanProperty(BIAS_VIA_INPUT_KEY, biasViaInput);
-
+		
 		// make sure numbers add up
 		double survivalRate = props.getDoubleProperty(SURVIVAL_RATE_KEY, DEFAULT_SURVIVAL_RATE);
 		// double crossoverSlice = 1.0f - ( 2.0f * survivalRate );
@@ -291,12 +294,16 @@ public class NeatConfiguration extends Configuration implements Configurable {
 		NaturalSelector selector = null;
 		if (props.getBooleanProperty(WEIGHTED_SELECTOR_KEY, false)) {
 			selector = new WeightedRouletteSelector();
+			logger.warn("Property " + WEIGHTED_SELECTOR_KEY + " is deprecated. Use " + SELECTOR_CLASS_KEY + " instead.");
 		} else {
-			selector = new SimpleSelector();
+			selector = props.newObjectProperty(props.getClassProperty(SELECTOR_CLASS_KEY, SimpleSelector.class));
 		}
+		
+		BulkFitnessFunction bulkFitnessFunc = (BulkFitnessFunction) props.singletonObjectProperty(Evolver.FITNESS_FUNCTION_CLASS_KEY);
+		
 		selector.setSurvivalRate(survivalRate);
 		selector.setElitismProportion(props.getFloatProperty(ELITISM_PROPORTION_KEY, 0.1f));
-		selector.setElitismMinToSelect(props.getIntProperty(ELITISM_MIN_TO_SELECT_KEY, 1));
+		selector.setElitismMinToSelect(props.getIntProperty(ELITISM_MIN_TO_SELECT_KEY, bulkFitnessFunc.getObjectiveCount()));
 		selector.setElitismMinSpeciesSize(props.getIntProperty(ELITISM_MIN_SPECIE_SIZE_KEY, 5));
 		selector.setSpeciatedFitness(props.getBooleanProperty(SPECIATED_FITNESS_KEY, true));
 		selector.setMaxStagnantGenerations(props.getIntProperty(MAX_STAGNANT_GENERATIONS_KEY, 999999));
@@ -410,7 +417,7 @@ public class NeatConfiguration extends Configuration implements Configurable {
 			logger.info("no speciation compatibility threshold specified", e);
 		}
 
-		getSpeciationParms().setSpeciationTarget(props.getIntProperty(SPECIATION_TARGET_KEY));
+		getSpeciationParms().setSpeciationTarget(props.getIntProperty(SPECIATION_TARGET_KEY, getPopulationSize() / 15));
 
 		getSpeciationParms().setSpeciationThresholdChange(props.getFloatProperty(SPECIATION_THRESHOLD_CHANGE_KEY));
 
@@ -534,7 +541,7 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	 * @see #BIAS_VIA_INPUT_KEY
 	 */
 	public boolean biasViaInput() {
-		return biasViaInput;
+		return props.getBooleanProperty(BIAS_VIA_INPUT_KEY, true);
 	}
 
 	/**

@@ -1,6 +1,8 @@
 package com.ojcoleman.ahni.experiments.objectrecognition;
 
 
+import java.awt.geom.AffineTransform;
+
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
@@ -17,6 +19,8 @@ import com.ojcoleman.ahni.transcriber.HyperNEATTranscriber;
  * Determines fitness based on how close <code>Activator</code> output is to a target.
  */
 public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction {
+	private static Logger logger = Logger.getLogger(ObjectRecognitionFitnessFunction2.class);
+
 	private double[][][] stimuli;
 	private int[][] targetCoords;
 	private int maxFitnessValue;
@@ -45,13 +49,6 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 		double maxDistance = (double) Math.sqrt(maxXDelta * maxXDelta + maxYDelta * maxYDelta);
 		maxFitnessValue = (int) Math.ceil(maxDistance * 1000); // fitness is given by maxFitnessValue - avg of distances
 																// * 1000
-	}
-
-	/**
-	 * @return maximum possible fitness value for this function
-	 */
-	public int getMaxFitnessValue() {
-		return maxFitnessValue;
 	}
 
 	/**
@@ -91,11 +88,8 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 		}
 	}
 
-	protected int evaluate(Chromosome genotype, Activator activator, int threadIndex) {
-		GridNet substrate = (GridNet) activator;
-		// if (genotype.size() > 100)
-		// return 0;
-		double[][][] responses = substrate.nextSequence(stimuli);
+	protected double evaluate(Chromosome genotype, Activator activator, int threadIndex) {
+		double[][][] responses = activator.nextSequence(stimuli);
 
 		int totalSqrDists = 0;
 		double totalDists = 0;
@@ -118,9 +112,9 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 			totalSqrDists += sqrDist;
 			totalDists += Math.sqrt(sqrDist);
 		}
-
-		genotype.setPerformanceValue(totalDists / numTrials);
-		return maxFitnessValue - (int) Math.round(((double) (totalDists / numTrials)) * 1000);
+		double fitness = (maxFitnessValue - (totalDists / numTrials) * 1000) / maxFitnessValue;
+		genotype.setPerformanceValue(fitness);
+		return fitness;
 	}
 
 	@Override
@@ -128,6 +122,36 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 		// adjust shape size
 		largeSquareSize *= scaleFactor;
 		smallSquareSize *= scaleFactor;
+
+		int[] width = transcriber.getWidth();
+		int[] height = transcriber.getWidth();
+		int connectionRange = transcriber.getConnectionRange();
+		
+		// get ratio of shape size to image size (this should be maintained during scale).
+		double ratioW = (double) inputWidth / largeSquareSize;
+		double ratioH = (double) inputHeight / largeSquareSize;
+
+		// adjust shape size
+		if (scaleFactor % 2 == 0 && largeSquareSize % 2 == 1) // if scaleFactor is even but shapeSize is odd
+			largeSquareSize = (largeSquareSize / 2) * scaleFactor * 2 + 1; // preserve oddness of conn range
+		else
+			largeSquareSize *= scaleFactor;
+
+		for (int l = 0; l < width.length; l++) {
+			width[l] = (int) Math.round(largeSquareSize * ratioW);
+			height[l] = (int) Math.round(largeSquareSize * ratioH);
+		}
+		connectionRange = largeSquareSize / 2;
+		
+		inputWidth = width[0];
+		inputHeight = height[0];
+		outputWidth = width[width.length - 1];
+		outputHeight = height[height.length - 1];
+		
+		transcriber.resize(width, height, connectionRange);
+		
 		setMaxFitnessValue();
+
+		logger.info("Scale performed: image size: " + inputWidth + "x" + inputHeight + ", large square size: " + largeSquareSize + ", conn range: " + connectionRange);
 	}
 }

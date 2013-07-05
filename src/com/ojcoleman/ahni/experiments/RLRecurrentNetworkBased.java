@@ -159,7 +159,7 @@ public class RLRecurrentNetworkBased extends BulkFitnessFunctionMT implements AH
 		weightVarianceMax = props.getDoubleProperty(WEIGHT_VARIANCE_MAX);
 		difficultyIncreasePerformance = props.getDoubleProperty(DIFFICULTY_INCREASE_PERFORMANCE);
 
-		envRand = new Random(props.getLongProperty(SEED, props.getLongProperty("experiment.id", System.currentTimeMillis())));
+		envRand = new Random(props.getLongProperty(SEED, System.currentTimeMillis()));
 
 		environments = new Environment[environmentCount];
 		for (int e = 0; e < environments.length; e++) {
@@ -188,17 +188,12 @@ public class RLRecurrentNetworkBased extends BulkFitnessFunctionMT implements AH
 	}
 
 	@Override
-	public int getMaxFitnessValue() {
-		return 1000000;
+	protected double evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
+		return evaluate(genotype, substrate, null, false, false);
 	}
 
 	@Override
-	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
-		return evaluate(genotype, substrate, null);
-	}
-
-	@Override
-	public int evaluate(Chromosome genotype, Activator substrate, String baseFileName) {
+	public double evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
 		double reward = 0;
 		NNAdaptor nn = (NNAdaptor) substrate;
 
@@ -207,7 +202,7 @@ public class RLRecurrentNetworkBased extends BulkFitnessFunctionMT implements AH
 		}
 
 		try {
-			NiceWriter logOutput = baseFileName == null ? null : new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
+			NiceWriter logOutput = !logText ? null : new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
 			int imageScale = 8;
 
 			double[] avgRewardForEachTrial = new double[trialCount];
@@ -223,7 +218,7 @@ public class RLRecurrentNetworkBased extends BulkFitnessFunctionMT implements AH
 				// Assuming the number of environments is >= the number of threads this doesn't waste CPU cycles.
 				Environment env = environments[envIndex];
 				if (!environmentDone[envIndex] && env.lock()) {
-					if (logOutput != null) {
+					if (logText) {
 						logOutput.put("\n\nBEGIN EVALUATION ON ENVIRONMENT " + env.id + "\n");
 
 						NiceWriter logOutputEnv = new NiceWriter(new FileWriter(baseFileName + ".environment.txt"), "0.00");
@@ -243,14 +238,15 @@ public class RLRecurrentNetworkBased extends BulkFitnessFunctionMT implements AH
 
 						BufferedImage image = null;
 						Graphics2D g = null;
-						if (logOutput != null) {
+						if (logText) {
 							logOutput.put("\n  BEGIN TRIAL " + (trial + 1) + " of " + trialCount + "\n");
-
+						}
+						if (baseFileName != null && logImage) {
 							// Log activation levels to time series plot.
 							image = new BufferedImage(iterationCount * imageScale, networkSize * imageScale, BufferedImage.TYPE_BYTE_GRAY);
 							g = image.createGraphics();
 						}
-
+					
 						// Reset environment to initial state.
 						env.rnn.reset();
 
@@ -273,17 +269,25 @@ public class RLRecurrentNetworkBased extends BulkFitnessFunctionMT implements AH
 							}
 							double stepReward = 1 - Math.abs(controlOutputSum / controlCount);
 
-							if (logOutput != null) {
+							if (logText) {
 								logOutput.put("    ");
 								for (int i = 0; i < manipulable; i++) {
 									logOutput.put(nf.format(agentOutput[i]) + ", ");
+								}
+								double[] envActivation = env.rnn.getNeuralNetwork().getNeurons().getOutputs();
+								for (int i = manipulable; i < networkSize; i++) {
+									logOutput.put(nf.format(envActivation[i]) + ", ");
+								}
+								logOutput.put("\n");
+							}
+							if (logImage) {
+								for (int i = 0; i < manipulable; i++) {
 									float c = (float) ((agentOutput[i] + 1) / 2);
 									g.setColor(new Color(c, c, c));
 									g.fillOval(step * imageScale, i * imageScale, imageScale, imageScale);
 								}
 								double[] envActivation = env.rnn.getNeuralNetwork().getNeurons().getOutputs();
 								for (int i = manipulable; i < networkSize; i++) {
-									logOutput.put(nf.format(envActivation[i]) + ", ");
 									float c = (float) ((envActivation[i] + 1) / 2);
 									g.setColor(new Color(c, c, c));
 									if (i < networkSize - observable) {
@@ -292,7 +296,6 @@ public class RLRecurrentNetworkBased extends BulkFitnessFunctionMT implements AH
 										g.fillOval(step * imageScale, i * imageScale, imageScale, imageScale);
 									}
 								}
-								logOutput.put("\n");
 							}
 
 							// Only count reward for last half of evaluation.
@@ -305,7 +308,7 @@ public class RLRecurrentNetworkBased extends BulkFitnessFunctionMT implements AH
 						envReward += trialReward;
 						avgRewardForEachTrial[trial] += trialReward;
 
-						if (logOutput != null) {
+						if (image != null) {
 							File outputfile = new File(baseFileName + ".timeseries.env_ " + envIndex + ".trial_" + trial + ".png");
 							ImageIO.write(image, "png", outputfile);
 						}
@@ -313,7 +316,7 @@ public class RLRecurrentNetworkBased extends BulkFitnessFunctionMT implements AH
 					reward += envReward / trialCount;
 
 					// Run environment with no input from agent to see what the unperturbed dynamics are like.
-					if (logOutput != null) {
+					if (logImage) {
 						BufferedImage image = new BufferedImage(iterationCount * imageScale, (networkSize - manipulable) * imageScale, BufferedImage.TYPE_BYTE_GRAY);
 						Graphics2D g = image.createGraphics();
 
@@ -354,7 +357,7 @@ public class RLRecurrentNetworkBased extends BulkFitnessFunctionMT implements AH
 			}
 
 			reward /= environmentCount;
-			return (int) Math.round(getMaxFitnessValue() * reward);
+			return reward;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

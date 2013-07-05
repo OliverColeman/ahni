@@ -54,23 +54,6 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 	}
 
 	/**
-	 * @return maximum possible fitness value for this function.
-	 */
-	public int getMaxFitnessValue() {
-		return fitnessCalculator.getMaxFitnessValue();
-	}
-
-	/**
-	 * Sets the maximum possible fitness value this function will return. Default is 1000000 which is fine for nearly
-	 * all purposes.
-	 * 
-	 * @param newMaxFitnessValue The new maximum fitness.
-	 */
-	protected void setMaxFitnessValue(int newMaxFitnessValue) {
-		fitnessCalculator.setMaxFitnessValue(newMaxFitnessValue);
-	}
-
-	/**
 	 * Set the input and target output pattern pairs to use for evaluations.
 	 * @param inputPatterns Array containing stimuli (input) examples, in the form [trial][y][x]. The dimensions should match those of the
 	 * input layer of the substrate network.
@@ -87,18 +70,18 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 	}
 
 	@Override
-	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
-		return evaluate(genotype, substrate, null);
+	protected double evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
+		return evaluate(genotype, substrate, null, false, false);
 	}
 	
 	@Override
-	public int evaluate(Chromosome genotype, Activator substrate, String baseFileName) {
+	public double evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
 		if (baseFileName == null) {
 			TargetFitnessCalculator.Results results = fitnessCalculator.evaluate(substrate, inputPatterns, targetOutputPatterns, minTargetOutputValue, maxTargetOutputValue, null);
 			genotype.setPerformanceValue(results.performance);
 			return results.fitness;
 		}
-		else {
+		else if (logText) {
 			try {
 				NiceWriter outputFile = new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
 				TargetFitnessCalculator.Results results = fitnessCalculator.evaluate(substrate, inputPatterns, targetOutputPatterns, minTargetOutputValue, maxTargetOutputValue, outputFile);
@@ -107,7 +90,7 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			return 0;
 		}
+		return 0;
 	}
 }

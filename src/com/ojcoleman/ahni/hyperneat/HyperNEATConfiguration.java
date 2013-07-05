@@ -240,7 +240,7 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 			if (enableLogFiles) {
 				try {
 					Transcriber cppnTranscriber = (Transcriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
-					Activator n = cppnTranscriber.transcribe(new Chromosome(sample, 0L));
+					Activator n = cppnTranscriber.transcribe(new Chromosome(sample, 0L, getObjectiveCount()));
 					BufferedWriter outputfile = new BufferedWriter(new FileWriter(getOutputDirPath() + "initial-sample-chromosome.txt"));
 					outputfile.write(n.toXml());
 					outputfile.close();

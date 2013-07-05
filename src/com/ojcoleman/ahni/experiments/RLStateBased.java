@@ -139,22 +139,17 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 	}
 
 	@Override
-	public int getMaxFitnessValue() {
-		return 1000000;
+	protected double evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
+		return evaluate(genotype, substrate, null, false, false);
 	}
 
 	@Override
-	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
-		return evaluate(genotype, substrate, null);
-	}
-
-	@Override
-	public int evaluate(Chromosome genotype, Activator substrate, String baseFileName) {
+	public double evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
 		double reward = 0;
 		int solvedCount = 0;
 
 		try {
-			NiceWriter logOutput = baseFileName == null ? null : new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
+			NiceWriter logOutput = !logText ? null : new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
 
 			// Either the substrate input array has length equal to the maximum state count + the maximum action count +
 			// 1,
@@ -170,7 +165,7 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 
 			double[] avgRewardForEachTrial = new double[trialCount];
 			for (Environment env : environments) {
-				if (logOutput != null) {
+				if (logText) {
 					logOutput.put("\n\nBEGIN EVALUATION ON ENVIRONMENT " + env.id + "\n");
 					logOutput.put(env).put("\n");
 				}
@@ -182,7 +177,7 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 				double trialReward = 0;
 				int consecutivePerfectTrialCount = 0;
 				for (int trial = 0; trial < trialCount; trial++) {
-					if (logOutput != null) {
+					if (logText) {
 						logOutput.put("\n  BEGIN TRIAL " + (trial + 1) + " of " + trialCount + "\n");
 					}
 
@@ -225,7 +220,7 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 							}
 						}
 
-						if (logOutput != null) {
+						if (logText) {
 							boolean outputChanged = step > 0 && !ArrayUtils.isEquals(output, previousOutput);
 							logOutput.put("    Agent is at " + currentState.id + "\n");
 							logOutput.put("    Input: " + ArrayUtil.toString(input, ", ", nf) + "\n");
@@ -260,7 +255,7 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 								avgRewardForEachTrial[t] += trialReward;
 								envReward += trialReward;
 							}
-							if (logOutput != null) {
+							if (logText) {
 								logOutput.put("  ENVIRONMENT MASTERED.\n\n");
 							}
 							break; // breaks out of: for (int trial = 0; trial < trialCount; trial++)
@@ -275,21 +270,20 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 			for (int trial = 0; trial < trialCount; trial++) {
 				avgRewardForEachTrial[trial] /= environmentCount;
 			}
-			if (logOutput != null) {
+			if (logText) {
 				logOutput.put("\n\nReward for each trial averaged over all environments:\n");
 				logOutput.put(Arrays.toString(avgRewardForEachTrial));
-
 				logOutput.close();
 			}
 			
 			genotype.setPerformanceValue((double) solvedCount / environmentCount);
 			reward /= environmentCount;
-			//return (int) Math.round(getMaxFitnessValue() * reward);
-			//return (int) Math.round(getMaxFitnessValue() * (genotype.getPerformanceValue() * 0.75 + reward * 0.25));
-			//return (int) Math.round(getMaxFitnessValue() * genotype.getPerformanceValue());
-			//return (int) Math.round(getMaxFitnessValue() * avgRewardForEachTrial[trialCount-1]); // Result of final trials.
+			//return reward;
+			//return genotype.getPerformanceValue() * 0.75 + reward * 0.25;
+			//return genotype.getPerformanceValue();
+			//return avgRewardForEachTrial[trialCount-1]; // Result of final trials.
 			// Result of final trials and percentage solved.
-			return (int) Math.round(getMaxFitnessValue() * (avgRewardForEachTrial[trialCount-1] * 0.5 + genotype.getPerformanceValue() * 0.5)); 
+			return avgRewardForEachTrial[trialCount-1] * 0.5 + genotype.getPerformanceValue() * 0.5; 
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

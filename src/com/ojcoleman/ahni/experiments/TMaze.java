@@ -210,22 +210,17 @@ public class TMaze extends BulkFitnessFunctionMT {
 	}
 
 	@Override
-	public int getMaxFitnessValue() {
-		return 1000000;
+	protected double evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
+		return evaluate(genotype, substrate, null, false, false);
 	}
 
 	@Override
-	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
-		return evaluate(genotype, substrate, null);
-	}
-
-	@Override
-	public int evaluate(Chromosome genotype, Activator substrate, String baseFileName) {
+	public double evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
 		try {
-			NiceWriter logOutput = baseFileName == null ? null : new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
+			NiceWriter logOutput = !logText ? null : new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
 			StringBuilder logSummary = logOutput == null ? null : new StringBuilder();
 			
-			if (logOutput != null) {
+			if (logText) {
 				logOutput.put("Map:\n");
 				logOutput.put(map).put("\n");
 			}
@@ -241,7 +236,7 @@ public class TMaze extends BulkFitnessFunctionMT {
 				maxSteps = isDouble ? passageLength * 3 + 5 : passageLength * 2 + 3;
 			}
 			for (int trial = 0; trial < trialCount; trial++) {
-				if (logOutput != null) {
+				if (logText) {
 					logOutput.put("\n=== BEGIN TRIAL " + trial + "===\n");
 					logSummary.append("Trial " + trial + "\n");
 				}
@@ -251,7 +246,7 @@ public class TMaze extends BulkFitnessFunctionMT {
 					rewardSwitchTrialsIndex++;
 					rewardHighIndex = rewardIndexForSwitch[rewardSwitchTrialsIndex];
 				}
-				if (logOutput != null)
+				if (logText)
 					logOutput.put("Reward is at " + rewardLocationsX[rewardHighIndex] + ", " + rewardLocationsY[rewardHighIndex] + "\n");
 	
 				int agentX = startX;
@@ -342,7 +337,7 @@ public class TMaze extends BulkFitnessFunctionMT {
 						action = (o < -0.3) ? 0 : ((o > 0.3) ? 2 : 1);
 					}
 	
-					if (logOutput != null) {
+					if (logText) {
 						logOutput.put("Agent is at " + agentX + ", " + agentY + "\n");
 						logOutput.put("\tInput: " + ArrayUtil.toString(input, ", ", nf) + "\n");
 						logOutput.put("\tOutput: " + ArrayUtil.toString(output, ", ", nf) + "\n");
@@ -376,12 +371,12 @@ public class TMaze extends BulkFitnessFunctionMT {
 			reward /= trialCount;
 			double minPossibleReward = Math.min(Math.min(rewardCrash, rewardFailReturnHome), 0);
 			double possibleRewardRange = rewardHigh - minPossibleReward;
-			int fitness = (int) Math.round(getMaxFitnessValue() * ((reward - minPossibleReward) / possibleRewardRange));
+			double fitness = (reward - minPossibleReward) / possibleRewardRange;
 			// Highest performance is reached when all trials are correct except those where the reward was moved and the agent had to explore all possible options.
 			double performance = (double) correctTrialCount / (trialCount - ((rewardSwitchCount+1) * (isDouble ? 3 : 1)));
 			if (performance > 1) performance = 1; // Sometimes there's a lucky one.
 			
-			if (logOutput != null) {
+			if (logText) {
 				logOutput.put("\n=== Summary ===\n" + logSummary);
 				logOutput.put("\n=== Stats ===\nfitness: " + fitness + "\nperformance: " + performance + "\nhigh reward count: " + highRewardCount + "\nlow reward count: " + lowRewardCount + "\ncrash count: " + crashCount + "\nfail return home (or took too long) count: " + failReturnHomeCount + "\n");
 				logOutput.close();

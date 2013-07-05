@@ -2,7 +2,7 @@ package com.ojcoleman.ahni.evaluation;
 
 import java.util.List;
 
-
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
@@ -11,21 +11,28 @@ import com.anji.neat.Evolver;
 import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.transcriber.HyperNEATTranscriber;
+import com.ojcoleman.ahni.util.ArrayUtil;
 
 /**
- * <p>Provides a base for fitness functions for use with HyperNEAT. Provides a multi-threaded framework for performing
- * evaluations on multiple genomes. The methods {@link #getMaxFitnessValue()} and
- * {@link #evaluate(Chromosome, Activator, int)} must be implemented in subclasses. Subclasses may also need to override
- * the methods {@link #init(Properties)}, {@link #initialiseEvaluation()},
- * {@link #postEvaluate(Chromosome, Activator, int)}, {@link #scale(int, int, HyperNEATTranscriber)} and {@link #dispose()}.</p>
+ * <p>
+ * Provides a base for fitness functions for use with HyperNEAT. Provides a multi-threaded framework for performing
+ * evaluations on multiple genomes. The methods {@link #evaluate(Chromosome, Activator, int)} must be implemented in
+ * subclasses. Subclasses may also need to override the methods {@link #init(Properties)},
+ * {@link #initialiseEvaluation()}, {@link #finaliseEvaluation()}, {@link #postEvaluate(Chromosome, Activator, int)},
+ * {@link #definesFitness()}, {@link #definesNovelty()}, {@link #scale(int, int, HyperNEATTranscriber)} and
+ * {@link #dispose()}.
+ * </p>
  * 
- * <p>Subclasses may wish to override {@link #evolutionFinished(com.ojcoleman.ahni.hyperneat.HyperNEATEvolver)} to perform testing or other analysis
- * on the fittest and/or best performing Chromosomes evolved during the run; the method
- * {@link #generateSubstrate(Chromosome, Activator)} may be used to create substrates for a Chromosome.</p>
+ * <p>
+ * Subclasses may wish to override {@link #evolutionFinished(com.ojcoleman.ahni.hyperneat.HyperNEATEvolver)} to perform
+ * testing or other analysis on the fittest and/or best performing Chromosomes evolved during the run; the method
+ * {@link #generateSubstrate(Chromosome, Activator)} may be used to create substrates for a Chromosome.
+ * </p>
  * 
- * <p>See
- * {@link com.ojcoleman.ahni.experiments.TestTargetFitnessFunction} and
- * {@link com.ojcoleman.ahni.experiments.objectrecognition.ObjectRecognitionFitnessFunction3} for examples.</p>
+ * <p>
+ * See {@link com.ojcoleman.ahni.experiments.TestTargetFitnessFunction} and
+ * {@link com.ojcoleman.ahni.experiments.objectrecognition.ObjectRecognitionFitnessFunction3} for examples.
+ * </p>
  * 
  * @author Oliver Coleman
  */
@@ -70,21 +77,25 @@ public abstract class HyperNEATFitnessFunction extends BulkFitnessFunctionMT {
 	private int scaleFactor = 2;
 	private int scaleTimes = 2;
 	private boolean scaleRecordIntermediatePerf = true;
-	
+
 	/**
-	 * The width of the input layer. This will be set in {@link #init(Properties)} (if the fitness function is to determine this then it will be set to -1 initially).
+	 * The width of the input layer. This will be set in {@link #init(Properties)} (if the fitness function is to
+	 * determine this then it will be set to -1 initially).
 	 */
 	protected int inputWidth;
 	/**
-	 * The height of the input layer. This will be set in {@link #init(Properties)} (if the fitness function is to determine this then it will be set to -1 initially).
+	 * The height of the input layer. This will be set in {@link #init(Properties)} (if the fitness function is to
+	 * determine this then it will be set to -1 initially).
 	 */
 	protected int inputHeight;
 	/**
-	 * The width of the output layer. This will be set in {@link #init(Properties)} (if the fitness function is to determine this then it will be set to -1 initially).
+	 * The width of the output layer. This will be set in {@link #init(Properties)} (if the fitness function is to
+	 * determine this then it will be set to -1 initially).
 	 */
 	protected int outputWidth;
 	/**
-	 * The height of the output layer. This will be set in {@link #init(Properties)} (if the fitness function is to determine this then it will be set to -1 initially).
+	 * The height of the output layer. This will be set in {@link #init(Properties)} (if the fitness function is to
+	 * determine this then it will be set to -1 initially).
 	 */
 	protected int outputHeight;
 
@@ -99,8 +110,9 @@ public abstract class HyperNEATFitnessFunction extends BulkFitnessFunctionMT {
 
 		scalePerformance = props.getDoubleProperty(SCALE_PERFORMANCE_KEY, scalePerformance);
 		scaleTimes = Math.max(0, props.getIntProperty(SCALE_COUNT_KEY, scaleTimes));
+		scaleFactor = Math.max(0, props.getIntProperty(SCALE_FACTOR_KEY, scaleFactor));
 		scaleRecordIntermediatePerf = props.getBooleanProperty(SCALE_RIP_KEY, scaleRecordIntermediatePerf);
-		
+
 		int depth = props.getIntProperty(HyperNEATTranscriber.SUBSTRATE_DEPTH);
 		int[] width = HyperNEATTranscriber.getProvisionalLayerSize(props, HyperNEATTranscriber.SUBSTRATE_WIDTH);
 		int[] height = HyperNEATTranscriber.getProvisionalLayerSize(props, HyperNEATTranscriber.SUBSTRATE_HEIGHT);
@@ -118,8 +130,12 @@ public abstract class HyperNEATFitnessFunction extends BulkFitnessFunctionMT {
 
 		endRun = false;
 		// If we've completed all scalings and reached the target performance, end the run.
-		if (scaleCount >= 0 && scaleCount == scaleTimes && scaleFactor > 1 && ((targetPerformanceType == 1 && bestPerformance >= targetPerformance) || (targetPerformanceType == 0 && bestPerformance <= targetPerformance))) {
-			endRun = true;
+		// If enough generations have been finished to get an average.
+		if (bestPerformances.isFull()) {
+			double avgBestPerformance = ArrayUtil.average(ArrayUtils.toPrimitive(bestPerformances.toArray(new Double[0])));
+			if ((scaleCount == scaleTimes || scaleFactor == 0) && ((targetPerformanceType == 1 && avgBestPerformance >= targetPerformance) || (targetPerformanceType == 0 && avgBestPerformance <= targetPerformance))) {
+				endRun = true;
+			}
 		}
 
 		// if we should scale the substrate
@@ -143,7 +159,8 @@ public abstract class HyperNEATFitnessFunction extends BulkFitnessFunctionMT {
 	 * 
 	 * @param scaleCount A count of how many times a scale has previously occurred. In the first call this has value 0.
 	 * @param scaleFactor The amount the substrate is being scaled by.
-	 * @param transcriber The transcriber that generates substrates (on which {@link HyperNEATTranscriber#resize(int[], int[], int)} may be called).
+	 * @param transcriber The transcriber that generates substrates (on which
+	 *            {@link HyperNEATTranscriber#resize(int[], int[], int)} may be called).
 	 */
 	protected void scale(int scaleCount, int scaleFactor, HyperNEATTranscriber transcriber) {
 	}
@@ -167,10 +184,12 @@ public abstract class HyperNEATFitnessFunction extends BulkFitnessFunctionMT {
 		if (!scaleRecordIntermediatePerf && scaleCount < scaleTimes)
 			genotype.setPerformanceValue(0);
 	}
-	
+
 	/**
 	 * {@inheritDoc}
-	 * <p>This default implementation does nothing.</p>
+	 * <p>
+	 * This default implementation does nothing.
+	 * </p>
 	 */
 	public void evolutionFinished(HyperNEATEvolver evolver) {
 	}

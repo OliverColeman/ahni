@@ -20,9 +20,14 @@
 package org.jgapcustomised;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.SortedSet;
+
+import com.ojcoleman.ahni.evaluation.novelty.Behaviour;
 
 /**
  * Chromosomes represent potential solutions and consist of a fixed-length collection of genes. Each gene represents a
@@ -31,7 +36,6 @@ import java.util.SortedSet;
  * Chromosomes within a single population (genotype).
  */
 public class Chromosome implements Comparable, Serializable {
-
 	/**
 	 * default ID
 	 */
@@ -55,23 +59,59 @@ public class Chromosome implements Comparable, Serializable {
 	protected boolean m_isSelectedForNextGeneration = false;
 
 	/**
-	 * Stores the fitness value of this Chromosome as determined by the active fitness function. A value of -1 indicates
-	 * that this field has not yet been set with this Chromosome's fitness values (valid fitness values are always
-	 * positive).
+	 * Stores the fitness value(s) of this Chromosome as determined by the active fitness function(s). A value of
+	 * Double.NaN indicates that a fitness value has not yet been set.
 	 */
-	protected int m_fitnessValue = -1;
+	protected double[] m_fitnessValue;
 
-	protected double m_performanceValue = -1;
+	/**
+	 * Stores the overall fitness value of this Chromosome, either as determined by the active fitness function or as
+	 * determined by the {@link org.jgapcustomised.NaturalSelector} based on the fitness values over all objectives. A
+	 * value of Double.NaN indicates that a fitness value has not yet been set.
+	 */
+	protected double m_overallFitnessValue;
 
-	private Species m_specie = null;
+	protected double m_performanceValue = Double.NaN;
+
+	protected Species m_specie = null;
 
 	public boolean isElite = false;
+
+	/**
+	 * May be used by implementations of novelty search.
+	 * 
+	 * @see com.ojcoleman.ahni.evaluation.novelty.NoveltySearch
+	 */
+	public double novelty = 0;
+
+	/**
+	 * May be used by implementations of novelty search. A list is used so that one or more behaviours may be stored.
+	 * 
+	 * @see com.ojcoleman.ahni.evaluation.novelty.NoveltySearch
+	 */
+	public ArrayList<Behaviour> behaviour = new ArrayList<Behaviour>(0);
+
+	/**
+	 * Used by selection algorithms to store a value representing how crowded the fitness space is relative to other
+	 * individuals with the same rank (on the same Pareto front), most useful for multi-objective selection algorithms
+	 * such as NSGA-II.
+	 */
+	public double crowdingDistance;
 
 	/**
 	 * ctor for hibernate
 	 */
 	private Chromosome() {
+		this(1);
+	}
+
+	/**
+	 * ctor for hibernate
+	 */
+	private Chromosome(int objectiveCount) {
 		m_material = new ChromosomeMaterial();
+		m_fitnessValue = new double[objectiveCount];
+		Arrays.fill(m_fitnessValue, Double.NaN);
 	}
 
 	/**
@@ -81,7 +121,7 @@ public class Chromosome implements Comparable, Serializable {
 	 * @param a_material Genetic material to be contained within this Chromosome instance.
 	 * @param an_id unique ID of new chromosome
 	 */
-	public Chromosome(ChromosomeMaterial a_material, Long an_id) {
+	public Chromosome(ChromosomeMaterial a_material, Long an_id, int objectiveCount) {
 		// Sanity checks: make sure the parameters are all valid.
 		if (a_material == null)
 			throw new IllegalArgumentException("Chromosome material can't be null.");
@@ -90,6 +130,8 @@ public class Chromosome implements Comparable, Serializable {
 		m_material = a_material;
 		m_alleles = Collections.unmodifiableSortedSet(m_material.getAlleles());
 		associateAllelesWithChromosome();
+		m_fitnessValue = new double[objectiveCount];
+		Arrays.fill(m_fitnessValue, Double.NaN);
 	}
 
 	private void associateAllelesWithChromosome() {
@@ -170,12 +212,30 @@ public class Chromosome implements Comparable, Serializable {
 	}
 
 	/**
-	 * Retrieves the fitness value of this Chromosome, as determined by the active fitness function.
-	 * 
-	 * @return a positive integer value representing the fitness of this Chromosome, or -1 if fitness function has not
-	 *         yet assigned a fitness value to this Chromosome.
+	 * Returns the overall fitness value of this Chromosome, either as determined by the active fitness function or as
+	 * determined by the {@link org.jgapcustomised.NaturalSelector} based on the fitness values over all objectives.
+	 * Fitness values are in the range [0, 1], however the value Double.NaN indicates that a fitness hasn't been set
+	 * yet.
 	 */
-	public int getFitnessValue() {
+	public double getFitnessValue() {
+		return m_overallFitnessValue;
+	}
+
+	/**
+	 * Returns the fitness value of this Chromosome for the given objective, as determined by the active fitness
+	 * function. Fitness values are in the range [0, 1], however the value Double.NaN indicates that a fitness hasn't
+	 * been set yet.
+	 */
+	public double getFitnessValue(int objective) {
+		return m_fitnessValue[objective];
+	}
+
+	/**
+	 * Returns a reference to the array of fitness values for this Chromosome for each objective, as determined by the
+	 * active fitness function. Fitness values are in the range [0, 1], however the value Double.NaN indicates that a
+	 * fitness hasn't been set yet.
+	 */
+	public double[] getFitnessValues() {
 		return m_fitnessValue;
 	}
 
@@ -183,35 +243,84 @@ public class Chromosome implements Comparable, Serializable {
 	 * @return int fitness value adjusted for fitness sharing according to <a
 	 *         href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf>NEAT </a> paradigm.
 	 */
-	public int getSpeciatedFitnessValue() {
+	public double getSpeciatedFitnessValue() {
 		if (m_specie == null)
 			return getFitnessValue();
-		int result = (int) (m_specie.getChromosomeFitnessValue(this) + 0.5);
-		return (result == 0) ? 1 : result;
+		return m_specie.getChromosomeSpeciatedFitnessValue(this);
 	}
 
 	/**
-	 * Sets the fitness value of this Chromosome. This method is for use by bulk fitness functions and should not be
-	 * invoked from anything else. This is the raw fitness value, before species fitness sharing. Setting the fitness
-	 * value will reset the performance value to -1, thus the performance value should always be set after setting the
-	 * fitness.
+	 * Sets the overall fitness value of this Chromosome. This method is for use by bulk fitness functions and should
+	 * not be invoked from anything else. This is the raw fitness value, before species fitness sharing. Fitness values
+	 * must be in the range [0, 1].
 	 * 
-	 * @param a_newFitnessValue a positive integer representing the fitness of this Chromosome. if 0, fitness is set as
-	 *            1.
+	 * @param a_newFitnessValue the fitness of this Chromosome.
 	 */
-	public void setFitnessValue(int a_newFitnessValue) {
-		if (a_newFitnessValue > 0)
-			m_fitnessValue = a_newFitnessValue;
-		else
-			m_fitnessValue = 1;
+	public void setFitnessValue(double a_newFitnessValue) {
+		if (a_newFitnessValue < 0 || a_newFitnessValue > 1) {
+			throw new IllegalArgumentException("Fitness values must be in the range [0, 1], or have value Double.NaN.");
+		}
+		m_overallFitnessValue = a_newFitnessValue;
 	}
 
+	/**
+	 * Sets the fitness value of this Chromosome for the given objective. This method is for use by bulk fitness
+	 * functions and should not be invoked from anything else. Fitness values must be in the range [0, 1].
+	 * 
+	 * @param a_newFitnessValue the fitness of this Chromosome.
+	 */
+	public void setFitnessValue(double a_newFitnessValue, int objective) {
+		if (a_newFitnessValue < 0 || a_newFitnessValue > 1) {
+			throw new IllegalArgumentException("Fitness values must be in the range [0, 1], or have value Double.NaN, but " + a_newFitnessValue + " was given for objective " + objective + ".");
+		}
+		m_fitnessValue[objective] = a_newFitnessValue;
+	}
+
+	/**
+	 * Returns the performance value of this Chromosome as determined by the active fitness function. Performance values
+	 * are in the range [0, 1], however the value Double.NaN indicates that a fitness hasn't been set yet.
+	 */
 	public double getPerformanceValue() {
 		return m_performanceValue;
 	}
 
-	public void setPerformanceValue(double mPerformanceValue) {
-		m_performanceValue = mPerformanceValue;
+	/**
+	 * Sets the performance value of this Chromosome. This method is for use by bulk fitness functions and should not be
+	 * invoked from anything else. Performance values must be in the range [0, 1].
+	 * 
+	 * @param aPerformanceValue the fitness of this Chromosome.
+	 */
+	public void setPerformanceValue(double aPerformanceValue) {
+		if (aPerformanceValue < 0 || aPerformanceValue > 1) {
+			throw new IllegalArgumentException("Performance values must be in the range [0, 1], but " + aPerformanceValue + " was given.");
+		}
+		this.m_performanceValue = aPerformanceValue;
+	}
+
+	/**
+	 * Resets the performance value of this Chromosome to Double.NaN.
+	 */
+	public void resetPerformanceValue() {
+		m_performanceValue = Double.NaN;
+	}
+	
+	/**
+	 * Resets the fitness value(s) of this Chromosome to Double.NaN.
+	 */
+	public void resetFitnessValues() {
+		m_overallFitnessValue = Double.NaN;
+		for (int i = 0; i < m_fitnessValue.length; i++)
+			m_fitnessValue[i] = Double.NaN;
+	}
+
+	
+	/**
+	 * Resets the performance, fitness value(s) and recorded novelty behaviour(s) of this Chromosome.
+	 */
+	public void resetEvaluationData() {
+		resetPerformanceValue();
+		resetFitnessValues();
+		behaviour.clear();
 	}
 
 	/**
@@ -225,7 +334,7 @@ public class Chromosome implements Comparable, Serializable {
 
 	/**
 	 * Compares this Chromosome against the specified object. The result is true if and the argument is an instance of
-	 * the Chromosome class and has a set of genes equal to this one.
+	 * the Chromosome class and has the same ID.
 	 * 
 	 * @param other The object to compare against.
 	 * @return true if the objects are the same, false otherwise.
@@ -244,9 +353,7 @@ public class Chromosome implements Comparable, Serializable {
 	}
 
 	/**
-	 * Compares the given Chromosome to this Chromosome. This chromosome is considered to be "less than" the given
-	 * chromosome if it has a fewer number of genes or if any of its gene values (alleles) are less than their
-	 * corresponding gene values in the other chromosome.
+	 * Compares the given Chromosome to this Chromosome by their ID.
 	 * 
 	 * @param o The Chromosome against which to compare this chromosome.
 	 * @return a negative number if this chromosome is "less than" the given chromosome, zero if they are equal to each
@@ -255,6 +362,19 @@ public class Chromosome implements Comparable, Serializable {
 	public int compareTo(Object o) {
 		Chromosome other = (Chromosome) o;
 		return m_id.compareTo(other.m_id);
+		// return m_material.compareTo(other.m_material);
+	}
+
+	/**
+	 * Compares this Chromosome against the specified object. The result is true if and the argument is an instance of
+	 * the Chromosome class and has a set of genes with equal values (eg connection weight, activation type) to this
+	 * one.
+	 * 
+	 * @param c2 The object to compare against.
+	 * @return true if the objects are the same, false otherwise.
+	 */
+	public boolean isEquivalent(Chromosome c2) {
+		return m_material.isEquivalent(c2.m_material);
 	}
 
 	/**
@@ -295,7 +415,7 @@ public class Chromosome implements Comparable, Serializable {
 	void resetSpecie() {
 		m_specie = null;
 	}
-
+	
 	/**
 	 * for hibernate
 	 * 
@@ -348,4 +468,64 @@ public class Chromosome implements Comparable, Serializable {
 		associateAllelesWithChromosome();
 	}
 
+	public int getObjectiveCount() {
+		return m_fitnessValue.length;
+	}
+
+	/**
+	 * Checks whether this individual dominates the specified other individual, i.e. it is at least as good as the other
+	 * one in all objectives and for at least one objective it is better (i.e. higher fitness value).
+	 * 
+	 * This code is based on JNSGA2 by Joachim Melcher, Institut AIFB, Universitaet Karlsruhe (TH), Germany
+	 * http://sourceforge.net/projects/jnsga2
+	 * 
+	 * @param otherChromosome other individual
+	 * @return <code>true</code> iff this individual dominates the specified one
+	 */
+	public boolean dominates(Chromosome otherChromosome) {
+		/* check special cases: at least one fitness value is 'NaN' (not a number) */
+		boolean hasThisNaN = false;
+		boolean hasOtherNaN = false;
+
+		for (int i = 0; i < getObjectiveCount(); i++) {
+			if (new Double(getFitnessValue(i)).equals(Double.NaN)) {
+				hasThisNaN = true;
+			}
+			if (new Double(otherChromosome.getFitnessValue(i)).equals(Double.NaN)) {
+				hasOtherNaN = true;
+			}
+		}
+
+		// If it looks like we might not be using multi-objective, try using overall/old fitness values.
+		if (getObjectiveCount() == 1 && hasThisNaN && hasOtherNaN) {
+			return getFitnessValue() > otherChromosome.getFitnessValue();
+		}
+
+		if (hasThisNaN) {
+			return false;
+		}
+
+		if (!hasThisNaN && hasOtherNaN) {
+			return true;
+		}
+
+		// Both individuals have no 'NaN'
+		boolean atLeastOneObjectiveBetter = false;
+
+		for (int i = 0; i < getObjectiveCount(); i++) {
+			if (getFitnessValue(i) < otherChromosome.getFitnessValue(i)) {
+				return false;
+			}
+			if (getFitnessValue(i) > otherChromosome.getFitnessValue(i)) {
+				atLeastOneObjectiveBetter = true;
+			}
+		}
+
+		return atLeastOneObjectiveBetter;
+	}
+
+	public void setCrowdingDistance(double positiveInfinity) {
+		// TODO Auto-generated method stub
+
+	}
 }

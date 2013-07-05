@@ -37,26 +37,11 @@ import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
  * 
  * @author Derek James
  */
-public class RandomFitnessFunction implements BulkFitnessFunction, Configurable {
-
-	private final static int MAX_FITNESS = 1000000;
-
+public class RandomFitnessFunction extends BulkFitnessFunction implements Configurable {
 	private Random rand;
 
 	/**
-	 * @return max fitness value
-	 * @see BulkFitnessFunction#getMaxFitnessValue()
-	 */
-	public int getMaxFitnessValue() {
-		return MAX_FITNESS;
-	}
-
-	public double getPerformanceFromFitnessValue(int fitness) {
-		return (double) fitness / MAX_FITNESS;
-	}
-
-	/**
-	 * Assigns random fitness for each chromosome between 1 and <code>MAX_FITNESS</code> inclusive.
+	 * Assigns random fitness for each chromosome.
 	 * 
 	 * @param genotypes <code>List</code> contains <code>Chromosome</code> objects
 	 */
@@ -64,8 +49,7 @@ public class RandomFitnessFunction implements BulkFitnessFunction, Configurable 
 		Iterator it = genotypes.iterator();
 		while (it.hasNext()) {
 			Chromosome chrom = (Chromosome) it.next();
-			int randomFitness = rand.nextInt(MAX_FITNESS);
-			chrom.setFitnessValue(randomFitness + 1);
+			chrom.setFitnessValue(rand.nextDouble());
 		}
 	}
 

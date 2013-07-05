@@ -103,6 +103,25 @@ for usage examples (make sure ann.transcriber.class is set to
 com.ojcoleman.ahni.hyperneat.ESHyperNEATTranscriberBain).
 
 
+NSGA-II multi-objective optimisation
+
+AHNI includes an implementation of the NSGA-II multi-objective optimisation
+algorithm. See documentation for com.ojcoleman.ahni.misc.NSGAIISelector for
+a complete description, and properties/rl-csb-single.proprties for usage 
+examples.
+
+
+Novelty Search
+
+AHNI provides support for novelty search via the classes in 
+com.ojcoleman.ahni.evaluation.novelty.NoveltySearch
+Some fitness functions have domain-specific support for novelty search
+(using the above classes). There is also a generic novelty search fitness 
+function that determines novelty by applying the same randomly generated 
+input sequences and comparing the output between individuals.
+See properties/rl-csb-single.proprties for parameter descriptions.
+
+
 NOTES
 
 AHNI was built on top of a modified version of ANJI (Another NEAT Java 

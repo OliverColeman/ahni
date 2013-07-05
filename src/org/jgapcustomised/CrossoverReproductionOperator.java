@@ -19,6 +19,7 @@
  */
 package org.jgapcustomised;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.jgapcustomised.impl.CloneReproductionOperator;
@@ -54,7 +55,7 @@ public abstract class CrossoverReproductionOperator extends ReproductionOperator
 	 *            number of chromosomes in parents and offspring should equal config.getPopulationSize()
 	 * @see ReproductionOperator#reproduce(Configuration, List, int, List)
 	 */
-	final protected void reproduce(final Configuration config, final List parentChroms, int numOffspring, List offspring) {
+	final protected void reproduce(final Configuration config, final List<Chromosome> parentChroms, int numOffspring, List<ChromosomeMaterial> offspring) {
 		if (parentChroms.size() < 1)
 			throw new IllegalArgumentException("crossover requires at least 1 parent");
 
@@ -63,26 +64,58 @@ public abstract class CrossoverReproductionOperator extends ReproductionOperator
 			CloneReproductionOperator.reproduce(parentChroms, numOffspring, offspring);
 		else {
 			int targetSize = offspring.size() + numOffspring;
-
+			
+			// Make sure we include elites at least once as a parent.
+			List<Integer> elites = new ArrayList<Integer>();
+			for (int i = 0; i < parentChroms.size(); i++) {
+				if (parentChroms.get(i).isElite) elites.add(i);
+			}
+			
+			int eliteIndex = 0;
 			while (offspring.size() < targetSize) {
-				// select random "mother" and "father"
-				int motherIdx = config.getRandomGenerator().nextInt(parentChroms.size());
+				int motherIdx;
+				if (eliteIndex < elites.size()) {
+					motherIdx = elites.get(eliteIndex++);
+				} else {
+					// select random "mother", with 10% chance of choosing an elite.
+					if (!elites.isEmpty() && config.getRandomGenerator().nextDouble() < 0.1) {
+						motherIdx = elites.get(config.getRandomGenerator().nextInt(elites.size()));
+					} else {
+						motherIdx = config.getRandomGenerator().nextInt(parentChroms.size());
+					}
+				}
+				
+				// select random "father", with 10% chance of choosing an elite.
 				int fatherIdx = motherIdx;
-				while (fatherIdx == motherIdx)
-					fatherIdx = config.getRandomGenerator().nextInt(parentChroms.size());
+				while (fatherIdx == motherIdx) {
+					if (!elites.isEmpty() && config.getRandomGenerator().nextDouble() < 0.1) {
+						fatherIdx = elites.get(config.getRandomGenerator().nextInt(elites.size()));
+					} else {
+						fatherIdx = config.getRandomGenerator().nextInt(parentChroms.size());
+					}
+				}
 
 				// determine dominance/recessiveness
 				Chromosome dominant = null;
 				Chromosome recessive = null;
-				Chromosome mother = (Chromosome) parentChroms.get(motherIdx);
-				Chromosome father = (Chromosome) parentChroms.get(fatherIdx);
-				// TODO - use speciated fitness here? (won't make any difference if from same species)
-				if (mother.getFitnessValue() > father.getFitnessValue()) {
+				Chromosome mother = parentChroms.get(motherIdx);
+				Chromosome father = parentChroms.get(fatherIdx);
+				
+				// dominates() uses multi-objective dominance if available, otherwise reverts to regular/overall fitness value.
+				if (mother.dominates(father)) {
 					dominant = mother;
 					recessive = father;
-				} else {
-					recessive = mother;
+				} else if (father.dominates(mother)) {
 					dominant = father;
+					recessive = mother;
+				}
+				// If neither dominates the other, randomly select dominant.
+				else if (config.getRandomGenerator().nextDouble() < 0.5) {
+					dominant = father;
+					recessive = mother;
+				} else {
+					dominant = mother;
+					recessive = father;
 				}
 				ChromosomeMaterial child = reproduce(config, dominant, recessive);
 				offspring.add(child);

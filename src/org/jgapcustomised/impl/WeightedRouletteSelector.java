@@ -97,7 +97,7 @@ public class WeightedRouletteSelector extends NaturalSelector {
 			if (counter == null) {
 				counter = new SlotCounter();
 			}
-			int fitness = speciatedFitness ? a_chromosomeToAdd.getSpeciatedFitnessValue() : a_chromosomeToAdd.getFitnessValue();
+			double fitness = speciatedFitness ? a_chromosomeToAdd.getSpeciatedFitnessValue() : a_chromosomeToAdd.getFitnessValue();
 			counter.reset(fitness);
 			m_wheel.put(a_chromosomeToAdd, counter);
 		}
@@ -271,11 +271,11 @@ class SlotCounter {
 	 * Resets the internal state of this SlotCounter instance so that it can be used to count slots for a new
 	 * Chromosome.
 	 * 
-	 * @param a_initialFitness The fitness value of the Chromosome for which this instance is acting as a counter.
+	 * @param fitness The fitness value of the Chromosome for which this instance is acting as a counter.
 	 */
-	public void reset(int a_initialFitness) {
-		m_fitnessValue = a_initialFitness;
-		m_count = a_initialFitness;
+	public void reset(double fitness) {
+		m_fitnessValue = (int) (fitness * 1000000);
+		m_count = m_fitnessValue;
 	}
 
 	/**

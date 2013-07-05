@@ -147,7 +147,7 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 								double weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getWeight(cppnOutputIndex)));
 								
 								if (enableLEO) {
-									weightVal = cppn.getLEO(cppnOutputIndex) > 0 ? weightVal : 0; 
+									weightVal = cppn.getLEO(cppnOutputIndex) ? weightVal : 0; 
 								}
 								// Otherwise use conventional thresholding.
 								else if (Math.abs(weightVal) > connectionExprThresh) {

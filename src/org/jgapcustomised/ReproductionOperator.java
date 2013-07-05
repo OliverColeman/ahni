@@ -22,8 +22,11 @@
 package org.jgapcustomised;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+
+import org.jgapcustomised.impl.CloneReproductionOperator;
 
 /**
  * Abstract class for reproduction operators. Handles intra-species breeding and someday will handle inter-species
@@ -65,33 +68,40 @@ public abstract class ReproductionOperator {
 			// calculate total fitness
 			double totalSpeciesFitness = 0;
 			for (Species specie : parentSpecies) {
-				totalSpeciesFitness += specie.getFitnessValue();
+				totalSpeciesFitness += specie.getAverageFitnessValue();
 			}
 
 			// reproduce from each specie relative to its percentage of total fitness
 			for (Species specie : parentSpecies) {
-				double percentFitness = specie.getFitnessValue() / totalSpeciesFitness;
-				int numSpecieOffspring = (int) Math.round(percentFitness * targetNewOffspringCount) - specie.getEliteCount();
+				double percentFitness = specie.getAverageFitnessValue() / totalSpeciesFitness;
+				int numSpecieOffspring =  (int) Math.round(percentFitness * targetNewOffspringCount) - specie.getEliteCount();
+				// Always create at least one offspring with the clone operator, or any operator if it has more than 50% of the slice.
+				// (Otherwise there's no point hanging on to a species).
+				if (numSpecieOffspring <= 0 && (getSlice() > 0.5 || getClass().equals(CloneReproductionOperator.class)))
+					numSpecieOffspring = 1;
+				
 				if (numSpecieOffspring > 0)
 					reproduce(config, specie.getChromosomes(), numSpecieOffspring, newOffspring);
-				// else
-				// System.out.println("numSpecieOffspring <= 0   size: " + specie.size() + "   elite count: " +
-				// specie.getEliteCount());
 			}
 
-			// allow for rounding error - adjust by removing or cloning random offspring
+			// Remove random offspring if we have too many.
 			while (newOffspring.size() > targetNewOffspringCount) {
-				int idx = config.getRandomGenerator().nextInt(newOffspring.size());
-				newOffspring.remove(idx);
-			}
-			while (newOffspring.size() > 0 && newOffspring.size() < targetNewOffspringCount) {
-				int idx = config.getRandomGenerator().nextInt(newOffspring.size());
-				ChromosomeMaterial clonee = (ChromosomeMaterial) newOffspring.get(idx);
-				newOffspring.add(clonee.clone(null));
+				Collections.shuffle(newOffspring, config.getRandomGenerator());
+				newOffspring.remove(newOffspring.size()-1);
 			}
 			
 			for (ChromosomeMaterial c : newOffspring) {
 				c.setShouldMutate(mutateProbability > config.getRandomGenerator().nextDouble());
+			}
+			
+			// Add clones of random offspring if we don't have enough.
+			while (newOffspring.size() > 0 && newOffspring.size() < targetNewOffspringCount) {
+				int idx = config.getRandomGenerator().nextInt(newOffspring.size());
+				ChromosomeMaterial clonee = (ChromosomeMaterial) newOffspring.get(idx);
+				ChromosomeMaterial c = clonee.clone(null);
+				// Clones should always be mutated.
+				c.setShouldMutate(true);
+				newOffspring.add(c);
 			}
 
 			offspring.addAll(newOffspring);
@@ -106,7 +116,7 @@ public abstract class ReproductionOperator {
 	 * @throws InvalidConfigurationException
 	 * @see ReproductionOperator#reproduce(Configuration, List, List)
 	 */
-	protected abstract void reproduce(final Configuration config, final List parents, int numOffspring, List offspring) throws InvalidConfigurationException;
+	protected abstract void reproduce(final Configuration config, final List<Chromosome> parents, int numOffspring, List<ChromosomeMaterial> offspring) throws InvalidConfigurationException;
 
 	/**
 	 * @return double slice of population this reproduction operator will fill with offspring

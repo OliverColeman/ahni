@@ -2,7 +2,9 @@ package com.ojcoleman.ahni.util;
 
 import java.lang.reflect.Array;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Random;
 
 public class ArrayUtil {
@@ -154,10 +156,36 @@ public class ArrayUtil {
 		return a;
 	}
 
+	/** 
+	 * Create a new array containing random values in the range [0, 1).
+	 */
 	public static double[] newRandom(int size, Random r) {
 		double[] a = new double[size];
 		for (int i = 0; i < size; i++) {
 			a[i] = r.nextDouble();
+		}
+		return a;
+	}
+	
+	/** 
+	 * Create a new array containing random values in the range [0, max).
+	 */
+	public static double[] newRandom(int size, Random r, double max) {
+		double[] a = new double[size];
+		for (int i = 0; i < size; i++) {
+			a[i] = r.nextDouble() * max;
+		}
+		return a;
+	}
+
+	/** 
+	 * Create a new array containing random values in the range [0, max).
+	 */
+	public static double[] newRandom(int size, Random r, double min, double max) {
+		double[] a = new double[size];
+		double range = max - min;
+		for (int i = 0; i < size; i++) {
+			a[i] = min + r.nextDouble() * range;
 		}
 		return a;
 	}
@@ -227,7 +255,7 @@ public class ArrayUtil {
 	/** 
 	 * Unpacks the values in the given 1D array into the given 2D array, row-first.
 	 * @param packed The packed array.
-	 * @param an array to copy the result into. Should have dimensions [height/rows][width/columns].
+	 * @param unpacked an array to copy the result into. Should have dimensions [height/rows][width/columns].
 	 * @param outputIndex The index to start reading from in the packed array.
 	 * @return a reference to the array passed in for parameter unpacked.
 	 * @see #pack(double[][])
@@ -249,6 +277,11 @@ public class ArrayUtil {
 		if (initialValues != 0) Arrays.fill(a, initialValues);
 		return a;
 	}
+	public static int[] newArray(int length, int initialValues) {
+		int[] a = new int[length];
+		if (initialValues != 0) Arrays.fill(a, initialValues);
+		return a;
+	}
 	
 	/**
 	 * Returns a new array that contains the negated values of the given array.
@@ -260,5 +293,32 @@ public class ArrayUtil {
 		}
 		return n;
 	}
-}
+	
+	/**
+	 * Calculates the distance between two points represented by (n-dimensional) vectors.
+	 */
+	public static double distance(double[] a, double[] b) {
+		double dist = 0;
+		for (int i = 0; i < a.length; i++) {
+			double d = a[i] - b[i];
+			dist += d*d;
+		}
+		return Math.sqrt(dist);
+	}
 
+	/**
+	 * Creates a new array containing every integer value in the range [0, size) in a random order.
+	 * All permutations occur with equal likelihood assuming that the source of randomness is fair.
+	 */
+	public static int[] newRandomIndexing(int size, Random random) {
+		int[] index = new int[size];
+		for (int i = 0; i < size; i++) index[i] = i;
+		for (int i = size; i > 1; i--) {
+			int ri = random.nextInt(i);
+			int tmp = index[i-1];
+			index[i-1] = index[ri];
+			index[ri] = tmp;
+		}
+		return index;
+	}
+}

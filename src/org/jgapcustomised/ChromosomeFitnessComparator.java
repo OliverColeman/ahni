@@ -21,6 +21,8 @@ package org.jgapcustomised;
 
 import java.util.Comparator;
 
+import com.ojcoleman.ahni.util.ArrayUtil;
+
 /**
  * Enables sorting of chromosomes by their fitness.
  * 
@@ -59,9 +61,26 @@ public class ChromosomeFitnessComparator<T> implements Comparator<T> {
 	public int compare(T o1, T o2) {
 		Chromosome c1 = (Chromosome) o1;
 		Chromosome c2 = (Chromosome) o2;
-		int fitness1 = (isSpeciated ? c1.getSpeciatedFitnessValue() : c1.getFitnessValue());
-		int fitness2 = (isSpeciated ? c2.getSpeciatedFitnessValue() : c2.getFitnessValue());
-		return isAscending ? fitness1 - fitness2 : fitness2 - fitness1;
+		double fitness1 = (isSpeciated ? c1.getSpeciatedFitnessValue() : c1.getFitnessValue());
+		double fitness2 = (isSpeciated ? c2.getSpeciatedFitnessValue() : c2.getFitnessValue());
+		
+		if (Double.isNaN(fitness1)) fitness1 = -1; // Use -1 as NaN should be lower than 0.
+		if (Double.isNaN(fitness2)) fitness2 = -1;
+		
+		// If the overall fitness is the same (eg because it's based on a ranking produced by NSGA-II), 
+		// then we might be able to differentiate based on the average over multiple objectives.
+		if (fitness1 == fitness2) {
+			fitness1 = ArrayUtil.sum(c1.getFitnessValues());
+			fitness2 = ArrayUtil.sum(c2.getFitnessValues());
+			if (Double.isNaN(fitness1)) fitness1 = -1;
+			if (Double.isNaN(fitness2)) fitness2 = -1;
+		}
+		// If the fitness is still identical then use ID to sort in order to maintain a stable sorting.
+		if (fitness1 == fitness2) {
+			fitness1 = c1.getId();
+			fitness2 = c2.getId();
+		}
+		return (int) (isAscending ? Math.signum(fitness1 - fitness2) : Math.signum(fitness2 - fitness1));
 	}
 
 }

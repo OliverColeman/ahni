@@ -4,17 +4,26 @@ import org.jgapcustomised.Chromosome;
 
 import com.anji.integration.Activator;
 import com.ojcoleman.ahni.evaluation.BulkFitnessFunctionMT;
+import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.nn.BainNN;
 import com.ojcoleman.bain.base.SynapseCollection;
 
 public class BainNNConnectionCountCost extends BulkFitnessFunctionMT {
+	/**
+	 * The target proportion of synapses based on maximum possible number of synapses (calculated as number of neurons squared).
+	 * Default is 0.1.
+	 */
+	public static String TARGET = "fitness.function.connection_count_cost.target";
+	
+	double target;
+	
 	@Override
-	public int getMaxFitnessValue() {
-		return 1000000;
+	public void init(Properties props) {
+		target = props.getDoubleProperty(TARGET, 0.1);
 	}
-
+	
 	@Override
-	protected int evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
+	protected double evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
 		if (substrate instanceof BainNN) {
 			BainNN nn = (BainNN) substrate;
 			double[] weights = nn.getNeuralNetwork().getSynapses().getEfficacies();
@@ -23,7 +32,8 @@ public class BainNNConnectionCountCost extends BulkFitnessFunctionMT {
 				if (weights[c] != 0)
 					count++;
 			}
-			return getMaxFitnessValue() / (1 + (count * count));
+			double targetCount = nn.getNeuronCount() * nn.getNeuronCount() * target;
+			return 1.0 / (1.0 + Math.abs(count - targetCount));
 		}
 		return 0;
 	}

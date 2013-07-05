@@ -77,6 +77,8 @@ public class Configuration implements java.io.Serializable {
 	private NaturalSelector m_populationSelector = null;
 
 	private SpeciationParms m_speciationParms = new SpeciationParms();
+	
+	protected int objectiveCount = 1;
 
 	/**
 	 * set selector
@@ -488,5 +490,13 @@ public class Configuration implements java.io.Serializable {
 	 */
 	public SpeciationParms getSpeciationParms() {
 		return m_speciationParms;
+	}
+	
+	/**
+	 * @return Returns the number of objectives being employed. This is only valid for fitness functions and 
+	 * selectors that handle multiple objectives. 
+	 */
+	public int getObjectiveCount() {
+		return m_bulkObjectiveFunction.getObjectiveCount();
 	}
 }

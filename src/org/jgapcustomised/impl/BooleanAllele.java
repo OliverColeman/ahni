@@ -527,4 +527,11 @@ public class BooleanAllele extends Allele {
 		return 0;
 	}
 
+	@Override
+	public boolean isEquivalent(Allele otherAllele) {
+		if (!(otherAllele instanceof BooleanAllele))
+			return false;
+		return m_value == ((BooleanAllele) otherAllele).m_value;
+	}
+
 }

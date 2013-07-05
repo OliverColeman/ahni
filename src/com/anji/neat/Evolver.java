@@ -96,8 +96,6 @@ public class Evolver implements Configurable {
 
 	private Genotype genotype = null;
 
-	private int numRuns = 0;
-
 	private int numEvolutions = 0;
 
 	// private double targetFitness = 0;
@@ -105,8 +103,6 @@ public class Evolver implements Configurable {
 	// private double thresholdFitness = 0;
 
 	private double targetPerformance = 1;
-
-	private int maxFitness = 0;
 
 	private Persistence db = null;
 
@@ -146,6 +142,10 @@ public class Evolver implements Configurable {
 
 		this.props = props;
 		config = new NeatConfiguration(props);
+		
+		// fitness function
+		bulkFitnessFunc = (BulkFitnessFunction) props.singletonObjectProperty(FITNESS_FUNCTION_CLASS_KEY);
+		config.setBulkFitnessFunction(bulkFitnessFunc);
 
 		// peristence
 		db = (Persistence) props.singletonObjectProperty(Persistence.PERSISTENCE_CLASS_KEY);
@@ -197,11 +197,6 @@ public class Evolver implements Configurable {
 			config.getEventManager().addEventListener(GeneticEvent.GENOTYPE_EVALUATED_EVENT, presListener);
 			config.getEventManager().addEventListener(GeneticEvent.RUN_COMPLETED_EVENT, presListener);
 		}
-
-		// fitness function
-		bulkFitnessFunc = (BulkFitnessFunction) props.singletonObjectProperty(FITNESS_FUNCTION_CLASS_KEY);
-		config.setBulkFitnessFunction(bulkFitnessFunc);
-		maxFitness = bulkFitnessFunc.getMaxFitnessValue();
 	}
 
 	/**
@@ -247,7 +242,7 @@ public class Evolver implements Configurable {
 		// (runtime.freeMemory() / (1024*1024)) + "  used: " +
 		// ((runtime.totalMemory() - runtime.freeMemory()) / (1024*1024)) +
 		// ")");
-		DateFormat fmt = new SimpleDateFormat("HH:mm:ss");
+		//DateFormat fmt = new SimpleDateFormat("HH:mm:ss");
 
 		// System.out.println("targetFitness = " + targetFitness);
 		// System.out.println("maxFitness = " + maxFitness);
@@ -296,16 +291,16 @@ public class Evolver implements Configurable {
 			// champFitnesses[generation] = adjustedFitness;
 
 			bestPerformance[generation] = bestPerforming.getPerformanceValue();
-			bestFitness[generation] = (double) fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue();
+			bestFitness[generation] = fittest.getFitnessValue();
 
 			int numSpecies = genotype.getSpecies().size();
 			int minSpeciesSize = Integer.MAX_VALUE;
 			int maxSpeciesSize = 0;
-			int numSpeciesWithNewFittest = 0;
+			int numSpeciesWithNewBestPerforming = 0;
 			int numNewSpecies = 0;
 			int maxSpeciesAge = 0;
 			int minSpeciesAge = Integer.MAX_VALUE;
-			double avgBestSpeciesFitness = 0;
+			double avgBestSpeciesPerformance = 0;
 			Iterator<Species> speciesIter = genotype.getSpecies().iterator();
 			while (speciesIter.hasNext()) {
 				Species species = speciesIter.next();
@@ -320,19 +315,19 @@ public class Evolver implements Configurable {
 				if (species.getAge() < minSpeciesAge)
 					minSpeciesAge = species.getAge();
 
-				if (species.getFittest() != null)
-					avgBestSpeciesFitness += species.getFittest().getFitnessValue();
+				if (species.getBestPerforming() != null)
+					avgBestSpeciesPerformance += species.getBestPerforming().getPerformanceValue();
 
 				Long speciesKey = new Long(species.getID());
 				if (allSpeciesEver.containsKey(speciesKey)) { // if existing species
-					if (species.getFittest() != species.getPreviousFittest())
-						numSpeciesWithNewFittest++;
+					if (species.getBestPerforming() != species.getPreviousBestPerforming())
+						numSpeciesWithNewBestPerforming++;
 				} else {
 					numNewSpecies++;
 					allSpeciesEver.put(speciesKey, species);
 				}
 			}
-			avgBestSpeciesFitness /= ((long) numSpecies * bulkFitnessFunc.getMaxFitnessValue());
+			avgBestSpeciesPerformance /= numSpecies;
 			int numExtinctSpecies = previousSpeciesCount - numSpecies + numNewSpecies;
 
 			// write out some info about species history
@@ -371,7 +366,7 @@ public class Evolver implements Configurable {
 				// System.out.println(generation+"(" + (int)(adjustedFitness*100) + " : " + champ.getFitnessValue() +
 				// "), ");
 
-				logger.info("Gen: " + generation + "  Fittest: " + fittest.getId() + "  (F: " + nf4.format((double) fittest.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + "  P: " + nf4.format(fittest.getPerformanceValue()) + ")" + "  Best perf: " + bestPerforming.getId() + "  (F: " + nf4.format((double) bestPerforming.getFitnessValue() / bulkFitnessFunc.getMaxFitnessValue()) + "  P: " + nf4.format(bestPerforming.getPerformanceValue()) + ")" + "  ABSF: " + nf4.format(avgBestSpeciesFitness) + "  S: " + numSpecies + "  NS/ES: " + numNewSpecies + "/" + numExtinctSpecies + "  SCT: " + nf1.format(speciationCompatThreshold) + "  Min/Max SS: " + minSpeciesSize + "/" + maxSpeciesSize + "  Min/Max SA: " + minSpeciesAge + "/" + maxSpeciesAge + "  SNF: " + numSpeciesWithNewFittest + "  Time: " + duration + "s  ETA: " + Misc.formatTimeInterval(eta) + "  Mem: " + memUsed + "MB");
+				logger.info("Gen: " + generation + "  Fittest: " + fittest.getId() + "  (F: " + nf4.format(fittest.getFitnessValue()) + "  P: " + nf4.format(fittest.getPerformanceValue()) + ")" + "  Best perf: " + bestPerforming.getId() + "  (F: " + nf4.format(bestPerforming.getFitnessValue()) + "  P: " + nf4.format(bestPerforming.getPerformanceValue()) + ")" + "  ABSP: " + nf4.format(avgBestSpeciesPerformance) + "  S: " + numSpecies + "  NS/ES: " + numNewSpecies + "/" + numExtinctSpecies + "  SCT: " + nf1.format(speciationCompatThreshold) + "  Min/Max SS: " + minSpeciesSize + "/" + maxSpeciesSize + "  Min/Max SA: " + minSpeciesAge + "/" + maxSpeciesAge + "  SNB: " + numSpeciesWithNewBestPerforming + "  Time: " + duration + "s  ETA: " + Misc.formatTimeInterval(eta) + "  Mem: " + memUsed + "MB");
 
 				start = System.currentTimeMillis();
 			}
@@ -409,8 +404,8 @@ public class Evolver implements Configurable {
 		// run finish
 		config.getEventManager().fireGeneticEvent(new GeneticEvent(GeneticEvent.RUN_COMPLETED_EVENT, genotype));
 		logConclusion(generationOfFirstSolution, fittest);
-		Date runEndDate = Calendar.getInstance().getTime();
-		long durationMillis = runEndDate.getTime() - runStartDate.getTime();
+		//Date runEndDate = Calendar.getInstance().getTime();
+		//long durationMillis = runEndDate.getTime() - runStartDate.getTime();
 		// logger.info( "Run: end [" + fmt.format( runStartDate ) + " - " +
 		// fmt.format( runEndDate ) + "] [" + durationMillis +
 		// "]  Best fitness: " + adjustedFitness);
@@ -508,7 +503,7 @@ public class Evolver implements Configurable {
 	 * @return maximum fitness value
 	 */
 	public double getChampAdjustedFitness() {
-		return (fittest == null) ? 0 : (double) fittest.getFitnessValue() / config.getBulkFitnessFunction().getMaxFitnessValue();
+		return (fittest == null) ? 0 : fittest.getFitnessValue();
 	}
 
 	/**

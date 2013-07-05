@@ -30,8 +30,6 @@ import java.util.List;
  * This can protect innovation, and also serve to maintain a broader search space, avoiding being trapped in local
  * optima.
  * 
- * Modified by Oliver Coleman 2010-09-11 to use fittest chromosome as representative
- * 
  * @author Philip Tucker
  */
 public class Species {
@@ -69,19 +67,22 @@ public class Species {
 	 */
 	private List<Chromosome> chromosomes = new ArrayList<Chromosome>();
 
-	// private Chromosome representative = null;
+	private Chromosome representative = null;
 
 	private SpeciationParms speciationParms = null;
 
-	private Chromosome fittest = null, previousFittest = null;
+	private Chromosome bestPerforming = null, previousBestPerforming = null;
 
 	private int stagnantGenerationsCount = 0;
-	private int previousGenBestFitness = 0;
+	private double previousGenBestPerformance = 0;
 	private int age = 0;
 
 	private int eliteCount;
 
 	public int originalSize;
+	public int previousOriginalSize;
+	
+	private double averageFitness = 0;
 
 	/**
 	 * for hibernate
@@ -89,16 +90,16 @@ public class Species {
 	private Long id;
 
 	/**
-	 * True iff this species contains the fittest individual from the entire population.
+	 * True iff this species contains the bestPerforming individual from the entire population.
 	 */
-	public boolean containsFittest;
+	public boolean containsBestPerforming;
 
 	/**
 	 * @see java.lang.Object#hashCode()
 	 */
 	public int hashCode() {
-		// return representative.hashCode();
-		return getFittest().hashCode();
+		return representative.hashCode();
+		//return getFittest().hashCode();
 	}
 
 	/**
@@ -106,19 +107,19 @@ public class Species {
 	 */
 	public boolean equals(Object o) {
 		Species other = (Species) o;
-		// return representative.equals(other.representative);
-		return getFittest().equals(other.getFittest());
+		return representative.equals(other.representative);
+		//return getFittest().equals(other.getFittest());
 	}
 
 	/**
 	 * @return unique ID; this is chromosome ID of representative
 	 */
 	public Long getRepresentativeId() {
-		// return representative.getId();
-		if (getFittest() == null) {
-			return -1l;
-		}
-		return getFittest().getId();
+		return representative.getId();
+		//if (getFittest() == null) {
+		//	return -1l;
+		//}
+		//return getFittest().getId();
 	}
 
 	/**
@@ -130,8 +131,8 @@ public class Species {
 	 * @param aRepresentative
 	 */
 	public Species(SpeciationParms aSpeciationParms, Chromosome aRepresentative) {
-		// representative = aRepresentative;
-		fittest = aRepresentative;
+		representative = aRepresentative;
+		bestPerforming = aRepresentative;
 		aRepresentative.setSpecie(this);
 		chromosomes.add(aRepresentative);
 		speciationParms = aSpeciationParms;
@@ -143,13 +144,13 @@ public class Species {
 	 * @return representative chromosome
 	 */
 	protected Chromosome getRepresentative() {
-		// return representative;
-		return getFittest();
+		return representative;
+		//return getFittest();
 	}
 
 	/**
 	 * @param aChromosome
-	 * @return true if chromosome is added, false if chromosome already is a member of this specie
+	 * @return true if chromosome is added, false if chromosome already is a member of this species
 	 */
 	public boolean add(Chromosome aChromosome) {
 		// if (chromosomes.isEmpty() && !match(aChromosome))
@@ -157,8 +158,7 @@ public class Species {
 		if (chromosomes.contains(aChromosome))
 			return false;
 		aChromosome.setSpecie(this);
-		if (fittest == null || aChromosome.m_fitnessValue > fittest.m_fitnessValue)
-			fittest = aChromosome;
+		bestPerforming = null; // Set to null rather than test as the performance comparator checks ID as well as performance.
 		return chromosomes.add(aChromosome);
 	}
 
@@ -168,8 +168,8 @@ public class Species {
 	 */
 	public boolean remove(Chromosome aChromosome) {
 		aChromosome.resetSpecie();
-		if (aChromosome == fittest)
-			fittest = null;
+		if (aChromosome == bestPerforming)
+			bestPerforming = null;
 		return chromosomes.remove(aChromosome);
 	}
 
@@ -186,7 +186,7 @@ public class Species {
 	 */
 	public void clear() {
 		chromosomes.clear();
-		fittest = null;
+		bestPerforming = null;
 	}
 
 	/**
@@ -204,47 +204,49 @@ public class Species {
 				it.remove();
 			}
 		}
-		fittest = null;
+		bestPerforming = null;
 	}
 
 	/**
-	 * remove all non-elite chromosomes from this species, except for population-wide fittest
+	 * remove all non-elite chromosomes from this species, except for population-wide bestPerforming
 	 */
-	public void cullToElites(Chromosome popFittest) {
+	public void cullToElites(Chromosome popBestPerforming) {
 		Iterator<Chromosome> it = chromosomes.iterator();
 		while (it.hasNext()) {
 			Chromosome e = it.next();
-			if (!e.isElite && !e.equals(popFittest)) {
+			if (!e.isElite && e != popBestPerforming) {
 				e.resetSpecie();
 				it.remove();
 			}
 		}
-		fittest = null;
+		bestPerforming = null;
 	}
 
 	/**
-	 * update internal variables (fittest, stagnantGenerationsCount) to begin new generation
+	 * update internal variables (bestPerforming, stagnantGenerationsCount) to begin new generation
 	 */
 	public void newGeneration() {
 		age++;
 
 		if (!chromosomes.isEmpty())
-			getFittest();
+			getBestPerforming();
 
-		if (fittest != null) {
-			// if fitness hasn't improved increase stagnant generations count
-			if (fittest.getFitnessValue() <= previousGenBestFitness) {
+		if (bestPerforming != null) {
+			// if performance hasn't improved increase stagnant generations count
+			if (bestPerforming.getPerformanceValue() <= previousGenBestPerformance) {
 				stagnantGenerationsCount++;
 				// System.out.println("Stagnant generations increased to " +
 				// stagnantGenerationsCount);
 			} else {
 				stagnantGenerationsCount = 0;
-				previousGenBestFitness = fittest.getFitnessValue();
+				previousGenBestPerformance = bestPerforming.getPerformanceValue();
 				// System.out.println("Stagnant generations reset");
 			}
 		}
-
-		fittest = null;
+		bestPerforming = null;
+		averageFitness = Double.NaN;
+		previousOriginalSize = originalSize;
+		originalSize = 0;
 	}
 
 	/**
@@ -271,68 +273,57 @@ public class Species {
 
 	/**
 	 * @param aChromosome
-	 * @return double adjusted fitness for aChromosome relative to this specie
+	 * @return Adjusted fitness for aChromosome relative to this species
 	 * @throws IllegalArgumentException if chromosome is not a member if this specie
 	 */
-	public double getChromosomeFitnessValue(Chromosome aChromosome) {
-		if (aChromosome.getFitnessValue() < 0)
+	public double getChromosomeSpeciatedFitnessValue(Chromosome aChromosome) {
+		if (aChromosome.getFitnessValue() == Double.NaN)
 			throw new IllegalArgumentException("chromosome's fitness has not been set: " + aChromosome.toString());
 		/*
 		 * removed check for performance if (chromosomes.contains(aChromosome) == false) throw new
 		 * IllegalArgumentException( "chromosome not a member of this specie: " + aChromosome.toString());
 		 */
-		return ((double) aChromosome.getFitnessValue()) / chromosomes.size();
+		return ((double) aChromosome.getFitnessValue()) / originalSize;
 	}
 
 	/**
-	 * @return average raw fitness (i.e., not adjusted for specie size) of all chromosomes in specie
+	 * @return Average fitness over all chromosomes in this species. This is equivalent to the sum of calling {@link #getChromosomeSpeciatedFitnessValue(Chromosome)} over all chromosomes in this species.
 	 */
-	public double getFitnessValue() {
-		long totalRawFitness = 0;
-		Iterator<Chromosome> iter = chromosomes.iterator();
-		while (iter.hasNext()) {
-			Chromosome aChromosome = iter.next();
-			if (aChromosome.getFitnessValue() < 0)
-				throw new IllegalStateException("chromosome's fitness has not been set: " + aChromosome.toString());
-			totalRawFitness += aChromosome.getFitnessValue();
-		}
-
-		return (double) totalRawFitness / chromosomes.size();
+	public double getAverageFitnessValue() {
+		if (averageFitness == Double.NaN)
+			throw new IllegalStateException("Average fitness has not yet been calculated for the species.");
+		return averageFitness;
 	}
 
 	/**
-	 * @return Chromosome fittest in this specie
+	 * @return Chromosome bestPerforming in this specie
 	 */
-	public synchronized Chromosome getFittest() {
-		if (fittest == null && !chromosomes.isEmpty()) {
-			Iterator<Chromosome> it = chromosomes.iterator();
-			fittest = it.next();
-			while (it.hasNext()) {
-				Chromosome next = it.next();
-				if (next.getFitnessValue() > fittest.getFitnessValue())
-					fittest = next;
-			}
+	public synchronized Chromosome getBestPerforming() {
+		if (bestPerforming == null && !chromosomes.isEmpty()) {
+			Collections.sort(chromosomes, new ChromosomePerformanceComparator(false));
+			bestPerforming = chromosomes.get(0);
 		}
-		return fittest;
+		return bestPerforming;
 	}
 
-	public Chromosome getPreviousFittest() {
-		return previousFittest;
+	public Chromosome getPreviousBestPerforming() {
+		return previousBestPerforming;
 	}
 
-	public void setPreviousFittest(Chromosome previousFittest) {
-		this.previousFittest = previousFittest;
+	public void setPreviousBestPerforming(Chromosome previousBestPerforming) {
+		this.previousBestPerforming = previousBestPerforming;
 	}
 
 	/**
-	 * Determine and return the top specified proportion of chromosomes in this species. The returned 
-	 * chromosomes are marked as being elite and all other chromosomes in this species are marked as
-	 * not elite.
+	 * Determine and return the top specified proportion of chromosomes in this species. The returned chromosomes are
+	 * marked as being elite and all other chromosomes in this species are marked as not elite.
+	 * 
 	 * @param proportion The proportion of Chromosomes to select, range (0, 1).
 	 * @param minToSelect The minimum number of Chromosomes to select. Use 0 for no minimum.
+	 * @param bestPerforming If not null this is the population-wide best performing and should be added to the list of elites.
 	 * @return top proportion (or minToSelect, which ever is greater) of fittest Chromosomes in this species.
 	 */
-	public List<Chromosome> getElite(double proportion, int minToSelect) {
+	public List<Chromosome> getElite(double proportion, int minToSelect, Chromosome bestPerforming) {
 		eliteCount = 0;
 
 		int numToSelect = Math.max(minToSelect, (int) Math.round(proportion * size()));
@@ -341,6 +332,12 @@ public class Species {
 
 		Collections.sort(chromosomes, new ChromosomeFitnessComparator(false /* asc */, false /* speciated fitness */));
 		List<Chromosome> result = new ArrayList<Chromosome>(numToSelect);
+		
+		// Make sure we include the population-wide best performing in the elites.
+		if (bestPerforming != null) {
+			result.add(bestPerforming);
+		}
+		
 		Iterator<Chromosome> it = chromosomes.iterator();
 		// get numToSelect elites
 		while (it.hasNext() && (result.size() < numToSelect)) {
@@ -354,24 +351,24 @@ public class Species {
 			Chromosome c = it.next();
 			c.isElite = false;
 		}
-
-		// System.out.println("selected " + result.size() +
-		// " chroms as elite from species of size " + chromosomes.size());
-
 		return result;
 	}
-	
+
 	/**
-	 * @param proportion The proportion of Chromosomes to select, range (0, 1).
-	 * @return top proportion of fittest Chromosomes in this species.
+	 * @param numToSelect The number of Chromosomes to select.
+	 * @param includeElites If true then elites will be included in the returned list, otherwise elites will be ignored.
+	 * @return the numToSelect fittest Chromosomes in this species.
 	 */
-	public List<Chromosome> getTop(int numToSelect) {
+	public List<Chromosome> getTop(int numToSelect, boolean includeElites) {
 		Collections.sort(chromosomes, new ChromosomeFitnessComparator(false /* asc */, false /* speciated fitness */));
 		List<Chromosome> result = new ArrayList<Chromosome>(numToSelect);
 		Iterator<Chromosome> it = chromosomes.iterator();
 		// get numToSelect parents
 		while (it.hasNext() && (result.size() < numToSelect)) {
-			result.add(it.next());
+			Chromosome c = it.next();
+			if (includeElites || !c.isElite) {
+				result.add(c);
+			}
 		}
 		return result;
 	}
@@ -385,8 +382,8 @@ public class Species {
 		if (isEmpty()) {
 			return false;
 		}
-		// return (representative.distance(aChromosome, speciationParms) < speciationParms.getSpeciationThreshold());
-		return (getFittest().distance(aChromosome, speciationParms) < speciationParms.getSpeciationThreshold());
+		return (representative.distance(aChromosome, speciationParms) < speciationParms.getSpeciationThreshold());
+		//return (getFittest().distance(aChromosome, speciationParms) < speciationParms.getSpeciationThreshold());
 	}
 
 	/**
@@ -441,5 +438,60 @@ public class Species {
 
 	public int getAge() {
 		return age;
+	}
+
+	public void setElites(List<Chromosome> elites) {
+		eliteCount = 0;
+		for (Chromosome c : chromosomes) {
+			if (c.getSpecie() != this) {
+				throw new IllegalStateException("The Chromosome to set as elite in a species is not a member of the species.");
+			}
+			
+			if (elites.contains(c)) {
+				c.isElite = true;
+				eliteCount++;
+			}
+			else {
+				c.isElite = false;
+			}
+		}
+	}
+
+	public void calculateAverageFitness() {
+		if (chromosomes.size() != originalSize) {
+			throw new IllegalStateException("Should not be calculating average fitness for species as the number of chromosomes it has does not match the species original size");
+		}
+		double totalRawFitness = 0;
+		for (Chromosome aChromosome : chromosomes) {
+			if (aChromosome.getFitnessValue() == Double.NaN)
+				throw new IllegalStateException("chromosome's fitness has not been set: " + aChromosome.toString());
+			totalRawFitness += aChromosome.getFitnessValue();
+		}
+		averageFitness = totalRawFitness / originalSize;
+	}
+
+	/**
+	 * Remove the clones from this species, as determined by {@link org.jgapcustomised.Chromosome#isEquivalent(Chromosome)}.
+	 */
+	@SuppressWarnings("unchecked")
+	public List<Chromosome> cullClones() {
+		// Sort in descending order of fitness so we can't remove fittest (elites haven't been set when this is called so don't worry about them).
+		Collections.sort(chromosomes, new ChromosomeFitnessComparator(false /* asc */, false /* speciated fitness */));
+		List<Chromosome> toRemove = new ArrayList<Chromosome>();
+		for (int i = 0; i < chromosomes.size(); i++) {
+			Chromosome c1 = chromosomes.get(i);
+			for (int j = i+1; j < chromosomes.size(); j++) {
+				Chromosome c2 = chromosomes.get(j);
+				if (!toRemove.contains(c2) && c1.isEquivalent(c2)) {
+					toRemove.add(c2);
+					originalSize--;
+				}
+			}
+		}
+		for (Chromosome c : toRemove) {
+			c.resetSpecie();
+			chromosomes.remove(c);
+		}
+		return toRemove;
 	}
 }

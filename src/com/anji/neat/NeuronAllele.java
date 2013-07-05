@@ -79,7 +79,7 @@ public class NeuronAllele extends Allele {
 	}
 
 	/**
-	 * @param aTarget should be <code>NeuronAllele</code> with same gene TODO - activation type and slope
+	 * @param target should be <code>NeuronAllele</code> with same gene TODO - activation type and slope
 	 * @see org.jgapcustomised.Allele#distance(org.jgapcustomised.Allele)
 	 */
 	public double distance(Allele target) {
@@ -130,5 +130,13 @@ public class NeuronAllele extends Allele {
 	 */
 	public String toString() {
 		return neuronGene.toString() + " [" + bias + "]";
+	}
+	
+	@Override
+	public boolean isEquivalent(Allele otherAllele) {
+		if (!(otherAllele instanceof NeuronAllele))
+			return false;
+		NeuronAllele other = (NeuronAllele) otherAllele;
+		return getType().equals(other.getType()) && getActivationType().equals(other.getActivationType()) && bias == other.bias;
 	}
 }

@@ -438,7 +438,7 @@ public class BainNN extends NNAdaptor {
 		out.append("\nNeurons:\n\tEnabled\t");
 		NeuronCollectionWithBias biasNeurons = (nn.getNeurons() instanceof NeuronCollectionWithBias) ? (NeuronCollectionWithBias) nn.getNeurons() : null;
 		if (coordsEnabled()) {
-			out.append("Coordinates\t\t");
+			out.append("Coordinates\t\t\t\t");
 		}
 		if (biasNeurons != null) {
 			out.append("bias\t");
@@ -498,7 +498,8 @@ public class BainNN extends NNAdaptor {
 	 */
 	@Override
 	public boolean render(Graphics2D g, int width, int height, int nodeSize) {
-		if (!coordsEnabled())
+		// Can't render without coords, don't render if 3D.
+		if (!coordsEnabled() || coordsRange.z > 0)
 			return false;
 
 		width -= nodeSize * 2;
@@ -559,8 +560,8 @@ public class BainNN extends NNAdaptor {
 
 				// Draw an arc instead of a straight line if this line passes through other nodes.
 				if (overlaps[i]) {
-					double dev = nodeSize; // How much the arc deviates from the straight line between the neuron
-											// centres, in pixels.
+					// How much the arc deviates from the straight line between the neuron centres, in pixels.
+					double dev = nodeSize;
 					double radius = (((dist * dist) / 4) + (dev * dev)) / (2 * dev); // Arc radius.
 					// Arc centre.
 					double cx = ((x1 + x2) / 2d) + (radius - dev) * dy;
@@ -676,5 +677,10 @@ public class BainNN extends NNAdaptor {
 			((SynapseConfiguration) synapses.getConfiguration(0)).maximumEfficacy = maxWeight;
 		}
 		return synapses;
+	}
+
+	@Override
+	public boolean isRecurrent() {
+		return topology.equals(Topology.RECURRENT);
 	}
 }

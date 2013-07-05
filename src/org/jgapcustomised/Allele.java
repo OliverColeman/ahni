@@ -187,4 +187,8 @@ public abstract class Allele implements Comparable {
 		chromosome = aChromosome;
 	}
 
+	/**
+	 * Return true iff all the parameters of this allele match those of the given allele.
+	 */
+	public abstract boolean isEquivalent(Allele otherAllele);
 }
