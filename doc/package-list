@@ -9,10 +9,13 @@ com.anji.util
 com.ojcoleman.ahni
 com.ojcoleman.ahni.evaluation
 com.ojcoleman.ahni.evaluation.mocostfunctions
+com.ojcoleman.ahni.evaluation.novelty
 com.ojcoleman.ahni.event
 com.ojcoleman.ahni.experiments
+com.ojcoleman.ahni.experiments.csb
 com.ojcoleman.ahni.experiments.objectrecognition
 com.ojcoleman.ahni.hyperneat
+com.ojcoleman.ahni.misc
 com.ojcoleman.ahni.nn
 com.ojcoleman.ahni.transcriber
 com.ojcoleman.ahni.util
