@@ -584,7 +584,17 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 					}
 					
 					if (bulkFitnessFunc instanceof AHNIFitnessFunction) {
+						// Record original performance and fitness values
+						double origPerformance = bestPerforming.getPerformanceValue();
+						double origFitness = bestPerforming.getFitnessValue();
+						double[] origFitnesses = new double[bestPerforming.getFitnessValues().length];
+						System.arraycopy(bestPerforming.getFitnessValues(), 0, origFitnesses, 0, origFitnesses.length);
+						
 						((AHNIFitnessFunction) bulkFitnessFunc).evaluate(bestPerforming, substrate, baseFileName + "-evaluation", logString, logImage);
+						
+						if (!Double.isNaN(origPerformance)) bestPerforming.setPerformanceValue(origPerformance);
+						if (!Double.isNaN(origFitness)) bestPerforming.setFitnessValue(origFitness);
+						System.arraycopy(origFitnesses, 0, bestPerforming.getFitnessValues(), 0, origFitnesses.length);
 					}
 				}
 			} catch (TranscriberException e) {

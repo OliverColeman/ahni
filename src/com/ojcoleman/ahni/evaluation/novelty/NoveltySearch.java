@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.log4j.Logger;
 
@@ -11,6 +12,7 @@ import com.anji.neat.NeatConfiguration;
 import com.ojcoleman.ahni.evaluation.BulkFitnessFunctionMT;
 import com.ojcoleman.ahni.hyperneat.Configurable;
 import com.ojcoleman.ahni.hyperneat.Properties;
+import com.ojcoleman.ahni.util.Range;
 
 public class NoveltySearch implements Configurable {
 	private static Logger logger = Logger.getLogger(NoveltySearch.class);
@@ -23,7 +25,9 @@ public class NoveltySearch implements Configurable {
 	/**
 	 * The novelty threshold to determine whether an individual is novel enough to add to the archive. The novelty
 	 * of an individual is always in the range [0, 1], thus the threshold should also be within this range. Default
-	 * is 0.05.
+	 * is 0.05. An alternative method where individuals are added probabilistically can be used by removing this option
+	 * and setting fitness.function.novelty.add_probability > 0. This option is mutually exclusive with 
+	 * fitness.function.novelty.add_probability
 	 */
 	public static final String ARCHIVE_THRESHOLD = "fitness.function.novelty.threshold";
 	/**
@@ -31,28 +35,52 @@ public class NoveltySearch implements Configurable {
 	 * added in a generation). Default is 0.05 * fitness.function.novelty.threshold.
 	 */
 	public static final String ARCHIVE_THRESHOLD_MIN = "fitness.function.novelty.threshold.min";
+	/**
+	 * The probability for each individual from the current generation that it will be added to the archive. For 
+	 * example if the population size is 1000 and fitness.function.novelty.add_probability == 0.001, then on average
+	 * one (randomly selected) individual will be added to the archive. This option is mutually exclusive with 
+	 * fitness.function.novelty.threshold. Default is 0 (disabled, threshold method will be used instead).
+	 */
+	public static final String ARCHIVE_ADD_PROB = "fitness.function.novelty.add_probability";
 
 	int k = 30;
 	double archiveThreshold = 0.05;
 	double archiveThresholdMin;
 
+	Properties properties;
 	public List<Behaviour> archive;
 	List<Behaviour> currentPop;
 	List<Behaviour> toArchive;
 	int noNewArchiveCount; // count number of generations in a row for which no individual added to archive.
 	int noNewArchiveGenerationsThreshold = 10;
 	int tooManyArchiveAdditionsThreshold;
+	double addProbability;
+	Random random;
 
 	public NoveltySearch() {
 	}
 
 	@Override
 	public void init(Properties props) {
+		properties = props;
+		
+		if (props.containsKey(ARCHIVE_ADD_PROB)) {
+			if (props.containsKey(ARCHIVE_THRESHOLD)) {
+				throw new IllegalArgumentException("The options/properties fitness.function.novelty.threshold and fitness.function.novelty.add_probability are mutually exclusive.");
+			}
+			addProbability = props.getDoubleProperty(ARCHIVE_ADD_PROB);
+			Range.checkUnitRange(addProbability, ARCHIVE_ADD_PROB);
+		}
+		else {
+			archiveThreshold = props.getDoubleProperty(ARCHIVE_THRESHOLD, archiveThreshold);
+			archiveThresholdMin = props.getDoubleProperty(ARCHIVE_THRESHOLD_MIN, archiveThreshold * 0.05);
+			Range.checkUnitRange(archiveThreshold, ARCHIVE_THRESHOLD);
+		}
+		
 		k = props.getIntProperty(K, k);
-		archiveThreshold = props.getDoubleProperty(ARCHIVE_THRESHOLD, archiveThreshold);
-		archiveThresholdMin = props.getDoubleProperty(ARCHIVE_THRESHOLD_MIN, archiveThreshold * 0.05);
-		// Adjust threshold so that around 2% of population is added at a time.
-		tooManyArchiveAdditionsThreshold = Math.max(1, (int) Math.round(props.getIntProperty(NeatConfiguration.POPUL_SIZE_KEY) * 0.02));
+		// Adjust threshold so that around 1% of population is added at a time.
+		int popSize = props.getIntProperty(NeatConfiguration.POPUL_SIZE_KEY);
+		tooManyArchiveAdditionsThreshold = Math.max(1, (int) Math.round(popSize * 0.01));
 		logger.info("Target maximum additions count to novelty archive per generation: " + tooManyArchiveAdditionsThreshold);
 		reset();
 	}
@@ -90,15 +118,24 @@ public class NoveltySearch implements Configurable {
 		}
 		Arrays.sort(dist);
 		double avgDist = 0;
+		int k = Math.min(dist.length, this.k);
 		for (i = 0; i < k; i++) {
 			avgDist += dist[i];
 		}
 		avgDist /= k;
 		assert (avgDist >= 0 && avgDist <= 1) : "Values returned by testNovelty must be in the range [0, 1] but a value of " + avgDist + " was found.";
 		
-		// If the archive and toArchive queue don't contain a similar behaviour, add it to the archive.
-		if (!containsSimilar(toArchive, b, archiveThreshold) && !containsSimilar(archive, b, archiveThreshold)) {
-			toArchive.add(b);
+		// If using probabilistic archive addition method.
+		if (addProbability > 0) {
+			if (properties.getConfig().getRandomGenerator().nextDouble() < addProbability) {
+				toArchive.add(b);
+			}
+		}
+		else { // Using threshold archive addition method.
+			// If the archive and toArchive queue don't contain a similar behaviour, add it to the archive.
+			if (!containsSimilar(toArchive, b, archiveThreshold) && !containsSimilar(archive, b, archiveThreshold)) {
+				toArchive.add(b);
+			}
 		}
 		
 		return avgDist;
@@ -139,24 +176,30 @@ public class NoveltySearch implements Configurable {
 	 * been added. The record of behaviours for the current population is cleared.
 	 */
 	public void finishedEvaluation() {
-		if (toArchive.isEmpty()) {
-			noNewArchiveCount++;
-			if (noNewArchiveCount == noNewArchiveGenerationsThreshold) {
-				archiveThreshold *= 0.95;
-				if (archiveThreshold < archiveThresholdMin)
-					archiveThreshold = archiveThresholdMin;
+		// If not using probabilistic archive addition method, adjust threshold if necessary to maintain desired addition rate.
+		if (addProbability == 0) {
+			if (toArchive.isEmpty()) {
+				noNewArchiveCount++;
+				if (noNewArchiveCount == noNewArchiveGenerationsThreshold) {
+					archiveThreshold *= 0.95;
+					if (archiveThreshold < archiveThresholdMin)
+						archiveThreshold = archiveThresholdMin;
+					noNewArchiveCount = 0;
+					//System.err.println("atd: " + archiveThreshold + "    (" + archiveThresholdMin + ")");
+				}
+			
+			} else {
 				noNewArchiveCount = 0;
-				//System.err.println("atd: " + archiveThreshold + "    (" + archiveThresholdMin + ")");
+				if (toArchive.size() > tooManyArchiveAdditionsThreshold) {
+					archiveThreshold *= 1.2;
+					//System.err.println("ati: " + archiveThreshold);
+				}
 			}
-		} else {
-			noNewArchiveCount = 0;
-			if (toArchive.size() > tooManyArchiveAdditionsThreshold) {
-				archiveThreshold *= 1.2;
-				//System.err.println("ati: " + archiveThreshold);
-			}
-			archive.addAll(toArchive);
-			logger.info("Novelty archive size is now " + archive.size() + "  (archive threshold is " + archiveThreshold + ").");
 		}
+		
+		archive.addAll(toArchive);
+		logger.info("Novelty archive size is now " + archive.size() + (addProbability == 0 ? "  (archive threshold is " + archiveThreshold + ")." : "."));
+		
 		toArchive.clear();
 		currentPop = new ArrayList<Behaviour>();
 	}

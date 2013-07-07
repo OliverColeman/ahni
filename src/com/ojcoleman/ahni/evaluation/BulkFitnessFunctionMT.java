@@ -198,7 +198,8 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 				for (int i = 0; i < mffs.length; i++) {
 					String tempKey = MULTI_KEY + "." + i;
 					props.put(tempKey + ".class", mffs[i].trim());
-					multiFitnessFunctions[i] = (BulkFitnessFunctionMT) props.singletonObjectProperty(tempKey);
+					//multiFitnessFunctions[i] = (BulkFitnessFunctionMT) props.singletonObjectProperty(tempKey);
+					multiFitnessFunctions[i] = (BulkFitnessFunctionMT) props.newObjectProperty(tempKey);
 					props.remove(tempKey + ".class");
 
 					if (multiFitnessFunctions[i].definesFitness())
@@ -273,6 +274,9 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		transcriber = (Transcriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
 
 		initialiseEvaluation();
+		for (BulkFitnessFunctionMT f : multiFitnessFunctions) {
+			f.initialiseEvaluation();
+		}
 
 		bestPerformance = targetPerformanceType == 1 ? 0 : Float.MAX_VALUE;
 
@@ -337,6 +341,9 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		}
 
 		finaliseEvaluation();
+		for (BulkFitnessFunctionMT f : multiFitnessFunctions) {
+			f.finaliseEvaluation();
+		}
 
 		renderedNoveltyArchivesThisGeneration = false;
 	}

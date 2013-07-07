@@ -461,7 +461,7 @@ public class Genotype implements Serializable {
 				fittest = null;
 			}
 			for (Chromosome c : m_chromosomes) {
-				if (fittest == null || fittest.getFitnessValue() < c.getFitnessValue()) {
+				if (fittest == null || fittest.getFitnessValue() < c.getFitnessValue() || (fittest.getFitnessValue() == c.getFitnessValue() && fittest.getPerformanceValue() < c.getPerformanceValue())) {
 					fittest = c;
 				}
 			}

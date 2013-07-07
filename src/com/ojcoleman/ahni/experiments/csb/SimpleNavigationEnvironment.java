@@ -69,7 +69,8 @@ public class SimpleNavigationEnvironment extends Environment {
 		// Start state is in randomly selected corner.
 		startState = new ArrayRealVector(size);
 		for (int i = 0; i < size; i++) {
-			startState.setEntry(i, (random.nextBoolean() ? 0 : 0.9) + random.nextDouble() * 0.1);
+			//startState.setEntry(i, (random.nextBoolean() ? 0 : 0.9) + random.nextDouble() * 0.1);
+			startState.setEntry(i, random.nextDouble());
 		}
 
 		// Goal state is in randomly selected location with minimum distance of 1 from start state.
@@ -78,7 +79,7 @@ public class SimpleNavigationEnvironment extends Environment {
 			for (int i = 0; i < size; i++) {
 				goalState.setEntry(i, random.nextDouble());
 			}
-		} while (goalState.getDistance(startState) < 0.9);
+		} while (goalState.getDistance(startState) < 0.2);
 
 		obstacleLocation = new ArrayRealVector[obstacleCount];
 		obstacleRadius = new double[obstacleCount];
@@ -113,7 +114,7 @@ public class SimpleNavigationEnvironment extends Environment {
 		if (obstacleCount == 0) {
 			path = findPath();
 		}
-		requiredSteps = (int) Math.round((path * 2) / maxStepSize);
+		requiredSteps = (int) Math.round((path*2) / maxStepSize);
 	}
 
 	@Override

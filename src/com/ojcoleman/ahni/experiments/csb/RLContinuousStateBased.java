@@ -107,7 +107,7 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 	protected double targetPerformance;
 	
 	// If novelty search enabled then record the environment state at 4 intervals (25%, 50%, 75%, 100%)
-	private int behaviourRecordCount = 2;
+	private int behaviourRecordCount = 1;
 	
 	@Override
 	public void init(Properties props) {
@@ -269,9 +269,9 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 						}
 						
 						// If goal reached.
-						if (agentInput[env.outputSize-1] >= targetPerformance) {
-							break;
-						}
+						//if (agentInput[env.outputSize-1] >= targetPerformance) {
+						//	break;
+						//}
 						
 						// Ask agent what it wants to do next, given output from environment.
 						// This also provides agent with reinforcement signal in the last element of the array.
@@ -431,5 +431,24 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 	@Override
 	public boolean definesNovelty() {
 		return enableNoveltySearch;
+	}
+	
+	@Override 
+	public void postEvaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
+		// If multiple instances of RLContinuousStateBased are being used in a multi-objective setup
+		// then set the performance to be the average of the fitness values over all instances of
+		// RLContinuousStateBased
+		double perf = genotype.getFitnessValue(0);
+		int count = 1;
+		if (multiFitnessFunctions != null) {
+			for (int i = 0; i < multiFitnessFunctions.length; i++) {
+				BulkFitnessFunctionMT f = multiFitnessFunctions[i];
+				if (f instanceof RLContinuousStateBased) {
+					perf += genotype.getFitnessValue(i+1);
+					count++;
+				}
+			}
+		}
+		genotype.setPerformanceValue(perf / count);
 	}
 }

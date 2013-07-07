@@ -279,9 +279,10 @@ public class Properties extends java.util.Properties {
 		String value = super.getProperty(key);
 		if (value != null && enableSubstitution) {
 			if (value.contains("$(")) {
-				Matcher m = Pattern.compile("\\$\\((.*)\\)").matcher(value);
+				Matcher m = Pattern.compile("\\$\\((.+?)\\)").matcher(value);
 				while (m.find()) {
 					String subKey = m.group(1);
+					System.out.println("sk: " + subKey);
 					if (containsKey(subKey)) {
 						value = value.replace("$(" + subKey + ")", getProperty(subKey));
 					}
