@@ -19,7 +19,7 @@ import com.ojcoleman.ahni.util.ArrayUtil;
  * evaluations on multiple genomes. The methods {@link #evaluate(Chromosome, Activator, int)} must be implemented in
  * subclasses. Subclasses may also need to override the methods {@link #init(Properties)},
  * {@link #initialiseEvaluation()}, {@link #finaliseEvaluation()}, {@link #postEvaluate(Chromosome, Activator, int)},
- * {@link #definesFitness()}, {@link #definesNovelty()}, {@link #scale(int, int, HyperNEATTranscriber)} and
+ * {@link #fitnessObjectivesCount()}, {@link #definesNoveltyObjective()}, {@link #scale(int, int, HyperNEATTranscriber)} and
  * {@link #dispose()}.
  * </p>
  * 
@@ -113,9 +113,13 @@ public abstract class HyperNEATFitnessFunction extends BulkFitnessFunctionMT {
 		scaleFactor = Math.max(0, props.getIntProperty(SCALE_FACTOR_KEY, scaleFactor));
 		scaleRecordIntermediatePerf = props.getBooleanProperty(SCALE_RIP_KEY, scaleRecordIntermediatePerf);
 
-		int depth = props.getIntProperty(HyperNEATTranscriber.SUBSTRATE_DEPTH);
 		int[] width = HyperNEATTranscriber.getProvisionalLayerSize(props, HyperNEATTranscriber.SUBSTRATE_WIDTH);
 		int[] height = HyperNEATTranscriber.getProvisionalLayerSize(props, HyperNEATTranscriber.SUBSTRATE_HEIGHT);
+		if (width.length != height.length) {
+			throw new IllegalArgumentException("Number of comma-separated layer dimensions in " + HyperNEATTranscriber.SUBSTRATE_WIDTH + " and " + HyperNEATTranscriber.SUBSTRATE_HEIGHT + " do not match.");
+		}
+		int depth = width.length;
+		
 		inputWidth = width[0];
 		inputHeight = height[0];
 		outputWidth = width[depth - 1];

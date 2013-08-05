@@ -1,5 +1,10 @@
 package com.ojcoleman.ahni.misc;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.*;
 
 import org.jgapcustomised.Chromosome;
@@ -9,6 +14,9 @@ import org.jgapcustomised.Genotype;
 import org.jgapcustomised.NaturalSelector;
 import org.jgapcustomised.Species;
 
+import com.ojcoleman.ahni.hyperneat.Configurable;
+import com.ojcoleman.ahni.hyperneat.HyperNEATConfiguration;
+import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.util.ArrayUtil;
 
 /**
@@ -35,15 +43,26 @@ import com.ojcoleman.ahni.util.ArrayUtil;
  * This code is based on JNSGA2 by Joachim Melcher, Institut AIFB, Universitaet Karlsruhe (TH), Germany
  * http://sourceforge.net/projects/jnsga2
  */
-public class NSGAIISelector extends NaturalSelector {
+public class NSGAIISelector extends NaturalSelector implements Configurable {
+	public static final String LOG = "log.selector.nsgaii";
+
+	private Properties props;
+	private DecimalFormat nf = new DecimalFormat("0.0000");
+	
 	/**
 	 * The population to select from, set in {@link #add(Configuration, List, List, Chromosome)}.
 	 */
 	protected List<Chromosome> population;
-
+	
+	
 	public NSGAIISelector() {
 		population = new ArrayList<Chromosome>();
 		species = new ArrayList<Species>();
+	}
+	
+	@Override
+	public void init(Properties props) throws Exception {
+		this.props = props;
 	}
 
 	/**
@@ -78,39 +97,56 @@ public class NSGAIISelector extends NaturalSelector {
 	@Override
 	public List<Chromosome> select(Configuration config) {
 		List<Chromosome> result = new ArrayList<Chromosome>();
+		HashMap<Species, Integer> numSelectedForSpecies = new HashMap<Species, Integer>();
+				
+		StringBuffer log = (props.logFilesEnabled() && props.getBooleanProperty(LOG, false)) ? new StringBuffer("SID, R, CID, E, P,  F\n") : null;
 		
 		for (Species s : species) {
 			List<List<Chromosome>> frontInSpecies = NSGAII.fastNonDominatedSort(s.getChromosomes());
+			List<Chromosome> selected = null;
+			List<Chromosome> elites = new ArrayList<Chromosome>();
 			
 			// Add elites and parents from this species if it's the only species or it hasn't been stagnant for too long
 			// or it hasn't reached the minimum species age or it contains the population-wide fittest individual.
 			if (species.size() == 1 || s.getStagnantGenerationsCount() < maxStagnantGenerations || s.getAge() < minAge || s.containsBestPerforming) {
-				// Add parents.
-				int minParentsToSelect = s.containsBestPerforming ? Math.max(1, elitismMinToSelect) : 0;
-				int numParentsToSelect = (int) Math.round(getSurvivalRate() * s.size());
-				if (numParentsToSelect < minParentsToSelect)
-					numParentsToSelect = minParentsToSelect;
-				
-				if (numParentsToSelect > 0) {
-					List<Chromosome> selected = NSGAII.getTop(frontInSpecies, numParentsToSelect);
-					result.addAll(selected);
-					// Make sure population-wide best performing is included in parents.
-					ensureHighestPerformingIncluded(s, result);
-				}
+				// Add parents. Always select at least one parent
+				int numParentsToSelect = Math.max(1, (int) Math.round(getSurvivalRate() * s.size()));
+				selected = NSGAII.getTop(frontInSpecies, numParentsToSelect);
+				result.addAll(selected);
+				numSelectedForSpecies.put(s, selected.size());
+				// Make sure population-wide best performing is included in parents.
+				ensureHighestPerformingIncluded(s, result);
 				
 				// Add elites.
-				int numElitesToSelect = (int) Math.round(elitismProportion * s.size());
-				if (numElitesToSelect < elitismMinToSelect)
-					numElitesToSelect = elitismMinToSelect;
-				// Don't select more elites than parents.
-				if (numElitesToSelect > numParentsToSelect)
-					numElitesToSelect = numParentsToSelect;
-				if (numElitesToSelect > 0) {
-					List<Chromosome> elites = NSGAII.getTop(frontInSpecies, numElitesToSelect);
-					// Make sure population-wide best performing is included in elites.
-					ensureHighestPerformingIncluded(s, elites);
-					s.setElites(elites);
+				if (s.size() >= elitismMinSpeciesSize) {
+					int numElitesToSelect = (int) Math.round(elitismProportion * s.size());
+					if (numElitesToSelect < elitismMinToSelect)
+						numElitesToSelect = elitismMinToSelect;
+					// Don't select more elites than parents.
+					if (numElitesToSelect > numParentsToSelect)
+						numElitesToSelect = numParentsToSelect;
+					if (numElitesToSelect > 0) {
+						elites = NSGAII.getTop(frontInSpecies, numElitesToSelect);
+					}
 				}
+				// Make sure population-wide best performing is included in elites.
+				ensureHighestPerformingIncluded(s, elites);
+				s.setElites(elites);
+			}
+			else {
+				numSelectedForSpecies.put(s, 0);
+			}
+			
+			if (log != null) {
+				if (selected == null) {
+					log.append(s.getID() + " None selected (stagnant generations: " + s.getStagnantGenerationsCount() + ")\n");
+				}
+				else {
+					for (Chromosome c : selected) {
+						log.append(s.getID() + ",  " + c.rank + ", " + c.getId() + ", " + (c.isElite ? "1" : "0") + ", " + nf.format(c.getPerformanceValue()) + ", " + ArrayUtil.toString(c.getFitnessValues(), ", ", nf) + "\n");
+					}
+				}
+				log.append("\n");
 			}
 		}
 		
@@ -122,9 +158,12 @@ public class NSGAIISelector extends NaturalSelector {
 			int numToRemove = result.size() - numToSelect;
 			int numRemoved = 0;
 			for (int i = result.size() - 1; i >= 0 && numRemoved < numToRemove; i--) {
-				// Don't remove elites.
-				if (!result.get(i).isElite) {
+				// Don't remove elites or single parents.
+				Species s = result.get(i).getSpecie();
+				if (!result.get(i).isElite && numSelectedForSpecies.get(s) > 1) {
 					result.remove(i);
+					numRemoved++;
+					numSelectedForSpecies.put(s, numSelectedForSpecies.get(s) - 1);
 				}
 			}
 		} else if (result.size() < numToSelect) {
@@ -143,14 +182,33 @@ public class NSGAIISelector extends NaturalSelector {
 		// This is used by ReproductionOperators to determine how many offspring to produce for each species.
 		List<List<Chromosome>> fronts = NSGAII.fastNonDominatedSort(population);
 		int rank = 0;
-		double rankMax = fronts.size() - 1;
 		double overallFitness = 0;
+		if (log != null) log.append("\n\n\n\n\nR, SID, CID, E, P, FO, FMO\n");
 		for (List<Chromosome> front : fronts) {
-			overallFitness = rankMax == 0 ? 1 : Math.pow((rankMax - rank) / rankMax, 2);
+			//overallFitness = Math.pow((rankMax - rank) / rankMax, 2);
+			overallFitness = 2.0 / (2.0 + rank);
 			for (Chromosome c : front) {
 				c.setFitnessValue(overallFitness);
+			
+				if (log != null) {
+					log.append(c.rank + ", " + c.getSpecie().getID() + ",  " + c.getId() + ", " + (c.isElite ? "1" : "0") + ", " + nf.format(c.getPerformanceValue()) + ", " + nf.format(c.getFitnessValue()) + ", " + ArrayUtil.toString(c.getFitnessValues(), ", ", nf) + "\n");
+				}
 			}
+			if (log != null) log.append("\n");
 			rank++;
+		}
+		
+		if (log != null) {
+			File dirFile = new File(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY));
+			if (!dirFile.exists())
+				dirFile.mkdirs();
+			try {
+				BufferedWriter logFile = new BufferedWriter(new FileWriter(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "nsgaii-" + props.getEvolver().getGeneration() + ".csv"));
+				logFile.write(log.toString());
+				logFile.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 
 		return result;

@@ -13,6 +13,10 @@ public class Range {
 	}
 
 	public Range(double s, double e) {
+		set(s, e);
+	}
+	
+	public void set(double s, double e) {
 		start = s;
 		end = e;
 		range = e - s;
@@ -63,5 +67,9 @@ public class Range {
 		if (label == null)
 			return false;
 		throw new IllegalArgumentException(label + " must be in the range [0, 1] but " + v + " was given.");
+	}
+	
+	public String toString() {
+		return "[" + start + ", " + end + "]";
 	}
 }

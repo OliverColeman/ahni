@@ -26,7 +26,7 @@ package com.anji.nn.activationfunction;
  */
 public class BipolarSigmoidActivationFunction implements ActivationFunction {
 
-	private final static double SLOPE = 4.924273f;
+	private final static double SLOPE = 2;
 
 	/**
 	 * identifying string

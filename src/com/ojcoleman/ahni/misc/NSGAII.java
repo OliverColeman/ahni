@@ -34,6 +34,7 @@ public class NSGAII {
 			for (Chromosome individualQ : individuals) {
 				if (individualP.dominates(individualQ)) {
 					individual2DominatedChromosomes.get(individualP).add(individualQ);
+					individualQ.rank = 0; 
 				} else {
 					if (individualQ.dominates(individualP)) {
 						individual2NumberOfDominatingChromosomes.put(individualP, individual2NumberOfDominatingChromosomes.get(individualP) + 1);
@@ -44,13 +45,10 @@ public class NSGAII {
 			if (individual2NumberOfDominatingChromosomes.get(individualP) == 0) {
 				// p belongs to the first front
 				if (dominationFronts.isEmpty()) {
-					List<Chromosome> firstDominationFront = new ArrayList<Chromosome>();
-					firstDominationFront.add(individualP);
-					dominationFronts.add(firstDominationFront);
-				} else {
-					List<Chromosome> firstDominationFront = dominationFronts.get(0);
-					firstDominationFront.add(individualP);
+					dominationFronts.add(new ArrayList<Chromosome>());
 				}
+				dominationFronts.get(0).add(individualP);
+				individualP.rank = 0;
 			}
 		}
 
@@ -62,6 +60,7 @@ public class NSGAII {
 					individual2NumberOfDominatingChromosomes.put(individualQ, individual2NumberOfDominatingChromosomes.get(individualQ) - 1);
 					if (individual2NumberOfDominatingChromosomes.get(individualQ) == 0) {
 						nextDominationFront.add(individualQ);
+						individualQ.rank = i; 
 					}
 				}
 			}

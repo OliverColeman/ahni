@@ -81,6 +81,9 @@ public class AddNeuronMutationOperator extends MutationOperator implements Confi
 	 * Adds connections according to <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">NEAT </a> add
 	 * node mutation.
 	 * 
+	 * Note that if the classic mutation scheme is enabled (see {@link NeatConfiguration#TOPOLOGY_MUTATION_CLASSIC_KEY}) then this method is not used and instead
+	 * {@link SingleTopologicalMutationOperator} calls {@link #addNeuronAtConnection(NeatConfiguration, Map, ConnectionAllele, Set, Set)} directly.
+	 *
 	 * @see org.jgapcustomised.MutationOperator#mutate(org.jgapcustomised.Configuration,
 	 *      org.jgapcustomised.ChromosomeMaterial, java.util.Set, java.util.Set)
 	 */

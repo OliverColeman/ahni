@@ -19,7 +19,12 @@ public class BainNNConnectionCountCost extends BulkFitnessFunctionMT {
 	
 	@Override
 	public void init(Properties props) {
-		target = props.getDoubleProperty(TARGET, 0.1);
+		target = props.getDoubleProperty(TARGET, 0);
+	}
+
+	@Override
+	public boolean fitnessValuesStable() {
+		return true;
 	}
 	
 	@Override

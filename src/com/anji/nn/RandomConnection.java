@@ -77,5 +77,4 @@ public class RandomConnection implements Connection {
 	public long cost() {
 		return 222;
 	}
-
 }

@@ -115,7 +115,7 @@ public class NeuronConnection implements Connection {
 	/**
 	 * @return Neuron input
 	 */
-	protected Neuron getIncomingNode() {
+	public Neuron getIncomingNode() {
 		return incomingNode;
 	}
 

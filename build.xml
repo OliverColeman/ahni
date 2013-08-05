@@ -39,6 +39,17 @@
 			<zipfileset excludes="META-INF/*.SF" src="lib/wildcard-1.03.jar" />
 		</jar>
 	</target>
+	
+	<target name="runjarnolib">
+		<antcall target="build" />
+		<jar destfile="../ahni.jar" filesetmanifest="mergewithoutmain">
+			<manifest>
+				<attribute name="Main-Class" value="com.ojcoleman.ahni.hyperneat.Run" />
+			</manifest>
+			<fileset dir="bin" />
+			<fileset dir="src" />
+		</jar>
+	</target>
 
 	<target name="runjarv">
 		<antcall target="build" />

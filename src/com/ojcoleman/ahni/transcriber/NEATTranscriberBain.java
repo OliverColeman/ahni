@@ -88,10 +88,13 @@ public class NEATTranscriberBain extends TranscriberAdaptor<BainNN> implements C
 		
 		// If this appears to be a "HyperNEAT compatible" properties file, attempt to determine substrate 
 		// input and output size from layer dimensions unless these are explicitly specified in properties. 
-		if (props.containsKey(HyperNEATTranscriber.SUBSTRATE_DEPTH) && !(props.containsKey(NeatConfiguration.STIMULUS_SIZE_KEY) || props.containsKey(NeatConfiguration.RESPONSE_SIZE_KEY))) {
-			int depth = props.getIntProperty(HyperNEATTranscriber.SUBSTRATE_DEPTH);
+		if (props.containsKey(HyperNEATTranscriber.SUBSTRATE_WIDTH) && !(props.containsKey(NeatConfiguration.STIMULUS_SIZE_KEY) || props.containsKey(NeatConfiguration.RESPONSE_SIZE_KEY))) {
 			int[] width = HyperNEATTranscriber.getProvisionalLayerSize(props, HyperNEATTranscriber.SUBSTRATE_WIDTH);
 			int[] height = HyperNEATTranscriber.getProvisionalLayerSize(props, HyperNEATTranscriber.SUBSTRATE_HEIGHT);
+			if (width.length != height.length) {
+				throw new IllegalArgumentException("Number of comma-separated layer dimensions in " + HyperNEATTranscriber.SUBSTRATE_WIDTH + " and " + HyperNEATTranscriber.SUBSTRATE_HEIGHT + " do not match.");
+			}
+			int depth = width.length;
 			
 			// Determine width and height of input and output layer if available.
 			BulkFitnessFunction bulkFitnessFunc = (BulkFitnessFunction) props.singletonObjectProperty(HyperNEATEvolver.FITNESS_FUNCTION_CLASS_KEY);

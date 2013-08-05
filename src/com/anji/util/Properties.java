@@ -282,7 +282,6 @@ public class Properties extends java.util.Properties {
 				Matcher m = Pattern.compile("\\$\\((.+?)\\)").matcher(value);
 				while (m.find()) {
 					String subKey = m.group(1);
-					System.out.println("sk: " + subKey);
 					if (containsKey(subKey)) {
 						value = value.replace("$(" + subKey + ")", getProperty(subKey));
 					}
@@ -413,6 +412,35 @@ public class Properties extends java.util.Properties {
 		double[] vals = new double[valStrings.length];
 		for (int i = 0; i < valStrings.length; i++) {
 			vals[i] = Double.parseDouble(valStrings[i]);
+		}
+		return vals;
+	}
+	
+	/**
+	 * Retrieve an array of String values from a comma-separated list.
+	 */
+	public String[] getStringArrayProperty(String key, String[] defaultVal) {
+		String value = getProperty(key, defaultVal == null ? null : java.util.Arrays.toString(defaultVal).replaceAll("[\\[\\]]", ""));
+		if (value == null)
+			return defaultVal;
+		return getStringArrayFromString(value);
+	}
+
+	/**
+	 * Retrieve an array of String values from a comma-separated list.
+	 */
+	public String[] getStringArrayProperty(String key) {
+		String value = getProperty(key);
+		if (value == null)
+			throw new IllegalArgumentException("no value for " + key);
+		
+		return getStringArrayFromString(value);
+	}
+	
+	private String[] getStringArrayFromString(String valString) {
+		String[] vals = valString.split(",");
+		for (int i = 0; i < vals.length; i++) {
+			vals[i] = vals[i].trim();
 		}
 		return vals;
 	}

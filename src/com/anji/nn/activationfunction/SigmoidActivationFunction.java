@@ -26,7 +26,7 @@ package com.anji.nn.activationfunction;
  */
 public class SigmoidActivationFunction implements ActivationFunction {
 
-	private final static double SLOPE = 4.924273f;
+	private final static double SLOPE = 1;
 
 	//private final static int LUT_RESOLUTION = 5000;
 	//private final static double MAX_LUT_INPUT = 2.5f; // after 2.5 (before -2.5) value is 1 (0) for all practical

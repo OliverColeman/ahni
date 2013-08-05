@@ -90,7 +90,9 @@ public abstract class HyperNEATTranscriberBainBase extends HyperNEATTranscriber<
 		int neuronType = cppn.getNeuronTypeIndex();
 
 		if (enableBias) {
-			((NeuronCollectionWithBias) neurons).setBias(bainIndex, cppn.getBiasWeight(neuronType));
+			double bias = cppn.getRangedBiasWeight(neuronType);
+			assert !Double.isNaN(bias) : cppn.cppnActivator.toString();
+			((NeuronCollectionWithBias) neurons).setBias(bainIndex, cppn.getRangedBiasWeight(neuronType));
 		}
 
 		// Type and/or parameters for neuron.

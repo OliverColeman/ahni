@@ -138,7 +138,9 @@ public class Genotype implements Serializable {
 			Chromosome orig = originals.get(idx);
 			Chromosome clone = new Chromosome(orig.cloneMaterial(), m_activeConfiguration.nextChromosomeId(), m_activeConfiguration.getObjectiveCount());
 			chroms.add(clone);
-			orig.getSpecie().add(clone);
+			if (orig.getSpecie() != null) {
+				orig.getSpecie().add(clone);
+			}
 		}
 		if (chroms.size() > targetSize) {
 			// remove random chromosomes
@@ -210,6 +212,9 @@ public class Genotype implements Serializable {
 	 */
 	protected void respeciate() {
 		m_species.clear();
+		for (Chromosome chrom : m_chromosomes) {
+			chrom.resetSpecie();
+		}
 		speciate();
 	}
 
@@ -380,24 +385,17 @@ public class Genotype implements Serializable {
 			// -------------------------------------------------------
 			m_activeConfiguration.getEventManager().fireGeneticEvent(new GeneticEvent(GeneticEvent.GENOTYPE_EVALUATED_EVENT, this));
 
-
+			
 			// Speciate population.
 			speciate();
 			
-			
-			// Attempt to maintain species count target
+			// Attempt to maintain species count target, don't change threshold too frequently.
 			int targetSpeciesCount = m_specParms.getSpeciationTarget();
-			// don't change threshold too frequently.
-			int maxAdjustFreq = m_activeConfiguration.getPopulationSize() / 20;
-			if (targetSpeciesCount > 0 && m_species.size() != targetSpeciesCount && (generation - lastGenChangedSpeciesCompatThreshold > maxAdjustFreq)) {
-				// adjust number of species by altering speciation threshold if necessary
-				if (m_species.size() > targetSpeciesCount) {
-					m_specParms.setSpeciationThreshold(m_specParms.getSpeciationThreshold() + m_specParms.getSpeciationThresholdChange());
-				} else { // m_species.size() < targetSpeciesCount
-					// Don't adjust below 0.1
-					if (m_specParms.getSpeciationThreshold() > 0.1 + m_specParms.getSpeciationThresholdChange())
-						m_specParms.setSpeciationThreshold(m_specParms.getSpeciationThreshold() - m_specParms.getSpeciationThresholdChange());
-				}
+			int maxAdjustFreq = (int) Math.sqrt(m_activeConfiguration.getPopulationSize());
+			if (targetSpeciesCount > 0 && m_species.size() != targetSpeciesCount && (generation - lastGenChangedSpeciesCompatThreshold > maxAdjustFreq) && generation > maxAdjustFreq * 2) {
+				double ratio = (double) m_species.size() / targetSpeciesCount;
+				double factor = (ratio - 1) * 0.2 + 1;
+				m_specParms.setSpeciationThreshold(m_specParms.getSpeciationThreshold() * factor);
 				lastGenChangedSpeciesCompatThreshold = generation;
 			}
 			
@@ -504,7 +502,6 @@ public class Genotype implements Serializable {
 			for (ReproductionOperator operator : m_activeConfiguration.getReproductionOperators()) {
 				operator.reproduce(m_activeConfiguration, m_species, offspring);
 			}
-
 			
 			// Execute Mutation Operators.
 			// -------------------------------------
@@ -522,7 +519,6 @@ public class Genotype implements Serializable {
 				if (s.isEmpty()) {
 					s.originalSize = 0;
 					speciesIter.remove();
-					// System.out.println("Removed species (no elites): " + s.getID() + "  age: " + s.getAge());
 				} else {
 					s.newGeneration(); // updates internal variables
 					m_chromosomes.addAll(s.getChromosomes());

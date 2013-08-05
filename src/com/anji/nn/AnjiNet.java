@@ -20,8 +20,10 @@
 
 package com.anji.nn;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -48,14 +50,14 @@ public class AnjiNet {
 	private String name;
 
 	/**
-	 * @param someNeurons
-	 * @param someInNeurons
-	 * @param someOutNeurons
-	 * @param someRecurrentConns
+	 * @param allNeurons
+	 * @param inputNeurons
+	 * @param outputNeurons
+	 * @param recurrentConns
 	 * @param aName
 	 */
-	public AnjiNet(Collection<Neuron> someNeurons, List<Neuron> someInNeurons, List<Neuron> someOutNeurons, List<CacheNeuronConnection> someRecurrentConns, String aName) {
-		init(someNeurons, someInNeurons, someOutNeurons, someRecurrentConns, aName);
+	public AnjiNet(Collection<Neuron> allNeurons, List<Neuron> inputNeurons, List<Neuron> outputNeurons, List<CacheNeuronConnection> recurrentConns, String aName) {
+		init(allNeurons, inputNeurons, outputNeurons, recurrentConns, aName);
 	}
 
 	/**
@@ -161,8 +163,57 @@ public class AnjiNet {
 	/**
 	 * @see java.lang.Object#toString()
 	 */
+
+	/**
+	 * @see java.lang.Object#toString()
+	 */
 	public String toString() {
-		return getName();
+		HashMap<Neuron, Integer> neuronIndexMap = new HashMap<Neuron, Integer>();
+		int connCount = 0;
+		for (int n = 0; n < allNeurons.size(); n++) {
+			neuronIndexMap.put(allNeurons.get(n), n);
+			if (!inNeurons.contains(allNeurons.get(n))) {
+				connCount += allNeurons.get(n).getIncomingConns().size();
+			}
+		}
+		
+		DecimalFormat nf = new DecimalFormat(" 0.00;-0.00");
+		StringBuilder out = new StringBuilder();
+		if (getName() != null) out.append(getName());
+		out.append("\nNeuron count: " + allNeurons.size());
+		out.append("\nSynapse count: " + connCount);
+		out.append("\nTopology type: " + (isRecurrent() ? "Reccurent" : "Feed-forward"));
+		
+		out.append("\n\nNeurons:\n\t\ttype\tfunc\tbias");
+		for (int n = 0; n < allNeurons.size(); n++) {
+			out.append("\n\t" + n + "\t" + getType(allNeurons.get(n)) + "\t" + allNeurons.get(n).getFunc() + "\t" + allNeurons.get(n).getBias());
+		}
+
+		out.append("\n\nConnections:");
+		out.append("\n\tpre > post\tweight");
+		
+		for (int ni = 0; ni < allNeurons.size(); ni++) {
+			Neuron n = allNeurons.get(ni);
+			for (Connection c : n.getIncomingConns()) {
+				if (c instanceof NeuronConnection) {
+					NeuronConnection nc = (NeuronConnection) c;
+					Neuron src = nc.getIncomingNode();
+					int pre = src != null ? neuronIndexMap.get(src) : -1;
+					int post = ni;
+					String preType = src != null ? getType(src) : "-";
+					String postType = getType(n);
+					out.append("\n\t" + preType + ":" + pre + " > " + postType + ":" + post + "\t" + nc.getWeight());
+				}
+			}
+		}
+
+		return out.toString();
+	}
+	
+	private String getType(Neuron n) {
+		if (inNeurons.contains(n)) return "i";
+		if (outNeurons.contains(n)) return "o";
+		return "h";
 	}
 
 	/**
@@ -181,7 +232,7 @@ public class AnjiNet {
 			// We don't use the Collections iterator functionality because it's slower for small collections.
 			for (int i = 0 ; i < recurrentConns.size(); i++) {
 				recurrentConns.get(i).step();
-				System.out.println("recurrent!");
+				System.out.println("recurrent! " + name);
 			}
 			for (int i = 0 ; i < allNeurons.size(); i++) {
 				allNeurons.get(i).step();
@@ -243,6 +294,10 @@ public class AnjiNet {
 	 */
 	public boolean isRecurrent() {
 		return !recurrentConns.isEmpty();
+	}
+
+	public void setName(String string) {
+		name = string;
 	}
 
 }

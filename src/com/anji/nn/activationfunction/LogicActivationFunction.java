@@ -9,7 +9,7 @@ public abstract class LogicActivationFunction implements ActivationFunction, Act
 	/**
 	 * Not used as this is a non-integrating function, returns 0.
 	 * 
-	 * @see #apply(double[])
+	 * @see #apply(double[], double)
 	 */
 	public double apply(double input) {
 		return 0;

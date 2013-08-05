@@ -155,6 +155,30 @@ public class ArrayUtil {
 			a[i] *= sumInv;
 		return a;
 	}
+	
+	/**
+	 * Scales each value to the range [0 ,1], using the given Range.
+	 * @param a The array to scale the values in (the values in this array are altered).
+	 * @param r The Range to use, this range should encompass all the values in the array.
+	 * @return The given array with scaled values.
+	 */
+	public static double[] scaleToUnit(double[] a, Range r) {
+		for (int i = 0; i < a.length; i++)
+			a[i] = r.translateToUnit(a[i]);
+		return a;
+	} 
+
+	/**
+	 * Scales each value in the array to the given.
+	 * @param a The array to scale the values in (the values in this array are altered). All values should be in the range [0, 1].
+	 * @param r The Range to use to scale the values with.
+	 * @return The given array with scaled values.
+	 */
+	public static double[] scaleFromUnit(double[] a, Range r) {
+		for (int i = 0; i < a.length; i++)
+			a[i] = r.translateFromUnit(a[i]);
+		return a;
+	} 
 
 	/** 
 	 * Create a new array containing random values in the range [0, 1).
@@ -207,6 +231,25 @@ public class ArrayUtil {
 	 */
 	public static double getMaxValue(double[] a) {
 		return a[getMaxIndex(a)];
+	}
+	
+	/**
+	 * Returns the index of the element with the smallest value in the given array.
+	 */
+	public static int getMinIndex(double[] a) {
+		int minIndex = 0;
+		for (int i = 1; i < a.length; i++) {
+			if (a[i] < a[minIndex])
+				minIndex = i;
+		}
+		return minIndex;
+	}
+	
+	/**
+	 * Returns the smallest value in the given array.
+	 */
+	public static double getMinValue(double[] a) {
+		return a[getMinIndex(a)];
 	}
 
 	/** 
@@ -282,6 +325,12 @@ public class ArrayUtil {
 		if (initialValues != 0) Arrays.fill(a, initialValues);
 		return a;
 	}
+	public static String[] newArray(int length, String initialValues) {
+		String[] a = new String[length];
+		if (initialValues != null) Arrays.fill(a, initialValues);
+		return a;
+	}
+
 	
 	/**
 	 * Returns a new array that contains the negated values of the given array.
@@ -320,5 +369,10 @@ public class ArrayUtil {
 			index[ri] = tmp;
 		}
 		return index;
+	}
+
+	public static int getMin(double[] minOutputValue) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 }

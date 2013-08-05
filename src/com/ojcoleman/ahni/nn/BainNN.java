@@ -74,6 +74,7 @@ public class BainNN extends NNAdaptor {
 	private int[] outputDimensions;
 	private int inputSize, outputIndex, outputSize;
 	int neuronCount;
+	double sumOfSquaredConnectionLengths;
 
 	private int synapseCount;
 	private int maxCycleLength;
@@ -426,12 +427,16 @@ public class BainNN extends NNAdaptor {
 	 */
 	@Override
 	public String toString() {
+		int neuronDisabledCount = 0;
+		for (int i = 0; i < neuronCount; i++) {
+			if (!neuronDisabled[i]) neuronDisabledCount++;
+		}
 		DecimalFormat nf = new DecimalFormat(" 0.00;-0.00");
 		StringBuilder out = new StringBuilder(125 + synapseCount * 30);
 		out.append("Neuron class: " + nn.getNeurons().getClass());
 		out.append("\nSynapse class: " + nn.getSynapses().getClass());
-		out.append("\nNeuron count: " + neuronCount + "  Populated size: " + nn.getNeurons().getSizePopulated());
-		out.append("\nSynapse count: " + synapseCount + "  Populated size: " + nn.getSynapses().getSizePopulated());
+		out.append("\nNeuron count: " + neuronCount + "  Populated/enabled size: " + neuronDisabledCount);
+		out.append("\nSynapse count: " + synapseCount + "  Populated/enabled size: " + nn.getSynapses().getSizePopulated());
 		out.append("\nTopology type: " + topology);
 		out.append("\nCycles per step: " + stepsPerStep);
 
@@ -682,5 +687,19 @@ public class BainNN extends NNAdaptor {
 	@Override
 	public boolean isRecurrent() {
 		return topology.equals(Topology.RECURRENT);
+	}
+
+	/**
+	 * @return the sum of the squared lengths of all connections.
+	 */
+	public double getSumOfSquaredConnectionLengths() {
+		return sumOfSquaredConnectionLengths;
+	}
+
+	/**
+	 * @param setSumOfSquaredConnectionLengths the sum of the squared lengths of all connections.
+	 */
+	public void setSumOfSquaredConnectionLengths(double setSumOfSquaredConnectionLengths) {
+		this.sumOfSquaredConnectionLengths = setSumOfSquaredConnectionLengths;
 	}
 }

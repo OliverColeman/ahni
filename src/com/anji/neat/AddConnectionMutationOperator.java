@@ -110,6 +110,9 @@ public class AddConnectionMutationOperator extends MutationOperator implements C
 	 * Adds connections according to <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">NEAT </a> add
 	 * connection mutation.
 	 * 
+	 * Note that if the classic mutation scheme is enabled (see {@link NeatConfiguration#TOPOLOGY_MUTATION_CLASSIC_KEY}) then this method is not used and instead
+	 * {@link SingleTopologicalMutationOperator} calls {@link #addSingleConnection(NeatConfiguration, List, SortedMap, Set)} directly.
+	 * 
 	 * @param jgapConfig
 	 * @param target chromosome material to mutate
 	 * @param allelesToAdd <code>Set</code> contains <code>Allele</code> objects

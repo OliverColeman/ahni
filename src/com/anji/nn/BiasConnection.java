@@ -68,5 +68,4 @@ public class BiasConnection implements Connection {
 	public long cost() {
 		return 41;
 	}
-
 }

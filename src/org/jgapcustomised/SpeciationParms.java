@@ -44,8 +44,6 @@ public class SpeciationParms {
 
 	public final static int DEFAULT_SPECIATION_TARGET = 0; // don't try to maintain a specific number of species
 
-	public final static double DEFAULT_SPECIATION_THRESHOLD_CHANGE = 0.1f;
-
 	private double compatExcessCoeff = DEFAULT_COMPATIBILITY_EXCESS_COEFF;
 
 	private double compatDisjointCoeff = DEFAULT_COMPATIBILITY_DISJOINT_COEFF;
@@ -55,8 +53,6 @@ public class SpeciationParms {
 	private double speciationThreshold = DEFAULT_SPECIATION_THRESHOLD;
 
 	private int speciationTarget = DEFAULT_SPECIATION_TARGET;
-
-	private double speciationThresholdChange = DEFAULT_SPECIATION_THRESHOLD_CHANGE;
 
 	/**
 	 * @return double coefficient for species compatibility based on common genes; see <a
@@ -143,19 +139,4 @@ public class SpeciationParms {
 	public void setSpeciationTarget(int d) {
 		speciationTarget = d;
 	}
-
-	/**
-	 * @return amount to change speciation threshold to maintain speciation target.
-	 */
-	public double getSpeciationThresholdChange() {
-		return speciationThresholdChange;
-	}
-
-	/**
-	 * @param d amount to change speciation threshold to maintain speciation target.
-	 */
-	public void setSpeciationThresholdChange(double d) {
-		speciationThresholdChange = d;
-	}
-
 }

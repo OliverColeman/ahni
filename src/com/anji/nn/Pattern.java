@@ -82,7 +82,6 @@ public class Pattern {
 		public long cost() {
 			return 41;
 		}
-
 	}
 
 	/**

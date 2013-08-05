@@ -50,7 +50,9 @@ import com.ojcoleman.ahni.event.AHNIEvent;
 import com.ojcoleman.ahni.event.AHNIEventListener;
 import com.ojcoleman.ahni.nn.BainNN;
 import com.ojcoleman.ahni.nn.NNAdaptor;
+import com.ojcoleman.ahni.transcriber.HyperNEATTranscriber;
 import com.ojcoleman.ahni.transcriber.TranscriberAdaptor;
+import com.ojcoleman.ahni.transcriber.HyperNEATTranscriber.CPPN;
 import com.ojcoleman.ahni.util.ArrayUtil;
 import com.ojcoleman.ahni.util.NiceWriter;
 
@@ -86,6 +88,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 	public static final String LOG_PER_GENERATIONS_KEY = "log.pergenerations";
 	public static final String LOG_CHAMP_TOSTRING_KEY = "log.champ.tostring";
 	public static final String LOG_CHAMP_TOIMAGE_KEY = "log.champ.toimage";
+	public static final String LOG_SPECIES_HISTORY_KEY = "log.species_history";
 	public static final String INITIAL_CPPN = "hyperneat.cppn.initial";
 
 	private HyperNEATConfiguration config = null;
@@ -214,6 +217,19 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 		config.getEventManager().addEventListener(GeneticEvent.GENOTYPE_EVALUATED_EVENT, this);
 		config.getEventManager().addEventListener(GeneticEvent.GENOTYPE_START_GENETIC_OPERATORS_EVENT, this);
 		config.getEventManager().addEventListener(GeneticEvent.GENOTYPE_FINISH_GENETIC_OPERATORS_EVENT, this);
+		
+		if (props.getBooleanProperty(LOGGING_ENABLE_KEY, true)) {
+			String sc = "";
+			Chromosome c = new Chromosome(config.getSampleChromosomeMaterial(), 0L, 0);
+			Transcriber<? extends Activator> transcriber = (Transcriber<? extends Activator>) properties.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
+			if (transcriber instanceof HyperNEATTranscriber) {
+				HyperNEATTranscriber.CPPN cppn = (transcriber instanceof HyperNEATTranscriber) ? ((HyperNEATTranscriber) transcriber).getCPPN(c) : null;
+				logger.info("Initial CPPN:\n" + cppn.toString());
+			}
+			else {
+				logger.info("Initial chromosome:\n" + c.toString());
+			}
+		}
 	}
 
 	/**
@@ -290,7 +306,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 		fittest = genotype.getFittestChromosome();
 
 		BufferedWriter speciesInfoWriter = null;
-		if (properties.logFilesEnabled()) {
+		if (properties.logFilesEnabled() && properties.getBooleanProperty(LOG_SPECIES_HISTORY_KEY, false)) {
 			File dirFile = new File(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY));
 			if (!dirFile.exists())
 				dirFile.mkdirs();
@@ -365,7 +381,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 			avgBestSpeciesPerformance /= numSpecies;
 			int numExtinctSpecies = previousSpeciesCount - numSpecies + numNewSpecies;
 
-			if (properties.logFilesEnabled()) {
+			if (properties.logFilesEnabled() && properties.getBooleanProperty(LOG_SPECIES_HISTORY_KEY, false)) {
 				// write out some info about species history
 				StringBuffer output = new StringBuffer(generation + ",\t" + allSpeciesEver.size() + ",\t" + numSpecies + ",\t" + numNewSpecies + ",\t" + numExtinctSpecies);
 				for (Species species : allSpeciesEver.values()) {
@@ -376,7 +392,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 				speciesInfoWriter.write(output.toString());
 				speciesInfoWriter.flush();
 			}
-
+			
 			
 			if (properties.logFilesEnabled()) {
 				logChamp(bestPerforming, false);
@@ -434,7 +450,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 
 		fireEvent(new AHNIEvent(AHNIEvent.Type.RUN_END, this, this));
 
-		if (properties.logFilesEnabled()) {
+		if (speciesInfoWriter != null) {
 			speciesInfoWriter.close();
 		}
 
@@ -562,6 +578,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 				Transcriber<? extends Activator> transcriber = (Transcriber<? extends Activator>) properties.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
 				
 				Activator substrate = (transcriber instanceof TranscriberAdaptor) ? ((TranscriberAdaptor) transcriber).transcribe(champ, null, transcribeOptions) : transcriber.transcribe(champ, null);
+				HyperNEATTranscriber.CPPN cppn = (transcriber instanceof HyperNEATTranscriber) ? ((HyperNEATTranscriber) transcriber).getCPPN(champ) : null;
 				
 				if (substrate == null) {
 					logger.warn("Champ substrate is null, which probably means it's been classified as a dud by the transcriber (e.g. perhaps because there are no connections from input to output.");
@@ -570,6 +587,9 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 					if (logString) {
 						BufferedWriter outputfile = new BufferedWriter(new FileWriter(baseFileName + ".txt"));
 						outputfile.write("String representation of " + msg + ":\n" + substrate);
+						if (cppn != null) {
+							outputfile.write("\n\n\nString representation of CPPN:\n" + cppn);
+						}
 						outputfile.close();
 					}
 

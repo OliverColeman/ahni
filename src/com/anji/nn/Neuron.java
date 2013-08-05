@@ -245,7 +245,7 @@ public class Neuron implements XmlPersistable {
 				for (int i = 0; i < incomingConns.size(); i++) {
 					input[i] = incomingConns.get(i).read();
 				}
-				value = func2.apply(input);
+				value = func2.apply(input, bias);
 			} else {
 				double sum = bias;
 				for (int i = 0; i < incomingConns.size(); i++) {
@@ -473,7 +473,7 @@ public class Neuron implements XmlPersistable {
 	 * 
 	 * @return Collection contains Connection objects
 	 */
-	protected Collection getIncomingConns() {
+	protected Collection<Connection> getIncomingConns() {
 		return incomingConns;
 	}
 

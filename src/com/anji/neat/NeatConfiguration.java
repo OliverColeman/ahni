@@ -126,7 +126,7 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	 */
 	public final static String SPECIATION_TARGET_KEY = "speciation.target";
 	/**
-	 * properties key, amount to change speciation threshold to maintain speciation target
+	 * @deprecated Adjustment amounts are now calculated as a ratio of the target and current species counts. Properties key, amount to change speciation threshold to maintain speciation target
 	 */
 	public final static String SPECIATION_THRESHOLD_CHANGE_KEY = "speciation.threshold.change";
 	/**
@@ -306,7 +306,7 @@ public class NeatConfiguration extends Configuration implements Configurable {
 		selector.setElitismMinToSelect(props.getIntProperty(ELITISM_MIN_TO_SELECT_KEY, bulkFitnessFunc.getObjectiveCount()));
 		selector.setElitismMinSpeciesSize(props.getIntProperty(ELITISM_MIN_SPECIE_SIZE_KEY, 5));
 		selector.setSpeciatedFitness(props.getBooleanProperty(SPECIATED_FITNESS_KEY, true));
-		selector.setMaxStagnantGenerations(props.getIntProperty(MAX_STAGNANT_GENERATIONS_KEY, 999999));
+		selector.setMaxStagnantGenerations(props.getIntProperty(MAX_STAGNANT_GENERATIONS_KEY, Integer.MAX_VALUE));
 		selector.setMinAge(props.getIntProperty(MINIMUM_AGE_KEY, 10));
 		setNaturalSelector(selector);
 
@@ -417,9 +417,11 @@ public class NeatConfiguration extends Configuration implements Configurable {
 			logger.info("no speciation compatibility threshold specified", e);
 		}
 
-		getSpeciationParms().setSpeciationTarget(props.getIntProperty(SPECIATION_TARGET_KEY, getPopulationSize() / 15));
+		getSpeciationParms().setSpeciationTarget(props.getIntProperty(SPECIATION_TARGET_KEY, (int) Math.round(Math.pow(getPopulationSize(), 0.6))));
 
-		getSpeciationParms().setSpeciationThresholdChange(props.getFloatProperty(SPECIATION_THRESHOLD_CHANGE_KEY));
+		if (props.containsKey(SPECIATION_THRESHOLD_CHANGE_KEY)) {
+			logger.warn(SPECIATION_THRESHOLD_CHANGE_KEY + " is deprecated, adjustment amounts are now calculated as a ratio of the target and current species counts.");
+		}
 
 	}
 

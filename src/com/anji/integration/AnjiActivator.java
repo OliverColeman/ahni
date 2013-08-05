@@ -238,4 +238,8 @@ public class AnjiActivator implements Activator {
 	@Override
 	public void dispose() {
 	}
+
+	public void setName(String string) {
+		net.setName(string);
+	}
 }

@@ -7,6 +7,7 @@ import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.Chromosome;
 
 import com.anji.integration.Activator;
+import com.anji.integration.AnjiActivator;
 import com.anji.integration.AnjiNetTranscriber;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
@@ -64,7 +65,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 */
 	public static final String HYPERNEAT_CONNECTION_RANGE = "ann.hyperneat.connection.range";
 	/**
-	 * The number of layers in the substrate network.
+	 * @deprecated The number of layers in the substrate network. This is no longer used, the depth is now determined by the number of elements in ann.hyperneat.height and ann.hyperneat.width. 
 	 */
 	public static final String SUBSTRATE_DEPTH = "ann.hyperneat.depth";
 	/**
@@ -141,6 +142,16 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 * @see #HYPERNEAT_LEO_THRESHOLD
 	 */
 	public static final String HYPERNEAT_LEO_THRESHOLD_DISTANCE = "ann.hyperneat.leo.threshold.factordistance";
+
+	/**
+	 * Enable multiplying the threshold for the Link Expression Output (LEO) by a factor depending on the direction of
+	 * the synapse with respect to the Z axis. Three comma-separated values are required for the reverse, neutral and
+	 * forward directions, respectively. This could be used to help inhibit non-feed-forward, recurrent links. Default
+	 * is 1,1,1 (i.e. no directional factor).
+	 * 
+	 * @see #HYPERNEAT_LEO_THRESHOLD
+	 */
+	public static final String HYPERNEAT_LEO_THRESHOLD_DIRECTION = "ann.hyperneat.leo.threshold.directionalfactor";
 
 	/**
 	 * Enable or disable seeding of the initial population of {@link org.jgapcustomised.Chromosome}s to incorporate a
@@ -249,10 +260,14 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 */
 	protected double leoThreshold = 0;
 	/**
-	 * If true the threshold for the Link Expression Output (LEO) is multiplied by the square of the distance between the
-	 * source and target neurons.
+	 * If true the threshold for the Link Expression Output (LEO) is multiplied by the square of the distance between
+	 * the source and target neurons.
 	 */
 	protected boolean leoThresholdFactorDistance = false;
+	/**
+	 * @see #HYPERNEAT_LEO_THRESHOLD_DIRECTION
+	 */
+	protected double[] leoThresholdFactorDirection = new double[]{1, 1, 1};
 	/**
 	 * If true indicates that Neuron Expression Output is enabled.
 	 */
@@ -340,11 +355,10 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		connectionExprThresh = props.getDoubleProperty(HYPERNEAT_CONNECTION_EXPRESSION_THRESHOLD, connectionExprThresh);
 		connectionWeightRange = connectionWeightMax - connectionWeightMin;
 		connectionRange = props.getIntProperty(HYPERNEAT_CONNECTION_RANGE, -1);
-		depth = props.getIntProperty(SUBSTRATE_DEPTH);
-		cyclesPerStep = feedForward ? depth - 1 : props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP, 1);
 		enableLEO = props.getBooleanProperty(HYPERNEAT_LEO, enableLEO);
 		leoThreshold = props.getDoubleProperty(HYPERNEAT_LEO_THRESHOLD, leoThreshold);
 		leoThresholdFactorDistance = props.getBooleanProperty(HYPERNEAT_LEO_THRESHOLD_DISTANCE, leoThresholdFactorDistance);
+		leoThresholdFactorDirection = props.getDoubleArrayProperty(HYPERNEAT_LEO_THRESHOLD_DIRECTION, leoThresholdFactorDirection);
 		enableNEO = props.getBooleanProperty(HYPERNEAT_NEO, enableNEO);
 		neoThreshold = props.getDoubleProperty(HYPERNEAT_NEO_THRESHOLD, neoThreshold);
 
@@ -354,7 +368,13 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 
 		width = getProvisionalLayerSize(props, SUBSTRATE_WIDTH);
 		height = getProvisionalLayerSize(props, SUBSTRATE_HEIGHT);
-
+		if (width.length != height.length) {
+			throw new IllegalArgumentException("Number of comma-separated layer dimensions in " + SUBSTRATE_WIDTH + " and " + SUBSTRATE_HEIGHT + " do not match.");
+		}
+		depth = width.length;
+		
+		cyclesPerStep = feedForward ? depth - 1 : props.getIntProperty(SUBSTRATE_CYCLES_PER_STEP, 1);
+		
 		rangeX = props.getObjectFromArgsProperty(RANGE_X, Range.class, rangeX, null);
 		rangeY = props.getObjectFromArgsProperty(RANGE_Y, Range.class, rangeY, null);
 		rangeZ = props.getObjectFromArgsProperty(RANGE_Z, Range.class, rangeZ, null);
@@ -404,6 +424,9 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 					}
 					StringBuilder logStr = new StringBuilder("Fitness function defines neuron positions for layer " + layer + ": ");
 					for (Point p : neuronPositionsForLayer[layer]) {
+						if (Double.isNaN(p.x) || Double.isNaN(p.x) || Double.isNaN(p.x)) {
+							throw new IllegalArgumentException(ahniFitnessFunc.getClass().getSimpleName() + ".getNeuronPositions() is giving NaN values.");
+						}
 						p.translateFromUnit(rangeX, rangeY, rangeZ);
 						logStr.append(p + ", ");
 					}
@@ -578,18 +601,8 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 * @return An array containing values for the width or height of each layer of the substrate.
 	 */
 	public static int[] getProvisionalLayerSize(Properties props, String sizeKey) {
-		int depth = props.getIntProperty(SUBSTRATE_DEPTH);
-		int[] sizes;
-		if (props.containsKey(sizeKey)) {
-			String valString = props.getProperty(sizeKey).replaceAll("f", "-1");
-			sizes = props.getIntArrayFromString(valString);
-			if (sizes.length != depth) {
-				throw new IllegalArgumentException("Number of comma-separated layer dimensions in " + sizeKey + " does not match " + SUBSTRATE_DEPTH + ".");
-			}
-		} else {
-			sizes = new int[depth];
-			Arrays.fill(sizes, -1);
-		}
+		String valString = props.getProperty(sizeKey).replaceAll("f", "-1");
+		int[] sizes = props.getIntArrayFromString(valString);
 		return sizes;
 	}
 
@@ -661,11 +674,15 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	public int getChromosomeOutputNeuronCount() {
 		return getCPPNOutputCount();
 	}
+	
+	public CPPN getCPPN(Chromosome genotype) throws TranscriberException {
+		return new CPPN(genotype);
+	}
 
 	/**
 	 * Provides a wrapper for an {@link com.anji.integration.Activator} that represents a CPPN.
 	 */
-	protected class CPPN {
+	public class CPPN {
 		protected Activator cppnActivator;
 		protected double[] cppnInput = new double[cppnInputCount];
 		protected double[] cppnOutput;
@@ -675,10 +692,11 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		/**
 		 * Squared length of the current synapse (set when query() called).
 		 */
-		protected double synapseLengthSquared = 0;
+		protected double synapseLength = 0;
 
 		public CPPN(Chromosome genotype) throws TranscriberException {
 			cppnActivator = cppnTranscriber.transcribe(genotype);
+			((AnjiActivator) cppnActivator).setName("CPPN-" + genotype.getId());
 			if (cppnIdxBiasInput != -1) {
 				cppnInput[cppnIdxBiasInput] = 1; // Bias.
 			}
@@ -878,7 +896,6 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 			return p;
 		}
 		
-		double dx = 0, dy = 0, dz = 0;
 
 		/**
 		 * Query this CPPN.
@@ -886,13 +903,15 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		 * @return The value of the (first) weight output. Other outputs can be retrieved with the various get methods.
 		 */
 		public double query() {
+			synapseLength = -1; // Reset
 			if (includeDelta || leoThresholdFactorDistance) {
+				double dx = 0, dy = 0, dz = 0;
 				dx = cppnInput[cppnIdxSX] - cppnInput[cppnIdxTX];
 				dy = cppnInput[cppnIdxSY] - cppnInput[cppnIdxTY];
 				dz = cppnIdxDZ != -1 ? cppnInput[cppnIdxSZ] - cppnInput[cppnIdxTZ] : 0;
-				
+
 				if (leoThresholdFactorDistance) {
-					synapseLengthSquared = dx * dx + dy * dy + dz * dz;
+					synapseLength = Math.sqrt(dx * dx + dy * dy + dz * dz);
 				}
 
 				if (includeDelta) {
@@ -1051,7 +1070,10 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		 * returned.
 		 */
 		public boolean getLEO(int index) {
-			return !enableLEO || cppnOutput[cppnIdxLEO[index]] > leoThreshold * (leoThresholdFactorDistance ? synapseLengthSquared : 1);
+			if (!enableLEO) return true;
+			double direction = cppnIdxSZ != -1 ? (cppnInput[cppnIdxTZ] - cppnInput[cppnIdxSZ]) : 1;
+			int dirIndex = direction < 0 ? 0 : (direction == 0 ? 1 : 2);
+			return cppnOutput[cppnIdxLEO[index]] > leoThreshold * (leoThresholdFactorDistance ? synapseLength : 1) * leoThresholdFactorDirection[dirIndex];
 		}
 
 		/**
@@ -1194,6 +1216,21 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 			if (cppnActivator.getMinResponse() < 0)
 				return getOutput(indices[0]) > 0 ? 1 : 0;
 			return getOutput(indices[0]) >= (cppnActivator.getMaxResponse() / 2) ? 1 : 0;
+		}
+		
+		public double getSynapseLength() {
+			if (synapseLength == -1) {
+				double dx = cppnInput[cppnIdxSX] - cppnInput[cppnIdxTX];
+				double dy = cppnInput[cppnIdxSY] - cppnInput[cppnIdxTY];
+				double dz = cppnIdxDZ != -1 ? cppnInput[cppnIdxSZ] - cppnInput[cppnIdxTZ] : 0;
+				synapseLength = Math.sqrt(dx * dx + dy * dy + dz * dz);
+			}
+			return synapseLength;
+		}
+		
+		@Override
+		public String toString() {
+			return cppnActivator.toString();
 		}
 	}
 

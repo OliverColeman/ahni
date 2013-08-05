@@ -25,7 +25,7 @@ package com.anji.nn.activationfunction;
  */
 public class GaussianActivationFunction implements ActivationFunction {
 
-	private final static double SLOPE = 4.924273f;
+	private final static double SLOPE = 1;
 
 	/**
 	 * identifying string

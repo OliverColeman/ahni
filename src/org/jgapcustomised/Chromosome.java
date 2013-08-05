@@ -69,13 +69,17 @@ public class Chromosome implements Comparable, Serializable {
 	 * determined by the {@link org.jgapcustomised.NaturalSelector} based on the fitness values over all objectives. A
 	 * value of Double.NaN indicates that a fitness value has not yet been set.
 	 */
-	protected double m_overallFitnessValue;
+	protected double m_overallFitnessValue = Double.NaN;
 
 	protected double m_performanceValue = Double.NaN;
+	
+	protected boolean evaluationDataStable = false;
 
 	protected Species m_specie = null;
 
 	public boolean isElite = false;
+	
+	public int rank = 0;
 
 	/**
 	 * May be used by implementations of novelty search.
@@ -301,16 +305,21 @@ public class Chromosome implements Comparable, Serializable {
 	 * Resets the performance value of this Chromosome to Double.NaN.
 	 */
 	public void resetPerformanceValue() {
-		m_performanceValue = Double.NaN;
+		if (!isEvaluationDataStable()) {
+			m_performanceValue = Double.NaN;
+		}
 	}
 	
 	/**
 	 * Resets the fitness value(s) of this Chromosome to Double.NaN.
 	 */
 	public void resetFitnessValues() {
-		m_overallFitnessValue = Double.NaN;
-		for (int i = 0; i < m_fitnessValue.length; i++)
-			m_fitnessValue[i] = Double.NaN;
+		if (!isEvaluationDataStable()) {
+			m_overallFitnessValue = Double.NaN;
+			for (int i = 0; i < m_fitnessValue.length; i++) {
+				m_fitnessValue[i] = Double.NaN;
+			}
+		}
 	}
 
 	
@@ -318,11 +327,25 @@ public class Chromosome implements Comparable, Serializable {
 	 * Resets the performance, fitness value(s) and recorded novelty behaviour(s) of this Chromosome.
 	 */
 	public void resetEvaluationData() {
-		resetPerformanceValue();
-		resetFitnessValues();
-		behaviour.clear();
+		if (!isEvaluationDataStable()) {
+			resetPerformanceValue();
+			resetFitnessValues();
+			behaviour.clear();
+		}
 	}
-
+	
+	/**
+	 * Indicate that the evaluation data (e.g. fitness, performance, behaviour) is stable: it won't change in future evaluations.
+	 * This only has an effect if the fitness function pays attention to this value, and the effect that it has may vary between implementations.
+	 */
+	public void setEvaluationDataStable() {
+		evaluationDataStable = true;
+	}
+	
+	public boolean isEvaluationDataStable() {
+		return evaluationDataStable;
+	}
+	
 	/**
 	 * Returns a string representation of this Chromosome, useful for some display purposes.
 	 * 

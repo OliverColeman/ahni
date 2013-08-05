@@ -55,12 +55,17 @@ public class GenericBehaviourEvaluator extends BulkFitnessFunctionMT {
 	}
 	
 	@Override
-	public boolean definesFitness() {
-		return false;
+	public int fitnessObjectivesCount() {
+		return 0;
 	}
 	
 	@Override
-	public boolean definesNovelty() {
+	public boolean definesNoveltyObjective() {
+		return true;
+	}
+	
+	@Override
+	public boolean fitnessValuesStable() {
 		return true;
 	}
 

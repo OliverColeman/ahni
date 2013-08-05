@@ -2,10 +2,15 @@ package com.ojcoleman.ahni.experiments.csb;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Random;
 import java.util.Vector;
+
+import javax.imageio.ImageIO;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.linear.ArrayRealVector;
@@ -39,8 +44,8 @@ public class SimpleNavigationEnvironment extends Environment {
 	public static final String OBSTACLE_COUNT_INITIAL = "fitness.function.rlcss.obstacles.initial";
 	/**
 	 * The amount to increase the obstacle count when environments with the current value have been sufficiently
-	 * mastered (see {@link RLContinuousStateBased#DIFFICULTY_INCREASE_PERFORMANCE}. If the value is followed by an "x" then the value is
-	 * considered a factor (and so should be > 1). Default is 1.
+	 * mastered (see {@link RLContinuousStateBased#DIFFICULTY_INCREASE_PERFORMANCE}. If the value is followed by an "x"
+	 * then the value is considered a factor (and so should be > 1). Default is 1.
 	 */
 	public static final String OBSTACLE_COUNT_INCREASE_DELTA = "fitness.function.rlcss.obstacles.delta";
 	/**
@@ -48,11 +53,12 @@ public class SimpleNavigationEnvironment extends Environment {
 	 */
 	public static final String OBSTACLE_COUNT_MAX = "fitness.function.rlcss.obstacles.maximum";
 
-	private int obstacleCount;
+	protected int obstacleCount;
 	ArrayRealVector[] obstacleLocation;
 	double[] obstacleRadius;
 	int requiredSteps = 0;
 	double maxStepSize = 0.1;
+	static int noveltyEnvironmentsDone = 0;
 
 	@Override
 	public void init(Properties props) {
@@ -66,20 +72,43 @@ public class SimpleNavigationEnvironment extends Environment {
 		this.id = id;
 		Random random = props.getEvolver().getConfig().getRandomGenerator();
 
-		// Start state is in randomly selected corner.
 		startState = new ArrayRealVector(size);
-		for (int i = 0; i < size; i++) {
-			//startState.setEntry(i, (random.nextBoolean() ? 0 : 0.9) + random.nextDouble() * 0.1);
-			startState.setEntry(i, random.nextDouble());
-		}
-
-		// Goal state is in randomly selected location with minimum distance of 1 from start state.
 		goalState = new ArrayRealVector(size);
-		do {
+		// If environment is for regular fitness testing.
+		if (id >= 0) {
 			for (int i = 0; i < size; i++) {
-				goalState.setEntry(i, random.nextDouble());
+				// Start state is in randomly selected corner.
+				// startState.setEntry(i, (random.nextBoolean() ? 0 : 0.9) + random.nextDouble() * 0.1);
+				
+				// Start state is anywhere.
+				//startState.setEntry(i, random.nextDouble());
+
+				// middle
+				startState.setEntry(i, 0.5);
 			}
-		} while (goalState.getDistance(startState) < 0.2);
+
+			// Goal state is in randomly selected location with minimum distance from start state.
+			do {
+				for (int i = 0; i < size; i++) {
+					goalState.setEntry(i, random.nextDouble());
+				}
+			} while (goalState.getDistance(startState) < 0.5);
+			
+			// Goal state is in corner according to id (iterate over all possible corners).
+			/*String corners = Integer.toBinaryString(id);
+			for (int i = 0, ci = corners.length() - 1; i < size; i++, ci--) {
+				// Goal state is in corner according to id (iterate over all possible corners).
+				goalState.setEntry(i, (ci < 0 || corners.charAt(ci) == '0' ? 0 : 0.9) + random.nextDouble() * 0.1);
+			}*/
+		} else { // Environment is for novelty testing.
+			String corners = Integer.toBinaryString(-id - 1);
+			for (int i = 0, ci = corners.length() - 1; i < size; i++, ci--) {
+				// Start state is roughly in middle.
+				startState.setEntry(i, 0.4 + random.nextDouble() * 0.2);
+				// Goal state is in corner according to id (iterate over all possible corners).
+				goalState.setEntry(i, (ci < 0 || corners.charAt(ci) == '0' ? 0 : 0.9) + random.nextDouble() * 0.1);
+			}
+		}
 
 		obstacleLocation = new ArrayRealVector[obstacleCount];
 		obstacleRadius = new double[obstacleCount];
@@ -114,60 +143,93 @@ public class SimpleNavigationEnvironment extends Environment {
 		if (obstacleCount == 0) {
 			path = findPath();
 		}
-		requiredSteps = (int) Math.round((path*2) / maxStepSize);
+		requiredSteps = (int) Math.round((path * 1.1) / maxStepSize);
+		if (props.getIntProperty(RLContinuousStateBased.TRIAL_COUNT) == 1) {
+			// The agent needs to try different directions to see which is the right one in the same trial
+			// allow some extra time for this.
+			requiredSteps += 2 << size;
+		}
 	}
 
 	@Override
-	public void updateStateAndOutput(ArrayRealVector state, double[] input, double[] output) {
+	public double updateStateAndOutput(ArrayRealVector state, double[] input, double[] output) {
 		// Update state given input.
+		ArrayRealVector inputT = new ArrayRealVector(input);
+		//inputT.mapDivideToSelf(Math.sqrt(input.length));
+		if (inputT.getNorm() > 1) {
+			inputT.unitize();
+		}
 		ArrayRealVector newState = state.copy();
 		double[] newStateData = newState.getDataRef();
 		double[] stateData = state.getDataRef();
 		for (int i = 0; i < stateData.length; i++) {
-			newStateData[i] = Math.min(1, Math.max(0, stateData[i] + input[i] * maxStepSize));
+			newStateData[i] = Math.min(1, Math.max(0, stateData[i] + inputT.getEntry(i) * maxStepSize));
 		}
 
 		// Determine if a collision has occurred with any obstacle.
 		for (int o = 0; o < obstacleCount; o++) {
 			// If collision occurs then disallow the move (state does not change).
 			if (collision(o, newState)) {
-				return;
+				return getOutputForState(state, output);
 			}
 		}
+		
+		// Update state if no collision occurred.
 		state.setSubVector(0, newState);
 
-		// Update state internally. Nothing to do for now.
-
 		// Update output given new state.
-		getOutputForState(state, output);
+		return getOutputForState(state, output);
 	}
 
 	@Override
-	public void getOutputForState(ArrayRealVector state, double[] output) {
+	public double getOutputForState(ArrayRealVector state, double[] output) {
 		// Update output given new state.
 		System.arraycopy(state.getDataRef(), 0, output, 0, state.getDimension());
-		if (state.equals(startState)) {
-			// Set reward signal to -1 to indicate that the agent is in the start state,
-			// and so a new trial and/or environment has been entered.
-			output[output.length - 1] = -1;
-		} else {
-			output[output.length - 1] = 1 - state.getDistance(goalState) / Math.sqrt(size);
-		}
-	}
 
-	private boolean collision(int o, ArrayRealVector p) {
+		// for (int i = 0; i < output.length - 1; i++) {
+		// output[i] = state.getEntry(i) - goalState.getEntry(i);
+		// }
+		
+		output[output.length - 1] = getRewardForState(state);
+		return getPerformanceForState(state);
+	}
+	
+	@Override
+	public double getRewardForState(ArrayRealVector state) {
+		//double perf = getPerformanceForState(state);
+		double d = state.getL1Distance(goalState) / size;
+		
+		//return perf;
+		//return Math.pow(1-d, 2);
+		return d < maxStepSize ? 1 : (1-d)*0.5;
+		//return perf >= 0.7 ? 1 : 0;
+	}
+	
+	@Override
+	public double getPerformanceForState(ArrayRealVector state) {
+		double d = state.getL1Distance(goalState) / size;
+		//return 1 - d;
+		return d < maxStepSize ? 1 : 0;
+	}
+	
+	
+	protected boolean collision(int o, ArrayRealVector p) {
 		if (obstacleLocation[o] == null)
 			return false;
 		return p.getDistance(obstacleLocation[o]) <= obstacleRadius[o];
 	}
 
-	// Returns the length (in terms of minimum steps) of the approximate shortest path through the environment, or -1 if
-	// no path was found.
-	// The returned length represents an upper bound due to the path following a uniform grid within the space (taxicab
-	// geometry).
-	// TODO Use sampling method when size (number of dimensions) > 5 or so (also dependent on maxStepSize but to a less
-	// extent, could base decision on pointCount).
+	/*
+	 * Returns the length (in terms of minimum steps) of the approximate shortest path through the environment, or -1 if
+	 * no path was found. If there are obstacles, the returned length represents an upper bound due to the path
+	 * following a uniform grid within the space (taxicab geometry). TODO Use sampling method when size (number of
+	 * dimensions) > 5 or so (also dependent on maxStepSize but to a lesser extent, could base decision on pointCount).
+	 */
 	private double findPath() {
+		if (obstacleCount == 0) {
+			return startState.getL1Distance(goalState);
+		}
+
 		int granularity = (int) Math.ceil(1 / maxStepSize) + 1;
 		double stepSize = 1.0 / (granularity - 1);
 		int pointCount = (int) Math.pow(granularity, size);
@@ -328,7 +390,35 @@ public class SimpleNavigationEnvironment extends Environment {
 	}
 
 	@Override
-	public void logToImage(Graphics2D g, int imageSize) {
+	public void setMinimumStepsToSolve(int steps) {
+		requiredSteps = steps;
+	}
+
+	/**
+	 * {@inheritDoc} This implementation renders the obstacles in the environment iff the environment size (dimensions)
+	 * == 2.
+	 */
+	@Override
+	public void logToImage(String baseFileName, int imageSize) {
+		if (size == 2 && obstacleCount > 0) {
+			BufferedImage image = new BufferedImage(imageSize, imageSize, BufferedImage.TYPE_3BYTE_BGR);
+			Graphics2D g = image.createGraphics();
+			logToImageForTrial(g, imageSize);
+			File outputfile = new File(baseFileName + ".png");
+			try {
+				ImageIO.write(image, "png", outputfile);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	/**
+	 * {@inheritDoc} This implementation renders the obstacles in the environment image.
+	 */
+	@Override
+	public void logToImageForTrial(Graphics2D g, int imageSize) {
+		imageSize -= 1;
 		// Draw obstacles.
 		g.setColor(Color.GRAY);
 		for (int o = 0; o < obstacleCount; o++) {
@@ -353,5 +443,27 @@ public class SimpleNavigationEnvironment extends Environment {
 		public String toString() {
 			return "Point " + index + " (" + Arrays.toString(indices) + ")";
 		}
+	}
+
+	@Override
+	public int getOutputSize() {
+		return size + 1;
+	}
+
+	@Override
+	public int getInputSize() {
+		return size;
+	}
+
+	@Override
+	public String toString() {
+		String out = "\t\t" + super.toString();
+		out += "\n\t\tObstacle locations and (radius):\n";
+		for (int o = 0; o < obstacleCount; o++) {
+			if (obstacleLocation[o] != null) {
+				out += "\t\t\t" + obstacleLocation[o] + " (" + obstacleRadius[o] + ")";
+			}
+		}
+		return out;
 	}
 }

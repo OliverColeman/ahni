@@ -18,17 +18,23 @@ public class RealVectorBehaviour extends Behaviour {
 	
 	public RealVectorBehaviour(ArrayRealVector p) {
 		this.p = p;
-		maxDist = Math.sqrt(p.getDimension());
+		//maxDist = Math.sqrt(p.getDimension());
+		maxDist = p.getDimension();
 		assert p.getMaxValue() <= 1 && p.getMinValue() >= 0 : "Values in RealVectorBehaviour must be in the range [0, 1] but " + p + " was given.";
 	}
 	
 	@Override
 	public double distanceFrom(Behaviour b) {
-		return p.getDistance(((RealVectorBehaviour) b).p) / maxDist;
+		return p.getL1Distance(((RealVectorBehaviour) b).p) / maxDist;
 	}
 	
 	@Override
 	public String toString() {
 		return ArrayUtil.toString(p.getDataRef(), "  ", nf);
+	}
+
+	@Override
+	public double defaultThreshold() {
+		return 1.0 / p.getDimension();
 	}
 }

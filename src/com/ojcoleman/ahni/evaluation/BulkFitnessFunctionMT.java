@@ -43,7 +43,7 @@ import com.ojcoleman.ahni.util.CircularFifoBuffer;
  * evaluations on multiple genomes. The methods {@link #evaluate(Chromosome, Activator, int)} must be implemented in
  * subclasses. Subclasses may also need to override the methods {@link #init(Properties)},
  * {@link #initialiseEvaluation()}, {@link #finaliseEvaluation()}, {@link #postEvaluate(Chromosome, Activator, int)},
- * {@link #definesFitness()}, {@link #definesNovelty()} and {@link #dispose()}. Subclasses may also need to override
+ * {@link #fitnessObjectivesCount()}, {@link #definesNoveltyObjective()} and {@link #dispose()}. Subclasses may also need to override
  * {@link #getLayerDimensions(int, int)} or {@link #getNeuronPositions(int, int)} to specify required layer dimensions
  * or neuron positions, for example for input or output layers.
  * </p>
@@ -178,11 +178,9 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 			evaluators[i].start();
 		}
 
-		objectiveCount = 0;
+		objectiveCount = fitnessObjectivesCount();
 		int noveltyCount = 0;
-		if (definesFitness())
-			objectiveCount++;
-		if (definesNovelty()) {
+		if (definesNoveltyObjective()) {
 			objectiveCount++;
 			noveltyCount++;
 		}
@@ -198,13 +196,11 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 				for (int i = 0; i < mffs.length; i++) {
 					String tempKey = MULTI_KEY + "." + i;
 					props.put(tempKey + ".class", mffs[i].trim());
-					//multiFitnessFunctions[i] = (BulkFitnessFunctionMT) props.singletonObjectProperty(tempKey);
 					multiFitnessFunctions[i] = (BulkFitnessFunctionMT) props.newObjectProperty(tempKey);
 					props.remove(tempKey + ".class");
 
-					if (multiFitnessFunctions[i].definesFitness())
-						objectiveCount++;
-					if (multiFitnessFunctions[i].definesNovelty()) {
+					objectiveCount += multiFitnessFunctions[i].fitnessObjectivesCount();
+					if (multiFitnessFunctions[i].definesNoveltyObjective()) {
 						objectiveCount++;
 						noveltyCount++;
 					}
@@ -247,24 +243,51 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	}
 
 	/**
-	 * Superclasses that support novelty search should override this method and return true. A {@link Behaviour} should
+	 * Subclasses that support novelty search should override this method and return true. A {@link Behaviour} should
 	 * then be appended to {@link Chromosome#behaviour}(s) of each Chromosome in the implementation of
 	 * {@link BulkFitnessFunctionMT#evaluate(Chromosome, Activator, int)}. This default implementation returns false.
 	 * 
 	 * @see com.ojcoleman.ahni.evaluation.novelty.NoveltySearch
 	 */
-	public boolean definesNovelty() {
+	public boolean definesNoveltyObjective() {
 		return false;
 	}
 
 	/**
-	 * Superclasses that do not provide a fitness value (and instead only define a novelty behaviour or performance
-	 * value (for primary fitness functions only)) should override this method and return false.
+	 * This is akin to {@link #getObjectiveCount()} but allows for handling multiple fitness functions, some of which
+	 * may define multiple objectives. This default implementation returns 1. If the fitness function defines more than
+	 * one fitness objective, or no fitness objectives (eg only a novelty objective), then this method must be overridden to return the number of fitness
+	 * objectives defined.
 	 */
-	public boolean definesFitness() {
-		return true;
+	public int fitnessObjectivesCount() {
+		return 1;
 	}
+	
 
+	/**
+	 * {@inheritDoc}
+	 * <p>
+	 * This implementation is set as final to allow this class to make use of multiple separate fitness functions for a
+	 * multi-objective setup.
+	 * </p>
+	 * 
+	 * @see #fitnessObjectivesCount()
+	 */
+	@Override
+	public final int getObjectiveCount() {
+		return objectiveCount;
+	}
+	
+	/**
+	 * If the fitness value(s) for do not change between generations then subclasses should override 
+	 * this method to return true in order to avoid unnecessarily recalculating the fitness value(s). 
+	 * This default implementation returns false.
+	 * @see #fitnessObjectivesCount()
+	 */
+	public boolean fitnessValuesStable() {
+		return false;
+	}
+	
 	/**
 	 * Evaluate a set of chromosomes.
 	 * 
@@ -350,7 +373,10 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 
 	/**
 	 * Evaluate an individual genotype. This method is called from {@link #evaluate(List)} and must be overridden in
-	 * order to evaluate the genotypes.
+	 * order to evaluate the genotypes. If the fitness function defines a performance value then this method should call
+	 * {@link Chromosome#setPerformanceValue(double)}. In a multi-objective set-up only the performance defined by the
+	 * primary fitness function will be used. If a performance value isn't defined it will be set to the overall fitness value.
+	 * This default implementation returns 0.
 	 * 
 	 * @param genotype the genotype being evaluated. This is not usually required but may be useful in some cases.
 	 * @param substrate the phenotypic substrate of the genotype being evaluated.
@@ -359,7 +385,31 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	 * @return The fitness value, in the range [0, 1]. Note that if novelty is the only objective then the returned
 	 *         value is ignored.
 	 */
-	protected abstract double evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex);
+	protected double evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
+		return 0;
+	}
+
+	/**
+	 * For fitness functions that define multiple fitness objectives (see {@link #fitnessObjectivesCount()}), evaluate an
+	 * individual genotype over all of these objectives. This default implementation simply calls
+	 * {@link #evaluate(Chromosome, Activator, int)}. If the fitness function defines a performance value then this
+	 * method should call {@link Chromosome#setPerformanceValue(double)}. In a multi-objective set-up (see {@link #MULTI_KEY}) only the
+	 * performance defined by the primary fitness function will be used. If a performance value isn't defined it will be
+	 * set to the (first) fitness value given by the primary fitness function.
+	 * 
+	 * @param genotype the genotype being evaluated. This is not usually required but may be useful in some cases.
+	 * @param substrate the phenotypic substrate of the genotype being evaluated.
+	 * @param evalThreadIndex The index of the evaluator thread. This is not usually required but may be useful in some
+	 *            cases.
+	 * @param fitnessValues An array to hold the fitness value(s) as determined by this fitness function. The array will
+	 *            have length {@link #fitnessObjectivesCount()}.
+	 */
+	protected void evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, double[] fitnessValues) {
+		double f = evaluate(genotype, substrate, evalThreadIndex);
+		if (fitnessObjectivesCount() > 0) {
+			fitnessValues[0] = f;
+		}
+	}
 
 	public int getNumThreads() {
 		return numThreads;
@@ -411,8 +461,18 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		 * Internal use only
 		 */
 		public void run() {
+			double[][] fitnessValues = null;
+			
 			while (!finish) {
 				while (go) {
+					if (fitnessValues == null) {
+						fitnessValues = new double[multiFitnessFunctions.length + 1][];
+						fitnessValues[0] = new double[fitnessObjectivesCount()];
+						for (int i = 0; i < multiFitnessFunctions.length; i++) {
+							fitnessValues[i + 1] = new double[multiFitnessFunctions[i].fitnessObjectivesCount()];
+						}
+					}
+
 					Chromosome chrom;
 					while ((chrom = getNextChromosome()) != null) {
 						if (!testingNovelty) {
@@ -422,53 +482,63 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 
 								// If a valid substrate could be generated.
 								if (substrate != null) {
-									double primaryFitness = evaluate(chrom, substrate, id);
-									double performance = chrom.getPerformanceValue();
-									int fitnessSlot = 0;
-
-									// If this (the primary) fitness function defines a regular objective.
-									if (definesFitness()) {
-										chrom.setFitnessValue(primaryFitness, fitnessSlot++);
-										// If the subclass didn't set the fitness of the individual then do it here.
-										// Note this will be overwritten if multiple fitness functions are used.
-										if (Double.isNaN(chrom.getFitnessValue()) && !Double.isNaN(primaryFitness)) {
-											chrom.setFitnessValue(primaryFitness);
+									// Pull any stable (fixed) fitness values from chromosome.
+									for (int i = 0, fs = 0; i < fitnessValues.length; i++) {
+										for (int f = 0; f < fitnessValues[i].length; f++, fs++) {
+											fitnessValues[i][f] = chrom.getFitnessValue(fs);
 										}
 									}
-
+									
+									// Do secondary fitness functions first.
 									for (int i = 0; i < multiFitnessFunctions.length; i++) {
 										BulkFitnessFunctionMT func = multiFitnessFunctions[i];
-										double f = func.evaluate(chrom, substrate, id);
-										if (func.definesFitness()) {
-											chrom.setFitnessValue(f, fitnessSlot++);
+										// If the fitness values aren't stable for this function or they haven't been calculated yet for this chrom.
+										if (!func.fitnessValuesStable() || Double.isNaN(ArrayUtil.sum(fitnessValues[i+1]))) {
+											func.evaluate(chrom, substrate, id, fitnessValues[i+1]);
+										}
+										else {
+											System.err.println("skip");
+										}
+										if (func.fitnessValuesStable()) {
+											chrom.setEvaluationDataStable();
 										}
 									}
-
-									// Reinstate performance value as determined by primary fitness function in case any
-									// secondary ones overwrite it.
-									chrom.setPerformanceValue(performance);
-
+									
+									// If the fitness values aren't stable for the primary function or they haven't been calculated yet for this chrom.
+									if (!fitnessValuesStable() || Double.isNaN(ArrayUtil.sum(fitnessValues[0]))) {
+										// Do primary fitness function.
+										evaluate(chrom, substrate, id, fitnessValues[0]);
+									}
+									if (fitnessValuesStable()) {
+										chrom.setEvaluationDataStable();
+									}
+									
+									// Assign fitness values to chromosome.
+									for (int i = 0, fs = 0; i < fitnessValues.length; i++) {
+										for (int f = 0; f < fitnessValues[i].length; f++, fs++) {
+											if (!Double.isNaN(fitnessValues[i][f])) {
+												chrom.setFitnessValue(fitnessValues[i][f], fs);
+											}
+										}
+									}
+									
+									postEvaluate(chrom, substrate, id);
+									
 									// We just set the overall fitness value according to the weightings. A different
 									// selector (eg NSGA-II selector) may set the overall fitness to something else
 									// based on the multiple objectives.
 									// If novelty is to be assessed wait until this is done for all chromosomes before
 									// calculating overall fitness.
-									if (noveltyArchives != null)
+									if (noveltyArchives == null)
 										calculateOverallFitness(chrom);
-
-									// If the fitness function hasn't explicitly set a performance value, just set it to
-									// (first) fitness value.
-									if (chrom.getPerformanceValue() == Double.NaN && chrom.getFitnessValue() != Double.NaN) {
-										chrom.setPerformanceValue(chrom.getFitnessValue());
-									}
+									
 									synchronized (this) {
 										if ((targetPerformanceType == 1 && chrom.getPerformanceValue() > bestPerformance) || (targetPerformanceType == 0 && chrom.getPerformanceValue() < bestPerformance)) {
 											bestPerformance = chrom.getPerformanceValue();
 											newBestChrom = chrom;
 										}
 									}
-
-									if (noveltyArchives != null && chrom.getFitnessValue() != Double.NaN && chrom.behaviour != null) {
+									if (noveltyArchives != null && chrom.behaviour != null) {
 										for (int n = 0; n < noveltyArchives.length; n++) {
 											noveltyArchives[n].addToCurrentPopulation(chrom.behaviour.get(n));
 										}
@@ -479,8 +549,6 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 								else {
 									substrate = previousSubstrate;
 								}
-
-								postEvaluate(chrom, substrate, id);
 							} catch (TranscriberException e) {
 								logger.warn("transcriber error: " + e.getMessage());
 								e.printStackTrace();
@@ -492,6 +560,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 								for (int n = 0; n < noveltyArchives.length; n++) {
 									chrom.setFitnessValue(noveltyArchives[n].testNovelty(chrom.behaviour.get(n)), fitnessSlot++);
 								}
+								calculateOverallFitness(chrom);
 							}
 						}
 					}
@@ -516,6 +585,12 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 				overallFitness += c.getFitnessValue(i) * multiFitnessFunctionWeights[i];
 			}
 			c.setFitnessValue(overallFitness);
+			
+			// If the fitness function hasn't explicitly set a performance value, just set it to
+			// overall fitness value.
+			if (Double.isNaN(c.getPerformanceValue()) && !Double.isNaN(c.getFitnessValue())) {
+				c.setPerformanceValue(c.getFitnessValue());
+			}
 		}
 
 		protected synchronized void go() {
@@ -570,7 +645,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	public double evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
 		if (!logImage || noveltyArchives == null)
 			return 0;
-
+		
 		synchronized (this) {
 			if (!renderedNoveltyArchivesThisGeneration) {
 				renderedNoveltyArchivesThisGeneration = true;
@@ -580,27 +655,56 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		}
 
 		for (int n = 0; n < noveltyArchives.length; n++) {
-			Behaviour tmp = noveltyArchives[n].archive.get(0);
-			boolean noveltyImageable = (tmp instanceof RealVectorBehaviour) && ((RealVectorBehaviour) tmp).p.getDimension() == 2;
-			if (noveltyImageable) {
-				// Log novelty archive in 2D map.
-				int imageSize = 254;
-				BufferedImage image = new BufferedImage(imageSize + 2, imageSize + 2, BufferedImage.TYPE_3BYTE_BGR);
-				Graphics2D g = image.createGraphics();
+			if (noveltyArchives[n].archive.isEmpty())
+				continue;
 
-				g.setColor(Color.WHITE);
-				for (Behaviour b : noveltyArchives[n].archive) {
-					RealVectorBehaviour brv = (RealVectorBehaviour) b;
-					g.drawRect((int) Math.round(brv.p.getEntry(0) * imageSize), (int) Math.round(brv.p.getEntry(1) * imageSize), 1, 1);
+			Behaviour tmp = noveltyArchives[n].archive.get(0);
+			if (tmp instanceof RealVectorBehaviour) {
+				int dims = ((RealVectorBehaviour) tmp).p.getDimension();
+				// If only 2 dimensions render as scatter plot.
+				if (dims == 2) {
+					int imageSize = 254;
+					BufferedImage image = new BufferedImage(imageSize + 2, imageSize + 2, BufferedImage.TYPE_BYTE_GRAY);
+					Graphics2D g = image.createGraphics();
+	
+					g.setColor(Color.WHITE);
+					for (Behaviour b : noveltyArchives[n].archive) {
+						RealVectorBehaviour brv = (RealVectorBehaviour) b;
+						g.fillRect((int) Math.round(brv.p.getEntry(0) * imageSize), (int) Math.round(brv.p.getEntry(1) * imageSize), 1, 1);
+					}
+					String fileName = props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "novelty_archive-" + props.getEvolver().getGeneration() + "-" + n + ".png";
+					File outputfile = new File(fileName);
+					try {
+						ImageIO.write(image, "png", outputfile);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 				}
-				String fileName = props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "novelty_archive-" + props.getEvolver().getGeneration() + "-" + n + ".png";
-				File outputfile = new File(fileName);
-				try {
-					ImageIO.write(image, "png", outputfile);
-				} catch (IOException e) {
-					e.printStackTrace();
+				else { // Render as intensity plot.
+					int imageScale = 1;
+					int size = noveltyArchives[n].archive.size();
+					BufferedImage image = new BufferedImage(size * imageScale, dims * imageScale, BufferedImage.TYPE_BYTE_GRAY);
+					Graphics2D g = image.createGraphics();
+	
+					for (int i = 0; i < size; i++) {
+						RealVectorBehaviour brv = (RealVectorBehaviour) noveltyArchives[n].archive.get(i);
+						for (int j = 0; j < dims; j++) {
+							float c = (float) brv.p.getEntry(j);
+							g.setColor(new Color(c, c, c));
+							g.fillRect(i * imageScale, j * imageScale, imageScale, imageScale);
+						}
+					}
+					String fileName = props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "novelty_archive-" + n + ".png";
+					File outputfile = new File(fileName);
+					try {
+						ImageIO.write(image, "png", outputfile);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					
 				}
-			}
+			}			
+			
 		}
 		return 0;
 	}
@@ -630,11 +734,6 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	 *            cases.
 	 */
 	protected void postEvaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
-	}
-
-	@Override
-	public int getObjectiveCount() {
-		return objectiveCount;
 	}
 
 	/**

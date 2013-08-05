@@ -2,6 +2,7 @@ package com.ojcoleman.ahni.experiments.objectrecognition;
 
 
 import java.awt.geom.AffineTransform;
+import java.util.HashMap;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
@@ -87,7 +88,7 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 			}
 		}
 	}
-
+	
 	protected double evaluate(Chromosome genotype, Activator activator, int threadIndex) {
 		double[][][] responses = activator.nextSequence(stimuli);
 

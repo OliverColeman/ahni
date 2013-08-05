@@ -119,6 +119,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 			synapses = substrate.getNeuralNetwork().getSynapses();
 		}
 		double[] synapseWeights = synapses.getEfficacies();
+		double sumOfSquaredConnectionLengths = 0;
 		
 		int synapseIndex = 0;
 		
@@ -136,7 +137,10 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 					int outputIndex = layerEncodingIsInput ? neuronType : z;
 					
 					setNeuronParameters(neurons, bainNeuronIndex, cppn, createNewPhenotype);
-					neuronDisabled[bainNeuronIndex] = !cppn.getNEO(outputIndex);
+					
+					// Only allow disabling hidden neurons.
+					neuronDisabled[bainNeuronIndex] = z > 0 && z < depth-1 && !cppn.getNEO(outputIndex);
+					
 					// If substrate is null then this is set below after we create the initial substrate.
 					if (substrate != null) {
 						substrate.setNeuronDisabled(bainNeuronIndex, neuronDisabled[bainNeuronIndex]);
@@ -167,13 +171,18 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 								
 								synapses.setPreAndPostNeurons(synapseIndex, bainNeuronIndexSource, bainNeuronIndexTarget);
 								
-								// Synapse is disabled if the source or target neurons are disabled, or if the LEO specifies it.
-								boolean disabled = neuronDisabled[bainNeuronIndexTarget] || neuronDisabled[bainNeuronIndexSource] || !cppn.getLEO(outputIndex);
+								// Synapse is disabled if the source and target are the same neuron, 
+								// or source or target neurons are disabled, or if the LEO specifies it.
+								boolean disabled = tz==sz && ty==sy && tx==sx || neuronDisabled[bainNeuronIndexTarget] || neuronDisabled[bainNeuronIndexSource] || !cppn.getLEO(outputIndex);
 								
 								// Determine weight for synapse from source to target.
 								synapseWeights[synapseIndex] = disabled ? 0 : cppn.getRangedWeight(outputIndex);
 								
 								setSynapseParameters(synapses, synapseIndex, cppn, disabled, createNewPhenotype);
+								
+								if (!disabled) {
+									sumOfSquaredConnectionLengths += cppn.getSynapseLength() * cppn.getSynapseLength();
+								}
 
 								/* The getBainSynapseIndex methods aren't used, and currently aren't correct.
 								if (feedForward) {
@@ -229,6 +238,8 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 			substrate.setName("network " + genotype.getId());
 			substrate.setStepsPerStepForNonLayeredFF();
 		}
+		
+		substrate.setSumOfSquaredConnectionLengths(sumOfSquaredConnectionLengths);
 				
 		// This will cause the kernels to update configuration variables and push all relevant data to the OpenCL device if necessary.
 		neurons.init();

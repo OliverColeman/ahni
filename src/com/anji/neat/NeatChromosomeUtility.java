@@ -120,9 +120,9 @@ public class NeatChromosomeUtility {
 		// Output neurons.
 		for (int j = 0; j < numOutputs; ++j) {
 			NeuronAllele outNeuron = config.newNeuronAllele(NeuronType.OUTPUT);
-			if (!config.biasViaInput()) {
-				outNeuron.setToRandomValue(config.getRandomGenerator(), false);
-			}
+			//if (!config.biasViaInput()) {
+			//	outNeuron.setToRandomValue(config.getRandomGenerator(), true);
+			//}
 			outNeurons.add(outNeuron);
 
 			if (fullyConnected && (numHidden == 0)) {
@@ -130,8 +130,7 @@ public class NeatChromosomeUtility {
 				for (int i = 0; i < numInputs; ++i) {
 					NeuronAllele srcNeuronAllele = inNeurons.get(i);
 					ConnectionAllele c = config.newConnectionAllele(srcNeuronAllele.getInnovationId(), outNeuron.getInnovationId());
-					if (config != null)
-						c.setToRandomValue(config.getRandomGenerator(), false);
+					//c.setToRandomValue(config.getRandomGenerator(), true);
 					conns.add(c);
 				}
 			}
@@ -141,17 +140,16 @@ public class NeatChromosomeUtility {
 		if (fullyConnected) {
 			for (int k = 0; k < numHidden; ++k) {
 				NeuronAllele hidNeuron = config.newNeuronAllele(NeuronType.HIDDEN);
-				if (!config.biasViaInput()) {
-					hidNeuron.setToRandomValue(config.getRandomGenerator(), false);
-				}
+				//if (!config.biasViaInput()) {
+					//hidNeuron.setToRandomValue(config.getRandomGenerator(), true);
+				//}
 				hidNeurons.add(hidNeuron);
 
 				// Add input -> hidden connections.
 				for (int i = 0; i < numInputs; ++i) {
 					NeuronAllele srcNeuronAllele = inNeurons.get(i);
 					ConnectionAllele c = config.newConnectionAllele(srcNeuronAllele.getInnovationId(), hidNeuron.getInnovationId());
-					if (config != null)
-						c.setToRandomValue(config.getRandomGenerator(), false);
+					//c.setToRandomValue(config.getRandomGenerator(), true);
 					conns.add(c);
 				}
 
@@ -159,8 +157,7 @@ public class NeatChromosomeUtility {
 				for (int j = 0; j < numOutputs; ++j) {
 					NeuronAllele destNeuronAllele = outNeurons.get(j);
 					ConnectionAllele c = config.newConnectionAllele(hidNeuron.getInnovationId(), destNeuronAllele.getInnovationId());
-					if (config != null)
-						c.setToRandomValue(config.getRandomGenerator(), false);
+					//c.setToRandomValue(config.getRandomGenerator(), true);
 					conns.add(c);
 				}
 			}

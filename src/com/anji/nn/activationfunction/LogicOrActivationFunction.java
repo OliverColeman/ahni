@@ -30,7 +30,7 @@ public class LogicOrActivationFunction extends LogicActivationFunction {
 	 * 
 	 * @return 1 or 0 depending on result of logic operation.
 	 */
-	public double apply(double[] input) {
+	public double apply(double[] input, double bias) {
 		boolean result = false;
 		for (int i = 0; i < input.length; i++)
 			result |= input[i] >= 0.5;

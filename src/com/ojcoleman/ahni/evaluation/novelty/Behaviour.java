@@ -9,4 +9,9 @@ public abstract class Behaviour {
 	 * All distances should be in the range [0, 1].
 	 */
 	public abstract double distanceFrom(Behaviour b);
+	
+	/**
+	 * Provide a default/suggested threshold. Should be in the range [0, 1].
+	 */
+	public abstract double defaultThreshold();
 }

@@ -41,7 +41,7 @@ public class ActivationFunctionFactory {
 		activationFunctions.put(LinearActivationFunction.NAME, new LinearActivationFunction());
 		activationFunctions.put(NegatedLinearActivationFunction.NAME, new NegatedLinearActivationFunction());
 		activationFunctions.put(SigmoidActivationFunction.NAME, new SigmoidActivationFunction());
-		activationFunctions.put(BipolarSigmoidActivationFunction.NAME, new SigmoidActivationFunction());
+		activationFunctions.put(BipolarSigmoidActivationFunction.NAME, new BipolarSigmoidActivationFunction());
 		activationFunctions.put(TanhActivationFunction.NAME, new TanhActivationFunction());
 		activationFunctions.put(TanhCubicActivationFunction.NAME, new TanhCubicActivationFunction());
 		activationFunctions.put(EvSailSigmoidActivationFunction.NAME, new EvSailSigmoidActivationFunction());
@@ -62,6 +62,9 @@ public class ActivationFunctionFactory {
 		activationFunctions.put(LogicOrActivationFunction.NAME, new LogicOrActivationFunction());
 		activationFunctions.put(LogicXORActivationFunction.NAME, new LogicXORActivationFunction());
 		activationFunctions.put(RecipriocalActivationFunction.NAME, new RecipriocalActivationFunction());
+		activationFunctions.put(MultiplyActivationFunction.NAME, new MultiplyActivationFunction());
+		activationFunctions.put(SqrtActivationFunction.NAME, new SqrtActivationFunction());
+		activationFunctions.put(SqrtAndLinearActivationFunction.NAME, new SqrtAndLinearActivationFunction());
 	}
 
 	/**
@@ -80,6 +83,10 @@ public class ActivationFunctionFactory {
 	 * @return ActivationFunction
 	 */
 	public ActivationFunction get(String key) {
+		ActivationFunction func = activationFunctions.get(key);
+		if (func == null) {
+			throw new IllegalArgumentException("Could not find \"" + key + "\" activation function.");
+		}
 		return activationFunctions.get(key);
 	}
 
