@@ -2,3 +2,7 @@ db/
 bin/
 ahni.jar
 hs_err*
+.settings
+.project
+.metadata
+.classpath
