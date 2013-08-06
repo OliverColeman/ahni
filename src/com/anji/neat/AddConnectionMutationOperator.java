@@ -22,6 +22,8 @@ package com.anji.neat;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 
@@ -39,14 +41,14 @@ import com.anji.util.Properties;
 /**
  * Implements NEAT add connection mutation inspired by <a
  * href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf"> Evolving Neural Networks through Augmenting
- * Topologies </a>. In ANJI, mutation rate refers to the likelihood of any candidate new mutation (i.e., any 2
- * unconnected nodes, not counting those that would create a loop if recurrency is disabled) occurring. In traditional
- * NEAT, it is the likelihood of a chromosome experiencing a mutation, and each chromosome can not have more than one
- * topological mutation per generation.
+ * Topologies </a>. Note that if the classic mutation scheme is enabled (see
+ * {@link NeatConfiguration#TOPOLOGY_MUTATION_CLASSIC_KEY}) then {@link SingleTopologicalMutationOperator} calls
+ * {@link #addSingleConnection(NeatConfiguration, List, SortedMap, Set)} directly, otherwise the number of
+ * mutations is determined by {@link MutationOperatorNormalDistribution#numMutations(Random, int)}.
  * 
  * @author Philip Tucker
  */
-public class AddConnectionMutationOperator extends MutationOperator implements Configurable {
+public class AddConnectionMutationOperator extends MutationOperatorNormalDistribution implements Configurable {
 
 	/**
 	 * properties key, add connection mutation rate
@@ -110,8 +112,9 @@ public class AddConnectionMutationOperator extends MutationOperator implements C
 	 * Adds connections according to <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">NEAT </a> add
 	 * connection mutation.
 	 * 
-	 * Note that if the classic mutation scheme is enabled (see {@link NeatConfiguration#TOPOLOGY_MUTATION_CLASSIC_KEY}) then this method is not used and instead
-	 * {@link SingleTopologicalMutationOperator} calls {@link #addSingleConnection(NeatConfiguration, List, SortedMap, Set)} directly.
+	 * Note that if the classic mutation scheme is enabled (see {@link NeatConfiguration#TOPOLOGY_MUTATION_CLASSIC_KEY})
+	 * then this method is not used and instead {@link SingleTopologicalMutationOperator} calls
+	 * {@link #addSingleConnection(NeatConfiguration, List, SortedMap, Set)} directly.
 	 * 
 	 * @param jgapConfig
 	 * @param target chromosome material to mutate
@@ -126,15 +129,15 @@ public class AddConnectionMutationOperator extends MutationOperator implements C
 			throw new AnjiRequiredException("com.anji.neat.NeatConfiguration");
 		NeatConfiguration config = (NeatConfiguration) jgapConfig;
 
-		// connection can mutate between any 2 neurons, excluding those neurons already removed
-		List neuronList = NeatChromosomeUtility.getNeuronList(target.getAlleles());
-		SortedMap conns = NeatChromosomeUtility.getConnectionMap(target.getAlleles());
-
 		// Determine # connections to add and iterate randomly through alleles ...
-		int maxConnectionsToAdd = (neuronList.size() * neuronList.size()) - conns.size();
-		int numConnectionsToAdd = numMutations(config.getRandomGenerator(), maxConnectionsToAdd);
+		int numConnectionsToAdd = numMutations(config.getRandomGenerator(), 0);
+		if (numConnectionsToAdd > 0) {
+			// connection can mutate between any 2 neurons, excluding those neurons already removed
+			List neuronList = NeatChromosomeUtility.getNeuronList(target.getAlleles());
+			SortedMap conns = NeatChromosomeUtility.getConnectionMap(target.getAlleles());
 
-		addConnections(numConnectionsToAdd, config, neuronList, conns, allelesToAdd);
+			addConnections(numConnectionsToAdd, config, neuronList, conns, allelesToAdd);
+		}
 	}
 
 	/**
@@ -238,7 +241,7 @@ public class AddConnectionMutationOperator extends MutationOperator implements C
 			boolean connected = NeatChromosomeUtility.neuronsAreConnected(dest.getInnovationId(), src.getInnovationId(), conns);
 			return !connected;
 		}
-		//return (dest.getActivationType().equals(LinearActivationFunction.NAME));
+		// return (dest.getActivationType().equals(LinearActivationFunction.NAME));
 		return true;
 	}
 }

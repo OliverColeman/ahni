@@ -16,6 +16,7 @@
  * 02111-1307 USA
  * 
  * created by Philip Tucker on Feb 16, 2003
+ * edited by Oliver Coleman.
  */
 package com.anji.neat;
 
@@ -23,8 +24,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
-
 
 import org.jgapcustomised.Allele;
 import org.jgapcustomised.ChromosomeMaterial;
@@ -38,13 +39,14 @@ import com.ojcoleman.ahni.util.ArrayUtil;
 
 /**
  * Implements NEAT add node mutation inspired by <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">
- * Evolving Neural Networks through Augmenting Topologies </a>. In ANJI, mutation rate refers to the likelihood of a new
- * node being created on any existing connection. In traditional NEAT, it is the likelihood of a chromosome experiencing
- * a mutation, and each chromosome can not have more than one topological mutation per generation.
+ * Evolving Neural Networks through Augmenting Topologies </a>. Note that if the classic mutation scheme is enabled (see
+ * {@link NeatConfiguration#TOPOLOGY_MUTATION_CLASSIC_KEY}) then {@link SingleTopologicalMutationOperator} calls
+ * {@link #addNeuronAtConnection(NeatConfiguration, Map, ConnectionAllele, Set, Set)} directly, otherwise the number of
+ * mutations is determined by {@link MutationOperatorNormalDistribution#numMutations(Random, int)}.
  * 
- * @author Philip Tucker
+ * @author Philip Tucker, Oliver Coleman
  */
-public class AddNeuronMutationOperator extends MutationOperator implements Configurable {
+public class AddNeuronMutationOperator extends MutationOperatorNormalDistribution implements Configurable {
 	/**
 	 * properties key, add neuron mutation rate
 	 */
@@ -75,15 +77,15 @@ public class AddNeuronMutationOperator extends MutationOperator implements Confi
 	public AddNeuronMutationOperator(double newMutationRate) {
 		super(newMutationRate);
 	}
-	
 
 	/**
 	 * Adds connections according to <a href="http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf">NEAT </a> add
 	 * node mutation.
 	 * 
-	 * Note that if the classic mutation scheme is enabled (see {@link NeatConfiguration#TOPOLOGY_MUTATION_CLASSIC_KEY}) then this method is not used and instead
-	 * {@link SingleTopologicalMutationOperator} calls {@link #addNeuronAtConnection(NeatConfiguration, Map, ConnectionAllele, Set, Set)} directly.
-	 *
+	 * Note that if the classic mutation scheme is enabled (see {@link NeatConfiguration#TOPOLOGY_MUTATION_CLASSIC_KEY})
+	 * then this method is not used and instead {@link SingleTopologicalMutationOperator} calls
+	 * {@link #addNeuronAtConnection(NeatConfiguration, Map, ConnectionAllele, Set, Set)} directly.
+	 * 
 	 * @see org.jgapcustomised.MutationOperator#mutate(org.jgapcustomised.Configuration,
 	 *      org.jgapcustomised.ChromosomeMaterial, java.util.Set, java.util.Set)
 	 */
@@ -92,9 +94,9 @@ public class AddNeuronMutationOperator extends MutationOperator implements Confi
 			throw new AnjiRequiredException("com.anji.neat.NeatConfiguration");
 		NeatConfiguration config = (NeatConfiguration) jgapConfig;
 
-		List<ConnectionAllele> connList = NeatChromosomeUtility.getConnectionList(target.getAlleles());
-		int numMutations = numMutations(config.getRandomGenerator(), connList.size());
+		int numMutations = numMutations(config.getRandomGenerator(), 0);
 		if (numMutations > 0) {
+			List<ConnectionAllele> connList = NeatChromosomeUtility.getConnectionList(target.getAlleles());
 			Map<Long, NeuronAllele> neurons = NeatChromosomeUtility.getNeuronMap(target.getAlleles());
 			// Add neurons at existing connections.
 			Collections.shuffle(connList, config.getRandomGenerator());
@@ -102,7 +104,8 @@ public class AddNeuronMutationOperator extends MutationOperator implements Confi
 			for (ConnectionAllele oldConnectAllele : connList) {
 				addNeuronAtConnection(config, neurons, oldConnectAllele, allelesToAdd, allelesToRemove);
 				count++;
-				if (count == numMutations) break;
+				if (count == numMutations)
+					break;
 			}
 		}
 	}
