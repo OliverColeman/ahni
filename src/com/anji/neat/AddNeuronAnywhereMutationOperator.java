@@ -21,7 +21,7 @@ import com.anji.util.Properties;
  * 
  * @author Oliver Coleman
  */
-public class AddNeuronAnywhereMutationOperator extends MutationOperatorNormalDistribution implements Configurable {
+public class AddNeuronAnywhereMutationOperator extends MutationOperatorMultiple implements Configurable {
 	/**
 	 * Properties key, the mutation rate. The number of neurons added is a factor of this and the current number of
 	 * neurons in the network.
@@ -32,7 +32,7 @@ public class AddNeuronAnywhereMutationOperator extends MutationOperatorNormalDis
 	 * default mutation rate
 	 */
 	public static final double DEFAULT_MUTATE_RATE = 0.0;
-
+	
 	private AddConnectionMutationOperator addConnOperator;
 
 	/**

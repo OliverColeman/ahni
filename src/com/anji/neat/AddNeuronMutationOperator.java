@@ -42,11 +42,11 @@ import com.ojcoleman.ahni.util.ArrayUtil;
  * Evolving Neural Networks through Augmenting Topologies </a>. Note that if the classic mutation scheme is enabled (see
  * {@link NeatConfiguration#TOPOLOGY_MUTATION_CLASSIC_KEY}) then {@link SingleTopologicalMutationOperator} calls
  * {@link #addNeuronAtConnection(NeatConfiguration, Map, ConnectionAllele, Set, Set)} directly, otherwise the number of
- * mutations is determined by {@link MutationOperatorNormalDistribution#numMutations(Random, int)}.
+ * mutations is determined by {@link MutationOperatorMultiple#numMutations(Random, int)}.
  * 
  * @author Philip Tucker, Oliver Coleman
  */
-public class AddNeuronMutationOperator extends MutationOperatorNormalDistribution implements Configurable {
+public class AddNeuronMutationOperator extends MutationOperatorMultiple implements Configurable {
 	/**
 	 * properties key, add neuron mutation rate
 	 */
@@ -56,7 +56,7 @@ public class AddNeuronMutationOperator extends MutationOperatorNormalDistributio
 	 * default mutation rate
 	 */
 	public static final double DEFAULT_MUTATE_RATE = 0.01f;
-
+	
 	/**
 	 * @see com.anji.util.Configurable#init(com.anji.util.Properties)
 	 */

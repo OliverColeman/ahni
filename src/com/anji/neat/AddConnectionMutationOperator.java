@@ -44,11 +44,11 @@ import com.anji.util.Properties;
  * Topologies </a>. Note that if the classic mutation scheme is enabled (see
  * {@link NeatConfiguration#TOPOLOGY_MUTATION_CLASSIC_KEY}) then {@link SingleTopologicalMutationOperator} calls
  * {@link #addSingleConnection(NeatConfiguration, List, SortedMap, Set)} directly, otherwise the number of
- * mutations is determined by {@link MutationOperatorNormalDistribution#numMutations(Random, int)}.
+ * mutations is determined by {@link MutationOperatorMultiple#numMutations(Random, int)}.
  * 
  * @author Philip Tucker
  */
-public class AddConnectionMutationOperator extends MutationOperatorNormalDistribution implements Configurable {
+public class AddConnectionMutationOperator extends MutationOperatorMultiple implements Configurable {
 
 	/**
 	 * properties key, add connection mutation rate
@@ -59,7 +59,7 @@ public class AddConnectionMutationOperator extends MutationOperatorNormalDistrib
 	 * default mutation rate
 	 */
 	public static final double DEFAULT_MUTATE_RATE = 0.01f;
-
+	
 	private RecurrencyPolicy policy;
 
 	/**

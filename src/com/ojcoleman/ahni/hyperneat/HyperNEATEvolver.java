@@ -31,6 +31,9 @@ import org.jgapcustomised.Species;
 import org.jgapcustomised.event.GeneticEvent;
 import org.jgapcustomised.event.GeneticEventListener;
 
+import com.anji.neat.AddConnectionMutationOperator;
+import com.anji.neat.AddNeuronAnywhereMutationOperator;
+import com.anji.neat.AddNeuronMutationOperator;
 import com.anji.neat.Evolver;
 import com.anji.persistence.Persistence;
 import com.anji.run.Run;
@@ -447,7 +450,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 				cumulativeDurationBetweenLogging = 0;
 			}
 		}
-
+		
 		fireEvent(new AHNIEvent(AHNIEvent.Type.RUN_END, this, this));
 
 		if (speciesInfoWriter != null) {
