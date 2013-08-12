@@ -43,9 +43,9 @@ import com.ojcoleman.ahni.util.CircularFifoBuffer;
  * evaluations on multiple genomes. The methods {@link #evaluate(Chromosome, Activator, int)} must be implemented in
  * subclasses. Subclasses may also need to override the methods {@link #init(Properties)},
  * {@link #initialiseEvaluation()}, {@link #finaliseEvaluation()}, {@link #postEvaluate(Chromosome, Activator, int)},
- * {@link #fitnessObjectivesCount()}, {@link #definesNoveltyObjective()} and {@link #dispose()}. Subclasses may also need to override
- * {@link #getLayerDimensions(int, int)} or {@link #getNeuronPositions(int, int)} to specify required layer dimensions
- * or neuron positions, for example for input or output layers.
+ * {@link #fitnessObjectivesCount()}, {@link #noveltyObjectiveCount()} and {@link #dispose()}. Subclasses may also
+ * need to override {@link #getLayerDimensions(int, int)} or {@link #getNeuronPositions(int, int)} to specify required
+ * layer dimensions or neuron positions, for example for input or output layers.
  * </p>
  * 
  * <p>
@@ -99,6 +99,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	protected double[] multiFitnessFunctionWeights;
 	protected boolean isRealMultiObjective;
 	protected int objectiveCount;
+	protected int noveltyObjectiveCount;
 	protected NoveltySearch[] noveltyArchives;
 
 	/**
@@ -178,12 +179,8 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 			evaluators[i].start();
 		}
 
+		noveltyObjectiveCount = noveltyObjectiveCount();
 		objectiveCount = fitnessObjectivesCount();
-		int noveltyCount = 0;
-		if (definesNoveltyObjective()) {
-			objectiveCount++;
-			noveltyCount++;
-		}
 
 		multiFitnessFunctions = new BulkFitnessFunctionMT[0];
 		if (props.containsKey(MULTI_KEY)) {
@@ -199,16 +196,15 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 					multiFitnessFunctions[i] = (BulkFitnessFunctionMT) props.newObjectProperty(tempKey);
 					props.remove(tempKey + ".class");
 
+					noveltyObjectiveCount += multiFitnessFunctions[i].noveltyObjectiveCount();
 					objectiveCount += multiFitnessFunctions[i].fitnessObjectivesCount();
-					if (multiFitnessFunctions[i].definesNoveltyObjective()) {
-						objectiveCount++;
-						noveltyCount++;
-					}
 				}
 				props.remove("fitness.function.multi.addingsub");
 				props.put(MULTI_KEY, multiKeyValue);
 			}
 		}
+
+		objectiveCount += noveltyObjectiveCount;
 
 		multiFitnessFunctionWeights = props.getDoubleArrayProperty(MULTI_WEIGHTING_KEY, ArrayUtil.newArray(objectiveCount, 1.0));
 		ArrayUtil.normaliseSum(multiFitnessFunctionWeights);
@@ -218,10 +214,10 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		logger.info("Number of objectives is " + objectiveCount + ".");
 		logger.info("Normalised fitness function weightings: " + Arrays.toString(multiFitnessFunctionWeights));
 
-		if (noveltyCount > 0) {
-			logger.info("Enabling novelty search with " + noveltyCount + " archive(s).");
-			noveltyArchives = new NoveltySearch[noveltyCount];
-			for (int n = 0; n < noveltyCount; n++) {
+		if (noveltyObjectiveCount > 0) {
+			logger.info("Enabling novelty search with " + noveltyObjectiveCount + " archive(s).");
+			noveltyArchives = new NoveltySearch[noveltyObjectiveCount];
+			for (int n = 0; n < noveltyObjectiveCount; n++) {
 				noveltyArchives[n] = props.newObjectProperty(NoveltySearch.class);
 			}
 		}
@@ -243,26 +239,29 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	}
 
 	/**
-	 * Subclasses that support novelty search should override this method and return true. A {@link Behaviour} should
-	 * then be appended to {@link Chromosome#behaviour}(s) of each Chromosome in the implementation of
-	 * {@link BulkFitnessFunctionMT#evaluate(Chromosome, Activator, int)}. This default implementation returns false.
+	 * This is akin to {@link #getNoveltyObjectiveCount()} but allows for handling multiple fitness functions, some of
+	 * which may define multiple novelty objectives. Subclasses that support novelty search should override this method
+	 * and return the number of behaviours this fitness function defines. This default implementation returns 0.
 	 * 
 	 * @see com.ojcoleman.ahni.evaluation.novelty.NoveltySearch
+	 * @see #fitnessObjectivesCount()
 	 */
-	public boolean definesNoveltyObjective() {
-		return false;
+	public int noveltyObjectiveCount() {
+		return 0;
 	}
 
 	/**
 	 * This is akin to {@link #getObjectiveCount()} but allows for handling multiple fitness functions, some of which
 	 * may define multiple objectives. This default implementation returns 1. If the fitness function defines more than
-	 * one fitness objective, or no fitness objectives (eg only a novelty objective), then this method must be overridden to return the number of fitness
-	 * objectives defined.
+	 * one fitness objective, or no fitness objectives (eg only a novelty objective), then this method must be
+	 * overridden to return the number of fitness objectives defined. NOTE: unlike {@link #getObjectiveCount()} this
+	 * method should not include the number of novelty objectives.
+	 * 
+	 * @see #noveltyObjectiveCount()
 	 */
 	public int fitnessObjectivesCount() {
 		return 1;
 	}
-	
 
 	/**
 	 * {@inheritDoc}
@@ -272,22 +271,39 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	 * </p>
 	 * 
 	 * @see #fitnessObjectivesCount()
+	 * @see #noveltyObjectiveCount()
 	 */
 	@Override
 	public final int getObjectiveCount() {
 		return objectiveCount;
 	}
-	
+
 	/**
-	 * If the fitness value(s) for do not change between generations then subclasses should override 
-	 * this method to return true in order to avoid unnecessarily recalculating the fitness value(s). 
-	 * This default implementation returns false.
+	 * {@inheritDoc}
+	 * <p>
+	 * This implementation is set as final to allow this class to make use of multiple separate fitness functions for a
+	 * multi-objective setup.
+	 * </p>
+	 * 
+	 * @see #fitnessObjectivesCount()
+	 * @see #noveltyObjectiveCount()
+	 */
+	@Override
+	public final int getNoveltyObjectiveCount() {
+		return noveltyObjectiveCount;
+	}
+
+	/**
+	 * If the fitness value(s) and behaviour(s) for novelty search (if used) for this fitness function do not change
+	 * between generations then subclasses should override this method to return true in order to avoid unnecessarily
+	 * recalculating the fitness value(s) or behaviour(s). This default implementation returns false.
+	 * 
 	 * @see #fitnessObjectivesCount()
 	 */
 	public boolean fitnessValuesStable() {
 		return false;
 	}
-	
+
 	/**
 	 * Evaluate a set of chromosomes.
 	 * 
@@ -340,7 +356,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 			}
 
 			// double avgArchiveSize = 0;
-			for (int n = 0; n < noveltyArchives.length; n++) {
+			for (int n = 0; n < noveltyObjectiveCount; n++) {
 				noveltyArchives[n].finishedEvaluation();
 				// avgArchiveSize += noveltyArchives[n].getArchiveSize();
 			}
@@ -372,11 +388,14 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	}
 
 	/**
-	 * Evaluate an individual genotype. This method is called from {@link #evaluate(List)} and must be overridden in
-	 * order to evaluate the genotypes. If the fitness function defines a performance value then this method should call
-	 * {@link Chromosome#setPerformanceValue(double)}. In a multi-objective set-up only the performance defined by the
-	 * primary fitness function will be used. If a performance value isn't defined it will be set to the overall fitness value.
-	 * This default implementation returns 0.
+	 * Evaluate an individual genotype on one fitness objective (if more than one fitness objective is defined by this
+	 * fitness function and/or it defines a behaviour for novelty search then
+	 * {@link #evaluate(Chromosome, Activator, int, double[], Behaviour[])} must be overridden instead). This method is
+	 * called from {@link #evaluate(List)} and must be overridden in order to evaluate the genotypes. If the fitness
+	 * function defines a performance value then this method should call {@link Chromosome#setPerformanceValue(double)}.
+	 * In a multi-objective set-up only the performance defined by the primary fitness function will be used. If a
+	 * performance value isn't defined it will be set to the overall fitness value. This default implementation returns
+	 * 0.
 	 * 
 	 * @param genotype the genotype being evaluated. This is not usually required but may be useful in some cases.
 	 * @param substrate the phenotypic substrate of the genotype being evaluated.
@@ -390,10 +409,11 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	}
 
 	/**
-	 * For fitness functions that define multiple fitness objectives (see {@link #fitnessObjectivesCount()}), evaluate an
-	 * individual genotype over all of these objectives. This default implementation simply calls
-	 * {@link #evaluate(Chromosome, Activator, int)}. If the fitness function defines a performance value then this
-	 * method should call {@link Chromosome#setPerformanceValue(double)}. In a multi-objective set-up (see {@link #MULTI_KEY}) only the
+	 * For fitness functions that define multiple fitness objectives (see {@link #fitnessObjectivesCount()}) and/or
+	 * behaviours for novelty search (see {@link #definesNoveltyObjective()}), evaluate an individual genotype over all
+	 * of these objectives. This default implementation simply calls {@link #evaluate(Chromosome, Activator, int)}. If
+	 * the fitness function defines a performance value then this method should call
+	 * {@link Chromosome#setPerformanceValue(double)}. In a multi-objective set-up (see {@link #MULTI_KEY}) only the
 	 * performance defined by the primary fitness function will be used. If a performance value isn't defined it will be
 	 * set to the (first) fitness value given by the primary fitness function.
 	 * 
@@ -403,8 +423,11 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	 *            cases.
 	 * @param fitnessValues An array to hold the fitness value(s) as determined by this fitness function. The array will
 	 *            have length {@link #fitnessObjectivesCount()}.
+	 * @param behaviours An array to hold the behaviour(s) for novelty search as determined by this fitness function.
+	 *            The array will have length {@link #noveltyObjectiveCount()}, and can be safely ignored if this method
+	 *            returns 0.
 	 */
-	protected void evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, double[] fitnessValues) {
+	protected void evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, double[] fitnessValues, Behaviour[] behaviours) {
 		double f = evaluate(genotype, substrate, evalThreadIndex);
 		if (fitnessObjectivesCount() > 0) {
 			fitnessValues[0] = f;
@@ -434,9 +457,9 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	protected class Evaluator extends Thread {
 		private volatile boolean go = false;
 		private volatile boolean finish = false;
+		private volatile boolean testingNovelty = false;
 		private int id;
 		private Activator substrate;
-		private boolean testingNovelty = false;
 
 		protected Evaluator(int id) {
 			this.id = id;
@@ -462,14 +485,18 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		 */
 		public void run() {
 			double[][] fitnessValues = null;
-			
+			Behaviour[][] behaviours = null;
+
 			while (!finish) {
 				while (go) {
 					if (fitnessValues == null) {
 						fitnessValues = new double[multiFitnessFunctions.length + 1][];
+						behaviours = new Behaviour[multiFitnessFunctions.length + 1][];
 						fitnessValues[0] = new double[fitnessObjectivesCount()];
+						behaviours[0] = new Behaviour[noveltyObjectiveCount()];
 						for (int i = 0; i < multiFitnessFunctions.length; i++) {
 							fitnessValues[i + 1] = new double[multiFitnessFunctions[i].fitnessObjectivesCount()];
+							behaviours[i + 1] = new Behaviour[multiFitnessFunctions[i].noveltyObjectiveCount()];
 						}
 					}
 
@@ -488,31 +515,36 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 											fitnessValues[i][f] = chrom.getFitnessValue(fs);
 										}
 									}
-									
+									for (int i = 0, fs = 0; i < behaviours.length; i++) {
+										for (int f = 0; f < behaviours[i].length; f++, fs++) {
+											behaviours[i][f] = chrom.behaviours[fs];
+										}
+									}
 									// Do secondary fitness functions first.
 									for (int i = 0; i < multiFitnessFunctions.length; i++) {
 										BulkFitnessFunctionMT func = multiFitnessFunctions[i];
-										// If the fitness values aren't stable for this function or they haven't been calculated yet for this chrom.
-										if (!func.fitnessValuesStable() || Double.isNaN(ArrayUtil.sum(fitnessValues[i+1]))) {
-											func.evaluate(chrom, substrate, id, fitnessValues[i+1]);
-										}
-										else {
-											System.err.println("skip");
+										// If the fitness values aren't stable for this function or they haven't been
+										// calculated yet for this chrom.
+										if (!func.fitnessValuesStable() || Double.isNaN(ArrayUtil.sum(fitnessValues[i + 1])) || ArrayUtils.contains(behaviours[i + 1], null)) {
+											func.evaluate(chrom, substrate, id, fitnessValues[i + 1], behaviours[i + 1]);
 										}
 										if (func.fitnessValuesStable()) {
+											// At least some fitness values stable (this doesn't prevent the non-stable
+											// ones from being updated).
 											chrom.setEvaluationDataStable();
 										}
 									}
-									
-									// If the fitness values aren't stable for the primary function or they haven't been calculated yet for this chrom.
+
+									// If the fitness values aren't stable for the primary function or they haven't been
+									// calculated yet for this chrom.
 									if (!fitnessValuesStable() || Double.isNaN(ArrayUtil.sum(fitnessValues[0]))) {
 										// Do primary fitness function.
-										evaluate(chrom, substrate, id, fitnessValues[0]);
+										evaluate(chrom, substrate, id, fitnessValues[0], behaviours[0]);
 									}
 									if (fitnessValuesStable()) {
 										chrom.setEvaluationDataStable();
 									}
-									
+
 									// Assign fitness values to chromosome.
 									for (int i = 0, fs = 0; i < fitnessValues.length; i++) {
 										for (int f = 0; f < fitnessValues[i].length; f++, fs++) {
@@ -521,9 +553,16 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 											}
 										}
 									}
-									
+									for (int i = 0, fs = 0; i < behaviours.length; i++) {
+										for (int f = 0; f < behaviours[i].length; f++, fs++) {
+											if (behaviours[i][f] != null) {
+												chrom.behaviours[fs] = behaviours[i][f];
+											}
+										}
+									}
+
 									postEvaluate(chrom, substrate, id);
-									
+
 									// We just set the overall fitness value according to the weightings. A different
 									// selector (eg NSGA-II selector) may set the overall fitness to something else
 									// based on the multiple objectives.
@@ -531,16 +570,16 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 									// calculating overall fitness.
 									if (noveltyArchives == null)
 										calculateOverallFitness(chrom);
-									
+
 									synchronized (this) {
 										if ((targetPerformanceType == 1 && chrom.getPerformanceValue() > bestPerformance) || (targetPerformanceType == 0 && chrom.getPerformanceValue() < bestPerformance)) {
 											bestPerformance = chrom.getPerformanceValue();
 											newBestChrom = chrom;
 										}
 									}
-									if (noveltyArchives != null && chrom.behaviour != null) {
-										for (int n = 0; n < noveltyArchives.length; n++) {
-											noveltyArchives[n].addToCurrentPopulation(chrom.behaviour.get(n));
+									if (noveltyArchives != null) {
+										for (int n = 0; n < noveltyObjectiveCount; n++) {
+											noveltyArchives[n].addToCurrentPopulation(chrom.behaviours[n]);
 										}
 									}
 								}
@@ -556,9 +595,9 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 						} else { // testingNovelty
 							int fitnessSlot = objectiveCount - noveltyArchives.length;
 							// May be empty if substrate decoding was a dud (see above).
-							if (!chrom.behaviour.isEmpty()) {
+							if (chrom.behaviours != null) {
 								for (int n = 0; n < noveltyArchives.length; n++) {
-									chrom.setFitnessValue(noveltyArchives[n].testNovelty(chrom.behaviour.get(n)), fitnessSlot++);
+									chrom.setFitnessValue(noveltyArchives[n].testNovelty(chrom.behaviours[n]), fitnessSlot++);
 								}
 								calculateOverallFitness(chrom);
 							}
@@ -585,7 +624,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 				overallFitness += c.getFitnessValue(i) * multiFitnessFunctionWeights[i];
 			}
 			c.setFitnessValue(overallFitness);
-			
+
 			// If the fitness function hasn't explicitly set a performance value, just set it to
 			// overall fitness value.
 			if (Double.isNaN(c.getPerformanceValue()) && !Double.isNaN(c.getFitnessValue())) {
@@ -642,15 +681,15 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	 * from their own implementation.
 	 */
 	@Override
-	public double evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
+	public void evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
 		if (!logImage || noveltyArchives == null)
-			return 0;
-		
+			return;
+
 		synchronized (this) {
 			if (!renderedNoveltyArchivesThisGeneration) {
 				renderedNoveltyArchivesThisGeneration = true;
 			} else {
-				return 0;
+				return;
 			}
 		}
 
@@ -666,7 +705,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 					int imageSize = 254;
 					BufferedImage image = new BufferedImage(imageSize + 2, imageSize + 2, BufferedImage.TYPE_BYTE_GRAY);
 					Graphics2D g = image.createGraphics();
-	
+
 					g.setColor(Color.WHITE);
 					for (Behaviour b : noveltyArchives[n].archive) {
 						RealVectorBehaviour brv = (RealVectorBehaviour) b;
@@ -679,13 +718,12 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-				}
-				else { // Render as intensity plot.
+				} else { // Render as intensity plot.
 					int imageScale = 1;
 					int size = noveltyArchives[n].archive.size();
 					BufferedImage image = new BufferedImage(size * imageScale, dims * imageScale, BufferedImage.TYPE_BYTE_GRAY);
 					Graphics2D g = image.createGraphics();
-	
+
 					for (int i = 0; i < size; i++) {
 						RealVectorBehaviour brv = (RealVectorBehaviour) noveltyArchives[n].archive.get(i);
 						for (int j = 0; j < dims; j++) {
@@ -701,12 +739,11 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-					
+
 				}
-			}			
-			
+			}
+
 		}
-		return 0;
 	}
 
 	/**

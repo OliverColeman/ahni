@@ -50,9 +50,7 @@ public abstract class AHNIFitnessFunction extends BulkFitnessFunction {
 	 * @param baseFileName The base/prefix of the names of log file(s) that should be created.
 	 * @param logText If true then text representations should be output.
 	 * @param logImage If true then image representations should be output.
-	 * @return A value in the range [0, 1].
 	 */
-	public double evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
-		return 0;
+	public void evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
 	}
 }

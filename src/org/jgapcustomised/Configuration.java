@@ -499,4 +499,11 @@ public class Configuration implements java.io.Serializable {
 	public int getObjectiveCount() {
 		return m_bulkObjectiveFunction.getObjectiveCount();
 	}
+	
+	/**
+	 * @return Returns the number of novelty objectives being employed. This is only valid for fitness functions that define novelty behaviours. 
+	 */
+	public int getNoveltyObjectiveCount() {
+		return m_bulkObjectiveFunction.getNoveltyObjectiveCount();
+	}
 }

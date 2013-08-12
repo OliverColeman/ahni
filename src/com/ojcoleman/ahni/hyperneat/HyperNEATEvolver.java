@@ -220,19 +220,6 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 		config.getEventManager().addEventListener(GeneticEvent.GENOTYPE_EVALUATED_EVENT, this);
 		config.getEventManager().addEventListener(GeneticEvent.GENOTYPE_START_GENETIC_OPERATORS_EVENT, this);
 		config.getEventManager().addEventListener(GeneticEvent.GENOTYPE_FINISH_GENETIC_OPERATORS_EVENT, this);
-		
-		if (props.getBooleanProperty(LOGGING_ENABLE_KEY, true)) {
-			String sc = "";
-			Chromosome c = new Chromosome(config.getSampleChromosomeMaterial(), 0L, 0);
-			Transcriber<? extends Activator> transcriber = (Transcriber<? extends Activator>) properties.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
-			if (transcriber instanceof HyperNEATTranscriber) {
-				HyperNEATTranscriber.CPPN cppn = (transcriber instanceof HyperNEATTranscriber) ? ((HyperNEATTranscriber) transcriber).getCPPN(c) : null;
-				logger.info("Initial CPPN:\n" + cppn.toString());
-			}
-			else {
-				logger.info("Initial chromosome:\n" + c.toString());
-			}
-		}
 	}
 
 	/**

@@ -59,8 +59,8 @@ import com.ojcoleman.ahni.util.Range;
  * each node.
  * </p>
  * <p>
- * The reward signal, which is the Euclidean distance from the current environment state to the goal state, is provided
- * directly to the agent.
+ * The reward signal, which is a function of the Euclidean distance from the current environment state to the goal
+ * state, is provided directly to the agent.
  * </p>
  * <p>
  * Environments can optionally have (hyper-)spherical obstacles added at random locations (increasing the environment
@@ -92,6 +92,7 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 	protected Random random;
 	protected int funcCount = 4;
 	protected int inDegree = 2;
+	protected Range outputTransformInputRange = new Range(-1, 1);
 
 	/**
 	 * Transforms input from the agent to changes in the current environment state.
@@ -118,11 +119,21 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 	@Override
 	public void setUp(int id) {
 		super.setUp(id);
-		//requiredSteps += size*2;
 		random = props.getConfig().getRandomGenerator();
 
 		inputTransform = new Transform(TransformType.INPUT, inputSize, size, funcCount, inDegree, new Range(-1, 1));
-		outputTransform = new Transform(TransformType.OUTPUT, size, outputSize-1, funcCount, inDegree, new Range(0, 1));
+		outputTransform = new Transform(TransformType.OUTPUT, size, outputSize - 1, funcCount, inDegree, outputTransformInputRange);
+
+		double path = findPath();
+		// multiply path length by 2 because when checking to make sure that the input transform allows producing all
+		// possible combinations of directions we only check for values that would allow moving at half the maximum
+		// speed.
+		requiredSteps = (int) Math.ceil((path * 2.2) / maxStepSize);
+		if (props.getIntProperty(RLContinuousStateBased.TRIAL_COUNT) == 1) {
+			// The agent needs to try different directions to see which is the right one in the same trial
+			// allow some extra time for this.
+			requiredSteps += 2 * size * size;
+		}
 	}
 
 	@Override
@@ -134,8 +145,7 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 				inputT[i] = inputT[i] * 2 - 1;
 			}
 			return super.updateStateAndOutput(state, inputT, output);
-		}
-		else {
+		} else {
 			return super.updateStateAndOutput(state, input, output);
 		}
 	}
@@ -145,7 +155,8 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 		// Update output given new state.
 		ArrayRealVector stateT = state;
 		if (outputTransform != null) {
-			stateT = new ArrayRealVector(outputTransform.transform(state.getDataRef()));
+			double[] s = ArrayUtil.scaleFromUnit(state.toArray(), outputTransformInputRange);
+			stateT = new ArrayRealVector(outputTransform.transform(s));
 		}
 		System.arraycopy(stateT.getDataRef(), 0, output, 0, stateT.getDimension());
 		output[output.length - 1] = getRewardForState(state);
@@ -154,13 +165,14 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 
 	@Override
 	public boolean increaseDifficultyPossible() {
-		return true;
+		return false;
 	}
 
 	@Override
 	public void increaseDifficulty() {
 		funcCount++;
 		inDegree++;
+		logger.info("Transform function count is now " + funcCount + ", in-degree is now " + inDegree);
 	}
 
 	@Override
@@ -205,10 +217,14 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 			for (int i = 0; i < numOutputs; i++) {
 				outputValueRanges[i] = new Range();
 			}
+			int tries = 0;
 			do {
-				System.out.println("newTransform(" + numInputs + ", " + numOutputs + ", " + numHidden + ", " + inDegree + ")");
+				// System.out.println("newTransform(" + numInputs + ", " + numOutputs + ", " + numHidden + ", " +
+				// inDegree + ")");
 				function = newTransform(numInputs, numOutputs, numHidden, inDegree);
+				tries++;
 			} while (!isViable());
+			logger.info("Took " + tries + " to create " + type + " transform.");
 		}
 
 		public synchronized double[] transform(double[] input) {
@@ -301,7 +317,7 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 			double[] input = new double[function.getInputCount()];
 			double[] observedMinOutputValue = ArrayUtil.newArray(function.getOutputCount(), Double.POSITIVE_INFINITY);
 			double[] observedMaxOutputValue = ArrayUtil.newArray(function.getOutputCount(), Double.NEGATIVE_INFINITY);
-			
+
 			// For each input permutation.
 			MultidimensionalCounter.Iterator mci = mc.iterator();
 			while (mci.hasNext()) {
@@ -333,20 +349,33 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 					outputValueRanges[d].set(function.getMinResponse(), function.getMaxResponse());
 				}
 			}
-			// Scale output vectors to lie within unit-cube and check that all output sign combinations exist if the transform type requires it.
-			boolean[] signCombo = new boolean[2 << (function.getOutputCount()-1)];
+			// Scale output vectors to lie within unit-cube and check that all output sign combinations exist if the
+			// transform type requires it.
+			boolean[] signCombo = new boolean[2 << (function.getOutputCount() - 1)];
 			int signComboCoveredCount = 0;
 			for (int i = 0; i < outputs.length; i++) {
 				for (int d = 0; d < outputs[i].length; d++) {
 					outputs[i][d] = outputValueRanges[d].translateToUnit(outputs[i][d]);
 				}
 				// System.out.println(Arrays.toString(outputs[i]));
-				
-				// If we need to check that all output sign combinations exist and not all combinations have been covered yet.
+
+				// If we need to check that all output sign combinations exist and not all combinations have been
+				// covered yet.
 				if (type.ensureAllOutputSignCombinationsExist() && signComboCoveredCount < signCombo.length) {
 					String combo = ""; // Create binary string representing combo.
+					boolean tooMiddling = false;
 					for (int d = 0; d < outputs[i].length; d++) {
+						double o = outputs[i][d];
+						if (o > 0.25 && o < 0.75) {
+							tooMiddling = true;
+							break;
+						}
 						combo += outputs[i][d] >= 0.5 ? "1" : "0";
+					}
+					// If the max or min values for one of the outputs is too small then ignore it for
+					// the purposes of determining whether the combination it represents is covered.
+					if (tooMiddling) {
+						continue;
 					}
 					int comboIndex = Integer.parseInt(combo, 2);
 					if (!signCombo[comboIndex]) {
@@ -355,13 +384,12 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 					}
 				}
 			}
-			System.out.println("  totalTestPoints: " + totalInputPoints);
-			System.out.println("  signCombo: " + Arrays.toString(signCombo));
-			
-			if (type.ensureAllOutputSignCombinationsExist() && signComboCoveredCount < signCombo.length) {
+			// System.out.println("  totalTestPoints: " + totalInputPoints);
+			// System.out.println("  signCombo: " + Arrays.toString(signCombo));
+
+			if (type.ensureAllOutputSignCombinationsExist() && signComboCoveredCount < signCombo.length)
 				return false;
-			}
-		
+
 			// Determine how many output points are too close to any other point.
 			int tooCloseCount = 0;
 			// equivOutputNeighbourDistance is the distance apart points would have to be in the output (hyper-)cube in
@@ -380,9 +408,9 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 			}
 			double fracTooClose = (double) tooCloseCount / totalInputPoints;
 
-			System.out.println("  equivOutputNeighbourDistance: " + equivOutputNeighbourDistance);
-			System.out.println("  tooCloseCount: " + tooCloseCount);
-			System.out.println("  fracTooClose: " + fracTooClose);
+			// System.out.println("  equivOutputNeighbourDistance: " + equivOutputNeighbourDistance);
+			// System.out.println("  tooCloseCount: " + tooCloseCount);
+			// System.out.println("  fracTooClose: " + fracTooClose);
 
 			// If less than 5% of tested input point pairs map too close to each other in the output space
 			// then the transform is considered to be an approximate one-to-one mapping.
@@ -391,9 +419,11 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 
 		// Render the transform function as a 2D image (if possible).
 		private boolean alreadyRendered = false;
+
 		public void render(String fileName, int imageSize) {
 			synchronized (this) {
-				if (alreadyRendered) return;
+				if (alreadyRendered)
+					return;
 				alreadyRendered = true;
 			}
 			if (function.getOutputCount() == 2 && function.getInputCount() <= 3) {
@@ -489,7 +519,7 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 	}
 
 	public enum TransformType {
-		INPUT(true, true), OUTPUT(false, false), STATE(true, false);
+		INPUT(true, true), OUTPUT(true, false), STATE(true, false);
 
 		private boolean scaleOutput;
 		private boolean ensureAllOutputSignCombinationsExist;

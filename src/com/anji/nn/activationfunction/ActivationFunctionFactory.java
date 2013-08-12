@@ -65,6 +65,7 @@ public class ActivationFunctionFactory {
 		activationFunctions.put(MultiplyActivationFunction.NAME, new MultiplyActivationFunction());
 		activationFunctions.put(SqrtActivationFunction.NAME, new SqrtActivationFunction());
 		activationFunctions.put(SqrtAndLinearActivationFunction.NAME, new SqrtAndLinearActivationFunction());
+		activationFunctions.put(PowerActivationFunction.NAME, new PowerActivationFunction());
 	}
 
 	/**

@@ -1,5 +1,6 @@
 package com.ojcoleman.ahni.evaluation.novelty;
 
+import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.commons.math3.linear.ArrayRealVector;
@@ -60,8 +61,8 @@ public class GenericBehaviourEvaluator extends BulkFitnessFunctionMT {
 	}
 	
 	@Override
-	public boolean definesNoveltyObjective() {
-		return true;
+	public int noveltyObjectiveCount() {
+		return 1;
 	}
 	
 	@Override
@@ -70,30 +71,33 @@ public class GenericBehaviourEvaluator extends BulkFitnessFunctionMT {
 	}
 
 	@Override
-	protected double evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
-		if (input == null) {
-			// Initial set-up based on first instance of a substrate.
-			int inputSize = substrate.getInputCount();
-			outputSize = substrate.getOutputCount();
-			minOutput = substrate.getMinResponse();
-			maxOutput = substrate.getMaxResponse();
-			if (minOutput < -Double.MAX_VALUE*0.5 || maxOutput > Double.MAX_VALUE*0.5) {
-				throw new IllegalStateException("Substrates with output ranges greater than Doubele.MAX_VALUE not currently supported.");
-			}
-			outputRange = maxOutput - minOutput;
-			Random random = props.getEvolver().getConfig().getRandomGenerator();
-			double minInput = props.getDoubleProperty(MIN_VALUE, 0);
-			double maxInput = props.getDoubleProperty(MIN_VALUE, 1);
-			
-			input = new double[sequenceCount][sampleCount][samplingInterval][inputSize];
-			for (int sequence = 0; sequence < sequenceCount; sequence++) {
-				for (int sample = 0; sample < sampleCount; sample++) {
-					for (int intervalCount = 0; intervalCount < samplingInterval; intervalCount++) {
-						input[sequence][sample][intervalCount] = ArrayUtil.newRandom(inputSize, random, minInput, maxInput);
+	protected void evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, double[] fitnessValues, Behaviour[] behaviours) {
+		synchronized (this) {
+			if (input == null) {
+				// Initial set-up based on first instance of a substrate.
+				int inputSize = substrate.getInputCount();
+				outputSize = substrate.getOutputCount();
+				minOutput = substrate.getMinResponse();
+				maxOutput = substrate.getMaxResponse();
+				if (minOutput < -Double.MAX_VALUE*0.5 || maxOutput > Double.MAX_VALUE*0.5) {
+					throw new IllegalStateException("Substrates with output ranges greater than Doubele.MAX_VALUE not currently supported.");
+				}
+				outputRange = maxOutput - minOutput;
+				Random random = props.getEvolver().getConfig().getRandomGenerator();
+				double minInput = props.getDoubleProperty(MIN_VALUE, 0);
+				double maxInput = props.getDoubleProperty(MAX_VALUE, 1);
+				
+				input = new double[sequenceCount][sampleCount][samplingInterval][inputSize];
+				for (int sequence = 0; sequence < sequenceCount; sequence++) {
+					for (int sample = 0; sample < sampleCount; sample++) {
+						for (int intervalCount = 0; intervalCount < samplingInterval; intervalCount++) {
+							input[sequence][sample][intervalCount] = ArrayUtil.newRandom(inputSize, random, minInput, maxInput);
+						}
 					}
 				}
 			}
 		}
+		
 		NNAdaptor nn = (NNAdaptor) substrate;
 		ArrayRealVector behaviour = new ArrayRealVector(outputSize * sequenceCount * sampleCount);
 		int behaviorIndex = 0;
@@ -115,7 +119,6 @@ public class GenericBehaviourEvaluator extends BulkFitnessFunctionMT {
 				behaviorIndex += outputSize;
 			}
 		}
-		genotype.behaviour.add(new RealVectorBehaviour(behaviour));
-		return 0;
+		behaviours[0] = new RealVectorBehaviour(behaviour);
 	}
 }

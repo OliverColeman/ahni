@@ -26,8 +26,8 @@ import com.ojcoleman.ahni.util.ArrayUtil;
  * state as is (no transformation is performed between the environments current state and the agents perception of it).
  * The agent can directly move around within the Cartesian space represented by the environment state space: the agents
  * output is interpreted as a motion vector which changes the current state in a linear additive way. The reward signal,
- * which is the Euclidean distance from the current environment state to the goal state, is provided directly to the
- * agent.
+ * which is a function of the Euclidean distance from the current environment state to the goal state, is provided
+ * directly to the agent.
  * </p>
  * <p>
  * Environments can optionally have (hyper-)spherical obstacles added at random locations (increasing the environment
@@ -53,9 +53,9 @@ public class SimpleNavigationEnvironment extends Environment {
 	 */
 	public static final String OBSTACLE_COUNT_MAX = "fitness.function.rlcss.obstacles.maximum";
 
+	Random random;
 	protected int obstacleCount;
-	ArrayRealVector[] obstacleLocation;
-	double[] obstacleRadius;
+	Obstacle[] obstacle;
 	int requiredSteps = 0;
 	double maxStepSize = 0.1;
 	static int noveltyEnvironmentsDone = 0;
@@ -70,7 +70,7 @@ public class SimpleNavigationEnvironment extends Environment {
 	@Override
 	public void setUp(int id) {
 		this.id = id;
-		Random random = props.getEvolver().getConfig().getRandomGenerator();
+		random = props.getEvolver().getConfig().getRandomGenerator();
 
 		startState = new ArrayRealVector(size);
 		goalState = new ArrayRealVector(size);
@@ -79,9 +79,9 @@ public class SimpleNavigationEnvironment extends Environment {
 			for (int i = 0; i < size; i++) {
 				// Start state is in randomly selected corner.
 				// startState.setEntry(i, (random.nextBoolean() ? 0 : 0.9) + random.nextDouble() * 0.1);
-				
+
 				// Start state is anywhere.
-				//startState.setEntry(i, random.nextDouble());
+				// startState.setEntry(i, random.nextDouble());
 
 				// middle
 				startState.setEntry(i, 0.5);
@@ -93,49 +93,59 @@ public class SimpleNavigationEnvironment extends Environment {
 					goalState.setEntry(i, random.nextDouble());
 				}
 			} while (goalState.getDistance(startState) < 0.5);
-			
+
 			// Goal state is in corner according to id (iterate over all possible corners).
-			/*String corners = Integer.toBinaryString(id);
-			for (int i = 0, ci = corners.length() - 1; i < size; i++, ci--) {
-				// Goal state is in corner according to id (iterate over all possible corners).
-				goalState.setEntry(i, (ci < 0 || corners.charAt(ci) == '0' ? 0 : 0.9) + random.nextDouble() * 0.1);
-			}*/
+			/*
+			 * String corners = Integer.toBinaryString(id); for (int i = 0, ci = corners.length() - 1; i < size; i++,
+			 * ci--) { // Goal state is in corner according to id (iterate over all possible corners).
+			 * goalState.setEntry(i, (ci < 0 || corners.charAt(ci) == '0' ? 0 : 0.9) + random.nextDouble() * 0.1); }
+			 */
 		} else { // Environment is for novelty testing.
-			String corners = Integer.toBinaryString(-id - 1);
+			int granularity = 3;
+			double stepSize = 1.0 / (granularity - 1);
+			MultidimensionalCounter mc = new MultidimensionalCounter(ArrayUtil.newArray(size, granularity));
+			int[] pos = mc.getCounts(-id - 1);
+			for (int d = 0; d < size; d++) {
+				startState.setEntry(d, 0.5);
+				goalState.setEntry(d, pos[d] * stepSize);
+			}
+			
+			/*String corners = Integer.toBinaryString(-id - 1);
 			for (int i = 0, ci = corners.length() - 1; i < size; i++, ci--) {
 				// Start state is roughly in middle.
 				startState.setEntry(i, 0.4 + random.nextDouble() * 0.2);
 				// Goal state is in corner according to id (iterate over all possible corners).
 				goalState.setEntry(i, (ci < 0 || corners.charAt(ci) == '0' ? 0 : 0.9) + random.nextDouble() * 0.1);
-			}
+			}*/
 		}
 
-		obstacleLocation = new ArrayRealVector[obstacleCount];
-		obstacleRadius = new double[obstacleCount];
-		double path = 0;
-		double radius = 0.3;
+		obstacle = new Obstacle[obstacleCount];
+		double path = 0, minPath = findPath();
+		double obstSize = 1;
 		for (int o = 0; o < obstacleCount; o++) {
-			// obstacleRadius[o] = random.nextDouble() * 0.3 + 0.1;
-			obstacleRadius[o] = radius;
 			boolean validPlacement = false;
 			int attempts = 0;
 			do {
-				obstacleLocation[o] = new ArrayRealVector(ArrayUtil.newRandom(size, random), false);
-				path = findPath();
-				validPlacement = !collision(o, startState) && !collision(o, goalState) && path != -1;
-
+				obstacle[o] = new Obstacle(obstSize);
+				validPlacement = !obstacle[o].collision(startState) && !obstacle[o].collision(goalState);
+				if (validPlacement) {
+					path = findPath();
+					// If this obstacle placement will completely block the goal, or it doesn't increase the path length from the bare minimum.
+					if (path == -1 || path <= minPath) {
+						validPlacement = false;
+					}
+				}
 				if (!validPlacement) {
 					// Keep shrinking radius until we can make it fit.
-					radius *= 0.95;
+					obstSize *= 0.95;
 					attempts++;
 				}
 
 				// If we can't seem to find anywhere to put this obstacle, start all over again.
-				// This should never happen, but it did at least once...
 				if (attempts == 1000) {
 					logger.warn("Couldn't seem to find anywhere to put obstacle " + o + ", restarting obstacle placements.");
 					o = -1;
-					radius = 0.3;
+					obstSize = 1;
 					break;
 				}
 			} while (!validPlacement);
@@ -143,11 +153,11 @@ public class SimpleNavigationEnvironment extends Environment {
 		if (obstacleCount == 0) {
 			path = findPath();
 		}
-		requiredSteps = (int) Math.round((path * 1.1) / maxStepSize);
+		requiredSteps = (int) Math.ceil((path * 1.1) / maxStepSize);
 		if (props.getIntProperty(RLContinuousStateBased.TRIAL_COUNT) == 1) {
 			// The agent needs to try different directions to see which is the right one in the same trial
 			// allow some extra time for this.
-			requiredSteps += 2 << size;
+			requiredSteps += 2 * size * size;
 		}
 	}
 
@@ -155,7 +165,7 @@ public class SimpleNavigationEnvironment extends Environment {
 	public double updateStateAndOutput(ArrayRealVector state, double[] input, double[] output) {
 		// Update state given input.
 		ArrayRealVector inputT = new ArrayRealVector(input);
-		//inputT.mapDivideToSelf(Math.sqrt(input.length));
+		// inputT.mapDivideToSelf(Math.sqrt(input.length));
 		if (inputT.getNorm() > 1) {
 			inputT.unitize();
 		}
@@ -169,11 +179,11 @@ public class SimpleNavigationEnvironment extends Environment {
 		// Determine if a collision has occurred with any obstacle.
 		for (int o = 0; o < obstacleCount; o++) {
 			// If collision occurs then disallow the move (state does not change).
-			if (collision(o, newState)) {
+			if (obstacle[o].collision(newState)) {
 				return getOutputForState(state, output);
 			}
 		}
-		
+
 		// Update state if no collision occurred.
 		state.setSubVector(0, newState);
 
@@ -189,43 +199,36 @@ public class SimpleNavigationEnvironment extends Environment {
 		// for (int i = 0; i < output.length - 1; i++) {
 		// output[i] = state.getEntry(i) - goalState.getEntry(i);
 		// }
-		
+
 		output[output.length - 1] = getRewardForState(state);
 		return getPerformanceForState(state);
 	}
-	
+
 	@Override
 	public double getRewardForState(ArrayRealVector state) {
-		//double perf = getPerformanceForState(state);
+		// double perf = getPerformanceForState(state);
 		double d = state.getL1Distance(goalState) / size;
-		
-		//return perf;
-		//return Math.pow(1-d, 2);
-		return d < maxStepSize ? 1 : (1-d)*0.5;
-		//return perf >= 0.7 ? 1 : 0;
+
+		// return perf;
+		// return Math.pow(1-d, 2);
+		return d < maxStepSize ? 1 : (1 - d) * 0.5;
+		// return perf >= 0.7 ? 1 : 0;
 	}
-	
+
 	@Override
 	public double getPerformanceForState(ArrayRealVector state) {
 		double d = state.getL1Distance(goalState) / size;
-		//return 1 - d;
+		// return 1 - d;
 		return d < maxStepSize ? 1 : 0;
-	}
-	
-	
-	protected boolean collision(int o, ArrayRealVector p) {
-		if (obstacleLocation[o] == null)
-			return false;
-		return p.getDistance(obstacleLocation[o]) <= obstacleRadius[o];
 	}
 
 	/*
 	 * Returns the length (in terms of minimum steps) of the approximate shortest path through the environment, or -1 if
-	 * no path was found. If there are obstacles, the returned length represents an upper bound due to the path
-	 * following a uniform grid within the space (taxicab geometry). TODO Use sampling method when size (number of
-	 * dimensions) > 5 or so (also dependent on maxStepSize but to a lesser extent, could base decision on pointCount).
+	 * no path was found. The returned length represents an upper bound due to the path following a uniform grid within
+	 * the space (taxicab geometry). TODO Use sampling method when size (number of dimensions) > 5 or so (also dependent
+	 * on maxStepSize but to a lesser extent, could base decision on pointCount).
 	 */
-	private double findPath() {
+	protected double findPath() {
 		if (obstacleCount == 0) {
 			return startState.getL1Distance(goalState);
 		}
@@ -248,7 +251,7 @@ public class SimpleNavigationEnvironment extends Environment {
 				point[d] = mci.getCount(d) * stepSize;
 
 			for (int o = 0; o < obstacleCount; o++) {
-				if (collision(o, pointARV)) {
+				if (obstacle[o] != null && obstacle[o].collision(pointARV)) {
 					obstacleOccludes.set(idx);
 					break;
 				}
@@ -422,11 +425,13 @@ public class SimpleNavigationEnvironment extends Environment {
 		// Draw obstacles.
 		g.setColor(Color.GRAY);
 		for (int o = 0; o < obstacleCount; o++) {
-			if (obstacleLocation[o] != null) {
-				int x = (int) Math.round((obstacleLocation[o].getEntry(0) - obstacleRadius[o]) * imageSize);
-				int y = (int) Math.round((obstacleLocation[o].getEntry(1) - obstacleRadius[o]) * imageSize);
-				int diameter = (int) Math.round(obstacleRadius[o] * 2 * imageSize);
-				g.fillOval(x, y, diameter, diameter);
+			if (obstacle[o] != null) {
+				int x = (int) Math.round(obstacle[o].corner1.getEntry(0) * imageSize);
+				int y = (int) Math.round(obstacle[o].corner1.getEntry(1) * imageSize);
+				ArrayRealVector dims = obstacle[o].getSize();
+				int width = (int) Math.round(dims.getEntry(0) * imageSize);
+				int height = (int) Math.round(dims.getEntry(1) * imageSize);
+				g.fillRect(x, y, width, height);
 			}
 		}
 	}
@@ -460,10 +465,41 @@ public class SimpleNavigationEnvironment extends Environment {
 		String out = "\t\t" + super.toString();
 		out += "\n\t\tObstacle locations and (radius):\n";
 		for (int o = 0; o < obstacleCount; o++) {
-			if (obstacleLocation[o] != null) {
-				out += "\t\t\t" + obstacleLocation[o] + " (" + obstacleRadius[o] + ")";
+			if (obstacle[o] != null) {
+				out += "\t\t\t" + obstacle[o];
 			}
 		}
 		return out;
+	}
+	
+	protected class Obstacle {
+		public ArrayRealVector corner1, corner2;
+		public Obstacle(double obstSize) {
+			ArrayRealVector dims = new ArrayRealVector(size, obstSize);
+			dims.setEntry(random.nextInt(size), maxStepSize); // Make the obstacle a line/plane.
+			corner1 = new ArrayRealVector(size);
+			for (int d = 0; d < size; d++) {
+				double start = -obstSize/2, end = 1-obstSize/2, range = end-start;
+				corner1.setEntry(d, random.nextDouble() * range + start);
+			}
+			corner2 = corner1.add(dims);
+		}
+		
+		public boolean collision(ArrayRealVector p) {
+			for (int d = 0; d < size; d++) {
+				if (p.getEntry(d) < corner1.getEntry(d) || p.getEntry(d) > corner2.getEntry(d))
+					return false;
+			}
+			return true;
+		}
+		
+		public ArrayRealVector getSize() {
+			return corner2.subtract(corner1);
+		}
+		
+		@Override
+		public String toString() {
+			return corner1 + " -> " + corner2 + " (" + getSize() + ")";
+		}
 	}
 }

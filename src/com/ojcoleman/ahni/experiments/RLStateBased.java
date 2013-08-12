@@ -140,11 +140,15 @@ public class RLStateBased extends BulkFitnessFunctionMT implements AHNIEventList
 
 	@Override
 	protected double evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
-		return evaluate(genotype, substrate, null, false, false);
+		return _evaluate(genotype, substrate, null, false, false);
 	}
 
 	@Override
-	public double evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
+	public void evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
+		_evaluate(genotype, substrate, baseFileName, logText, logImage);
+	}
+	
+	public double _evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
 		double reward = 0;
 		int solvedCount = 0;
 

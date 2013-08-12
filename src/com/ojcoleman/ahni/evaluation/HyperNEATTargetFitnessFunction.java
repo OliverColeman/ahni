@@ -71,11 +71,15 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 
 	@Override
 	protected double evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
-		return evaluate(genotype, substrate, null, false, false);
+		return _evaluate(genotype, substrate, null, false, false);
 	}
 	
 	@Override
-	public double evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
+	public void evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
+		evaluate(genotype, substrate, baseFileName, logText, logImage);
+	}
+	
+	public double _evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
 		if (baseFileName == null) {
 			TargetFitnessCalculator.Results results = fitnessCalculator.evaluate(substrate, inputPatterns, targetOutputPatterns, minTargetOutputValue, maxTargetOutputValue, null);
 			genotype.setPerformanceValue(results.performance);

@@ -136,7 +136,7 @@ public class Genotype implements Serializable {
 		while (chroms.size() < targetSize) {
 			int idx = chroms.size() % originals.size();
 			Chromosome orig = originals.get(idx);
-			Chromosome clone = new Chromosome(orig.cloneMaterial(), m_activeConfiguration.nextChromosomeId(), m_activeConfiguration.getObjectiveCount());
+			Chromosome clone = new Chromosome(orig.cloneMaterial(), m_activeConfiguration.nextChromosomeId(), orig.getObjectiveCount(), orig.getNoveltyObjectiveCount());
 			chroms.add(clone);
 			if (orig.getSpecie() != null) {
 				orig.getSpecie().add(clone);
@@ -180,7 +180,7 @@ public class Genotype implements Serializable {
 		Iterator<ChromosomeMaterial> iter = chromosomeMaterial.iterator();
 		while (iter.hasNext()) {
 			ChromosomeMaterial cMat = iter.next();
-			Chromosome chrom = new Chromosome(cMat, m_activeConfiguration.nextChromosomeId(), m_activeConfiguration.getObjectiveCount());
+			Chromosome chrom = new Chromosome(cMat, m_activeConfiguration.nextChromosomeId(), m_activeConfiguration.getObjectiveCount(), m_activeConfiguration.getNoveltyObjectiveCount());
 			m_chromosomes.add(chrom);
 		}
 	}
@@ -392,7 +392,7 @@ public class Genotype implements Serializable {
 			// Attempt to maintain species count target, don't change threshold too frequently.
 			int targetSpeciesCount = m_specParms.getSpeciationTarget();
 			int maxAdjustFreq = (int) Math.sqrt(m_activeConfiguration.getPopulationSize());
-			if (targetSpeciesCount > 0 && m_species.size() != targetSpeciesCount && (generation - lastGenChangedSpeciesCompatThreshold > maxAdjustFreq) && generation > maxAdjustFreq * 2) {
+			if (targetSpeciesCount > 0 && m_species.size() != targetSpeciesCount && (generation - lastGenChangedSpeciesCompatThreshold > maxAdjustFreq)) {
 				double ratio = (double) m_species.size() / targetSpeciesCount;
 				double factor = (ratio - 1) * 0.2 + 1;
 				m_specParms.setSpeciationThreshold(m_specParms.getSpeciationThreshold() * factor);
@@ -636,7 +636,7 @@ public class Genotype implements Serializable {
 
 		for (int i = 0; i < populationSize; i++) {
 			ChromosomeMaterial material = ChromosomeMaterial.randomInitialChromosomeMaterial(a_activeConfiguration);
-			chroms.add(new Chromosome(material, a_activeConfiguration.nextChromosomeId(), a_activeConfiguration.getObjectiveCount()));
+			chroms.add(new Chromosome(material, a_activeConfiguration.nextChromosomeId(), a_activeConfiguration.getObjectiveCount(), a_activeConfiguration.getNoveltyObjectiveCount()));
 		}
 
 		return new Genotype(props, a_activeConfiguration, chroms);

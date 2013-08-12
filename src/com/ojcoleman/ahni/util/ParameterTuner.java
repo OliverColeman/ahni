@@ -103,7 +103,7 @@ public class ParameterTuner {
 	private int[] adjustCountDown;
 	private int runLotID;
 	private Result bestResult;
-	private BufferedWriter outputFile;
+	private BufferedWriter resultFile;
 	
 	public static void main(String[] args) {
 		if (args.length == 0) {
@@ -119,9 +119,9 @@ public class ParameterTuner {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
-            	if (outputFile != null) {
+            	if (resultFile != null) {
             		try {
-						outputFile.close();
+						resultFile.close();
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -188,8 +188,8 @@ public class ParameterTuner {
 			double adjustDownVal = 0, adjustUpVal = 0;
 			runLotID = 0;
 			
-			outputFile = new BufferedWriter(new FileWriter("results.csv"));
-			outputFile.append(props.getProperty("parametertuner.totune") + ",gens, mean perf\n");
+			resultFile = new BufferedWriter(new FileWriter("results.csv"));
+			resultFile.append(props.getProperty("parametertuner.totune") + ",gens, mean perf\n");
 
 			System.out.println("Determining initial fitness with values:");
 			for (int p = 0; p < propCount; p++) {
@@ -293,7 +293,7 @@ public class ParameterTuner {
 							addResult(adjustUpResult);
 						}
 						
-						outputFile.append("\n");
+						resultFile.append("\n");
 						
 						// If the fitness was increased by an adjustment.
 						if (currentBestVals[p] != newVal) {
@@ -334,7 +334,7 @@ public class ParameterTuner {
 					adjustCountDownZeroExists |= adjustCountDown[p] == 0;
 				}
 				
-				outputFile.append("\n");
+				resultFile.append("\n");
 
 				System.out.println("\nFinished iteration. Best result is " + bestResult + ". Current best values are:");
 				for (int p = 0; p < propCount; p++) {
@@ -359,8 +359,8 @@ public class ParameterTuner {
 				if (triedAtLeastOneParamAdjustment) {
 					if (noImprovement) {
 						stagnantCount++;
-						// Finish if no improvement after 5 iterations.
-						if (stagnantCount > 5) {
+						// Finish if no improvement after 3 iterations.
+						if (stagnantCount > 3) {
 							break;
 						}
 					}
@@ -376,7 +376,7 @@ public class ParameterTuner {
 			}
 			System.out.println("num.generations=" + numGens);
 			
-			outputFile.close();
+			resultFile.close();
 			
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -402,10 +402,10 @@ public class ParameterTuner {
 	private void addResult(Result r) {
 		try {
 			for (int p = 0; p < propCount; p++) {
-				outputFile.append(r.getProps().get(this.propsToTune[p]) + ", ");
+				resultFile.append(r.getProps().get(this.propsToTune[p]) + ", ");
 			}
-			outputFile.append(numGens + ", " + r.performance() + "\n");
-			outputFile.flush();
+			resultFile.append(numGens + ", " + r.performance() + "\n");
+			resultFile.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -461,9 +461,9 @@ public class ParameterTuner {
 			}
 		}
 		
-		String mainJAR = this.getClass().getProtectionDomain().getCodeSource().getLocation().getFile();
+		String mainJAR = this.getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
 		mainJAR = URLDecoder.decode(mainJAR, "UTF-8");
-		String jarFiles = condorSubmit.containsKey("jar_files") ? condorSubmit.get("jar_files") + "," : "";
+		String jarFiles = condorSubmit.containsKey("jar_files") ? condorSubmit.get("jar_files") + " " : "";
 		jarFiles += mainJAR;
 		
 		condorSubmit.put("universe", "java");

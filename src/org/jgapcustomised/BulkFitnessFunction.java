@@ -47,12 +47,22 @@ public abstract class BulkFitnessFunction implements Serializable {
 	
 	/**
 	 * @return Returns the number of objectives being employed. This is only valid for fitness functions and 
-	 * {@link NaturalSelector}s that handle multiple objectives. This default implementation returns 1. 
+	 * {@link NaturalSelector}s that handle multiple objectives. This default implementation returns 1. NOTE:
+	 * the returned value should include the number of regular fitness objectives PLUS the number of novelty
+	 * objectives (see {@link #getNoveltyObjectiveCount()}).
 	 */
 	public int getObjectiveCount() {
 		return 1;
 	}
-
+	
+	/**
+	 * @return Returns the number of novelty objectives being employed. This is only valid for fitness functions 
+	 * that define novelty behaviours. This default implementation returns 0.
+	 */
+	public int getNoveltyObjectiveCount() {
+		return 0;
+	}
+	
 	public abstract void dispose();
 
 	/**

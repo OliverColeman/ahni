@@ -19,7 +19,7 @@ import com.ojcoleman.ahni.util.ArrayUtil;
  * evaluations on multiple genomes. The methods {@link #evaluate(Chromosome, Activator, int)} must be implemented in
  * subclasses. Subclasses may also need to override the methods {@link #init(Properties)},
  * {@link #initialiseEvaluation()}, {@link #finaliseEvaluation()}, {@link #postEvaluate(Chromosome, Activator, int)},
- * {@link #fitnessObjectivesCount()}, {@link #definesNoveltyObjective()}, {@link #scale(int, int, HyperNEATTranscriber)} and
+ * {@link #fitnessObjectivesCount()}, {@link #noveltyObjectiveCount()}, {@link #scale(int, int, HyperNEATTranscriber)} and
  * {@link #dispose()}.
  * </p>
  * 

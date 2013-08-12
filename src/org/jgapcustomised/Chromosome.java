@@ -89,11 +89,11 @@ public class Chromosome implements Comparable, Serializable {
 	public double novelty = 0;
 
 	/**
-	 * May be used by implementations of novelty search. A list is used so that one or more behaviours may be stored.
+	 * May be used by implementations of novelty search. An array is used so that multiple behaviours may be defined.
 	 * 
 	 * @see com.ojcoleman.ahni.evaluation.novelty.NoveltySearch
 	 */
-	public ArrayList<Behaviour> behaviour = new ArrayList<Behaviour>(0);
+	public Behaviour[] behaviours;
 
 	/**
 	 * Used by selection algorithms to store a value representing how crowded the fitness space is relative to other
@@ -106,16 +106,19 @@ public class Chromosome implements Comparable, Serializable {
 	 * ctor for hibernate
 	 */
 	private Chromosome() {
-		this(1);
+		this(1, 0);
 	}
 
 	/**
 	 * ctor for hibernate
 	 */
-	private Chromosome(int objectiveCount) {
+	private Chromosome(int objectiveCount, int behaviourCount) {
 		m_material = new ChromosomeMaterial();
 		m_fitnessValue = new double[objectiveCount];
 		Arrays.fill(m_fitnessValue, Double.NaN);
+		if (behaviourCount > 0) {
+			behaviours = new Behaviour[behaviourCount];
+		}
 	}
 
 	/**
@@ -125,7 +128,7 @@ public class Chromosome implements Comparable, Serializable {
 	 * @param a_material Genetic material to be contained within this Chromosome instance.
 	 * @param an_id unique ID of new chromosome
 	 */
-	public Chromosome(ChromosomeMaterial a_material, Long an_id, int objectiveCount) {
+	public Chromosome(ChromosomeMaterial a_material, Long an_id, int objectiveCount, int behaviourCount) {
 		// Sanity checks: make sure the parameters are all valid.
 		if (a_material == null)
 			throw new IllegalArgumentException("Chromosome material can't be null.");
@@ -136,6 +139,9 @@ public class Chromosome implements Comparable, Serializable {
 		associateAllelesWithChromosome();
 		m_fitnessValue = new double[objectiveCount];
 		Arrays.fill(m_fitnessValue, Double.NaN);
+		if (behaviourCount > 0) {
+			behaviours = new Behaviour[behaviourCount];
+		}
 	}
 
 	private void associateAllelesWithChromosome() {
@@ -324,18 +330,20 @@ public class Chromosome implements Comparable, Serializable {
 
 	
 	/**
-	 * Resets the performance, fitness value(s) and recorded novelty behaviour(s) of this Chromosome.
+	 * Resets the performance, fitness value(s) and recorded novelty behaviours(s) of this Chromosome.
 	 */
 	public void resetEvaluationData() {
 		if (!isEvaluationDataStable()) {
 			resetPerformanceValue();
 			resetFitnessValues();
-			behaviour.clear();
+			if (behaviours != null) {
+				Arrays.fill(behaviours, null);
+			}
 		}
 	}
 	
 	/**
-	 * Indicate that the evaluation data (e.g. fitness, performance, behaviour) is stable: it won't change in future evaluations.
+	 * Indicate that the evaluation data (e.g. fitness, performance, behaviours) is stable: it won't change in future evaluations.
 	 * This only has an effect if the fitness function pays attention to this value, and the effect that it has may vary between implementations.
 	 */
 	public void setEvaluationDataStable() {
@@ -493,6 +501,10 @@ public class Chromosome implements Comparable, Serializable {
 
 	public int getObjectiveCount() {
 		return m_fitnessValue.length;
+	}
+
+	public int getNoveltyObjectiveCount() {
+		return behaviours == null ? 0 : behaviours.length;
 	}
 
 	/**

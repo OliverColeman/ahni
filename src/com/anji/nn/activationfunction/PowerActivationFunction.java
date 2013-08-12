@@ -1,16 +1,15 @@
 package com.anji.nn.activationfunction;
 
 /**
- * Divide activation function (divides first input by second input).
+ * Square-root function.
  * 
  * @author Oliver Coleman
  */
-public class DivideActivationFunction implements ActivationFunction, ActivationFunctionNonIntegrating {
-
+public class PowerActivationFunction implements ActivationFunction, ActivationFunctionNonIntegrating {
 	/**
 	 * identifying string
 	 */
-	public final static String NAME = "divide";
+	public final static String NAME = "power";
 
 	/**
 	 * @see Object#toString()
@@ -22,7 +21,7 @@ public class DivideActivationFunction implements ActivationFunction, ActivationF
 	/**
 	 * This class should only be accessd via ActivationFunctionFactory.
 	 */
-	DivideActivationFunction() {
+	PowerActivationFunction() {
 		// no-op
 	}
 
@@ -35,15 +34,13 @@ public class DivideActivationFunction implements ActivationFunction, ActivationF
 	}
 
 	/**
-	 * Return first input divided by second input (or just first input if no second input).
+	 * Return first input raised to the power of the absolute value of the second input (or just first input if no second input).
 	 */
 	@Override
 	public double apply(double[] input, double bias) {
 		if (input.length < 2)
 			return input[0];
-		if (input[1] == 0)
-			return Float.MAX_VALUE * Math.signum(input[0]);
-		double v = input[0] / input[1];
+		double v = Math.pow(input[0], Math.abs(input[1]));
 		return Double.isNaN(v) ? 0 : v;
 	}
 
@@ -51,20 +48,20 @@ public class DivideActivationFunction implements ActivationFunction, ActivationF
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMaxValue()
 	 */
 	public double getMaxValue() {
-		return Float.MAX_VALUE;
+		return Double.MAX_VALUE;
 	}
 
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */
 	public double getMinValue() {
-		return 0;
+		return -Double.MAX_VALUE;
 	}
 
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#cost()
 	 */
 	public long cost() {
-		return 42;
+		return 75;
 	}
 }

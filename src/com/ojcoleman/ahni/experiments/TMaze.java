@@ -211,11 +211,16 @@ public class TMaze extends BulkFitnessFunctionMT {
 
 	@Override
 	protected double evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
-		return evaluate(genotype, substrate, null, false, false);
+		return _evaluate(genotype, substrate, null, false, false);
 	}
 
 	@Override
-	public double evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
+	public void evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
+		_evaluate(genotype, substrate, baseFileName, logText, logImage);
+	}	
+		
+	
+	public double _evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
 		try {
 			NiceWriter logOutput = !logText ? null : new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
 			StringBuilder logSummary = logOutput == null ? null : new StringBuilder();

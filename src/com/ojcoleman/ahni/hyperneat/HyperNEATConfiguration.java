@@ -236,17 +236,17 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 				sample = NeatChromosomeUtility.newSampleChromosomeMaterial(stimulusSize, props.getShortProperty(INITIAL_TOPOLOGY_NUM_HIDDEN_NEURONS_KEY, DEFAULT_INITIAL_HIDDEN_SIZE), responseSize, this, props.getBooleanProperty(INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, true));
 			}
 			setSampleChromosomeMaterial(sample);
-			
-			if (enableLogFiles) {
-				try {
-					Transcriber cppnTranscriber = (Transcriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
-					Activator n = cppnTranscriber.transcribe(new Chromosome(sample, 0L, getObjectiveCount()));
-					BufferedWriter outputfile = new BufferedWriter(new FileWriter(getOutputDirPath() + "initial-sample-chromosome.txt"));
-					outputfile.write(n.toXml());
-					outputfile.close();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+		}
+		
+		if (enableLogFiles) {
+			try {
+				Transcriber cppnTranscriber = (Transcriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
+				Activator n = cppnTranscriber.transcribe(new Chromosome(getSampleChromosomeMaterial(), 0L, 0, 0));
+				BufferedWriter outputfile = new BufferedWriter(new FileWriter(getOutputDirPath() + "initial-sample-chromosome.txt"));
+				outputfile.write(n.toXml());
+				outputfile.close();
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
 		
