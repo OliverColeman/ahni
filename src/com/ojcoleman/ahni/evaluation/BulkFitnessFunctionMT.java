@@ -335,7 +335,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 				System.out.println(ignore);
 			}
 		}
-
+		
 		if (noveltyArchives != null) {
 			// Evaluate novelty over all individuals (this must be done after fitness/performance evaluation so that
 			// we have the behaviour record of every individual in the population.
@@ -410,7 +410,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 
 	/**
 	 * For fitness functions that define multiple fitness objectives (see {@link #fitnessObjectivesCount()}) and/or
-	 * behaviours for novelty search (see {@link #definesNoveltyObjective()}), evaluate an individual genotype over all
+	 * behaviours for novelty search (see {@link #noveltyObjectiveCount()}), evaluate an individual genotype over all
 	 * of these objectives. This default implementation simply calls {@link #evaluate(Chromosome, Activator, int)}. If
 	 * the fitness function defines a performance value then this method should call
 	 * {@link Chromosome#setPerformanceValue(double)}. In a multi-objective set-up (see {@link #MULTI_KEY}) only the

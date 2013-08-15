@@ -1,6 +1,5 @@
 package com.ojcoleman.ahni.experiments.objectrecognition;
 
-
 import java.awt.geom.AffineTransform;
 import java.util.HashMap;
 
@@ -17,7 +16,9 @@ import com.ojcoleman.ahni.nn.GridNet;
 import com.ojcoleman.ahni.transcriber.HyperNEATTranscriber;
 
 /**
- * Determines fitness based on how close <code>Activator</code> output is to a target.
+ * Corresponds to tasks 1.1 and 1.2 in Oliver J. Coleman, "Evolving Neural Networks for Visual Processing",
+ * Undergraduate Honours Thesis (Bachelor of Computer Science), 2010. The number of small squares is hard coded in
+ * variable numSmallSquares.
  */
 public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction {
 	private static Logger logger = Logger.getLogger(ObjectRecognitionFitnessFunction2.class);
@@ -48,16 +49,10 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 		int maxXDelta = inputWidth - deltaAdjust;
 		int maxYDelta = inputHeight - deltaAdjust;
 		double maxDistance = (double) Math.sqrt(maxXDelta * maxXDelta + maxYDelta * maxYDelta);
-		maxFitnessValue = (int) Math.ceil(maxDistance * 1000); // fitness is given by maxFitnessValue - avg of distances
-																// * 1000
+		maxFitnessValue = (int) Math.ceil(maxDistance * 100000); // fitness is given by maxFitnessValue - avg of distances
+																// * 100000
 	}
 
-	/**
-	 * Iterates through chromosomes. For each, transcribe it to an <code>Activator</code> and present the stimuli to the
-	 * activator. The stimuli are presented in random order to ensure the underlying network is not memorizing the
-	 * sequence of inputs. Calculation of the fitness based on error is delegated to the subclass. This method adjusts
-	 * fitness for network size, based on configuration.
-	 */
 	public void initialiseEvaluation() {
 		// generate trials
 		stimuli = new double[numTrials][inputHeight][inputWidth];
@@ -88,11 +83,15 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 			}
 		}
 	}
-	
+
+	/**
+	 * Evaluate given individual by presenting the stimuli to the network in a random order to ensure the underlying
+	 * network is not memorising the sequence of inputs. Calculation of the fitness based on error is delegated to the
+	 * subclass. This method adjusts fitness for network size, based on configuration.
+	 */
 	protected double evaluate(Chromosome genotype, Activator activator, int threadIndex) {
 		double[][][] responses = activator.nextSequence(stimuli);
 
-		int totalSqrDists = 0;
 		double totalDists = 0;
 		for (int t = 0; t < numTrials; t++) {
 			// find output with highest response
@@ -110,11 +109,11 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 			int deltaX = xh - targetCoords[t][0];
 			int deltaY = yh - targetCoords[t][1];
 			int sqrDist = deltaX * deltaX + deltaY * deltaY;
-			totalSqrDists += sqrDist;
 			totalDists += Math.sqrt(sqrDist);
 		}
-		double fitness = (maxFitnessValue - (totalDists / numTrials) * 1000) / maxFitnessValue;
+		double fitness = (maxFitnessValue - (totalDists / numTrials) * 100000) / maxFitnessValue;
 		genotype.setPerformanceValue(fitness);
+		//if (fitness > 0.85) System.err.println((totalDists / numTrials) + " : " + fitness);
 		return fitness;
 	}
 
@@ -127,7 +126,7 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 		int[] width = transcriber.getWidth();
 		int[] height = transcriber.getWidth();
 		int connectionRange = transcriber.getConnectionRange();
-		
+
 		// get ratio of shape size to image size (this should be maintained during scale).
 		double ratioW = (double) inputWidth / largeSquareSize;
 		double ratioH = (double) inputHeight / largeSquareSize;
@@ -143,14 +142,14 @@ public class ObjectRecognitionFitnessFunction2 extends HyperNEATFitnessFunction 
 			height[l] = (int) Math.round(largeSquareSize * ratioH);
 		}
 		connectionRange = largeSquareSize / 2;
-		
+
 		inputWidth = width[0];
 		inputHeight = height[0];
 		outputWidth = width[width.length - 1];
 		outputHeight = height[height.length - 1];
-		
+
 		transcriber.resize(width, height, connectionRange);
-		
+
 		setMaxFitnessValue();
 
 		logger.info("Scale performed: image size: " + inputWidth + "x" + inputHeight + ", large square size: " + largeSquareSize + ", conn range: " + connectionRange);

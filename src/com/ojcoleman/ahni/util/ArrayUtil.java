@@ -354,7 +354,7 @@ public class ArrayUtil {
 		}
 		return Math.sqrt(dist);
 	}
-
+	
 	/**
 	 * Creates a new array containing every integer value in the range [0, size) in a random order.
 	 * All permutations occur with equal likelihood assuming that the source of randomness is fair.

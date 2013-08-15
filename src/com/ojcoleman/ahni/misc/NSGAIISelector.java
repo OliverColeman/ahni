@@ -213,21 +213,6 @@ public class NSGAIISelector extends NaturalSelector implements Configurable {
 
 		return result;
 	}
-	
-	/**
-	 * Make sure population-wide best performing is included in list.
-	 */
-	private void ensureHighestPerformingIncluded(Species s, List<Chromosome> list) {
-		if (s.containsBestPerforming) {
-			if (!list.contains(bestPerforming)) {
-				if (!list.isEmpty()) {
-					// Remove lowest ranked so list size is maintained.
-					list.remove(list.size()-1);
-				}
-				list.add(bestPerforming);
-			}
-		}
-	}
 
 	/**
 	 * This method should not be used, only the {@link #select(Configuration)} method should be used. An

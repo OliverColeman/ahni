@@ -102,7 +102,7 @@ public class WeightedRouletteSelector extends NaturalSelector {
 			m_wheel.put(a_chromosomeToAdd, counter);
 		}
 
-		m_totalNumberOfUsedSlots += a_chromosomeToAdd.getSpeciatedFitnessValue();
+		m_totalNumberOfUsedSlots += (int) (a_chromosomeToAdd.getSpeciatedFitnessValue() * 1000000);
 	}
 
 	/**

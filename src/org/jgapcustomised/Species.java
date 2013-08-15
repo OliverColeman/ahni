@@ -325,18 +325,10 @@ public class Species {
 	 */
 	public List<Chromosome> getElite(double proportion, int minToSelect, Chromosome bestPerforming) {
 		eliteCount = 0;
-
-		int numToSelect = Math.max(minToSelect, (int) Math.round(proportion * size()));
-		if (numToSelect == 0)
-			return new ArrayList<Chromosome>(0);
-
+		int numToSelect = Math.max(minToSelect, (int) Math.round(proportion * size())) - (bestPerforming != null ? 1 : 0);
+		
 		Collections.sort(chromosomes, new ChromosomeFitnessComparator(false /* asc */, false /* speciated fitness */));
 		List<Chromosome> result = new ArrayList<Chromosome>(numToSelect);
-		
-		// Make sure we include the population-wide best performing in the elites.
-		if (bestPerforming != null) {
-			result.add(bestPerforming);
-		}
 		
 		Iterator<Chromosome> it = chromosomes.iterator();
 		// get numToSelect elites
@@ -351,6 +343,14 @@ public class Species {
 			Chromosome c = it.next();
 			c.isElite = false;
 		}
+		
+		// Make sure we include the population-wide best performing in the elites.
+		if (bestPerforming != null) {
+			bestPerforming.isElite=true;
+			result.add(bestPerforming);
+			eliteCount++;
+		}
+		
 		return result;
 	}
 

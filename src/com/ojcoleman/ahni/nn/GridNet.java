@@ -61,7 +61,7 @@ public class GridNet implements Activator {
 	 * 
 	 * @param connectionMaxRanges The maximum length/range of connections in either direction in the x, y and z axes.
 	 *            The array has format [z=0|y=1|x=2],[negative=0|positive=1] = max range. For example a standard
-	 *            feed-forward network with width W (x-axis), height H (y-axis) and depth D (z-axis) would be described:
+	 *            feed-forward network with width W (x-axis), height H (y-axis) and depth DISCRETE (z-axis) would be described:
 	 *            {{-1, 1}, {H, H}, {W, W}}, where -1 for the negative direction for the z-axis indicates that
 	 *            connections may not go from layer n to layer &lt; n.
 	 * @param weights The connection weights of the network between each neuron, where neurons are specfied by their

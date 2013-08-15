@@ -103,7 +103,10 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 						if (enableBias) {
 							cppn.setSourceCoordinatesFromGridIndices(tx, ty, tz);
 							cppn.query();
-							int cppnOutputIndex = layerEncodingIsInput ? 0 : tz-1; 						
+							int cppnOutputIndex = layerEncodingIsInput ? 0 : tz-1;
+							bias[tz - 1][ty][tx] = cppn.getRangedBiasWeight(cppnOutputIndex);
+									
+							/* below now handled by getRangedBiasWeight
 							double biasVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getBiasWeight(cppnOutputIndex)));
 							if (Math.abs(biasVal) > connectionExprThresh) {
 								if (biasVal > 0)
@@ -115,6 +118,7 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 							} else {
 								bias[tz - 1][ty][tx] = 0;
 							}
+							*/
 						}
 
 						// calculate dimensions of this weight target matrix
@@ -143,7 +147,11 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 								cppn.query();
 
 								// Determine weight for synapse from source to target.
-								int cppnOutputIndex = layerEncodingIsInput ? 0 : tz-1; 
+								int cppnOutputIndex = layerEncodingIsInput ? 0 : tz-1;
+								
+								w[wy][wx] = cppn.getLEO(cppnOutputIndex) ? cppn.getRangedWeight(cppnOutputIndex) : 0;
+								
+								/* below now handled by getRangedWeight
 								double weightVal = Math.min(connectionWeightMax, Math.max(connectionWeightMin, cppn.getWeight(cppnOutputIndex)));
 								
 								if (enableLEO) {
@@ -160,6 +168,7 @@ public class HyperNEATTranscriberGridNet extends HyperNEATTranscriber {
 									weightVal = 0;
 								}
 								w[wy][wx] = weightVal;
+								*/
 								// System.out.print("\t" + w[wy][wx]);
 							}
 							// System.out.println();

@@ -12,7 +12,6 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
-
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
@@ -32,6 +31,10 @@ import com.ojcoleman.ahni.nn.GridNet;
 import com.ojcoleman.ahni.transcriber.HyperNEATTranscriber;
 import com.ojcoleman.ahni.transcriber.HyperNEATTranscriberGridNet;
 
+/**
+ * Corresponds to task 1.3 in Oliver J. Coleman, "Evolving Neural Networks for Visual Processing", Undergraduate Honours
+ * Thesis (Bachelor of Computer Science), 2010
+ */
 public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction {
 	public static final String SHAPE_SIZE_KEY = "or.shapesize";
 	public static final String SHAPE_TYPE_KEY = "or.shapetype";
@@ -84,11 +87,12 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
 	public void init(Properties props) {
 		super.init(props);
 
+		String imageDir = props.getProperty("output.dir", null);
 		shapeSize = props.getIntProperty(SHAPE_SIZE_KEY, shapeSize);
 		shapeType = props.getProperty(SHAPE_TYPE_KEY, shapeType);
 		numEdges = props.getIntProperty(NUM_EDGES_KEY, numEdges);
 		numNonTargetShapesShown = props.getIntProperty(NUM_SHOWN_KEY, numNonTargetShapesShown);
-		saveImages = props.getBooleanProperty(SAVE_IMAGES_KEY, saveImages);
+		saveImages = imageDir != null ? props.getBooleanProperty(SAVE_IMAGES_KEY, saveImages) : false;
 		numShapesInLib = props.getIntProperty(NUM_SHAPES_KEY, numShapesInLib);
 		targetIndex = props.getIntProperty(TARGET_INDEX_KEY, targetIndex);
 
@@ -117,7 +121,6 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
 		if (saveImages) {
 			// create unique directory for images for this run
 			// String imageDir = this.getClass().getName() + File.separatorChar + System.currentTimeMillis();
-			String imageDir = props.getProperty("output.dir");
 			System.out.println("image dir: " + imageDir);
 			shapesImageDir = imageDir + File.separatorChar + "shapes";
 			trialsImageDir = imageDir + File.separatorChar + "trials";
@@ -492,7 +495,7 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
 		int[] width = transcriber.getWidth();
 		int[] height = transcriber.getWidth();
 		int connectionRange = transcriber.getConnectionRange();
-		
+
 		// get ratio of shape size to image size (this should be maintained during scale).
 		double ratioW = (double) inputWidth / shapeSize;
 		double ratioH = (double) inputHeight / shapeSize;
@@ -512,12 +515,12 @@ public class ObjectRecognitionFitnessFunction3 extends HyperNEATFitnessFunction 
 		AffineTransform scaleTransform = AffineTransform.getScaleInstance(scaleFactor, scaleFactor);
 		for (int s = 0; s < numShapesInLib; s++)
 			shapes[s].transform(scaleTransform);
-		
+
 		inputWidth = width[0];
 		inputHeight = height[0];
 		outputWidth = width[width.length - 1];
 		outputHeight = height[height.length - 1];
-		
+
 		transcriber.resize(width, height, connectionRange);
 
 		logger.info("Scale performed: image size: " + inputWidth + "x" + inputHeight + ", shape size: " + shapeSize + ", conn range: " + connectionRange);

@@ -27,6 +27,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import com.ojcoleman.ahni.misc.NSGAII;
+
 /**
  * Natural selectors are responsible for actually selecting a specified number of Chromosome specimens from a
  * population, using the fitness values as a guide. Usually fitness is treated as a statistic probability of survival,
@@ -60,15 +62,13 @@ public abstract class NaturalSelector {
 		this.bestPerforming = bestPerforming;
 		
 		// determine elites for each species
-		Iterator<Species> speciesIter = species.iterator();
-		while (speciesIter.hasNext()) {
-			Species s = speciesIter.next();
+		for (Species s : species) {
 			if (s.containsBestPerforming || 
-					(elitismProportion > 0 || elitismMinToSelect > 0) &&
+					((elitismProportion > 0 || elitismMinToSelect > 0) &&
 					s.size() >= elitismMinSpeciesSize &&
-					(species.size() == 1 || s.getStagnantGenerationsCount() < maxStagnantGenerations || s.getAge() < minAge)) {
-				List<Chromosome> elites = s.getElite(elitismProportion, elitismMinToSelect, bestPerforming.getSpecie() == s ? bestPerforming : null);
-				elite.addAll(elites);
+					(species.size() == 1 || s.getStagnantGenerationsCount() < maxStagnantGenerations || s.getAge() < minAge))) {
+				List<Chromosome> speciesElite = s.getElite(elitismProportion, elitismMinToSelect, s.containsBestPerforming ? bestPerforming : null);
+				elite.addAll(speciesElite);
 			}
 		}
 		
@@ -207,5 +207,20 @@ public abstract class NaturalSelector {
 
 	public void setMinAge(int minAge) {
 		this.minAge = minAge;
+	}
+	
+	/**
+	 * Make sure population-wide best performing is included in list.
+	 */
+	protected void ensureHighestPerformingIncluded(Species s, List<Chromosome> list) {
+		if (s.containsBestPerforming) {
+			if (!list.contains(bestPerforming)) {
+				if (!list.isEmpty()) {
+					// Remove lowest ranked so list size is maintained.
+					list.remove(list.size()-1);
+				}
+				list.add(bestPerforming);
+			}
+		}
 	}
 }

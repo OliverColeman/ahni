@@ -28,7 +28,7 @@ public class Properties extends com.anji.util.Properties {
 	/**
 	 * Creates a new Properties initialised with the given properties.
 	 */
-	public Properties(Properties values) {
+	public Properties(com.anji.util.Properties values) {
 		super(values);
 	}
 

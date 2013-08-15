@@ -11,7 +11,6 @@ import java.util.Vector;
 
 import javax.imageio.ImageIO;
 
-
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
 
@@ -27,6 +26,10 @@ import com.ojcoleman.ahni.nn.GridNet;
 import com.ojcoleman.ahni.transcriber.HyperNEATTranscriber;
 import com.ojcoleman.ahni.transcriber.HyperNEATTranscriberGridNet;
 
+/**
+ * Corresponds to task 1.4 in Oliver J. Coleman, "Evolving Neural Networks for Visual Processing", Undergraduate Honours
+ * Thesis (Bachelor of Computer Science), 2010
+ */
 public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction {
 	public static final String SHAPE_SIZE_KEY = "or.shapesize";
 	public static final String SHAPE_TYPE_KEY = "or.shapetype";
@@ -297,8 +300,8 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 			// canvas.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			/*
 			 * //randomly place target pos.x = random.nextInt(inputWidth-shapeSize+1); pos.y =
-			 * random.nextInt(inputHeight-shapeSize+1); drawShape(canvas, pos, target); targetCoords[t] = new Point(pos.x
-			 * + shapeSize/2, pos.y + shapeSize/2); //assumes odd size
+			 * random.nextInt(inputHeight-shapeSize+1); drawShape(canvas, pos, target); targetCoords[t] = new
+			 * Point(pos.x + shapeSize/2, pos.y + shapeSize/2); //assumes odd size
 			 * 
 			 * //randomly place other shapes so they don't overlap the target Path2D.Float shape; for (int s = 0; s <
 			 * numNonTargetShapesShown; s++) { //select a non-target shape do { shape =
@@ -356,14 +359,13 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 	}
 
 	protected double evaluate(Chromosome genotype, Activator activator, int threadIndex) {
-		GridNet substrate = (GridNet) activator;
-		double[][][] responses = substrate.nextSequence(stimuli);
+		double[][][] responses = activator.nextSequence(stimuli);
 		/*
 		 * double avgDist = 0; double avgInvDist = 0; double percentCorrect = 0; double wsose = 0; for (int t = 0; t <
 		 * numTrials; t++) { double targetOutputError = 0; //for wsoe double nonTargetOutputError = 0; //for wsoe
 		 * 
-		 * Point highest = new Point(0, 0); for (int y = 0; y < inputHeight; y++) { for (int x = 0; x < inputWidth; x++) {
-		 * //find output with highest response if (responses[t][y][x] > responses[t][highest.y][highest.x])
+		 * Point highest = new Point(0, 0); for (int y = 0; y < inputHeight; y++) { for (int x = 0; x < inputWidth; x++)
+		 * { //find output with highest response if (responses[t][y][x] > responses[t][highest.y][highest.x])
 		 * highest.setLocation(x, y);
 		 * 
 		 * //calculate wsose error if (y == targetCoords[t].y && x == targetCoords[t].x) targetOutputError = (double)
@@ -418,19 +420,20 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 			bestPerformanceSoFar = performance;
 		if (fitness >= nextNoteworthyFitness) {
 			bestFitnessSoFar = fitness;
-			System.out.println("next noteworthy fitness: " + (bestFitnessSoFar + (1 - bestFitnessSoFar) * nextNoteworthyFitnessFactor));
+			//System.out.println("next noteworthy fitness: " + (bestFitnessSoFar + (1 - bestFitnessSoFar) * nextNoteworthyFitnessFactor));
 		}
 		if (percentCorrect > bestPCSoFar)
 			bestPCSoFar = percentCorrect;
 
-		if (saveImagesNow) {
+		if (saveImagesNow && activator instanceof GridNet) {
+			GridNet substrate = (GridNet) activator;
 			System.out.println("saving images for " + genotype.getId() + ", performance: " + performance + ", fitness: " + fitness);
 
 			printedFirst = true;
 
 			double weightRange = connectionWeightMax - connectionWeightMin;
 			int connectionRange = getConnectionRange();
-			
+
 			HyperNEATTranscriber transcriber = (HyperNEATTranscriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
 			int depth = transcriber.getDepth();
 			int[] width = transcriber.getWidth();
@@ -586,12 +589,12 @@ public class ObjectRecognitionFitnessFunction4 extends HyperNEATFitnessFunction 
 		AffineTransform scaleTransform = AffineTransform.getScaleInstance(scaleFactor, scaleFactor);
 		for (int s = 0; s < numShapesInLib; s++)
 			shapes[s].transform(scaleTransform);
-		
+
 		inputWidth = width[0];
 		inputHeight = height[0];
 		outputWidth = width[width.length - 1];
 		outputHeight = height[height.length - 1];
-		
+
 		transcriber.resize(width, height, connectionRange);
 
 		logger.info("Scale performed: layer sizes: " + layerSizeString + "shape size: " + shapeSize + ", conn range: " + connectionRange);

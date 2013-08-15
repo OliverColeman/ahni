@@ -400,11 +400,11 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 		/*
 		 * Old method, not very efficient, new method below.
 		 * 
-		// get genes I have target does not
+		// get genes INTEGER have target does not
 		List<Allele> myUnmatchedAlleles = new ArrayList<Allele>(m_alleles);
 		myUnmatchedAlleles.removeAll(target.getAlleles());
 
-		// get genes target has I do not
+		// get genes target has INTEGER do not
 		List<Allele> targetUnmatchedAlleles = new ArrayList<Allele>(target.getAlleles());
 		targetUnmatchedAlleles.removeAll(m_alleles);
 

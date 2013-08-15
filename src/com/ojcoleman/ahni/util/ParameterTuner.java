@@ -10,12 +10,21 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.management.ManagementFactory;
+import java.lang.reflect.Array;
 import java.net.URLDecoder;
+import java.text.DateFormat;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -23,6 +32,7 @@ import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -81,27 +91,25 @@ import com.ojcoleman.ahni.hyperneat.Run;
 public class ParameterTuner {
 	public static final double significanceFactor = 1.01;
 	private static final DecimalFormat nf = new DecimalFormat("0.00000");
+	private static final DateFormat df = new SimpleDateFormat("HH:mm:ss");
+	
 	
 	private ArrayList<String> runningCondorClusterIDs = new ArrayList<String>();
 	private Properties props;
 
-	private String[] propsToTune;
+	private Param[] propsToTune;
+	private Param.Value[] currentBestValues;
 	private int propCount;
-	private double[] currentBestVals;
-	private String[] types;
-	private double[] minValues;
-	private double[] maxValues;
 	private int numGens;
 	private int popSize;
 	private int totalEvaluations;
 	private int maxIterations;
-	private double valAdjustFactor;
 	private int numRuns;
 	private double solvedPerformance;
 	private String htCondorTpl;
 	private int[] adjustIneffectiveCount;
 	private int[] adjustCountDown;
-	private int runLotID;
+	private volatile int runLotID;
 	private Result bestResult;
 	private BufferedWriter resultFile;
 	
@@ -142,32 +150,64 @@ public class ParameterTuner {
 	public void go(String[] args) {
 		try {
 			props = new Properties(args[0]);
-			propsToTune = props.getProperty("parametertuner.totune").replaceAll("\\s", "").split(",");
-			propCount = propsToTune.length;
-			currentBestVals = props.getDoubleArrayProperty("parametertuner.initialvalues");
-			types = props.getStringArrayProperty("parametertuner.types", ArrayUtil.newArray(propCount, "f"));
-			minValues = props.getDoubleArrayProperty("parametertuner.minvalues", ArrayUtil.newArray(propCount, -Double.MAX_VALUE));
-			maxValues = props.getDoubleArrayProperty("parametertuner.maxvalues", ArrayUtil.newArray(propCount, Double.MAX_VALUE));
-			numGens = props.getIntProperty("parametertuner.numgens", 500);
-			popSize = props.getIntProperty("popul.size");
 			
-			for (int i = 0; i < propCount; i++) {
-				if (types[i].equals("b")) {
-					if (minValues[i] < 0) minValues[i] = 0;
-					if (maxValues[i] > 1) maxValues[i] = 1;
+			Properties toTune = new Properties(props.getOnlySubProperties("parametertuner.tune"));
+			TreeMap<Integer, Param> propsTemp = new TreeMap<Integer, Param>();
+			TreeMap<Integer, Param.Value> initValTemp = new TreeMap<Integer, Param.Value>();
+			for (String key : toTune.stringPropertyNames()) {
+				if (!key.endsWith(".prop"))
+					continue;
+				
+				int propIndex = Integer.parseInt(key.substring(0, key.length() - 5));
+				String keyPrefix = propIndex + ".";
+				
+				String propName = toTune.getProperty(keyPrefix + "prop");
+				Param.Type propType = Param.Type.valueOf(toTune.getProperty(keyPrefix + "type", "float").toUpperCase());
+				Param.AdjustType adjustType = Param.AdjustType.valueOf(toTune.getProperty(keyPrefix + "adjust.type", "factor").toUpperCase());
+				double adjustAmountOrFactor = toTune.getDoubleProperty(keyPrefix + "adjust.amount", 2);
+				
+				if (propType != Param.Type.DISCRETE && adjustType == Param.AdjustType.ALL) {
+					throw new IllegalArgumentException("ParameterTuner: cannot use \"ALL\" adjust type for non-discrete property type for " + propName + ".");					
 				}
 				
-				if (propsToTune[i].equals("popul.size")) {
-					popSize = (int) Math.round(currentBestVals[i]);
+				Param param = null;
+				if (propType == Param.Type.DISCRETE) {
+					String[] discreteVals = toTune.getProperty(keyPrefix + "discrete_values").split("\\s*;\\s*");
+					//String prop, String type, int adjustType, double adjustAmountOrFactor, String[] discreteVals
+					param = new Param(propName, propType, adjustType, adjustAmountOrFactor, discreteVals);
+				}
+				else {
+					//String name, String type, int adjustType, double adjustAmountOrFactor, double min, double max
+					double min = toTune.getDoubleProperty(keyPrefix + "min", propType == Param.Type.FLOAT ? 0 : 1);
+					double max = toTune.getDoubleProperty(keyPrefix + "max", propType == Param.Type.FLOAT ? 1 : 1000);
+					param = new Param(propName, propType, adjustType, adjustAmountOrFactor, min, max);
+				}
+				propsTemp.put(propIndex, param);
+				double initVal = toTune.getDoubleProperty(keyPrefix + "initial");
+				initValTemp.put(propIndex, param.getValue(initVal));
+				
+				if (propName.equals("popul.size")) {
+					popSize = (int) Math.round(initVal);
 				}
 			}
+			propCount = propsTemp.size();
+			propsToTune = new Param[propCount];
+			currentBestValues = new Param.Value[propCount];
+			int j = 0;
+			for (Entry<Integer, Param> e : propsTemp.entrySet()) {
+				propsToTune[j] = e.getValue();
+				currentBestValues[j] = initValTemp.get(e.getKey());
+				j++;
+			}
+			
+			numGens = props.getIntProperty("parametertuner.numgens", 500);
+			popSize = props.getIntProperty("popul.size");
 			
 			// Store the total evaluations that will be performed for a run, so that if we're tuning popul.size
 			// then we can adjust the number of generations accordingly.
 			totalEvaluations = numGens * popSize;
 			
 			maxIterations = props.getIntProperty("parametertuner.maxiterations", 100);
-			valAdjustFactor = props.getDoubleProperty("parametertuner.initialvalueadjustfactor", 2);
 			numRuns = props.getIntProperty("parametertuner.numruns", 50);
 			solvedPerformance = props.getDoubleProperty("parametertuner.solvedperformance", 1);
 			htCondorTpl = props.getProperty("parametertuner.htcondor", null);
@@ -185,20 +225,24 @@ public class ParameterTuner {
 
 			adjustIneffectiveCount = new int[propCount];
 			adjustCountDown = new int[propCount];
-			double adjustDownVal = 0, adjustUpVal = 0;
 			runLotID = 0;
 			
 			resultFile = new BufferedWriter(new FileWriter("results.csv"));
-			resultFile.append(props.getProperty("parametertuner.totune") + ",gens, mean perf\n");
+			for (int p = 0; p < propCount; p++) {
+				resultFile.append(propsToTune[p].name + ",");
+			}
+			resultFile.append("gens, mean perf\n");
 
+			ExecutorService runExecutor = Executors.newCachedThreadPool();
+			
 			System.out.println("Determining initial fitness with values:");
 			for (int p = 0; p < propCount; p++) {
-				String propKey = propsToTune[p];
-				props.setProperty(propKey, "" + typeAdjustValueStr(types[p], currentBestVals[p]));
+				String propKey = propsToTune[p].name;
+				props.setProperty(propKey, currentBestValues[p].toString());
 				System.out.println("  " + propsToTune[p] + "=" + props.getProperty(propKey));
 			}
 			System.out.println("  num.generations=" + numGens);
-			bestResult = doRuns((Properties) props.clone(), runLotID++, "i");
+			bestResult = runExecutor.submit(new DoRuns(props, runLotID++, "i")).get();
 			System.out.println();
 			if (bestResult.solvedByGeneration() != -1) {
 				numGens = bestResult.solvedByGeneration();
@@ -209,8 +253,6 @@ public class ParameterTuner {
 			System.out.println("Initial performance: " + nf.format(bestResult.performance()));
 			
 			addResult(bestResult);
-			
-			ExecutorService runExecutor = Executors.newFixedThreadPool(htCondorTpl != null ? 2 : 1);
 			
 			int stagnantCount = 0;
 			
@@ -224,86 +266,67 @@ public class ParameterTuner {
 
 				// Adjust each parameter in turn.
 				for (int p = 0; p < propCount; p++) {
-					String propKey = propsToTune[p];
+					String propKey = propsToTune[p].name;
 					boolean tuningPopSize = propKey.equals("popul.size");
 
 					// Sample fitness either side of current parameter value.
 					if (adjustCountDown[p] == 0) {
-						Future<Result> downFuture = null;
-						Future<Result> upFuture = null;
+						System.out.println("\tTuning " + propKey + " (current value is " + currentBestValues[p] + "). ");
 						
+						Param.Value[] variations = currentBestValues[p].variations();
+						int varCount = variations.length;
+						Future<Result>[] futures = (Future<Result>[]) Array.newInstance(Future.class, varCount);
 						
-						System.out.print("\tTuning " + propKey + " (current value is " + nf.format(currentBestVals[p]) + "). ");
-						double newVal = currentBestVals[p];
-						
-						if (types[p].equals("b")) {
-							adjustDownVal = 0;
-						} else {
-							adjustDownVal = typeAdjustValue(types[p], Math.min(maxValues[p], Math.max(minValues[p], currentBestVals[p] / valAdjustFactor)));
+						for (int var = 0; var < varCount; var++) {
+							System.out.println("\t\tTrying value: " + variations[var] + ".");
 						}
-						if (adjustDownVal != currentBestVals[p]) {
-							props.setProperty(propKey, "" + typeAdjustValueStr(types[p], adjustDownVal));
+						System.out.print("\t\t");
+						long start = System.currentTimeMillis();
+						for (int var = 0; var < varCount; var++) {
+							props.setProperty(propKey, variations[var].toString());
 							if (tuningPopSize) {
 								// Adjust gens so that total evaluations per run is maintained.
-								props.setProperty("num.generations", "" + (int) Math.round(totalEvaluations / adjustDownVal));
+								props.setProperty("num.generations", "" + (int) Math.round(totalEvaluations / variations[var].getValue()));
 							}
-							downFuture = runExecutor.submit(new DoRuns(props, runLotID++, "d"));
+							futures[var] = runExecutor.submit(new DoRuns(props, runLotID++, ""+var));
 							triedAtLeastOneParamAdjustment = true;
 						}
-
-						if (types[p].equals("b")) {
-							adjustUpVal = 1;
-						} else {
-							adjustUpVal = typeAdjustValue(types[p], Math.min(maxValues[p], Math.max(minValues[p], currentBestVals[p] * valAdjustFactor)));
-						}
-						if (adjustUpVal != currentBestVals[p]) {
-							props.setProperty(propKey, "" + typeAdjustValueStr(types[p], adjustUpVal));
-							if (tuningPopSize) {
-								// Adjust gens so that total evaluations per run is maintained.
-								props.setProperty("num.generations", "" + (int) Math.round(totalEvaluations / adjustUpVal));
+						Param.Value newVal = null;
+						int doneCount = 0;
+						boolean[] done = new boolean[varCount];
+						while (doneCount != varCount) {
+							Thread.sleep(1000);
+							for (int var = 0; var < varCount; var++) {
+								if (!done[var] && futures[var].isDone()) {
+									Result adjustResult = futures[var].get();
+									boolean better = adjustResult.betterThan(bestResult);
+									System.out.println("\n\t\tValue " + variations[var] + (tuningPopSize ? " (" + adjustResult.maxGens() + " max gens)" : "") +  " gave " + adjustResult + "." + (better ? " BETTER THAN CURRENT BEST." : ""));
+									if (better) {
+										bestResult = adjustResult;
+										newVal = variations[var];
+									}
+									addResult(adjustResult);
+									done[var] = true;
+									doneCount++;
+								}
 							}
-							upFuture = runExecutor.submit(new DoRuns(props, runLotID++, "u"));
-							triedAtLeastOneParamAdjustment = true;
 						}
 						
-						// Wait for tasks to complete.
-						if (downFuture != null) downFuture.get();
-						if (upFuture != null) upFuture.get();
-						System.out.println();
+						long finish = System.currentTimeMillis();
 						
-						if (downFuture != null) {
-							Result adjustDownResult = downFuture.get();
-							boolean better = adjustDownResult.betterThan(bestResult);
-							System.out.println("\t\tValue " + nf.format(adjustDownVal) + (tuningPopSize ? " (" + adjustDownResult.maxGens() + " max gens)" : "") +  " gave " + adjustDownResult + "." + (better ? " BETTER THAN CURRENT BEST." : ""));
-							if (better) {
-								bestResult = adjustDownResult;
-								newVal = adjustDownVal;
-							}
-							addResult(adjustDownResult);
-						}
-						
-						if (upFuture != null) {
-							Result adjustUpResult = upFuture.get();
-							boolean better = adjustUpResult.betterThan(bestResult);
-							System.out.println("\t\tValue " + nf.format(adjustUpVal) + (tuningPopSize ? " (" + adjustUpResult.maxGens() + " max gens)" : "") + " gave " + adjustUpResult + "." + (better ? " BETTER THAN CURRENT BEST." : ""));
-							if (better) {
-								bestResult = adjustUpResult;
-								newVal = adjustUpVal;
-							}
-							addResult(adjustUpResult);
-						}
+						System.out.println("\t\tTook " + DurationFormatUtils.formatPeriod(start, finish, "d:HH:mm:ss") + ".\n");
 						
 						resultFile.append("\n");
 						
 						// If the fitness was increased by an adjustment.
-						if (currentBestVals[p] != newVal) {
+						if (newVal != null) {
 							adjustIneffectiveCount[p] = 0;
-							currentBestVals[p] = newVal;
+							currentBestValues[p] = newVal;
 							adjustedAnyParams = true;
 							
 							if (tuningPopSize) {
-								popSize = (int) Math.round(newVal);
-								numGens = (int) Math.round(totalEvaluations / newVal);
+								popSize = (int) Math.round(newVal.getValue());
+								numGens = (int) Math.round(totalEvaluations / newVal.getValue());
 								props.setProperty("num.generations", "" + numGens);
 							}
 							
@@ -325,7 +348,7 @@ public class ParameterTuner {
 						}
 
 						// Set parameter to current best value.
-						props.setProperty(propKey, "" + typeAdjustValueStr(types[p], currentBestVals[p]));
+						props.setProperty(propKey, currentBestValues[p].toString());
 					} else {
 						adjustCountDown[p]--;
 						System.out.println("\tSkipping " + propKey + " for " + adjustCountDown[p] + " more iterations.");
@@ -338,13 +361,16 @@ public class ParameterTuner {
 
 				System.out.println("\nFinished iteration. Best result is " + bestResult + ". Current best values are:");
 				for (int p = 0; p < propCount; p++) {
-					System.out.println("  " + propsToTune[p] + "=" + typeAdjustValueStr(types[p], currentBestVals[p]));
+					System.out.println("  " + propsToTune[p] + "=" + currentBestValues[p]);
 				}
 				System.out.println("  num.generations=" + numGens);
 
-				if (!adjustedAnyParams) { 
-					valAdjustFactor = (valAdjustFactor-1)/2+1;
-					System.out.println("\nValue adjust factor is now " + nf.format(valAdjustFactor));
+				if (!adjustedAnyParams) {
+					System.out.println();
+					for (int p = 0; p < propCount; p++) {
+						if (propsToTune[p].reduceAdjustAmountOrFactor())
+							System.out.println("Value adjust amount for " + propsToTune[p].name + " is now " + nf.format(propsToTune[p].adjustAmountOrFactor));
+					}
 				}
 				System.out.println("\n");
 
@@ -372,7 +398,7 @@ public class ParameterTuner {
 			System.out.println("Finished adjusting parameters.");
 			System.out.println("Final best parameter values, giving result " + bestResult + ", were:");
 			for (int p = 0; p < propCount; p++) {
-				System.out.println(propsToTune[p] + "=" + typeAdjustValueStr(types[p], currentBestVals[p]));
+				System.out.println(propsToTune[p] + "=" + currentBestValues[p]);
 			}
 			System.out.println("num.generations=" + numGens);
 			
@@ -383,26 +409,11 @@ public class ParameterTuner {
 		}
 	}
 	
-	private static double typeAdjustValue(String type, double v) {
-		if (type.equals("d")) return v;
-		int vi = (int) Math.round(v);
-		if (type.equals("i")) return vi;
-		if (type.equals("b")) return Math.max(0, Math.min(1, vi));
-		throw new IllegalArgumentException("Invalid parameter type specified: " + type);
-	}
-	
-	private static String typeAdjustValueStr(String type, double v) {
-		if (type.equals("d")) return ""+v;
-		int vi = (int) Math.round(v);
-		if (type.equals("i")) return ""+vi;
-		if (type.equals("b")) return vi >= 1 ? "true" : "false";
-		throw new IllegalArgumentException("Invalid parameter type specified: " + type);
-	}
 	
 	private void addResult(Result r) {
 		try {
 			for (int p = 0; p < propCount; p++) {
-				resultFile.append(r.getProps().get(this.propsToTune[p]) + ", ");
+				resultFile.append(r.getProps().get(this.propsToTune[p].name) + ", ");
 			}
 			resultFile.append(numGens + ", " + r.performance() + "\n");
 			resultFile.flush();
@@ -420,152 +431,158 @@ public class ParameterTuner {
 	}
 	
 	
-
-	private Result doRuns(Properties props, int id, String label) throws Exception {
-		if (htCondorTpl == null) {
-			return new Result(props, doRunsSerial(props, label), props.getIntProperty("popul.size"), props.getIntProperty("num.generations"));
-		} else {
-			return new Result(props, doRunsHTCondor(props, id, label), props.getIntProperty("popul.size"), props.getIntProperty("num.generations"));
-		}
-	}
-	
-	private Results doRunsSerial(Properties props, String label) throws Exception {
-		System.out.print("Starting " + numRuns + " runs (" + label + ") ");
-		double[][] performances = new double[numRuns][];
-		for (int r = 0; r < numRuns; r++) {
-			Run runner = new Run(props);
-			runner.noOutput = true;
-			runner.run();
-			performances[r] = runner.performance[0];
-			System.out.print(label);
-		}
-		System.out.print(" (" + label + " finished) ");
-		return new Results(performances, null);
-	}
-	
-	private Results doRunsHTCondor(Properties props, int id, String label) throws Exception {
-		// Create dir to store temp files.
-		String condorOutDir = "pt-condor-" + id;
-		String condorOutDirSep = condorOutDir + File.separator;
-		(new File(condorOutDir)).mkdir();
-		// Save properties file.
-		props.store(new FileOutputStream(condorOutDirSep + "pt.properties"), "" + id);
-		
-		// Generate condor submit file from template.
-		String[] lines = htCondorTpl.split("\n");
-		Map<String, String> condorSubmit = new HashMap<String, String>();
-		for (String line : lines) {
-			if (!line.trim().isEmpty()) {
-				String[] keyVal = line.split("=", 2);
-				condorSubmit.put(keyVal[0].trim(), keyVal[1].trim());
-			}
-		}
-		
-		String mainJAR = this.getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
-		mainJAR = URLDecoder.decode(mainJAR, "UTF-8");
-		String jarFiles = condorSubmit.containsKey("jar_files") ? condorSubmit.get("jar_files") + " " : "";
-		jarFiles += mainJAR;
-		
-		condorSubmit.put("universe", "java");
-		condorSubmit.put("executable", mainJAR);
-		condorSubmit.put("jar_files", jarFiles);
-		condorSubmit.put("arguments", "com.ojcoleman.ahni.hyperneat.Run -ao -od ./ -f -ar result-$(Process) ./pt.properties");
-		condorSubmit.put("universe", "java");
-		String tif = (condorSubmit.containsKey("transfer_input_files") ? condorSubmit.get("transfer_input_files") + ", " : "") + "pt.properties";
-		condorSubmit.put("transfer_input_files", tif);
-		condorSubmit.put("output", "out-$(Process).txt");
-		condorSubmit.put("error", "err-$(Process).txt");
-		condorSubmit.put("when_to_transfer_output", "ON_EXIT");
-		condorSubmit.put("should_transfer_files", "YES");
-		condorSubmit.remove("queue");
-		BufferedWriter fileWriter = new BufferedWriter(new FileWriter(new File(condorOutDirSep + "submit.txt")));
-		for (Map.Entry<String, String> entry : condorSubmit.entrySet()) {
-			fileWriter.write(entry.getKey() + "=" + entry.getValue() + "\n");
-		}
-		fileWriter.write("queue " + numRuns + "\n");
-		fileWriter.close();
-		
-		// Submit jobs to condor.
-		Process condorProcess = Runtime.getRuntime().exec("condor_submit submit.txt", null, new File(condorOutDir));
-		boolean finished = false;
-		int condorProcessReturn = -1;
-		InputStreamReader condorProcessOutStream = new InputStreamReader(condorProcess.getInputStream());
-		StringBuilder condorProcessOut = new StringBuilder();
-		int c;
-		do {
-			Thread.sleep(100);
-			
-			// Catch the output.
-			while ((c = condorProcessOutStream.read()) != -1)
-				condorProcessOut.append((char) c);
-
-			// See if process has finished (waitFor() doesn't seem to work).
-			try {
-				condorProcessReturn = condorProcess.exitValue();
-				finished = true;
-			}
-			catch (IllegalThreadStateException e) {}
-		} while (!finished);
-		
-		// Catch any last bits of output.
-		while ((c = condorProcessOutStream.read()) != -1)
-			condorProcessOut.append((char) c);
-		
-		if (condorProcessReturn != 0) {
-			throw new Exception("Error submitting HTCondor jobs:\n" + condorProcessOut);
-		}
-		
-		Pattern p = Pattern.compile("\\d+ job\\(s\\) submitted to cluster (\\d+)\\.");
-		Matcher m = p.matcher(condorProcessOut.toString());
-		String condorClusterID = null;
-		if (m.find()) {
-			condorClusterID = m.group(1);
-			System.out.print("Started " + numRuns + " runs (" + label + ", cluster " + condorClusterID + ") ");
-			runningCondorClusterIDs.add("" + condorClusterID);
-		}
-		else {
-			System.out.println("Unable to determine cluster ID from condor_submit output:\n " + condorProcessOut);
-		}
-		
-		// Wait for condor jobs to finish.
-		int currentDoneCount = 0;
-		while (currentDoneCount != numRuns) {
-			Thread.sleep(1000); // Wait for 1 second.
-			Paths paths = new Paths(condorOutDir, "result-*-performance.csv");
-			if (currentDoneCount != paths.count()) {
-				for (int i = 0; i < paths.count() - currentDoneCount; i++) System.out.print(label);
-			}
-			currentDoneCount = paths.count();
-		}
-		System.out.print(" (" + label + " finished) ");
-		
-		if (condorClusterID != null) {
-			runningCondorClusterIDs.remove(condorClusterID);
-		}
-		
-		// Collate results.
-		Results results = PostProcess.combineResults(condorOutDirSep + "result-*-performance.csv", false);
-		
-		// Clean up generated files.
-		//Paths paths = new Paths("./", condorOutDir);
-		//paths.delete();
-
-		return results;
-	}
 	
 	
 	private class DoRuns implements Callable<Result> {
 		int id;
 		Properties props;
 		String label;
+		
 		public DoRuns(Properties props, int id, String label) {
 			this.id = id;
-			this.props = (Properties) props.clone();;
+			this.props = (Properties) props.clone();
 			this.label = label;
 		}
+		
 		@Override
 		public Result call() throws Exception {
 			return doRuns(props, id, label);
+		}
+		
+		private Result doRuns(Properties props, int id, String label) throws Exception {
+			if (htCondorTpl == null) {
+				return new Result(props, doRunsSerial(props, label), props.getIntProperty("popul.size"), props.getIntProperty("num.generations"));
+			} else {
+				return new Result(props, doRunsHTCondor(props, id, label), props.getIntProperty("popul.size"), props.getIntProperty("num.generations"));
+			}
+		}
+
+		private Results doRunsSerial(Properties props, String label) throws Exception {
+			System.out.print("Starting " + numRuns + " runs (" + label + ") ");
+			double[][] performances = new double[numRuns][];
+			for (int r = 0; r < numRuns; r++) {
+				Run runner = new Run(props);
+				runner.noOutput = true;
+				runner.run();
+				performances[r] = runner.performance[0];
+				System.out.print(label);
+				if (r > 0 && r % 25 == 0) System.out.print("("+r+")");					
+			}
+			System.out.print(" (" + label + " finished) ");
+			return new Results(performances, null);
+		}
+		
+		private Results doRunsHTCondor(Properties props, int id, String label) throws Exception {
+			// Create dir to store temp files.
+			String condorOutDir = "pt-condor-" + id;
+			String condorOutDirSep = condorOutDir + File.separator;
+			(new File(condorOutDir)).mkdir();
+			// Save properties file.
+			props.store(new FileOutputStream(condorOutDirSep + "pt.properties"), "" + id);
+			
+			// Generate condor submit file from template.
+			String[] lines = htCondorTpl.split("\n");
+			Map<String, String> condorSubmit = new HashMap<String, String>();
+			for (String line : lines) {
+				if (!line.trim().isEmpty()) {
+					String[] keyVal = line.split("=", 2);
+					condorSubmit.put(keyVal[0].trim(), keyVal[1].trim());
+				}
+			}
+			
+			String mainJAR = this.getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
+			mainJAR = URLDecoder.decode(mainJAR, "UTF-8");
+			String jarFiles = condorSubmit.containsKey("jar_files") ? condorSubmit.get("jar_files") + " " : "";
+			jarFiles += mainJAR;
+			
+			condorSubmit.put("universe", "java");
+			condorSubmit.put("executable", mainJAR);
+			condorSubmit.put("jar_files", jarFiles);
+			condorSubmit.put("arguments", "com.ojcoleman.ahni.hyperneat.Run -ao -od ./ -f -ar result-$(Process) ./pt.properties");
+			condorSubmit.put("universe", "java");
+			String tif = (condorSubmit.containsKey("transfer_input_files") ? condorSubmit.get("transfer_input_files") + ", " : "") + "pt.properties";
+			condorSubmit.put("transfer_input_files", tif);
+			condorSubmit.put("output", "out-$(Process).txt");
+			condorSubmit.put("error", "err-$(Process).txt");
+			condorSubmit.put("when_to_transfer_output", "ON_EXIT");
+			condorSubmit.put("should_transfer_files", "YES");
+			condorSubmit.remove("queue");
+			BufferedWriter fileWriter = new BufferedWriter(new FileWriter(new File(condorOutDirSep + "submit.txt")));
+			for (Map.Entry<String, String> entry : condorSubmit.entrySet()) {
+				fileWriter.write(entry.getKey() + "=" + entry.getValue() + "\n");
+			}
+			fileWriter.write("queue " + numRuns + "\n");
+			fileWriter.close();
+			
+			// Submit jobs to condor.
+			Process condorProcess = Runtime.getRuntime().exec("condor_submit submit.txt", null, new File(condorOutDir));
+			boolean finished = false;
+			int condorProcessReturn = -1;
+			InputStreamReader condorProcessOutStream = new InputStreamReader(condorProcess.getInputStream());
+			StringBuilder condorProcessOut = new StringBuilder();
+			int c;
+			do {
+				Thread.sleep(100);
+				
+				// Catch the output.
+				while ((c = condorProcessOutStream.read()) != -1)
+					condorProcessOut.append((char) c);
+
+				// See if process has finished (waitFor() doesn't seem to work).
+				try {
+					condorProcessReturn = condorProcess.exitValue();
+					finished = true;
+				}
+				catch (IllegalThreadStateException e) {}
+			} while (!finished);
+			
+			// Catch any last bits of output.
+			while ((c = condorProcessOutStream.read()) != -1)
+				condorProcessOut.append((char) c);
+			
+			if (condorProcessReturn != 0) {
+				throw new Exception("Error submitting HTCondor jobs:\n" + condorProcessOut);
+			}
+			
+			Pattern p = Pattern.compile("\\d+ job\\(s\\) submitted to cluster (\\d+)\\.");
+			Matcher m = p.matcher(condorProcessOut.toString());
+			String condorClusterID = null;
+			if (m.find()) {
+				condorClusterID = m.group(1);
+				System.out.print("Started " + numRuns + " runs (" + label + ", cluster " + condorClusterID + ") ");
+				runningCondorClusterIDs.add("" + condorClusterID);
+			}
+			else {
+				System.out.println("Unable to determine cluster ID from condor_submit output:\n " + condorProcessOut);
+			}
+			
+			// Wait for condor jobs to finish.
+			int currentDoneCount = 0;
+			while (currentDoneCount != numRuns) {
+				Thread.sleep(1000); // Wait for 1 second.
+				Paths paths = new Paths(condorOutDir, "result-*-performance.csv");
+				if (currentDoneCount != paths.count()) {
+					for (; currentDoneCount < paths.count(); currentDoneCount++) {
+						System.out.print(label);
+						if (currentDoneCount > 0 && currentDoneCount % 25 == 0) System.out.print("("+currentDoneCount+")");
+					}
+					//if (currentDoneCount > 0 && currentDoneCount % 25 == 0) System.out.print("("+currentDoneCount+")");
+				}
+			}
+			System.out.print(" (" + label + " finished) ");
+			
+			if (condorClusterID != null) {
+				runningCondorClusterIDs.remove(condorClusterID);
+			}
+			
+			// Collate results.
+			Results results = PostProcess.combineResults(condorOutDirSep + "result-*-performance.csv", false);
+			
+			// Clean up generated files.
+			//Paths paths = new Paths("./", condorOutDir);
+			//paths.delete();
+
+			return results;
 		}
 	}
 	
@@ -584,14 +601,12 @@ public class ParameterTuner {
 			this.maxGens = maxGens;
 			Statistics s = new Statistics(r);
 			for (int g = 0; g < r.getItemCount(); g++) {
-				double m = getCroppedMean(s, g, 0.05);
-				if (m >= solvedPerformance) {
+				performance = getCroppedMean(s, g, 0.05);
+				if (performance >= solvedPerformance) {
 					solvedByGeneration = g;
-					performance = m;
 					return;
 				}
 			}
-			performance = getCroppedMean(s, r.getItemCount()-1, 0.05);
 		}
 
 		public double performance() {
@@ -634,6 +649,119 @@ public class ParameterTuner {
 		@Override
 		public String toString() {
 			return "(" + nf.format(performance) + " : " + (solvedByGeneration == -1 ? "not solved" : "solved in " + solvedByGeneration + " gens") + ")";
+		}
+	}
+	
+	
+	public static class Param {
+		public static enum Type { FLOAT, INTEGER, BOOLEAN, DISCRETE };
+		public static enum AdjustType { DELTA, FACTOR, ALL };
+		
+		Type type;
+		String name;
+		AdjustType adjustType;
+		double adjustAmountOrFactor;
+		double min, max;
+		String[] discreteVals;
+		
+		public Param(String name, Type type, AdjustType adjustType, double adjustAmountOrFactor, double min, double max) {
+			this.name = name;
+			this.type = type;
+			this.adjustType = adjustType;
+			this.adjustAmountOrFactor = adjustAmountOrFactor;
+			if (this.type == Type.BOOLEAN) {
+				this.min = 0;
+				this.max = 1;
+			}
+			else {
+				this.min = min;
+				this.max = max;
+			}
+		}
+		public Param(String prop, Type type, AdjustType adjustType, double adjustAmountOrFactor, String[] discreteVals) {
+			this(prop, type, adjustType, adjustAmountOrFactor, 0, discreteVals.length-1);
+			this.discreteVals = discreteVals;
+		}
+		
+		@Override
+		public String toString() {
+			return name;
+		}
+		
+		public Value getValue(double v) {
+			return new Value(v);
+		}
+		
+		public boolean reduceAdjustAmountOrFactor() {
+			if (adjustType == AdjustType.ALL || type == Type.BOOLEAN)
+				return false;
+			double orig = adjustAmountOrFactor;
+			if (adjustType == AdjustType.FACTOR)
+				adjustAmountOrFactor = (adjustAmountOrFactor-1)/2+1;
+			else
+				adjustAmountOrFactor /= 2;
+			
+			if (adjustType == AdjustType.DELTA && (type == Type.INTEGER || type == Type.DISCRETE)) {
+				adjustAmountOrFactor = Math.max(1, adjustAmountOrFactor);
+			}
+			return adjustAmountOrFactor != orig;
+		}
+		
+		public class Value {
+			private double value;
+			
+			public Value(double v) {
+				value = v;
+				if (type == Type.INTEGER || type == Type.BOOLEAN) value = Math.round(value);
+				value = Math.max(min, Math.min(max, value));
+			}
+			
+			public double getValue() {
+				return value;
+			}
+			
+			@Override
+			public String toString() {
+				if (type == Type.FLOAT) return ""+value;
+				int vi = (int) Math.round(value);
+				if (type == Type.INTEGER) return ""+vi;
+				if (type == Type.BOOLEAN) return vi == 0 ? "false" : "true";
+				return discreteVals[vi];
+			}
+			
+			public Value up() {
+				Value v = new Value(adjustType == AdjustType.DELTA ? value + adjustAmountOrFactor : value * adjustAmountOrFactor);
+				return (v.value == value) ? null : v;
+			}
+			public Value down() {
+				Value v = new Value(adjustType == AdjustType.DELTA ? value - adjustAmountOrFactor : value / adjustAmountOrFactor);
+				return (v.value == value) ? null : v;
+			}
+			
+			public Value[] variations() {
+				if (type == Type.DISCRETE && adjustType == AdjustType.ALL) {
+					Value[] values = new Value[discreteVals.length-1];
+					for (int i = 0, j = 0; i < discreteVals.length; i++) {
+						// Skip current value.
+						if (i != value)
+							values[j++] = new Value(i);
+					}
+					return values;
+				}
+				if (type == Type.BOOLEAN) {
+					return new Value[]{new Value(value == 0 ? 1 : 0)};
+				}
+				Value up = up();
+				Value down = down();
+				if (up != null && down != null) {
+					return new Value[]{down, up};
+				} else if (up != null) {
+					return new Value[]{up};
+				} else if (down != null) {
+					return new Value[]{down};
+				}
+				return new Value[0];
+			}
 		}
 	}
 }
