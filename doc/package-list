@@ -13,6 +13,7 @@ com.ojcoleman.ahni.evaluation.novelty
 com.ojcoleman.ahni.event
 com.ojcoleman.ahni.experiments
 com.ojcoleman.ahni.experiments.csb
+com.ojcoleman.ahni.experiments.doublepolebalancing
 com.ojcoleman.ahni.experiments.objectrecognition
 com.ojcoleman.ahni.hyperneat
 com.ojcoleman.ahni.misc
