@@ -91,7 +91,10 @@ public abstract class ReproductionOperator {
 			}
 			
 			for (ChromosomeMaterial c : newOffspring) {
-				c.setShouldMutate(mutateProbability > config.getRandomGenerator().nextDouble());
+				// Mutate if it has the same parents, otherwise according to probability.
+				boolean mutate = c.getSecondaryParentId() != null  && c.getPrimaryParentId().equals(c.getSecondaryParentId());
+				mutate |= mutateProbability > config.getRandomGenerator().nextDouble();
+				c.setShouldMutate(mutate);
 			}
 			
 			// Add clones of random offspring if we don't have enough.

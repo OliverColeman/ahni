@@ -93,10 +93,16 @@ public class AddNeuronMutationOperator extends MutationOperatorMultiple implemen
 		if ((jgapConfig instanceof NeatConfiguration) == false)
 			throw new AnjiRequiredException("com.anji.neat.NeatConfiguration");
 		NeatConfiguration config = (NeatConfiguration) jgapConfig;
+		List<ConnectionAllele> connList = NeatChromosomeUtility.getConnectionList(target.getAlleles());
 
 		int numMutations = numMutations(config.getRandomGenerator(), 0);
+		
+		int maxMutationsPossible = connList.size();
+		if (numMutations > maxMutationsPossible) {
+			numMutations = maxMutationsPossible;
+		}
+		
 		if (numMutations > 0) {
-			List<ConnectionAllele> connList = NeatChromosomeUtility.getConnectionList(target.getAlleles());
 			Map<Long, NeuronAllele> neurons = NeatChromosomeUtility.getNeuronMap(target.getAlleles());
 			// Add neurons at existing connections.
 			Collections.shuffle(connList, config.getRandomGenerator());

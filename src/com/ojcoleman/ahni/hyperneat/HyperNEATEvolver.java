@@ -35,6 +35,7 @@ import com.anji.neat.AddConnectionMutationOperator;
 import com.anji.neat.AddNeuronAnywhereMutationOperator;
 import com.anji.neat.AddNeuronMutationOperator;
 import com.anji.neat.Evolver;
+import com.anji.neat.NEATGenotype;
 import com.anji.persistence.Persistence;
 import com.anji.run.Run;
 import com.anji.util.Misc;
@@ -97,7 +98,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 	private HyperNEATConfiguration config = null;
 	private List<AHNIEventListener> listeners = new ArrayList<AHNIEventListener>();
 	private Properties properties = null;
-	private Genotype genotype = null;
+	private NEATGenotype genotype = null;
 	private int numEvolutions = 0;
 	private double targetPerformance = 1;
 	private Persistence db = null;
@@ -271,16 +272,16 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 		bestPerformances = new double[numEvolutions];
 
 		// TODO loading genotype from storage is broken?
-		if (loadGenotypeFromDB) {
+		/*if (loadGenotypeFromDB) {
 			// load population, either from previous run or random
 			genotype = db.loadGenotype(config);
 			if (genotype != null) {
 			} else {
-				genotype = Genotype.randomInitialGenotype(properties, config);
+				genotype = NEATGenotype.randomInitialGenotype(properties, config);
 			}
-		} else {
-			genotype = Genotype.randomInitialGenotype(properties, config);
-		}
+		} else {*/
+			genotype = NEATGenotype.randomInitialGenotype(properties, config);
+		//}
 
 		if (logger.isDebugEnabled()) {
 			// Log CPPN represented by each initial Chromosome.

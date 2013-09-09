@@ -21,6 +21,7 @@
  */
 package com.anji.neat;
 
+import java.text.DecimalFormat;
 import java.util.Random;
 
 import org.jgapcustomised.Allele;
@@ -35,6 +36,7 @@ import com.anji.nn.activationfunction.ActivationFunction;
  * @author Philip Tucker
  */
 public class NeuronAllele extends Allele {
+	private static final DecimalFormat nf = new DecimalFormat(" 0.0000;-0.0000");
 
 	private NeuronGene neuronGene;
 	
@@ -74,8 +76,10 @@ public class NeuronAllele extends Allele {
 	public void setToRandomValue(Random a_numberGenerator, boolean onlyPerturbFromCurrentValue) {
 		if (onlyPerturbFromCurrentValue)
 			bias += a_numberGenerator.nextGaussian() * ConnectionAllele.RANDOM_STD_DEV;
+			//bias += (a_numberGenerator.nextBoolean() ? 1 : -1) * a_numberGenerator.nextDouble() * ConnectionAllele.RANDOM_STD_DEV;
 		else
 			bias = a_numberGenerator.nextGaussian() * ConnectionAllele.RANDOM_STD_DEV;
+			//bias = (a_numberGenerator.nextBoolean() ? 1 : -1) * a_numberGenerator.nextDouble() * ConnectionAllele.RANDOM_STD_DEV;
 	}
 
 	/**
@@ -83,6 +87,7 @@ public class NeuronAllele extends Allele {
 	 * @see org.jgapcustomised.Allele#distance(org.jgapcustomised.Allele)
 	 */
 	public double distance(Allele target) {
+		assert target.getInnovationId().equals(getInnovationId()) : "Should not compute distance for alleles of different gene.";
 		return Math.abs(bias - ((NeuronAllele) target).getBias());
 	}
 
@@ -129,7 +134,7 @@ public class NeuronAllele extends Allele {
 	 * @see Object#toString()
 	 */
 	public String toString() {
-		return neuronGene.toString() + " [" + bias + "]";
+		return "N-" + neuronGene.toString() + " [" + nf.format(bias) + "]";
 	}
 	
 	@Override
@@ -138,5 +143,21 @@ public class NeuronAllele extends Allele {
 			return false;
 		NeuronAllele other = (NeuronAllele) otherAllele;
 		return getType().equals(other.getType()) && getActivationType().equals(other.getActivationType()) && bias == other.bias;
+	}
+
+	/**
+	 * Gets the bias value.
+	 */
+	@Override
+	public double getValue() {
+		return bias;
+	}
+
+	/**
+	 * Sets the bias value.
+	 */
+	@Override
+	public void setValue(double aValue) {
+		this.bias = aValue;
 	}
 }

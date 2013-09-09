@@ -33,6 +33,8 @@ import org.apache.log4j.Logger;
 import org.jgapcustomised.Allele;
 import org.jgapcustomised.ChromosomeMaterial;
 
+import com.anji.nn.RecurrencyPolicy;
+
 /**
  * Utility class capturing functionality pertaining to NEAT neuron and connection genes.
  * 
@@ -249,6 +251,34 @@ public class NeatChromosomeUtility {
 		}
 		return result;
 	}
+	
+	/**
+	 * if type == null, returns all neuron genes in <code>genes</code>; otherwise, returns only neuron genes of type
+	 * 
+	 * @param alleles <code>Collection</code> contains gene objects
+	 * @param types
+	 * @return <code>List</code> contains <code>NeuronAllele</code> objects
+	 */
+	public static List<NeuronAllele> getNeuronListForTypes(Collection<Allele> alleles, NeuronType[] types) {
+		List<NeuronAllele> result = new ArrayList<NeuronAllele>();
+		for (Allele allele : alleles) {
+			if (allele instanceof NeuronAllele) {
+				NeuronAllele nAllele = (NeuronAllele) allele;
+
+				// sanity check
+				if (result.contains(nAllele))
+					throw new IllegalArgumentException("chromosome contains duplicate neuron gene: " + allele.toString());
+				
+				for (NeuronType type : types) {
+					if (nAllele.isType(type)) {
+						result.add(nAllele);
+						break;
+					}
+				}
+			}
+		}
+		return result;
+	}
 
 	/**
 	 * returns all connections in <code>alleles</code> as <code>SortedMap</code>
@@ -335,5 +365,45 @@ public class NeatChromosomeUtility {
 			}
 		}
 		return false;
+	}
+	
+	/**
+	 * @param config
+	 * @param src
+	 * @param dest
+	 * @param conns <code>SortedMap</code> contains key <code>Long</code> id, value <code>ConnectionAllele</code>
+	 *            objects
+	 * @return true of connection between <code>src</code> and <code>dest</code> is allowed according to recurrency
+	 *         policy; false otherwise.
+	 * @see NeatChromosomeUtility#neuronsAreConnected(Long, Long, Collection)
+	 */
+	public static boolean connectionAllowed(NeatConfiguration config, NeuronAllele src, NeuronAllele dest, Collection<ConnectionAllele> conns) {
+		if (RecurrencyPolicy.DISALLOWED.equals(config.getRecurrencyPolicy())) {
+			if (dest.isType(NeuronType.INPUT) || src.isType(NeuronType.OUTPUT))
+				return false;
+			boolean connected = NeatChromosomeUtility.neuronsAreConnected(dest.getInnovationId(), src.getInnovationId(), conns);
+			return !connected;
+		}
+		// return (dest.getActivationType().equals(LinearActivationFunction.NAME));
+		return true;
+	}
+	
+	/**
+	 * @param config
+	 * @param srcID innovation ID
+	 * @param destID innovation ID
+	 * @param conns <code>SortedMap</code> contains key <code>Long</code> id, value <code>ConnectionAllele</code>
+	 *            objects
+	 * @return true of connection between <code>src</code> and <code>dest</code> is allowed according to recurrency
+	 *         policy; false otherwise.
+	 * @see NeatChromosomeUtility#neuronsAreConnected(Long, Long, Collection)
+	 */
+	public static boolean connectionAllowed(NeatConfiguration config, Long srcID, Long destID, Collection<ConnectionAllele> conns) {
+		if (RecurrencyPolicy.DISALLOWED.equals(config.getRecurrencyPolicy())) {
+			boolean connected = NeatChromosomeUtility.neuronsAreConnected(destID, srcID, conns);
+			return !connected;
+		}
+		// return (dest.getActivationType().equals(LinearActivationFunction.NAME));
+		return true;
 	}
 }

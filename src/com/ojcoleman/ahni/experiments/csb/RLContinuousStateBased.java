@@ -88,9 +88,24 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 	public static final String DIFFICULTY_INCREASE_PERFORMANCE = "fitness.function.rlcss.difficulty.increase.performance";
 	
 	/**
-	 * If true enables novelty search. Default is false.
+	 * If true enables novelty search for which behaviours are defined by the agent output for the first {@link #NOVELTY_SEARCH_FS_RC} steps of each trial. Default is false.
 	 */
-	public static final String NOVELTY_SEARCH = "fitness.function.rlcss.noveltysearch.enable";
+	public static final String NOVELTY_SEARCH_FS = "fitness.function.rlcss.noveltysearch.first_steps";
+
+	/**
+	 * See {@link #NOVELTY_SEARCH_FS}. Default is 2 * {@link #SIZE}^2.
+	 */
+	public static final String NOVELTY_SEARCH_FS_RC = "fitness.function.rlcss.noveltysearch.first_steps.record_count";
+
+	/**
+	 * If true enables novelty search for which behaviours are defined by the environment state at {@link #NOVELTY_SEARCH_ED_RC} equally spaced intervals between the beginning and end of each trial. Default is false.
+	 */
+	public static final String NOVELTY_SEARCH_ED = "fitness.function.rlcss.noveltysearch.even_distribution";
+
+	/**
+	 * See {@link #NOVELTY_SEARCH_ED}. Default is 1 if {@link #TRIAL_COUNT} > 1, else 4.
+	 */
+	public static final String NOVELTY_SEARCH_ED_RC = "fitness.function.rlcss.noveltysearch.even_distribution.record_count";
 
 
 	private int envSize;
@@ -103,11 +118,13 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 	private Environment[] nsEnvironments;
 	private int environmentCounter = 0;
 	private int[] environmentOrder; // evaluation order of environments
-	protected boolean enableNoveltySearch;
+	protected boolean nsFirstSteps;
+	protected boolean nsEvenDistribution;
 	protected double difficultyIncreasePerformance = 0.99;
 	protected double targetPerformance;
 	
-	private int behaviourRecordCount;
+	private int behaviourEDRecordCount;
+	int behaviourFSRecordCount;
 	
 	@Override
 	public void init(Properties props) {
@@ -121,16 +138,18 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 		environments = new Environment[environmentCount];
 		for (int e = 0; e < environments.length; e++) {
 			environments[e] = props.newObjectProperty(props.getClassProperty(ENVIRONMENT_CLASS, SimpleNavigationEnvironment.class));
-			environments[e].rlcss = this;
+			environments[e].rlcsb = this;
 		}
-		enableNoveltySearch = props.getBooleanProperty(NOVELTY_SEARCH, false);
-		
+		nsFirstSteps = props.getBooleanProperty(NOVELTY_SEARCH_FS, false);
+		nsEvenDistribution = props.getBooleanProperty(NOVELTY_SEARCH_ED, false);
+
 		// If novelty search enabled then record the environment state either just at the end of each trial, 
 		// or multiple times during the course of a single trial.
-		behaviourRecordCount = trialCount > 1 ? 1 : 4;
+		behaviourEDRecordCount = props.getIntProperty(NOVELTY_SEARCH_ED_RC, trialCount > 1 ? 1 : 4);
+		behaviourFSRecordCount = 2 * envSize * envSize;
 		
-		if (enableNoveltySearch && environmentReplaceProb > 0) {
-		//if (enableNoveltySearch) {
+		if ((nsFirstSteps || nsEvenDistribution) && environmentReplaceProb > 0) {
+		//if (nsFirstSteps) {
 			//throw new IllegalArgumentException("Can't enable novelty search and environment replacement.");
 			
 			// Create a set of environments that don't change over the course of evolution to test novelty on.
@@ -139,7 +158,7 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 			//nsEnvironments = new Environment[1];
 			for (int e = 0; e < nsEnvironments.length; e++) {
 				nsEnvironments[e] = props.newObjectProperty(props.getClassProperty(ENVIRONMENT_CLASS, SimpleNavigationEnvironment.class));
-				nsEnvironments[e].rlcss = this;
+				nsEnvironments[e].rlcsb = this;
 				// If possible, generate environments of varying difficulty.
 				for (int i = 1; i < e && nsEnvironments[e].increaseDifficultyPossible(); i++) {
 					nsEnvironments[e].increaseDifficulty();
@@ -164,10 +183,10 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 				for (int e = 0, id = -1; e < nsEnvironments.length; e++, id--) {
 					if (e == nsEnvironments.length/2) id--; // Skip middle point where goal state is.
 					nsEnvironments[e].setUp(id);
-					///nsEnvironments[e].setMinimumStepsToSolve(behaviourRecordCount);
+					///nsEnvironments[e].setMinimumStepsToSolve(behaviourEDRecordCount);
 				}
-				//logger.info("Novelty behaviour dimensionality: " + (nsEnvironments.length * trialCount * envSize * behaviourRecordCount));
-				logger.info("Novelty behaviour dimensionality: " + (nsEnvironments.length * 1 * envSize * behaviourRecordCount));
+				//logger.info("Novelty behaviour dimensionality: " + (nsEnvironments.length * trialCount * envSize * behaviourEDRecordCount));
+				logger.info("Novelty behaviour dimensionality: " + (nsEnvironments.length * 1 * envSize * behaviourEDRecordCount));
 			}
 		}
 		else { 
@@ -208,12 +227,13 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 			int imageSize = 256;
 
 			double[] avgRewardForEachTrial = new double[trialCount];
-			ArrayRealVector behaviour = enableNoveltySearch && nsEnvironments == null ? new ArrayRealVector(environmentCount * trialCount * envSize * behaviourRecordCount) : null;
+			ArrayRealVector behaviourED = nsEvenDistribution && nsEnvironments == null ? new ArrayRealVector(environmentCount * trialCount * envSize * behaviourEDRecordCount) : null;
+			ArrayRealVector behaviourFS = nsFirstSteps && nsEnvironments == null ? new ArrayRealVector(environmentCount * trialCount * envSize * behaviourFSRecordCount) : null;
 			int behaviourIndex = 0;
 			double maxFitness = 0;
 			boolean logImageTemp = logImage;
 			for (int ei = 0; ei < environmentCount; ei++) {
-				int envIndex = (logText || logImageTemp) ? ei : environmentOrder[ei];
+				int envIndex = ((logText || logImageTemp) && environmentReplaceProb == 0) ? ei : environmentOrder[ei];
 				Environment env = environments[envIndex];
 				if (logText) {
 					logOutput.put("\n\nBEGIN EVALUATION ON ENVIRONMENT " + env.id + "\n");
@@ -235,7 +255,7 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 				substrate.reset();
 				
 				double envFitness = 0;
-				int noveltySearchStepsPerRecord = (int) Math.ceil((double) env.getMinimumStepsToSolve() / behaviourRecordCount);
+				int noveltySearchStepsPerRecord = (int) Math.ceil((double) env.getMinimumStepsToSolve() / behaviourEDRecordCount);
 				double previousTrialReward = 0;
 				ArrayRealVector state = null;
 				for (int trial = 0; trial < trialCount; trial++) {
@@ -274,7 +294,8 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 						}
 					}
 					
-					int behaviourRecordIndex = 0;
+					int behaviourIndexED = 0;
+					int behaviourIndexFS = 0;
 					
 					for (int step = 0; step < env.getMinimumStepsToSolve(); step++) {
 						if (logText) {
@@ -308,11 +329,16 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 						}
 						
 
-						if (enableNoveltySearch && nsEnvironments == null && step > 0 && step % noveltySearchStepsPerRecord == 0) {
-							// Behaviour is concatenation of states at behaviourRecordCount times from each trial from each environment.
-							behaviour.setSubVector(behaviourIndex, state);
+						if (nsEvenDistribution && nsEnvironments == null && step > 0 && step % noveltySearchStepsPerRecord == 0) {
+							// Behaviour is concatenation of states at behaviourEDRecordCount times from each trial from each environment.
+							behaviourED.setSubVector(behaviourIndex, state);
 							behaviourIndex += envSize;
-							behaviourRecordIndex++;
+							behaviourIndexED++;
+						}
+						
+						if (nsFirstSteps && nsEnvironments == null && step > 0 && step <= behaviourFSRecordCount) {
+							behaviourFS.setSubVector(behaviourIndexFS, state);
+							behaviourIndexFS += envSize;
 						}
 						
 						// If goal reached.
@@ -330,6 +356,7 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 
 					// Reward for trial is reward received in last step.
 					trialReward = env.getRewardForState(state);
+					assert Range.checkUnitRange(trialReward, "trialReward");
 					avgRewardForEachTrial[trial] += trialReward;
 					
 					// Reward received in initial trials isn't worth as much as for later trials, as agent can't know 
@@ -375,11 +402,11 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 						ImageIO.write(image, "png", outputfile);
 					}
 					
-					if (enableNoveltySearch && nsEnvironments == null) {
+					if (nsEvenDistribution && nsEnvironments == null) {
 						// Fill rest of behaviour vector with final state (if the goal was reached before the maximum 
 						// steps were used then this will ensure the behaviour vector is the right length).
-						for (; behaviourRecordIndex < behaviourRecordCount; behaviourRecordIndex++) {
-							behaviour.setSubVector(behaviourIndex, state);
+						for (; behaviourIndexED < behaviourEDRecordCount; behaviourIndexED++) {
+							behaviourED.setSubVector(behaviourIndex, state);
 							behaviourIndex += envSize;
 						}
 					}
@@ -389,19 +416,21 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 				performance += env.getPerformanceForState(state);
 				
 			} //for (int envIndex = 0; envIndex < environmentCount; envIndex++) {
+			
+			fitness /= maxFitness;
+			performance /= environmentCount;
+			genotype.setPerformanceValue(performance);
 
 			for (int trial = 0; trial < trialCount; trial++) {
 				avgRewardForEachTrial[trial] /= environmentCount;
 			}
 			if (logText) {
-				logOutput.put("\n\nReward for each trial averaged over all environments:\n");
+				logOutput.put("\n\nFitness: " + fitness + "\n");
+				logOutput.put("Performance: " + performance + "\n");
+				logOutput.put("Reward for each trial averaged over all environments:\n");
 				logOutput.put(Arrays.toString(avgRewardForEachTrial));
 				logOutput.close();
 			}
-
-			fitness /= maxFitness;
-			performance /= environmentCount;
-			genotype.setPerformanceValue(performance);
 			
 			// Determine the average distance between each pair of final states from each trial, over all environments.
 			double finalStatesDiff = 0;
@@ -423,12 +452,14 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 				}
 			}
 			
-			if (enableNoveltySearch && behaviours != null) {
+			if ((nsFirstSteps || nsEvenDistribution) && behaviours != null) {
 				if (nsEnvironments == null) {
-					behaviours[0] = new RealVectorBehaviour(behaviour);
+					int bi = 0;
+					if (nsEvenDistribution) behaviours[bi++] = new RealVectorBehaviour(behaviourED);
+					if (nsFirstSteps) behaviours[bi++] = new RealVectorBehaviour(behaviourFS);
 				}
 				else {
-					behaviours[0] = new RealVectorBehaviour(getBehaviourForNovelty(genotype, nn));
+					getBehaviourForNovelty(genotype, nn, behaviours);
 				}
 			}
 		} catch (IOException e) {
@@ -437,21 +468,22 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 	}
 	
 	// Used to determine behaviour when environments used to determine fitness will be replaced over the course of evolution.
-	private ArrayRealVector getBehaviourForNovelty(Chromosome genotype, NNAdaptor nn) {
+	private void getBehaviourForNovelty(Chromosome genotype, NNAdaptor nn, Behaviour[] behaviours) {
 		//int trialCount = 1;
 		Range outputRange = new Range(nn.getMinResponse() < -1000 ? -1000 : nn.getMinResponse(), nn.getMaxResponse() > 1000 ? 1000 : nn.getMaxResponse());
 		
-		int recordSize = envSize;
 		//int recordSize = nn.getOutputCount();
 		//int recordSize = 2;
-		ArrayRealVector behaviour = new ArrayRealVector(nsEnvironments.length * trialCount * recordSize * behaviourRecordCount);
-		int behaviourIndex = 0;
+		ArrayRealVector behaviourED = nsEvenDistribution ? new ArrayRealVector(nsEnvironments.length * trialCount * envSize * behaviourEDRecordCount) : null;
+		ArrayRealVector behaviourFS = nsFirstSteps ? new ArrayRealVector(nsEnvironments.length * trialCount * envSize * behaviourFSRecordCount) : null;
+		int behaviourIndexED = 0;
+		int behaviourIndexFS = 0;
 		for (int ei = 0; ei < nsEnvironments.length; ei++) {
 			Environment env = nsEnvironments[ei];
 			// Reset substrate to initial state to begin learning (new) environment.
 			nn.reset();
 			// Record the environment state at specified intervals.
-			int noveltySearchStepsPerRecord = (int) Math.ceil((double) env.getMinimumStepsToSolve() / behaviourRecordCount);
+			int noveltySearchStepsPerRecord = (int) Math.ceil((double) env.getMinimumStepsToSolve() / behaviourEDRecordCount);
 			for (int trial = 0; trial < trialCount; trial++) {
 				double[] agentOutput = new double[env.getInputSize()];
 				// Get initial state and environment output.
@@ -477,15 +509,15 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 					// Get updated environment output.
 					env.updateStateAndOutput(state, agentOutput, agentInput);
 					
-					if (step > 0 && step % noveltySearchStepsPerRecord == 0) {
+					if (nsEvenDistribution && step > 0 && step % noveltySearchStepsPerRecord == 0) {
 						//System.err.println("  " + step + " : " + behaviourIndex);
 						
-						// Behaviour is concatenation of states at behaviourRecordCount times from each trial from each environment.
-						behaviour.setSubVector(behaviourIndex, state);
+						// Behaviour is concatenation of states at behaviourEDRecordCount times from each trial from each environment.
+						behaviourED.setSubVector(behaviourIndexED, state);
 						
 						//double reward = Math.max(0, agentInput[agentInput.length-1]);
 						
-						// Behaviour is concatenation of agent output and the current reward signal at behaviourRecordCount times from each trial from each environment.
+						// Behaviour is concatenation of agent output and the current reward signal at behaviourEDRecordCount times from each trial from each environment.
 						//double[] b = ArrayUtil.scaleToUnit(Arrays.copyOf(agentOutput, recordSize), outputRange);
 						//b[b.length-1] = reward; // Reward.
 						//behaviours.setSubVector(behaviourIndex, b);
@@ -506,19 +538,27 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 						System.arraycopy(agentOutput, 0, prevOutput, 0, agentOutput.length);
 						*/
 						
-						behaviourIndex += recordSize;
+						behaviourIndexED += envSize;
+					}
+					
+					if (nsFirstSteps && step > 0 && step <= behaviourFSRecordCount) {
+						behaviourFS.setSubVector(behaviourIndexFS, ArrayUtil.scaleToUnit(Arrays.copyOf(agentOutput, agentOutput.length), outputRange));
+						//behaviourFS.setSubVector(behaviourIndexFS, state);
+						behaviourIndexFS += envSize;
 					}
 				}
 				// Fill rest of behaviour vector with final state (if the goal was reached before the maximum 
 				// steps were used then this will ensure the behaviour vector is the right length).
-				while (behaviourIndex < (ei+1) * (trial+1) * envSize * behaviourRecordCount) {
-					behaviour.setSubVector(behaviourIndex, state);
-					behaviourIndex += recordSize;
+				while (nsEvenDistribution && behaviourIndexED < (ei+1) * (trial+1) * envSize * behaviourEDRecordCount) {
+					behaviourED.setSubVector(behaviourIndexED, state);
+					behaviourIndexED += envSize;
 					//System.err.println("    " + behaviourIndex);
 				}
 			}		
 		} //for (int envIndex = 0; envIndex < environmentCount; envIndex++) {
-		return behaviour;
+		int bi = 0;
+		if (nsEvenDistribution) behaviours[bi++] = new RealVectorBehaviour(behaviourED);
+		if (nsFirstSteps) behaviours[bi++] = new RealVectorBehaviour(behaviourFS);
 	}
 
 
@@ -573,7 +613,7 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 	
 	@Override
 	public int noveltyObjectiveCount() {
-		return enableNoveltySearch ? 1 : 0;
+		return (nsFirstSteps ? 1 : 0) + (nsEvenDistribution ? 1 : 0);
 	}
 	
 	@Override
@@ -585,6 +625,10 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 	@Override
 	public boolean fitnessValuesStable() {
 		return environmentReplaceProb == 0;
+	}
+	
+	public int getEnvironmentCount() {
+		return environmentCount;
 	}
 	
 	@Override 

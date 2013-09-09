@@ -59,6 +59,7 @@ public abstract class MutationOperator {
 
 	/**
 	 * The {@link #mutate(Configuration, ChromosomeMaterial, Set, Set)} method will be invoked on each of the given individuals.
+	 * This method respects {@link ChromosomeMaterial#shouldMutate()}.
 	 * 
 	 * @param config The current active genetic configuration.
 	 * @param offspring <code>List</code> Contains <code>ChromosomeMaterial</code> objects from the current evolution.
@@ -68,12 +69,24 @@ public abstract class MutationOperator {
 	public void mutate(final Configuration config, final List<ChromosomeMaterial> offspring) throws InvalidConfigurationException {
 		for (ChromosomeMaterial material : offspring) {
 			if (material.shouldMutate()) {
-				Set<Allele> allelesToAdd = new HashSet<Allele>();
-				Set<Allele> allelesToRemove = new HashSet<Allele>();
-				mutate(config, material, allelesToAdd, allelesToRemove);
-				updateMaterial(material, allelesToAdd, allelesToRemove);
+				mutate(config, material);
 			}
 		}
+	}
+	
+	/**
+	 * The {@link #mutate(Configuration, ChromosomeMaterial, Set, Set)} method will be invoked on the given individuals.
+	 * This method ignores {@link ChromosomeMaterial#shouldMutate()}.
+	 * 
+	 * @param config The current active genetic configuration.
+	 * @param material The individual to mutate.
+	 * @throws InvalidConfigurationException
+	 */
+	public void mutate(final Configuration config, final ChromosomeMaterial material) throws InvalidConfigurationException {
+		Set<Allele> allelesToAdd = new HashSet<Allele>();
+		Set<Allele> allelesToRemove = new HashSet<Allele>();
+		mutate(config, material, allelesToAdd, allelesToRemove);
+		updateMaterial(material, allelesToAdd, allelesToRemove);
 	}
 
 	/**
@@ -126,7 +139,7 @@ public abstract class MutationOperator {
 	 * @param allelesToAdd <code>Set</code> contains <code>Allele</code> objecs
 	 * @param allelesToRemove <code>Set</code> contains <code>Allele</code> objects
 	 */
-	protected static void updateMaterial(ChromosomeMaterial material, Set allelesToAdd, Set allelesToRemove) {
+	protected static void updateMaterial(ChromosomeMaterial material, Set<Allele> allelesToAdd, Set<Allele> allelesToRemove) {
 		// remove before add because some genes that have been modified are in both lists
 		material.getAlleles().removeAll(allelesToRemove);
 		material.getAlleles().addAll(allelesToAdd);
@@ -135,7 +148,7 @@ public abstract class MutationOperator {
 	/**
 	 * @param aMutationRate
 	 */
-	protected void setMutationRate(double aMutationRate) {
+	public void setMutationRate(double aMutationRate) {
 		mutationRate = aMutationRate;
 	}
 

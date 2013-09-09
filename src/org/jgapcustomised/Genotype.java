@@ -23,6 +23,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -30,7 +31,9 @@ import org.jgapcustomised.event.GeneticEvent;
 
 import org.apache.log4j.Logger;
 
+import com.anji.neat.AddConnectionMutationOperator;
 import com.anji.neat.Evolver;
+import com.anji.neat.NeatConfiguration;
 import com.anji.util.Properties;
 
 /**
@@ -399,7 +402,6 @@ public class Genotype implements Serializable {
 				lastGenChangedSpeciesCompatThreshold = generation;
 			}
 			
-			
 			// Remove clones from population. We do this after speciation.
 			for (Species s : m_species) {
 				List<Chromosome> removed = s.cullClones();
@@ -465,7 +467,7 @@ public class Genotype implements Serializable {
 			}
 			previousFittest = fittest;
 			
-			// cull species down to contain only parent chromosomes and calculate the average (shared) fitness value for each species.
+			// For each species calculate the average (shared) fitness value and then cull it down to contain only parent chromosomes.
 			Iterator<Species> speciesIter = m_species.iterator();
 			while (speciesIter.hasNext()) {
 				Species s = speciesIter.next();
@@ -633,12 +635,12 @@ public class Genotype implements Serializable {
 		// ------------------------------------------------------------------
 		int populationSize = a_activeConfiguration.getPopulationSize();
 		List<Chromosome> chroms = new ArrayList<Chromosome>(populationSize);
-
+		
 		for (int i = 0; i < populationSize; i++) {
 			ChromosomeMaterial material = ChromosomeMaterial.randomInitialChromosomeMaterial(a_activeConfiguration);
 			chroms.add(new Chromosome(material, a_activeConfiguration.nextChromosomeId(), a_activeConfiguration.getObjectiveCount(), a_activeConfiguration.getNoveltyObjectiveCount()));
 		}
-
+		
 		return new Genotype(props, a_activeConfiguration, chroms);
 	}
 

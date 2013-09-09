@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import com.anji.neat.ConnectionAllele;
+
 /**
  * This is the guts of the original Chromosome object, pulled out so the genes can be modified by genetic operators
  * before creating the Chromosome object. Also enables us to handle special cases, like sample chromosome, where you
@@ -122,6 +124,15 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 		Long cloneParentId = (parentId == null) ? getPrimaryParentId() : parentId;
 		return new ChromosomeMaterial(copyOfAlleles, cloneParentId);
 	}
+	
+	/**
+	 * Returns the size of this ChromosomeMaterial (the number of alleles it contains).
+	 * 
+	 * @return The number of alleles contained within this ChromosomeMaterial instance.
+	 */
+	public int size() {
+		return m_alleles.size();
+	}
 
 	/**
 	 * Retrieves the set of genes. This method exists primarily for the benefit of GeneticOperators that require the
@@ -195,7 +206,8 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 
 			// Perturb the gene's value (allele) a random amount.
 			// ------------------------------------------------
-			newAllele.setToRandomValue(a_activeConfiguration.getRandomGenerator(), true);
+			if (newAllele instanceof ConnectionAllele)
+				newAllele.setToRandomValue(a_activeConfiguration.getRandomGenerator(), true);
 		}
 
 		return newMaterial;
@@ -467,8 +479,11 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 		//return result;
 		*/
 		
+		//boolean log = Math.random() < 0.01;
+		boolean log = false;
 		
 		if (m_alleles.isEmpty() || target.m_alleles.isEmpty()) {
+			if (log) System.err.println("empty");
 			return 1; // disjointCount / Math.max(m_alleles.size(), target.m_alleles.size()) will always equal 1 (no excess and no weight diff between common genes).
 		}
 		int disjointCount = 0, excessCount = 0, commonCount = 0;
@@ -534,8 +549,20 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 		}
 		*/
 		
-		int maxSize = Math.max(this.getAlleles().size(), target.getAlleles().size());
+		int maxSize = 1; //Math.max(this.getAlleles().size(), target.getAlleles().size());
+		
 		double result2 = ((speciationParms.getSpecieCompatExcessCoeff() * excessCount) / maxSize) + ((speciationParms.getSpecieCompatDisjointCoeff() * disjointCount) / maxSize) + (speciationParms.getSpecieCompatCommonCoeff() * avgWeightDifference);
+		
+		if (log) {
+			System.err.println("\nexcessCount " + excessCount);
+			System.err.println("disjointCount " + disjointCount);
+			System.err.println("commonCount " + commonCount);
+			System.err.println("avgWeightDifference " + avgWeightDifference);
+			System.err.println("maxSize " + maxSize);
+			System.err.println("result2 " + result2);
+			System.err.println(this.toString());
+			System.err.println(target.toString());
+		}
 		
 		//if (result != result2) {
 		//	System.err.println("result " + result  + " != " + result2 + "     " + (result - result2));

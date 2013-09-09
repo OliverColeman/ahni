@@ -46,24 +46,24 @@ import com.ojcoleman.ahni.hyperneat.Run;
 /**
  * <p>
  * Attempts to fine tune one or more parameters for an experiment described by a Properties file. Parameters are
- * adjusted iteratively, with each parameter adjusted in turn each iteration. The underlying assumption is that the
+ * adjusted iteratively, with each property adjusted in turn each iteration. The underlying assumption is that the
  * fitness landscape represented by the parameters to adjust is unimodal. It is currently assumed that all parameters
  * are represented by floating point numbers.
  * </p>
  * <p>
- * For each parameter for each iteration the fitness value is calculated by adjusting the parameter up or down by a
+ * For each property for each iteration the fitness value is calculated by adjusting the property up or down by a
  * multiplicative factor and running the experiment. If either of these adjustments results in a higher fitness then the
  * adjusted value will be adopted (at least until the next iteration when a new value may be adopted).
  * </p>
  * <p>
- * The default initial multiplicative factor is 2 (thus the initial downward adjustment of a parameter p is p/2 and the
+ * The default initial multiplicative factor is 2 (thus the initial downward adjustment of a property p is p/2 and the
  * upward adjustment is p*2). A different initial multiplicative factor may be specified in the Properties file. For each
- * iteration in which no parameter adjustments are adopted the multiplicative factor is halved.
+ * iteration in which no property adjustments are adopted the multiplicative factor is halved.
  * </p>
  * <p>
- * If fitness was not increased by adjusting a parameter in the previous iteration then it will not be adjusted in the
- * current iteration to save time. If adjusting the parameter in the next iteration still doesn't yield an increase in
- * fitness then the parameter will be ignored for the next two iterations, and so on.
+ * If fitness was not increased by adjusting a property in the previous iteration then it will not be adjusted in the
+ * current iteration to save time. If adjusting the property in the next iteration still doesn't yield an increase in
+ * fitness then the property will be ignored for the next two iterations, and so on.
  * </p>
  * <p>
  * The following properties may be specified in the Properties file:
@@ -84,7 +84,7 @@ import com.ojcoleman.ahni.hyperneat.Run;
  * <dt>parametertuner.initialvalueadjustfactor</dt>
  * <dd>The initial multiplicative factor</dd>
  * <dt>parametertuner.numruns</dt>
- * <dd>The number of runs to perform when determining fitness for a set of parameter values. Default is 50, which is probably about the safest minimum.</dd>
+ * <dd>The number of runs to perform when determining fitness for a set of property values. Default is 50, which is probably about the safest minimum.</dd>
  * </dl>
  * </p>
  */
@@ -109,9 +109,10 @@ public class ParameterTuner {
 	private String htCondorTpl;
 	private int[] adjustIneffectiveCount;
 	private int[] adjustCountDown;
-	private volatile int runLotID;
 	private Result bestResult;
 	private BufferedWriter resultFile;
+	private int iteration;
+	private int property;
 	
 	public static void main(String[] args) {
 		if (args.length == 0) {
@@ -225,11 +226,11 @@ public class ParameterTuner {
 
 			adjustIneffectiveCount = new int[propCount];
 			adjustCountDown = new int[propCount];
-			runLotID = 0;
 			
 			resultFile = new BufferedWriter(new FileWriter("results.csv"));
+			resultFile.append("iteration, tuned property, ");
 			for (int p = 0; p < propCount; p++) {
-				resultFile.append(propsToTune[p].name + ",");
+				resultFile.append(propsToTune[p].name + ", ");
 			}
 			resultFile.append("gens, mean perf\n");
 
@@ -242,7 +243,7 @@ public class ParameterTuner {
 				System.out.println("  " + propsToTune[p] + "=" + props.getProperty(propKey));
 			}
 			System.out.println("  num.generations=" + numGens);
-			bestResult = runExecutor.submit(new DoRuns(props, runLotID++, "i")).get();
+			bestResult = runExecutor.submit(new DoRuns(props, "initial", "0")).get();
 			System.out.println();
 			if (bestResult.solvedByGeneration() != -1) {
 				numGens = bestResult.solvedByGeneration();
@@ -256,24 +257,24 @@ public class ParameterTuner {
 			
 			int stagnantCount = 0;
 			
-			for (int i = 0; i < maxIterations; i++) {
-				System.out.println("Start iteration " + i);
+			for (iteration = 1; iteration <= maxIterations; iteration++) {
+				System.out.println("Start iteration " + iteration);
 				
 				boolean adjustedAnyParams = false;
 				boolean adjustCountDownZeroExists = false; // Indicates if any parameters are due to be adjusted this iteration.
 				boolean noImprovement = true;
 				boolean triedAtLeastOneParamAdjustment = false;
 
-				// Adjust each parameter in turn.
-				for (int p = 0; p < propCount; p++) {
-					String propKey = propsToTune[p].name;
+				// Adjust each property in turn.
+				for (property = 0; property < propCount; property++) {
+					String propKey = propsToTune[property].name;
 					boolean tuningPopSize = propKey.equals("popul.size");
 
-					// Sample fitness either side of current parameter value.
-					if (adjustCountDown[p] == 0) {
-						System.out.println("\tTuning " + propKey + " (current value is " + currentBestValues[p] + "). ");
+					// Sample fitness either side of current property value.
+					if (adjustCountDown[property] == 0) {
+						System.out.println("\tTuning " + propKey + " (current value is " + currentBestValues[property] + "). ");
 						
-						Param.Value[] variations = currentBestValues[p].variations();
+						Param.Value[] variations = currentBestValues[property].variations();
 						int varCount = variations.length;
 						Future<Result>[] futures = (Future<Result>[]) Array.newInstance(Future.class, varCount);
 						
@@ -288,7 +289,8 @@ public class ParameterTuner {
 								// Adjust gens so that total evaluations per run is maintained.
 								props.setProperty("num.generations", "" + (int) Math.round(totalEvaluations / variations[var].getValue()));
 							}
-							futures[var] = runExecutor.submit(new DoRuns(props, runLotID++, ""+var));
+							String name = var + "-" + propKey + "=" + variations[var].toString();
+							futures[var] = runExecutor.submit(new DoRuns(props, name, ""+var));
 							triedAtLeastOneParamAdjustment = true;
 						}
 						Param.Value newVal = null;
@@ -320,8 +322,8 @@ public class ParameterTuner {
 						
 						// If the fitness was increased by an adjustment.
 						if (newVal != null) {
-							adjustIneffectiveCount[p] = 0;
-							currentBestValues[p] = newVal;
+							adjustIneffectiveCount[property] = 0;
+							currentBestValues[property] = newVal;
 							adjustedAnyParams = true;
 							
 							if (tuningPopSize) {
@@ -339,22 +341,22 @@ public class ParameterTuner {
 							
 							noImprovement = false;
 						} else {
-							// If the fitness did not improve by adjusting this parameter then hold off adjusting it
+							// If the fitness did not improve by adjusting this property then hold off adjusting it
 							// for a few iterations (dependent on how many times adjusting it has been ineffective in
 							// previous generations).
-							adjustIneffectiveCount[p]++;
-							adjustCountDown[p] = adjustIneffectiveCount[p];
+							adjustIneffectiveCount[property]++;
+							adjustCountDown[property] = adjustIneffectiveCount[property];
 
 						}
 
-						// Set parameter to current best value.
-						props.setProperty(propKey, currentBestValues[p].toString());
+						// Set property to current best value.
+						props.setProperty(propKey, currentBestValues[property].toString());
 					} else {
-						adjustCountDown[p]--;
-						System.out.println("\tSkipping " + propKey + " for " + adjustCountDown[p] + " more iterations.");
+						adjustCountDown[property]--;
+						System.out.println("\tSkipping " + propKey + " for " + adjustCountDown[property] + " more iterations.");
 					}
 					
-					adjustCountDownZeroExists |= adjustCountDown[p] == 0;
+					adjustCountDownZeroExists |= adjustCountDown[property] == 0;
 				}
 				
 				resultFile.append("\n");
@@ -374,7 +376,7 @@ public class ParameterTuner {
 				}
 				System.out.println("\n");
 
-				// Make sure that at least one parameter is due to be adjusted. 
+				// Make sure that at least one property is due to be adjusted. 
 				while (!adjustCountDownZeroExists) {
 					for (int p = 0; p < propCount; p++) {
 						if (adjustCountDown[p] > 0) adjustCountDown[p]--;
@@ -396,7 +398,7 @@ public class ParameterTuner {
 				}
 			}
 			System.out.println("Finished adjusting parameters.");
-			System.out.println("Final best parameter values, giving result " + bestResult + ", were:");
+			System.out.println("Final best property values, giving result " + bestResult + ", were:");
 			for (int p = 0; p < propCount; p++) {
 				System.out.println(propsToTune[p] + "=" + currentBestValues[p]);
 			}
@@ -412,10 +414,17 @@ public class ParameterTuner {
 	
 	private void addResult(Result r) {
 		try {
-			for (int p = 0; p < propCount; p++) {
-				resultFile.append(r.getProps().get(this.propsToTune[p].name) + ", ");
+			if (iteration > 0) {
+				resultFile.append("\"" + iteration + "\",\"" + this.propsToTune[property].name + "\",");
 			}
-			resultFile.append(numGens + ", " + r.performance() + "\n");
+			else {
+				// Initial result.
+				resultFile.append("\"0\",\"<initial>\",");
+			}
+			for (int p = 0; p < propCount; p++) {
+				resultFile.append("\"" + r.getProps().get(this.propsToTune[p].name) + "\",");
+			}
+			resultFile.append("\"" + numGens + "\",\"" + r.performance() + "\"\n");
 			resultFile.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -434,26 +443,26 @@ public class ParameterTuner {
 	
 	
 	private class DoRuns implements Callable<Result> {
-		int id;
+		String name;
 		Properties props;
 		String label;
 		
-		public DoRuns(Properties props, int id, String label) {
-			this.id = id;
+		public DoRuns(Properties props, String name, String label) {
+			this.name = name;
 			this.props = (Properties) props.clone();
 			this.label = label;
 		}
 		
 		@Override
 		public Result call() throws Exception {
-			return doRuns(props, id, label);
+			return doRuns(props, name, label);
 		}
 		
-		private Result doRuns(Properties props, int id, String label) throws Exception {
+		private Result doRuns(Properties props, String name, String label) throws Exception {
 			if (htCondorTpl == null) {
 				return new Result(props, doRunsSerial(props, label), props.getIntProperty("popul.size"), props.getIntProperty("num.generations"));
 			} else {
-				return new Result(props, doRunsHTCondor(props, id, label), props.getIntProperty("popul.size"), props.getIntProperty("num.generations"));
+				return new Result(props, doRunsHTCondor(props, name, label), props.getIntProperty("popul.size"), props.getIntProperty("num.generations"));
 			}
 		}
 
@@ -472,13 +481,17 @@ public class ParameterTuner {
 			return new Results(performances, null);
 		}
 		
-		private Results doRunsHTCondor(Properties props, int id, String label) throws Exception {
+		private Results doRunsHTCondor(Properties props, String name, String label) throws Exception {
 			// Create dir to store temp files.
-			String condorOutDir = "pt-condor-" + id;
+			String condorOutDir = "pt-condor-" + iteration + "-" + name;
+			if (condorOutDir.length() > 255) {
+				// Trim to maximum length of 255 as this is the maximum on most file systems.
+				condorOutDir = condorOutDir.substring(0, 255);
+			}
 			String condorOutDirSep = condorOutDir + File.separator;
 			(new File(condorOutDir)).mkdir();
 			// Save properties file.
-			props.store(new FileOutputStream(condorOutDirSep + "pt.properties"), "" + id);
+			props.store(new FileOutputStream(condorOutDirSep + "pt.properties"), condorOutDir);
 			
 			// Generate condor submit file from template.
 			String[] lines = htCondorTpl.split("\n");
@@ -504,7 +517,8 @@ public class ParameterTuner {
 			condorSubmit.put("transfer_input_files", tif);
 			condorSubmit.put("output", "out-$(Process).txt");
 			condorSubmit.put("error", "err-$(Process).txt");
-			condorSubmit.put("when_to_transfer_output", "ON_EXIT");
+			condorSubmit.put("log", "condorlog-$(Process).txt");
+			condorSubmit.put("when_to_transfer_output", "ON_EXIT_OR_EVICT");
 			condorSubmit.put("should_transfer_files", "YES");
 			condorSubmit.remove("queue");
 			BufferedWriter fileWriter = new BufferedWriter(new FileWriter(new File(condorOutDirSep + "submit.txt")));
@@ -557,6 +571,7 @@ public class ParameterTuner {
 			}
 			
 			// Wait for condor jobs to finish.
+			// TODO use condor_q to check job status instead of output files (in case a job crashed).
 			int currentDoneCount = 0;
 			while (currentDoneCount != numRuns) {
 				Thread.sleep(1000); // Wait for 1 second.
@@ -578,8 +593,17 @@ public class ParameterTuner {
 			// Collate results.
 			Results results = PostProcess.combineResults(condorOutDirSep + "result-*-performance.csv", false);
 			
-			// Clean up generated files.
-			//Paths paths = new Paths("./", condorOutDir);
+			// Write them out to disk for later inspection if desired.
+			BufferedWriter resultsAllWriter = new BufferedWriter(new FileWriter(condorOutDirSep + "results-all-performance.csv"));
+			resultsAllWriter.write(results.toString());
+			resultsAllWriter.close();
+			BufferedWriter resultsStatsWriter = new BufferedWriter(new FileWriter(condorOutDirSep + "results-stats-performance.csv"));
+			Statistics stats = new Statistics(results);
+			resultsStatsWriter.write(stats.getBasicStats().toString());
+			resultsStatsWriter.close();
+			
+			// Clean up some generated files.
+			//Paths paths = new Paths("./", condorOutDir, "result-*-*.csv");
 			//paths.delete();
 
 			return results;

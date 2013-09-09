@@ -27,8 +27,10 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 
+import org.jgapcustomised.Allele;
 import org.jgapcustomised.ChromosomeMaterial;
 import org.jgapcustomised.Configuration;
+import org.jgapcustomised.InvalidConfigurationException;
 import org.jgapcustomised.MutationOperator;
 
 import com.anji.integration.AnjiRequiredException;
@@ -94,7 +96,7 @@ public class SingleTopologicalMutationOperator extends MutationOperator implemen
 	 * @see org.jgapcustomised.MutationOperator#mutate(org.jgapcustomised.Configuration,
 	 *      org.jgapcustomised.ChromosomeMaterial, java.util.Set, java.util.Set)
 	 */
-	protected void mutate(Configuration jgapConfig, ChromosomeMaterial target, Set allelesToAdd, Set allelesToRemove) {
+	protected void mutate(final Configuration jgapConfig, final ChromosomeMaterial target, Set<Allele> allelesToAdd, Set<Allele> allelesToRemove) throws InvalidConfigurationException {
 		if ((jgapConfig instanceof NeatConfiguration) == false)
 			throw new AnjiRequiredException("com.anji.neat.NeatConfiguration");
 
@@ -102,11 +104,11 @@ public class SingleTopologicalMutationOperator extends MutationOperator implemen
 
 		Random rand = config.getRandomGenerator();
 		if (doesMutationOccur(rand)) {
-			SortedSet alleles = target.getAlleles();
+			SortedSet<Allele> alleles = target.getAlleles();
 			if (rand.nextDouble() < addConnRatio) {
-				List neuronList = NeatChromosomeUtility.getNeuronList(alleles);
-				SortedMap conns = NeatChromosomeUtility.getConnectionMap(alleles);
-				addConnOp.addSingleConnection(config, neuronList, conns, allelesToAdd);
+				List<NeuronAllele> neuronList = NeatChromosomeUtility.getNeuronList(alleles);
+				SortedMap<Long, ConnectionAllele> conns = NeatChromosomeUtility.getConnectionMap(alleles);
+				addConnOp.addConnections(1, config, neuronList, conns, allelesToAdd, allelesToRemove);
 			} else {
 				List connList = NeatChromosomeUtility.getConnectionList(alleles);
 				Collections.shuffle(connList, rand);

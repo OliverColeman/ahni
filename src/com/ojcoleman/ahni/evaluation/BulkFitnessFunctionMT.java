@@ -172,10 +172,11 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		if (maxThreads > 0 && numThreads > maxThreads)
 			numThreads = maxThreads;
 
+		EvaluatorGroup eg = new EvaluatorGroup(this.getClass().getSimpleName() + " evaluators");
 		logger.info("Using " + numThreads + " threads for transcription and evaluation.");
 		evaluators = new Evaluator[numThreads];
 		for (int i = 0; i < numThreads; i++) {
-			evaluators[i] = new Evaluator(i);
+			evaluators[i] = new Evaluator(i, eg);
 			evaluators[i].start();
 		}
 
@@ -461,7 +462,8 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		private int id;
 		private Activator substrate;
 
-		protected Evaluator(int id) {
+		protected Evaluator(int id, ThreadGroup tg) {
+			super(tg, "FF Evaluator " + id);
 			this.id = id;
 			substrate = null;
 		}
@@ -588,8 +590,8 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 								else {
 									substrate = previousSubstrate;
 								}
-							} catch (TranscriberException e) {
-								logger.warn("transcriber error: " + e.getMessage());
+							} catch (Exception e) {
+								logger.warn("Exception during transcription or evaluation: " + e.getMessage());
 								e.printStackTrace();
 							}
 						} else { // testingNovelty
@@ -651,6 +653,17 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 			notifyAll();
 		}
 	}
+	
+	private class EvaluatorGroup extends ThreadGroup {
+		public EvaluatorGroup(String name) {
+			super(name);
+		}
+		public void uncaughtException(Thread t, Throwable e) {
+			super.uncaughtException(t, e);
+			System.exit(1);
+		}
+	}
+
 
 	/**
 	 * A convenience method to generate a substrate from the given Chromosome using the configured transcriber for this
@@ -745,7 +758,8 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 
 		}
 	}
-
+	
+	
 	/**
 	 * Sub-classes may override this method to dispose of resources upon disposal of this object.
 	 */

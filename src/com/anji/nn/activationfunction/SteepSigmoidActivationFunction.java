@@ -20,15 +20,17 @@
 package com.anji.nn.activationfunction;
 
 /**
- * Classic Sigmoid.
+ * Steepened Sigmoid with slope of 4.9.
  * 
  * @author Philip Tucker
  */
-public class SigmoidActivationFunction implements ActivationFunction {
+public class SteepSigmoidActivationFunction implements ActivationFunction {
+	private final static double SLOPE = 4.9;
+
 	/**
 	 * identifying string
 	 */
-	public final static String NAME = "sigmoid";
+	public final static String NAME = "sigmoid-steep";
 
 	/**
 	 * @see Object#toString()
@@ -40,11 +42,11 @@ public class SigmoidActivationFunction implements ActivationFunction {
 	/**
 	 * This class should only be accessed via ActivationFunctionFactory.
 	 */
-	SigmoidActivationFunction() {
+	SteepSigmoidActivationFunction() {
 	}
 
 	public double apply(double input) {
-		return 1.0 / (1.0 + Math.exp(-input));
+		return 1.0 / (1.0 + Math.exp(-(input * SLOPE)));
 	}
 
 	/**

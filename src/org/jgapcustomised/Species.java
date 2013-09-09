@@ -325,7 +325,7 @@ public class Species {
 	 */
 	public List<Chromosome> getElite(double proportion, int minToSelect, Chromosome bestPerforming) {
 		eliteCount = 0;
-		int numToSelect = Math.max(minToSelect, (int) Math.round(proportion * size())) - (bestPerforming != null ? 1 : 0);
+		int numToSelect = Math.max(0, Math.max(minToSelect, (int) Math.round(proportion * size())) - (bestPerforming != null ? 1 : 0));
 		
 		Collections.sort(chromosomes, new ChromosomeFitnessComparator(false /* asc */, false /* speciated fitness */));
 		List<Chromosome> result = new ArrayList<Chromosome>(numToSelect);
@@ -488,6 +488,7 @@ public class Species {
 				}
 			}
 		}
+		
 		for (Chromosome c : toRemove) {
 			c.resetSpecie();
 			chromosomes.remove(c);

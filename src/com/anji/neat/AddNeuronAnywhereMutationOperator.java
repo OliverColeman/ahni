@@ -80,7 +80,7 @@ public class AddNeuronAnywhereMutationOperator extends MutationOperatorMultiple 
 		while (!connected) {
 			NeuronAllele src = neurons.get(random.nextInt(neurons.size()));
 			NeuronAllele dest = neurons.get(random.nextInt(neurons.size()));
-			if (addConnOperator.connectionAllowed(src, dest, connections)) {
+			if (NeatChromosomeUtility.connectionAllowed(config, src, dest, connections)) {
 				ConnectionAllele newConn = config.newConnectionAllele(src.getInnovationId(), newNeuronAllele.getInnovationId());
 				newConn.setToRandomValue(random, false);
 				allelesToAdd.add(newConn);
@@ -88,6 +88,7 @@ public class AddNeuronAnywhereMutationOperator extends MutationOperatorMultiple 
 
 				newConn = config.newConnectionAllele(newNeuronAllele.getInnovationId(), dest.getInnovationId());
 				newConn.setWeight(random.nextGaussian() * ConnectionAllele.RANDOM_STD_DEV);
+				//newConn.setWeight((random.nextBoolean() ? 1 : -1) * random.nextDouble() * ConnectionAllele.RANDOM_STD_DEV);
 				allelesToAdd.add(newConn);
 				connections.add(newConn);
 				connected = true;

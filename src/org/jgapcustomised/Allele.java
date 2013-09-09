@@ -191,4 +191,14 @@ public abstract class Allele implements Comparable {
 	 * Return true iff all the parameters of this allele match those of the given allele.
 	 */
 	public abstract boolean isEquivalent(Allele otherAllele);
+
+	/**
+	 * Generic method for setting the value of an allele. If not required then this method should be overridden with a method returning 0.
+	 */
+	public abstract double getValue();
+
+	/**
+	 * Generic method for setting the value of an allele. If not required then this method should be overridden with an empty method.
+	 */
+	public abstract void setValue(double aValue);
 }

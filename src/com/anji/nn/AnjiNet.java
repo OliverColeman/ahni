@@ -232,7 +232,7 @@ public class AnjiNet {
 			// We don't use the Collections iterator functionality because it's slower for small collections.
 			for (int i = 0 ; i < recurrentConns.size(); i++) {
 				recurrentConns.get(i).step();
-				System.out.println("recurrent! " + name);
+				//System.out.println("recurrent! " + name);
 			}
 			for (int i = 0 ; i < allNeurons.size(); i++) {
 				allNeurons.get(i).step();

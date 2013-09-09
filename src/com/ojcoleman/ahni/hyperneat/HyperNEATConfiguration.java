@@ -67,7 +67,7 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 		super.init(newProps);
 		props = newProps;
 		
-		boolean enableLogFiles = props.contains(HyperNEATConfiguration.OUTPUT_DIR_KEY);
+		boolean enableLogFiles = props.containsKey(HyperNEATConfiguration.OUTPUT_DIR_KEY);
 		if (enableLogFiles) {
 			File dirFile = new File(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY));
 			if (!dirFile.exists())
@@ -243,7 +243,7 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 				Transcriber cppnTranscriber = (Transcriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
 				Activator n = cppnTranscriber.transcribe(new Chromosome(getSampleChromosomeMaterial(), 0L, 0, 0));
 				BufferedWriter outputfile = new BufferedWriter(new FileWriter(getOutputDirPath() + "initial-sample-chromosome.txt"));
-				outputfile.write(n.toXml());
+				outputfile.write(n.toString());
 				outputfile.close();
 			} catch (Exception e) {
 				e.printStackTrace();

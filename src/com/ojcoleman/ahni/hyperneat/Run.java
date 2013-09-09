@@ -141,7 +141,7 @@ public class Run {
 			configureLog4J(true);
 		}
 		// If no files should be generated (but output to terminal is allowed).
-		else if (noFiles) {
+		else if (noFiles || outputDir == null && !properties.containsKey(HyperNEATConfiguration.OUTPUT_DIR_KEY)) {
 			properties.remove(HyperNEATConfiguration.OUTPUT_DIR_KEY);
 			outputDir = null;
 			resultFileNameBase = null;
@@ -186,6 +186,8 @@ public class Run {
 
 		long start = System.currentTimeMillis();
 		double avgRunTime = 0;
+		double avgGenerations = 0;
+		int solvedCount = 0;
 		for (int run = 0; run < numRuns; run++) {
 			long startRun = System.currentTimeMillis();
 
@@ -213,6 +215,10 @@ public class Run {
 
 			performance[run] = evolver.getBestPerformance();
 			fitness[run] = evolver.getBestFitness();
+			avgGenerations += evolver.getGeneration();
+			if (evolver.getGeneration() < performance[run].length) {
+				solvedCount++;
+			}
 
 			evolver.dispose();
 
@@ -234,6 +240,10 @@ public class Run {
 
 		}
 		logger.info(numRuns + " runs completed in " + Misc.formatTimeInterval((end - start) / 1000));
+		
+		avgGenerations /= numRuns;
+		logger.info("Average number of generations: " + avgGenerations);
+		logger.info("Number of runs in which solution was found: " + solvedCount);
 
 		if (resultFileNameBase != null) {
 			String resultPerfFileName = resultFileNameBase + "-performance.csv";

@@ -17,7 +17,7 @@ public abstract class Environment implements Configurable {
 	/**
 	 * The containing RLContinuousStateBased object.
 	 */
-	protected RLContinuousStateBased rlcss;
+	protected RLContinuousStateBased rlcsb;
 	protected int size;
 	protected int id;
 	protected ArrayRealVector startState;

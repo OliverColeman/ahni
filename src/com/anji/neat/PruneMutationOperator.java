@@ -45,8 +45,7 @@ import com.anji.util.Properties;
  * Simplification and Complexification in the Evolution of Neural Network Topologies" paper for <a
  * href="http://gal4.ge.uiuc.edu:8080/GECCO-2004/">GECCO 2004 </a>.
  * 
- * TODO - mutation rate less than 1.0 might yield unexpected results - maybe should handle nodes and connections
- * differently in that case
+ * This class forces the mutation rate to be 1 as any other mutation rate doesn't make sense.
  * 
  * @author Philip Tucker
  */
@@ -80,7 +79,7 @@ public class PruneMutationOperator extends MutationOperator implements Configura
 	 * @see MutationOperator#MutationOperator(double)
 	 */
 	public PruneMutationOperator(double newMutationRate) {
-		super(newMutationRate);
+		super(DEFAULT_MUTATE_RATE);
 	}
 
 	/**
@@ -146,4 +145,10 @@ public class PruneMutationOperator extends MutationOperator implements Configura
 		}
 	}
 
+	/**
+	 * @param aMutationRate
+	 */
+	@Override
+	public void setMutationRate(double aMutationRate) {
+	}
 }

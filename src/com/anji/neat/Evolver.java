@@ -470,26 +470,35 @@ public class Evolver implements Configurable {
 	 * @param args command line arguments; args[0] used as properties file
 	 * @throws Throwable
 	 */
-	/*
-	 * public static void main( String[] args ) throws Throwable { try { //System.out.println( Copyright.STRING );
-	 * 
-	 * if ( args.length != 1 ) { usage(); System.exit( -1 ); }
-	 * 
-	 * Properties props = new Properties( args[ 0 ] ); Evolver evolver = new Evolver(); evolver.init( props );
-	 * evolver.run();
-	 * 
-	 * 
-	 * 
-	 * // HyperNEATTranscriber transcriber = new HyperNEATTranscriber(props); // GridNet net =
-	 * transcriber.newGridNet(evolver.getChamp()); // System.out.println("Champ weights:"); //
-	 * System.out.println(net.toString());
-	 * 
-	 * 
-	 * // NeatActivator na = new NeatActivator(); // na.init( props ); // logger.info( "\n" + na.displayActivation( "" +
-	 * evolver.getChamp().getId() ) );
-	 * 
-	 * System.exit( 0 ); } catch ( Throwable th ) { logger.error( "", th ); throw th; } }
-	 */
+	public static void main(String[] args) throws Throwable {
+		try {
+			// System.out.println( Copyright.STRING );
+			if (args.length != 1) {
+				usage();
+				System.exit(-1);
+			}
+
+			Properties props = new Properties(args[0]);
+			Evolver evolver = new Evolver();
+			evolver.init(props);
+			evolver.run();
+
+			// HyperNEATTranscriber transcriber = new HyperNEATTranscriber(props);
+			// GridNet net =transcriber.newGridNet(evolver.getChamp());
+			// System.out.println("Champ weights:");
+			// System.out.println(net.toString());
+
+			// NeatActivator na = new NeatActivator();
+			// na.init( props );
+			// logger.info( "\n" + na.displayActivation( "" +evolver.getChamp().getId() ) );
+
+			System.exit(0);
+		} catch (Throwable th) {
+			logger.error("", th);
+			throw th;
+		}
+	}
+	 
 	/**
 	 * @return champion of last generation
 	 */

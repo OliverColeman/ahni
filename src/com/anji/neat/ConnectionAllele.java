@@ -19,6 +19,7 @@
  */
 package com.anji.neat;
 
+import java.text.DecimalFormat;
 import java.util.Random;
 
 import org.jgapcustomised.Allele;
@@ -31,6 +32,8 @@ import org.jgapcustomised.Allele;
  * @author Philip Tucker
  */
 public class ConnectionAllele extends Allele {
+	private static final DecimalFormat nf = new DecimalFormat(" 0.0000;-0.0000");
+	
 	private ConnectionGene connectionGene;
 
 	/**
@@ -47,7 +50,7 @@ public class ConnectionAllele extends Allele {
 	 * @see Object#toString()
 	 */
 	public String toString() {
-		return connectionGene.toString() + " [" + weight + "]";
+		return "C-" + connectionGene.toString() + " [" + nf.format(weight) + "]";
 	}
 
 	/**
@@ -80,9 +83,7 @@ public class ConnectionAllele extends Allele {
 	 * @see Allele#distance(Allele)
 	 */
 	public double distance(Allele target) {
-		// TODO - removed to help performance
-		// if ( target.getInnovationId().equals( getInnovationId() ) == false )
-		// throw new Exception( "should not compute distance for alleles of different gene" );
+		assert target.getInnovationId().equals(getInnovationId()) : "Should not compute distance for alleles of different gene.";
 		return Math.abs(weight - ((ConnectionAllele) target).getWeight());
 	}
 
@@ -95,8 +96,11 @@ public class ConnectionAllele extends Allele {
 	public void setToRandomValue(Random a_numberGenerator, boolean onlyPerturbFromCurrentValue) {
 		if (onlyPerturbFromCurrentValue)
 			weight += a_numberGenerator.nextGaussian() * RANDOM_STD_DEV;
+			//weight += (a_numberGenerator.nextBoolean() ? 1 : -1) * a_numberGenerator.nextDouble() * RANDOM_STD_DEV;
 		else
 			weight = a_numberGenerator.nextGaussian() * RANDOM_STD_DEV;
+			//weight = (a_numberGenerator.nextBoolean() ? 1 : -1) * a_numberGenerator.nextDouble() * RANDOM_STD_DEV;
+		
 	}
 
 	/**
@@ -135,5 +139,21 @@ public class ConnectionAllele extends Allele {
 			return false;
 		ConnectionAllele other = (ConnectionAllele) otherAllele;
 		return getSrcNeuronId() == other.getSrcNeuronId() && getDestNeuronId() == other.getDestNeuronId() && weight == other.weight;
+	}
+
+	/**
+	 * Gets the weight value.
+	 */
+	@Override
+	public double getValue() {
+		return weight;
+	}
+
+	/**
+	 * Sets the weight value.
+	 */
+	@Override
+	public void setValue(double aValue) {
+		weight = aValue;
 	}
 }

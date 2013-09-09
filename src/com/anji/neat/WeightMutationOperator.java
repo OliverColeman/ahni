@@ -105,32 +105,40 @@ public class WeightMutationOperator extends MutationOperator implements Configur
 		int numMutations = numMutations(config.getRandomGenerator(), alleles.size());
 		Iterator<Allele> iter = alleles.iterator();
 		int i = 0;
-
+		
 		while ((i < numMutations) && iter.hasNext()) {
 			Allele origAllele = iter.next();
+			
+			// TODO CHECK IF THIS IS A NEW CONNECTION AND DON'T MUTATE IF SO.
+			
 			boolean isNeuron = origAllele instanceof NeuronAllele;
 			boolean isConnection = origAllele instanceof ConnectionAllele;
 			if (isNeuron || isConnection) {
 				double currentValue = isConnection ? ((ConnectionAllele) origAllele).getWeight() : ((NeuronAllele) origAllele).getBias();
-				double nextValue = currentValue + config.getRandomGenerator().nextGaussian() * getStdDev();
-	
-				if (nextValue > config.getMaxConnectionWeight()) {
-					nextValue = config.getMaxConnectionWeight();
-				} else if (nextValue < config.getMinConnectionWeight()) {
-					nextValue = config.getMinConnectionWeight();
+				// Treat neuron bias values of 0 like a connection that doesn't exist. 
+				if (!isNeuron || currentValue != 0) {
+					double nextValue = currentValue + config.getRandomGenerator().nextGaussian() * getStdDev();
+					//double nextValue = currentValue + (config.getRandomGenerator().nextBoolean() ? 1 : -1) * config.getRandomGenerator().nextDouble() * getStdDev();
+		
+					if (nextValue > config.getMaxConnectionWeight()) {
+						nextValue = config.getMaxConnectionWeight();
+					} else if (nextValue < config.getMinConnectionWeight()) {
+						nextValue = config.getMinConnectionWeight();
+					}
+		
+					Allele newAllele = origAllele.cloneAllele();
+					if (isConnection) {
+						((ConnectionAllele) newAllele).setWeight(nextValue);
+					}
+					else {
+						((NeuronAllele) newAllele).setBias(nextValue);
+					}
+					
+					genesToRemove.add(origAllele);
+					genesToAdd.add(newAllele);
+					
+					i++;
 				}
-	
-				Allele newAllele = origAllele.cloneAllele();
-				if (isConnection) {
-					((ConnectionAllele) newAllele).setWeight(nextValue);
-				}
-				else {
-					((NeuronAllele) newAllele).setBias(nextValue);
-				}
-	
-				genesToRemove.add(origAllele);
-				genesToAdd.add(newAllele);
-				i++;
 			}
 		}
 	}

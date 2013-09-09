@@ -171,8 +171,10 @@ public class AnjiNetTranscriber implements Transcriber<AnjiActivator>, Configura
 			for (ConnectionAllele connAllele : connAlleles) {
 				Neuron src = allNeurons.get(connAllele.getSrcNeuronId());
 				Neuron dest = allNeurons.get(connAllele.getDestNeuronId());
-				if (src == null || dest == null)
-					throw new TranscriberException("connection with missing src or dest neuron: " + connAllele.toString());
+				if (src == null)
+					throw new TranscriberException("connection with missing src neuron: " + connAllele.toString());
+				if (dest == null)
+					throw new TranscriberException("connection with missing dest neuron: " + connAllele.toString());
 
 				// handle recurrency processing
 				boolean cached = false;

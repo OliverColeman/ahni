@@ -207,7 +207,7 @@ public class RLRecurrentNetworkBased extends BulkFitnessFunctionMT implements AH
 
 		try {
 			NiceWriter logOutput = !logText ? null : new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
-			int imageScale = 8;
+			int imageScale = 4;
 
 			double[] avgRewardForEachTrial = new double[trialCount];
 

@@ -558,9 +558,8 @@ public class Chromosome implements Comparable, Serializable {
 
 		return atLeastOneObjectiveBetter;
 	}
-
-	public void setCrowdingDistance(double positiveInfinity) {
-		// TODO Auto-generated method stub
-
+	
+	public ChromosomeMaterial getMaterial() {
+		return m_material;
 	}
 }

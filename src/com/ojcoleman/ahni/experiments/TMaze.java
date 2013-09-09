@@ -201,9 +201,9 @@ public class TMaze extends BulkFitnessFunctionMT {
 			if (randomRange > 0) rewardSwitchTrials[i] += random.nextInt(randomRange + 1) * 2 - randomRange;
 			rewardIndexForSwitchList.add((i + 1) % rewardLocationsX.length);
 		}
-		if (rewardSwitchVariation > 0) {
+		//if (rewardSwitchVariation > 0) {
 			Collections.shuffle(rewardIndexForSwitchList, random);
-		}
+		//}
 		rewardIndexForSwitch = new int[rewardSwitchCount + 1];
 		for (int i = 0; i < rewardSwitchCount + 1; i++)
 			rewardIndexForSwitch[i] = rewardIndexForSwitchList.get(i);
@@ -377,6 +377,10 @@ public class TMaze extends BulkFitnessFunctionMT {
 			double minPossibleReward = Math.min(Math.min(rewardCrash, rewardFailReturnHome), 0);
 			double possibleRewardRange = rewardHigh - minPossibleReward;
 			double fitness = (reward - minPossibleReward) / possibleRewardRange;
+			// Allow for numerical imprecision.
+			if (fitness < 0 && fitness > -0.000001) {
+				fitness = 0;
+			}
 			// Highest performance is reached when all trials are correct except those where the reward was moved and the agent had to explore all possible options.
 			double performance = (double) correctTrialCount / (trialCount - ((rewardSwitchCount+1) * (isDouble ? 3 : 1)));
 			if (performance > 1) performance = 1; // Sometimes there's a lucky one.

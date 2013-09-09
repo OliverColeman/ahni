@@ -42,6 +42,7 @@ public class ActivationFunctionFactory {
 		activationFunctions.put(NegatedLinearActivationFunction.NAME, new NegatedLinearActivationFunction());
 		activationFunctions.put(SigmoidActivationFunction.NAME, new SigmoidActivationFunction());
 		activationFunctions.put(BipolarSigmoidActivationFunction.NAME, new BipolarSigmoidActivationFunction());
+		activationFunctions.put(SteepSigmoidActivationFunction.NAME, new SteepSigmoidActivationFunction());
 		activationFunctions.put(TanhActivationFunction.NAME, new TanhActivationFunction());
 		activationFunctions.put(TanhCubicActivationFunction.NAME, new TanhCubicActivationFunction());
 		activationFunctions.put(EvSailSigmoidActivationFunction.NAME, new EvSailSigmoidActivationFunction());

@@ -87,13 +87,23 @@ public class SimpleNavigationEnvironment extends Environment {
 				startState.setEntry(i, 0.5);
 			}
 
-			// Goal state is in randomly selected location with minimum distance from start state.
-			do {
-				for (int i = 0; i < size; i++) {
-					goalState.setEntry(i, random.nextDouble());
-				}
-			} while (goalState.getDistance(startState) < 0.5);
-
+			if (size == 2) {
+				double ad = 2 * Math.PI / rlcsb.getEnvironmentCount();
+				double a = ad * (id % rlcsb.getEnvironmentCount());
+				//a += random.nextDouble() * ad * 0.4;
+				goalState.setEntry(0, 0.5 + Math.cos(a)/2);
+	            goalState.setEntry(1, 0.5 + Math.sin(a)/2);
+	            //System.err.println((int) (goalState.getEntry(0) * 1000) + "," + (int) (goalState.getEntry(1) * 1000));
+			}
+			else {
+				// Goal state is in randomly selected location with minimum distance from start state.
+				do {
+					for (int i = 0; i < size; i++) {
+						goalState.setEntry(i, random.nextDouble());
+					}
+				} while (goalState.getDistance(startState) < 0.4 || goalState.getDistance(startState) > 0.5);
+			}
+			
 			// Goal state is in corner according to id (iterate over all possible corners).
 			/*
 			 * String corners = Integer.toBinaryString(id); for (int i = 0, ci = corners.length() - 1; i < size; i++,
@@ -108,6 +118,11 @@ public class SimpleNavigationEnvironment extends Environment {
 			for (int d = 0; d < size; d++) {
 				startState.setEntry(d, 0.5);
 				goalState.setEntry(d, pos[d] * stepSize);
+			}
+			double d = goalState.getDistance(startState);
+			if (d > 0.5) {
+				// Make sure distance from start state is 0.5.
+				goalState.mapSubtractToSelf(0.5).mapMultiplyToSelf(0.5/d).mapAddToSelf(0.5);
 			}
 			
 			/*String corners = Integer.toBinaryString(-id - 1);
@@ -153,11 +168,11 @@ public class SimpleNavigationEnvironment extends Environment {
 		if (obstacleCount == 0) {
 			path = findPath();
 		}
-		requiredSteps = (int) Math.ceil((path * 1.1) / maxStepSize);
+		requiredSteps = (int) Math.round((path * 1.1) / maxStepSize) + 1;
 		if (props.getIntProperty(RLContinuousStateBased.TRIAL_COUNT) == 1) {
 			// The agent needs to try different directions to see which is the right one in the same trial
-			// allow some extra time for this.
-			requiredSteps += 2 * size * size;
+			// allow some extra time for this (2 directions in each axis).
+			requiredSteps += 2 * size;
 		}
 	}
 
@@ -206,13 +221,10 @@ public class SimpleNavigationEnvironment extends Environment {
 
 	@Override
 	public double getRewardForState(ArrayRealVector state) {
-		// double perf = getPerformanceForState(state);
 		double d = state.getL1Distance(goalState) / size;
-
-		// return perf;
+		return 1 - d;
 		// return Math.pow(1-d, 2);
-		return d < maxStepSize ? 1 : (1 - d) * 0.5;
-		// return perf >= 0.7 ? 1 : 0;
+		// return d < maxStepSize ? 1 : (1 - d) * 0.5;
 	}
 
 	@Override
@@ -230,7 +242,7 @@ public class SimpleNavigationEnvironment extends Environment {
 	 */
 	protected double findPath() {
 		if (obstacleCount == 0) {
-			return startState.getL1Distance(goalState);
+			return startState.getDistance(goalState);
 		}
 
 		int granularity = (int) Math.ceil(1 / maxStepSize) + 1;
