@@ -10,6 +10,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
 
@@ -466,9 +467,9 @@ public class BainNN extends NNAdaptor {
 				out.append("\t" + ArrayUtil.toString(nn.getNeurons().getComponentConfiguration(i).getParameterValues(), "\t", nf));
 			}
 		}
-
+		
 		out.append("\nSynapses:");
-		out.append("\n\tpre > post\tweight");
+		out.append("\n\tpre > post\tEnabled\tweight");
 		paramNames = nn.getSynapses().getConfigSingleton() != null ? nn.getSynapses().getConfigSingleton().getParameterNames() : null;
 		if (paramNames != null) {
 			out.append("\t");
@@ -476,17 +477,27 @@ public class BainNN extends NNAdaptor {
 				out.append(paramNames[p].substring(0, Math.min(6, paramNames[p].length())) + "\t");
 			}
 		}
+		TreeMap<String, String> sortedSynapses = new TreeMap<String, String>();
 		for (int i = 0; i < synapseCount; i++) {
 			int pre = nn.getSynapses().getPreNeuron(i);
 			int post = nn.getSynapses().getPostNeuron(i);
 			String preType = isInput(pre) ? "i" : isOutput(pre) ? "o" : "h";
 			String postType = isInput(post) ? "i" : isOutput(post) ? "o" : "h";
-			out.append("\n\t" + preType + ":" + pre + " > " + postType + ":" + post + "\t" + nf.format(nn.getSynapses().getEfficacy(i)));
+			String enabled = nn.getSynapses().isNotUsed(i) ? "0" : "1";
+			String efficacy = nf.format(nn.getSynapses().getEfficacy(i));
+			
+			String key = pre + ":" + post;
+			String value = preType + ":" + pre + " > " + postType + ":" + post + "\t" + enabled + "\t" + efficacy;
 			if (paramNames != null && nn.getSynapses().getComponentConfiguration(i) != null) {
-				out.append("\t" + ArrayUtil.toString(nn.getSynapses().getComponentConfiguration(i).getParameterValues(), "\t", nf));
+				value += "\t" + ArrayUtil.toString(nn.getSynapses().getComponentConfiguration(i).getParameterValues(), "\t", nf);
 			}
+			sortedSynapses.put(key, value);			
 		}
-
+		for (String cs : sortedSynapses.values()) {
+			out.append("\n\t" + cs);
+		}
+		
+		out.append("\n");
 		return out.toString();
 	}
 

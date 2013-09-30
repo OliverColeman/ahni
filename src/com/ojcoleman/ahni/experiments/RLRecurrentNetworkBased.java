@@ -504,7 +504,7 @@ public class RLRecurrentNetworkBased extends BulkFitnessFunctionMT implements AH
 				double previousWeightVariance = weightVariance;
 				int previousInDegree = inDegree;
 				if (increaseDifficulty()) {
-					event.getEvolver().logChamp(bestPerforming, true);
+					event.getEvolver().logChamp(bestPerforming, true, "");
 
 					// Create new environment networks to allow for possibly increased number of connections.
 					for (int e = 0; e < environments.length; e++) {

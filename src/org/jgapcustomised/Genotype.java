@@ -227,7 +227,7 @@ public class Genotype implements Serializable {
 	 */
 	protected void speciate() {
 		// If true then chromosomes from previous generations will never be removed from their current species.
-		boolean keepExistingSpecies = true;
+		boolean keepExistingSpecies = false;
 		
 		// sort so fittest are first as the fittest is used as the representative of a species (in case of creating new
 		// species)
@@ -394,11 +394,14 @@ public class Genotype implements Serializable {
 			
 			// Attempt to maintain species count target, don't change threshold too frequently.
 			int targetSpeciesCount = m_specParms.getSpeciationTarget();
-			int maxAdjustFreq = (int) Math.sqrt(m_activeConfiguration.getPopulationSize());
+			int maxAdjustFreq = (int) Math.round(Math.pow(m_activeConfiguration.getPopulationSize(), 0.333));
 			if (targetSpeciesCount > 0 && m_species.size() != targetSpeciesCount && (generation - lastGenChangedSpeciesCompatThreshold > maxAdjustFreq)) {
 				double ratio = (double) m_species.size() / targetSpeciesCount;
 				double factor = (ratio - 1) * 0.2 + 1;
-				m_specParms.setSpeciationThreshold(m_specParms.getSpeciationThreshold() * factor);
+				double newSpecThresh = m_specParms.getSpeciationThreshold() * factor;
+				if (newSpecThresh < m_specParms.getSpeciationThresholdMin()) newSpecThresh = m_specParms.getSpeciationThresholdMin();
+				if (newSpecThresh > m_specParms.getSpeciationThresholdMax()) newSpecThresh = m_specParms.getSpeciationThresholdMax();
+				m_specParms.setSpeciationThreshold(newSpecThresh);
 				lastGenChangedSpeciesCompatThreshold = generation;
 			}
 			
@@ -407,7 +410,6 @@ public class Genotype implements Serializable {
 				List<Chromosome> removed = s.cullClones();
 				m_chromosomes.removeAll(removed);
 			}
-			
 			
 			// Find best performing individual.
 			if (previousBestPerforming != null && m_chromosomes.contains(previousBestPerforming)) {

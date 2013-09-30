@@ -43,6 +43,8 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 	private SortedSet<Allele> m_alleles = null;
 	private boolean shouldMutate = true;
 
+	public boolean pruned;
+
 	/**
 	 * Create chromosome with two parents. Used for crossover.
 	 * 
@@ -409,76 +411,6 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 	 * @see Allele#distance(Allele)
 	 */
 	public double distance(ChromosomeMaterial target, SpeciationParms speciationParms) {
-		/*
-		 * Old method, not very efficient, new method below.
-		 * 
-		// get genes INTEGER have target does not
-		List<Allele> myUnmatchedAlleles = new ArrayList<Allele>(m_alleles);
-		myUnmatchedAlleles.removeAll(target.getAlleles());
-
-		// get genes target has INTEGER do not
-		List<Allele> targetUnmatchedAlleles = new ArrayList<Allele>(target.getAlleles());
-		targetUnmatchedAlleles.removeAll(m_alleles);
-
-		// extract excess genes
-		long targetMax = getMaxInnovationId(target.getAlleles());
-		long thisMax = getMaxInnovationId(m_alleles);
-		List excessAlleles = (targetMax > thisMax) ? extractExcessAlleles(targetUnmatchedAlleles, thisMax) : extractExcessAlleles(myUnmatchedAlleles, targetMax);
-
-		// all other extras are disjoint
-		List<Allele> disjointAlleles = new ArrayList<Allele>(myUnmatchedAlleles);
-		disjointAlleles.addAll(targetUnmatchedAlleles);
-
-		// get common connection genes
-		List<Allele> myCommonAlleles = new ArrayList<Allele>(this.getAlleles());
-		myCommonAlleles.retainAll(target.getAlleles());
-		List<Allele> targetCommonAlleles = new ArrayList<Allele>(target.getAlleles());
-		targetCommonAlleles.retainAll(this.getAlleles());
-
-		// sanity test
-		if (myCommonAlleles.size() != targetCommonAlleles.size()) {
-			throw new IllegalStateException("sizes of my common genes and target common genes differ");
-		}
-
-		// calculate distance for common genes
-		double avgCommonDiff = 0;
-		int numComparableCommonAlleles = 0;
-		if (myCommonAlleles.size() > 0) {
-			double totalCommonDiff = 0;
-			Iterator<Allele> myIter = myCommonAlleles.iterator();
-			Iterator<Allele> targetIter = targetCommonAlleles.iterator();
-			while (myIter.hasNext() && targetIter.hasNext() && totalCommonDiff < Double.MAX_VALUE) {
-				Allele myAllele = myIter.next();
-				Allele targetAllele = targetIter.next();
-				if (myAllele.getInnovationId().equals(targetAllele.getInnovationId()) == false) {
-					throw new IllegalStateException("corresponding genes do not have same innovation ids");
-				}
-				try {
-					double aDistance = myAllele.distance(targetAllele);
-					if (totalCommonDiff + aDistance > Float.MAX_VALUE) {
-						totalCommonDiff = Float.MAX_VALUE;
-					} else {
-						totalCommonDiff += aDistance;
-					}
-					++numComparableCommonAlleles;
-				} catch (UnsupportedOperationException e) {
-					// do nothing
-				}
-			}
-			avgCommonDiff = totalCommonDiff / numComparableCommonAlleles;
-		}
-
-		// formula from "Evolving Neural Networks Through Augmenting Topologies",
-		// Stanley/Miikkulainen
-		long maxChromSize = Math.max(this.getAlleles().size(), target.getAlleles().size());
-		double result = 0;
-		if (maxChromSize > 0) // should never be 0
-		{
-			result = ((speciationParms.getSpecieCompatExcessCoeff() * excessAlleles.size()) / maxChromSize) + ((speciationParms.getSpecieCompatDisjointCoeff() * disjointAlleles.size()) / maxChromSize) + (speciationParms.getSpecieCompatCommonCoeff() * avgCommonDiff);
-		}
-		//return result;
-		*/
-		
 		//boolean log = Math.random() < 0.01;
 		boolean log = false;
 		
@@ -486,8 +418,8 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 			if (log) System.err.println("empty");
 			return 1; // disjointCount / Math.max(m_alleles.size(), target.m_alleles.size()) will always equal 1 (no excess and no weight diff between common genes).
 		}
-		int disjointCount = 0, excessCount = 0, commonCount = 0;
-		double avgWeightDifference = 0;
+		double disjointCount = 0, excessCount = 0, commonCount = 0;
+		double weightDifference = 0;
 		Iterator<Allele> thisIter = m_alleles.iterator(), targetIter = target.m_alleles.iterator();
 		Allele thisCurrent = thisIter.next(), targetCurrent = targetIter.next();
 		long thisMaxInnoID = this.getMaxInnovationID(), targetMaxInnoID = target.getMaxInnovationID();
@@ -495,7 +427,7 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 		do {
 			if (thisCurrent.getInnovationId() == targetCurrent.getInnovationId()) {
 				commonCount++;
-				avgWeightDifference += thisCurrent.distance(targetCurrent);
+				weightDifference += thisCurrent.distance(targetCurrent);
 				thisCurrent = thisIter.hasNext() ? thisIter.next() : null;
 				targetCurrent = targetIter.hasNext() ? targetIter.next() : null;
 			}
@@ -524,41 +456,20 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 			excessCount++;
 		}
 		
-		if (commonCount > 0) avgWeightDifference /= commonCount;
-		/* testing
-		if (
-				excessAlleles.size() != excessCount || 
-				disjointAlleles.size() != disjointCount ||
-				numComparableCommonAlleles != commonCount ||
-				avgCommonDiff != avgWeightDifference) {
-			System.err.println("\nexcessCount " + excessAlleles.size()  + " != " + excessCount);
-			System.err.println("disjointCount " + disjointAlleles.size()  + " != " + disjointCount);
-			System.err.println("commonCount " + numComparableCommonAlleles  + " != " + commonCount);
-			System.err.println("avgWeightDifference " + avgCommonDiff  + " != " + avgWeightDifference + "     " + (avgCommonDiff - avgWeightDifference));
-			
-			thisIter = m_alleles.iterator();
-			while (thisIter.hasNext())
-				System.err.print(thisIter.next().getInnovationId() + ", ");
-			System.err.println();
-			targetIter = target.m_alleles.iterator();
-			while (targetIter.hasNext())
-				System.err.print(targetIter.next().getInnovationId() + ", ");
-			System.err.println();
-			System.err.println("thisCurrent " + thisCurrent);
-			System.err.println("targetCurrent " + targetCurrent);
+		if (speciationParms.specieCompatNormalise()) {
+			int maxSize = Math.max(this.getAlleles().size(), target.getAlleles().size());
+			excessCount /= maxSize;
+			disjointCount /= maxSize;
+			if (commonCount > 0) weightDifference /= commonCount;
 		}
-		*/
 		
-		int maxSize = 1; //Math.max(this.getAlleles().size(), target.getAlleles().size());
-		
-		double result2 = ((speciationParms.getSpecieCompatExcessCoeff() * excessCount) / maxSize) + ((speciationParms.getSpecieCompatDisjointCoeff() * disjointCount) / maxSize) + (speciationParms.getSpecieCompatCommonCoeff() * avgWeightDifference);
+		double result2 = (speciationParms.getSpecieCompatExcessCoeff() * excessCount) + (speciationParms.getSpecieCompatDisjointCoeff() * disjointCount) + (speciationParms.getSpecieCompatCommonCoeff() * weightDifference);
 		
 		if (log) {
 			System.err.println("\nexcessCount " + excessCount);
 			System.err.println("disjointCount " + disjointCount);
 			System.err.println("commonCount " + commonCount);
-			System.err.println("avgWeightDifference " + avgWeightDifference);
-			System.err.println("maxSize " + maxSize);
+			System.err.println("weightDifference " + weightDifference);
 			System.err.println("result2 " + result2);
 			System.err.println(this.toString());
 			System.err.println(target.toString());

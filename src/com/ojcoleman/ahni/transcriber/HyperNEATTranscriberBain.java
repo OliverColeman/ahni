@@ -1,5 +1,6 @@
 package com.ojcoleman.ahni.transcriber;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import com.ojcoleman.bain.NeuralNetwork;
@@ -82,6 +83,9 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 	public BainNN transcribe(Chromosome genotype, BainNN substrate, Map<String, Object> options) throws TranscriberException {
 		return newBainNN(genotype, substrate, options);
 	}
+	
+	//static HashMap<Long, String> debug = new HashMap<Long, String>();
+	//static HashMap<Long, String> debug2 = new HashMap<Long, String>();
 
 	/**
 	 * Create a new neural network from a genotype.
@@ -91,7 +95,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 	 * @throws TranscriberException
 	 */
 	public BainNN newBainNN(Chromosome genotype, BainNN substrate, Map<String, Object> options) throws TranscriberException {
-		boolean recordCoords = options == null ? false : options.get("recordCoordinates").equals(Boolean.TRUE);
+		boolean recordCoords = true; // options == null ? false : options.get("recordCoordinates").equals(Boolean.TRUE);
 		
 		CPPN cppn = new CPPN(genotype);
 				
@@ -165,7 +169,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 								cppn.setSourceCoordinatesFromGridIndices(sx, sy, sz);
 								cppn.query();
 
-								int bainNeuronIndexSource = feedForward ? getBainNeuronIndex(sx, sy, sz) : getBainNeuronIndex(sx, sy, sz);
+								int bainNeuronIndexSource = getBainNeuronIndex(sx, sy, sz);
 								int synapseType = cppn.getSynapseTypeIndex();
 								int outputIndex = layerEncodingIsInput ? synapseType : sz;
 								
@@ -177,6 +181,11 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 								
 								// Determine weight for synapse from source to target.
 								synapseWeights[synapseIndex] = disabled ? 0 : cppn.getRangedWeight(outputIndex);
+								
+								// If we're not using LEO to explicitly enable synapses, then consider a synapse disabled if the weight is zero.
+								if (!enableLEO && synapseWeights[synapseIndex] == 0) {
+									disabled = true;
+								}
 								
 								setSynapseParameters(synapses, synapseIndex, cppn, disabled, createNewPhenotype);
 								
@@ -201,7 +210,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 		synapses.setEfficaciesModified();
 		
 		// Remove unused synapses from simulation calculations.
-		synapses.compress();
+		//synapses.compress();
 		
 		if (createNewPhenotype) {
 			int simRes = properties.getIntProperty(BainNN.SUBSTRATE_SIMULATION_RESOLUTION, 1000);
@@ -245,7 +254,25 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 		neurons.init();
 		synapses.init();
 		substrate.reset();
-		
+
+		/*String dbg2 = "";
+		for (int i = 0; i < synapses.getSize(); i++) {
+			dbg2 += (synapses.isNotUsed(i) ? i+"\n" : "");
+		}
+		if (substrate != null) {
+			String rep = substrate.toString();
+			String repOrig = debug.get(genotype.getId());
+			if (repOrig != null) {
+				if (!rep.equals(repOrig)) {
+					System.err.println("\ntranscriptions differ for " + genotype.getId() + "\n\n" + rep + dbg2 + "\n\n" + repOrig + debug2.get(genotype.getId()));
+				}
+			}
+			else {
+				debug.put(genotype.getId(), rep);
+				debug2.put(genotype.getId(), dbg2);
+			}
+		}*/
+				
 		return substrate;
 	}
 

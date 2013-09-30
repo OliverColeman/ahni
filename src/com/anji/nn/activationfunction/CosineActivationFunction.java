@@ -46,12 +46,10 @@ public class CosineActivationFunction implements ActivationFunction {
 	}
 
 	/**
-	 * Return <code>input</code> with no transformation.
-	 * 
-	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
+	 * Returns cosine(input).
 	 */
 	public double apply(double input) {
-		return (double) Math.cos(input);
+		return Math.cos(input);
 	}
 
 	/**

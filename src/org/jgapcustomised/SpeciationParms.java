@@ -49,8 +49,12 @@ public class SpeciationParms {
 	private double compatDisjointCoeff = DEFAULT_COMPATIBILITY_DISJOINT_COEFF;
 
 	private double compatCommonCoeff = DEFAULT_COMPATIBILITY_COMMON_COEFF;
+	
+	private boolean specieCompatNormalise = false;
 
 	private double speciationThreshold = DEFAULT_SPECIATION_THRESHOLD;
+	private double speciationThresholdMin = 0;
+	private double speciationThresholdMax = Double.MAX_VALUE;
 
 	private int speciationTarget = DEFAULT_SPECIATION_TARGET;
 
@@ -126,6 +130,22 @@ public class SpeciationParms {
 		speciationThreshold = d;
 	}
 
+	public double getSpeciationThresholdMin() {
+		return speciationThresholdMin;
+	}
+
+	public void setSpeciationThresholdMin(double speciationThresholdMin) {
+		this.speciationThresholdMin = speciationThresholdMin;
+	}
+
+	public double getSpeciationThresholdMax() {
+		return speciationThresholdMax;
+	}
+
+	public void setSpeciationThresholdMax(double speciationThresholdMax) {
+		this.speciationThresholdMax = speciationThresholdMax;
+	}
+
 	/**
 	 * @return target number of species to try and maintain by altering speciation threshold.
 	 */
@@ -138,5 +158,13 @@ public class SpeciationParms {
 	 */
 	public void setSpeciationTarget(int d) {
 		speciationTarget = d;
+	}
+
+	public boolean specieCompatNormalise() {
+		return specieCompatNormalise;
+	}
+
+	public void setSpecieCompatNormalise(boolean specieCompatNormalise) {
+		this.specieCompatNormalise = specieCompatNormalise;
 	}
 }

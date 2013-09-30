@@ -534,4 +534,14 @@ public class BooleanAllele extends Allele {
 		return m_value == ((BooleanAllele) otherAllele).m_value;
 	}
 
+	@Override
+	public double getValue() {
+		return m_value ? 1 : 0;
+	}
+
+	@Override
+	public void setValue(double aValue) {
+		m_value = aValue > 0.5;
+	}
+
 }

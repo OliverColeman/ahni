@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.jgapcustomised.Allele;
 import org.jgapcustomised.ChromosomeMaterial;
 import org.jgapcustomised.Configuration;
 import org.jgapcustomised.MutationOperator;
@@ -57,29 +58,14 @@ public class PruneMutationOperator extends MutationOperator implements Configura
 	private static final String PRUNE_MUTATE_RATE_KEY = "prune.mutation.rate";
 
 	/**
-	 * default mutation rate
-	 */
-	public final static double DEFAULT_MUTATE_RATE = 1.00f;
-
-	/**
 	 * @see com.anji.util.Configurable#init(com.anji.util.Properties)
 	 */
 	public void init(Properties props) throws Exception {
-		setMutationRate(props.getDoubleProperty(PRUNE_MUTATE_RATE_KEY, DEFAULT_MUTATE_RATE));
+		setMutationRate(1);
 	}
 
-	/**
-	 * @see PruneMutationOperator#PruneMutationOperator(double)
-	 */
 	public PruneMutationOperator() {
-		this(DEFAULT_MUTATE_RATE);
-	}
-
-	/**
-	 * @see MutationOperator#MutationOperator(double)
-	 */
-	public PruneMutationOperator(double newMutationRate) {
-		super(DEFAULT_MUTATE_RATE);
+		super(1);
 	}
 
 	/**
@@ -93,13 +79,16 @@ public class PruneMutationOperator extends MutationOperator implements Configura
 	 * @see org.jgapcustomised.MutationOperator#mutate(org.jgapcustomised.Configuration,
 	 *      org.jgapcustomised.ChromosomeMaterial, java.util.Set, java.util.Set)
 	 */
-	protected void mutate(Configuration config, ChromosomeMaterial target, Set genesToAdd, Set genesToRemove) {
-		List candidatesToRemove = new ArrayList();
+	protected void mutate(Configuration config, ChromosomeMaterial target, Set<Allele> genesToAdd, Set<Allele> genesToRemove) {
+		genesToRemove.addAll(getAllelesToRemove(target));
+	}
+	
+	public static Set<Allele> getAllelesToRemove(ChromosomeMaterial target) {
+		target.pruned = true;
+		List<Allele> candidatesToRemove = new ArrayList<Allele>();
 		findUnvisitedAlleles(target, candidatesToRemove, true);
 		findUnvisitedAlleles(target, candidatesToRemove, false);
-		Collections.shuffle(candidatesToRemove, config.getRandomGenerator());
-		for (int i = 0; i < numMutations(config.getRandomGenerator(), candidatesToRemove.size()); ++i)
-			genesToRemove.add(candidatesToRemove.get(i));
+		return new HashSet<Allele>(candidatesToRemove);
 	}
 
 	/**
@@ -107,20 +96,20 @@ public class PruneMutationOperator extends MutationOperator implements Configura
 	 * @param unvisitedAlleles <code>List</code> contains <code>Gene</code> objects, unvisited nodes and connections
 	 * @param isForward traverse the network from input to output if true, output to input if false
 	 */
-	private void findUnvisitedAlleles(ChromosomeMaterial material, List unvisitedAlleles, boolean isForward) {
+	private static void findUnvisitedAlleles(ChromosomeMaterial material, List<Allele> unvisitedAlleles, boolean isForward) {
 		// initialize unvisited connections
-		List unvisitedConnAlleles = NeatChromosomeUtility.getConnectionList(material.getAlleles());
+		List<ConnectionAllele> unvisitedConnAlleles = NeatChromosomeUtility.getConnectionList(material.getAlleles());
 
 		// initialize unvisited neurons (input and output neurons are always part of the activation,
 		// and therefore considered "visited")
-		Map hiddenNeuronAlleles = NeatChromosomeUtility.getNeuronMap(material.getAlleles(), NeuronType.HIDDEN);
-		Set unvisitedNeuronInnovationIds = new HashSet(hiddenNeuronAlleles.keySet());
+		Map<Long, NeuronAllele> hiddenNeuronAlleles = NeatChromosomeUtility.getNeuronMap(material.getAlleles(), NeuronType.HIDDEN);
+		Set<Long> unvisitedNeuronInnovationIds = new HashSet<Long>(hiddenNeuronAlleles.keySet());
 
 		// currentNeuronInnovationIds and nextNeuronInnovationIds keep track of where we are as we
 		// traverse the network
-		Map initialNeuronAlleles = NeatChromosomeUtility.getNeuronMap(material.getAlleles(), (isForward ? NeuronType.INPUT : NeuronType.OUTPUT));
-		Set currentNeuronInnovationIds = new HashSet(initialNeuronAlleles.keySet());
-		Set nextNeuronInnovationIds = new HashSet();
+		Map<Long, NeuronAllele> initialNeuronAlleles = NeatChromosomeUtility.getNeuronMap(material.getAlleles(), (isForward ? NeuronType.INPUT : NeuronType.OUTPUT));
+		Set<Long> currentNeuronInnovationIds = new HashSet<Long>(initialNeuronAlleles.keySet());
+		Set<Long> nextNeuronInnovationIds = new HashSet<Long>();
 		while (!unvisitedConnAlleles.isEmpty() && !currentNeuronInnovationIds.isEmpty()) {
 			nextNeuronInnovationIds.clear();
 			Collection connAlleles = isForward ? NeatChromosomeUtility.extractConnectionAllelesForSrcNeurons(unvisitedConnAlleles, currentNeuronInnovationIds) : NeatChromosomeUtility.extractConnectionAllelesForDestNeurons(unvisitedConnAlleles, currentNeuronInnovationIds);

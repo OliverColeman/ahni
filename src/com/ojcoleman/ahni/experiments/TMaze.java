@@ -201,9 +201,9 @@ public class TMaze extends BulkFitnessFunctionMT {
 			if (randomRange > 0) rewardSwitchTrials[i] += random.nextInt(randomRange + 1) * 2 - randomRange;
 			rewardIndexForSwitchList.add((i + 1) % rewardLocationsX.length);
 		}
-		//if (rewardSwitchVariation > 0) {
+		if (rewardSwitchVariation > 0) {
 			Collections.shuffle(rewardIndexForSwitchList, random);
-		//}
+		}
 		rewardIndexForSwitch = new int[rewardSwitchCount + 1];
 		for (int i = 0; i < rewardSwitchCount + 1; i++)
 			rewardIndexForSwitch[i] = rewardIndexForSwitchList.get(i);

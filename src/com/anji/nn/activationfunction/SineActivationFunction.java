@@ -46,9 +46,7 @@ public class SineActivationFunction implements ActivationFunction {
 	}
 
 	/**
-	 * Return <code>input</code> with no transformation.
-	 * 
-	 * @see com.anji.nn.activationfunction.ActivationFunction#apply(double)
+	 * Returns sine(input).
 	 */
 	public double apply(double input) {
 		return Math.sin(input);

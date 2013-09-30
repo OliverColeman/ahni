@@ -205,11 +205,13 @@ public class AnjiNetTranscriber implements Transcriber<AnjiActivator>, Configura
 		// make sure we traversed all connections and nodes; input neurons are automatically
 		// considered "traversed" since they should be realized regardless of their connectivity to
 		// the rest of the network
-		if (!remainingConnAlleles.isEmpty())
-			logger.warn("not all connection genes handled: " + genotype.toString());
+		if (!remainingConnAlleles.isEmpty()) {
+			logger.warn("not all connection genes handled: " + genotype.toString() + (genotype.getMaterial().pruned ? "  " : "  not") + " pruned");
+		}
 		traversedNeuronInnovationIds.addAll(inNeuronAlleles.keySet());
-		if (traversedNeuronInnovationIds.size() != allNeurons.size())
-			logger.warn("did not traverse all neurons: " + genotype.toString());
+		if (traversedNeuronInnovationIds.size() != allNeurons.size()) {
+			logger.warn("did not traverse all neurons: " + genotype.toString() + (genotype.getMaterial().pruned ? "  " : "  not") + " pruned");
+		}
 
 		// build network
 

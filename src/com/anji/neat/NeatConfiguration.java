@@ -119,9 +119,21 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	 */
 	public final static String CHROM_COMPAT_COMMON_COEFF_KEY = "chrom.compat.common.coeff";
 	/**
+	 * properties key, enable speciation chromosome compatibility normalisation (default is false).
+	 */
+	public final static String CHROM_COMPAT_NORMALISE_KEY = "chrom.compat.normalise";
+	/**
 	 * properties key, speciation threshold
 	 */
 	public final static String SPECIATION_THRESHOLD_KEY = "speciation.threshold";
+	/**
+	 * properties key, speciation threshold minimum value for auto-adjustment
+	 */
+	public final static String SPECIATION_THRESHOLD_MIN_KEY = "speciation.threshold.min";
+	/**
+	 * properties key, speciation threshold maximum value for auto-adjustment
+	 */
+	public final static String SPECIATION_THRESHOLD_MAX_KEY = "speciation.threshold.max";
 	/**
 	 * properties key, target number of species, default is popul.size / 15.
 	 */
@@ -408,33 +420,18 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	}
 
 	protected void initSpeciationParms() {
-		try {
-			getSpeciationParms().setSpecieCompatExcessCoeff(props.getFloatProperty(CHROM_COMPAT_EXCESS_COEFF_KEY));
-		} catch (RuntimeException e) {
-			logger.info("no speciation compatibility threshold specified", e);
-		}
-		try {
-			getSpeciationParms().setSpecieCompatDisjointCoeff(props.getFloatProperty(CHROM_COMPAT_DISJOINT_COEFF_KEY));
-		} catch (RuntimeException e) {
-			logger.info("no speciation compatibility threshold specified", e);
-		}
-		try {
-			getSpeciationParms().setSpecieCompatCommonCoeff(props.getFloatProperty(CHROM_COMPAT_COMMON_COEFF_KEY));
-		} catch (RuntimeException e) {
-			logger.info("no speciation compatibility threshold specified", e);
-		}
-		try {
-			getSpeciationParms().setSpeciationThreshold(props.getFloatProperty(SPECIATION_THRESHOLD_KEY));
-		} catch (RuntimeException e) {
-			logger.info("no speciation compatibility threshold specified", e);
-		}
-
+		getSpeciationParms().setSpecieCompatExcessCoeff(props.getDoubleProperty(CHROM_COMPAT_EXCESS_COEFF_KEY));
+		getSpeciationParms().setSpecieCompatDisjointCoeff(props.getDoubleProperty(CHROM_COMPAT_DISJOINT_COEFF_KEY));
+		getSpeciationParms().setSpecieCompatCommonCoeff(props.getDoubleProperty(CHROM_COMPAT_COMMON_COEFF_KEY));
+		getSpeciationParms().setSpecieCompatNormalise(props.getBooleanProperty(CHROM_COMPAT_NORMALISE_KEY, false));
+		getSpeciationParms().setSpeciationThreshold(props.getDoubleProperty(SPECIATION_THRESHOLD_KEY));
+		getSpeciationParms().setSpeciationThresholdMin(props.getDoubleProperty(SPECIATION_THRESHOLD_MIN_KEY, 0));
+		getSpeciationParms().setSpeciationThresholdMax(props.getDoubleProperty(SPECIATION_THRESHOLD_MAX_KEY, Double.MAX_VALUE));
 		getSpeciationParms().setSpeciationTarget(props.getIntProperty(SPECIATION_TARGET_KEY, (int) Math.round(Math.pow(getPopulationSize(), 0.6))));
 
 		if (props.containsKey(SPECIATION_THRESHOLD_CHANGE_KEY)) {
 			logger.warn(SPECIATION_THRESHOLD_CHANGE_KEY + " is deprecated, adjustment amounts are now calculated as a ratio of the target and current species counts.");
 		}
-
 	}
 
 	/**

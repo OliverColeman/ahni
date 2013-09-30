@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -40,7 +41,7 @@ public class NeatCrossoverReproductionOperator extends CrossoverReproductionOper
 		ChromosomeMaterial child = null;
 		
 		// If parent1 dominates parent2 (the superclass already performs a check and makes sure that parent2 does not dominate parent1).
-		if (parent1.dominates(parent2)) {
+		if (true) { //parent1.dominates(parent2)) {
 			// Child inherits all structure/genes from dominant parent.
 			child = parent1.cloneMaterial();
 			child.setSecondaryParentId(parent2.getId());
@@ -56,8 +57,9 @@ public class NeatCrossoverReproductionOperator extends CrossoverReproductionOper
 						allele1.setValue(allele2.getValue());
 					}
 					else if (valueSwitch == 2) {
-						// Use average value from both parents.
-						allele1.setValue((allele1.getValue() + allele2.getValue()) / 2);
+						// Use value somewhere between those from both parents.
+						double s = config.getRandomGenerator().nextDouble();
+						allele1.setValue(allele1.getValue() * s + allele2.getValue() * (1-s));
 					} 
 				}
 			}
@@ -76,23 +78,25 @@ public class NeatCrossoverReproductionOperator extends CrossoverReproductionOper
 			// Iterate through alleles from both parents, adding them to child as we go.
 			do {
 				Allele childAllele = null;
-				// If we have not reached excess allele yet in whichever is the larger chromosome.
+				// If we have not reached excess alleles yet.
 				if (allele1 != null && allele2 != null) {
-					// Add allele that is missing from one or the other (or that both parents have in which case it doesn't matter which we clone).
-					childAllele = allele1.getInnovationId() < allele2.getInnovationId() ? allele1.cloneAllele() : allele2.cloneAllele();
+					// Add allele that is missing from one or the other (or that both parents have in which case we default to parent 1).
+					childAllele = allele1.getInnovationId() <= allele2.getInnovationId() ? allele1.cloneAllele() : allele2.cloneAllele();
 					
-					int valueSwitch = config.getRandomGenerator().nextInt(3);
-					valueSwitch = 2;
-					// valueSwitch == 0 means we use parent1 allele value, nothing to do.
-					if (valueSwitch == 1) {
-						// Use parent2 allele value.
-						childAllele.setValue(allele2.getValue());
+					// If both parents have this allele, allow using value from one or the other or a blended value.
+					if (allele1.getInnovationId() == allele2.getInnovationId()) {
+						int valueSwitch = config.getRandomGenerator().nextInt(3);
+						// valueSwitch == 0 means we use parent1 allele value, nothing to do.
+						if (valueSwitch == 1) {
+							// Use parent2 allele value.
+							childAllele.setValue(allele2.getValue());
+						}
+						else if (valueSwitch == 2) {
+							// Use value somewhere between those from both parents.
+							double s = config.getRandomGenerator().nextDouble();
+							childAllele.setValue(allele1.getValue() * s + allele2.getValue() * (1-s));
+						}
 					}
-					else if (valueSwitch == 2) {
-						// Use value somewhere between those from both parents.
-						double s = config.getRandomGenerator().nextDouble();
-						childAllele.setValue(allele1.getValue() * s + allele2.getValue() * (1-s));
-					} 
 					
 					// If both chromosomes have this allele, iterate to next on both.
 					if (allele1.getInnovationId() == allele2.getInnovationId()) {
@@ -107,7 +111,7 @@ public class NeatCrossoverReproductionOperator extends CrossoverReproductionOper
 						allele2 = itrP2.hasNext() ? itrP2.next() : null;
 					}
 				}
-				// Iterating over excess alleles on larger chromosome.
+				// Iterating over excess alleles.
 				else {
 					// parent1 has the allele.
 					if (allele1 != null) {
@@ -141,6 +145,11 @@ public class NeatCrossoverReproductionOperator extends CrossoverReproductionOper
 			} while (allele1 != null || allele2 != null);
 			
 			child = new ChromosomeMaterial(childAlleles, parent1.getId(), parent2.getId());
+			
+			// Make sure there are no dangling or isolated structures in the resultant network
+			// (eg if connections that would cause recurrence have not been included).
+			Set<Allele> unusedAllelles = PruneMutationOperator.getAllelesToRemove(child);
+			child.getAlleles().removeAll(unusedAllelles);
 		}
 
 		return child;

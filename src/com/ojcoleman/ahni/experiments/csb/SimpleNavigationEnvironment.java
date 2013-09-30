@@ -83,16 +83,17 @@ public class SimpleNavigationEnvironment extends Environment {
 				// Start state is anywhere.
 				// startState.setEntry(i, random.nextDouble());
 
-				// middle
+				// middle (if always the same start state then agent can't determine environment instance from initial state)
 				startState.setEntry(i, 0.5);
 			}
 
 			if (size == 2) {
+				// Ensure even distribution
 				double ad = 2 * Math.PI / rlcsb.getEnvironmentCount();
 				double a = ad * (id % rlcsb.getEnvironmentCount());
 				//a += random.nextDouble() * ad * 0.4;
-				goalState.setEntry(0, 0.5 + Math.cos(a)/2);
-	            goalState.setEntry(1, 0.5 + Math.sin(a)/2);
+				goalState.setEntry(0, 0.5 + Math.cos(a)/2.01);
+	            goalState.setEntry(1, 0.5 + Math.sin(a)/2.01);
 	            //System.err.println((int) (goalState.getEntry(0) * 1000) + "," + (int) (goalState.getEntry(1) * 1000));
 			}
 			else {
@@ -178,6 +179,9 @@ public class SimpleNavigationEnvironment extends Environment {
 
 	@Override
 	public double updateStateAndOutput(ArrayRealVector state, double[] input, double[] output) {
+		assert !Double.isNaN(ArrayUtil.sum(input)) : "updateStateAndOutput(): input array contains NaN: " + Arrays.toString(input);
+		assert !state.isNaN() : "updateStateAndOutput(): state contains NaN: " + state;
+		
 		// Update state given input.
 		ArrayRealVector inputT = new ArrayRealVector(input);
 		// inputT.mapDivideToSelf(Math.sqrt(input.length));
@@ -208,6 +212,9 @@ public class SimpleNavigationEnvironment extends Environment {
 
 	@Override
 	public double getOutputForState(ArrayRealVector state, double[] output) {
+		assert !state.isNaN() : "getOutputForState(): state contains NaN: " + state;
+		assert !Double.isNaN(ArrayUtil.sum(output)) : "getOutputForState(): input array contains NaN: " + Arrays.toString(output);
+		
 		// Update output given new state.
 		System.arraycopy(state.getDataRef(), 0, output, 0, state.getDimension());
 
@@ -216,6 +223,9 @@ public class SimpleNavigationEnvironment extends Environment {
 		// }
 
 		output[output.length - 1] = getRewardForState(state);
+		
+		assert !Double.isNaN(ArrayUtil.sum(output)) : "getOutputForState(): input array contains NaN: " + Arrays.toString(output);
+		
 		return getPerformanceForState(state);
 	}
 
@@ -224,14 +234,14 @@ public class SimpleNavigationEnvironment extends Environment {
 		double d = state.getL1Distance(goalState) / size;
 		return 1 - d;
 		// return Math.pow(1-d, 2);
-		// return d < maxStepSize ? 1 : (1 - d) * 0.5;
+		//return d < maxStepSize ? 1 : (1 - d) * 0.5;
 	}
 
 	@Override
 	public double getPerformanceForState(ArrayRealVector state) {
 		double d = state.getL1Distance(goalState) / size;
 		// return 1 - d;
-		return d < maxStepSize ? 1 : 0;
+		return d < maxStepSize ? 1 : (1-d)*0.1;
 	}
 
 	/*
@@ -488,7 +498,7 @@ public class SimpleNavigationEnvironment extends Environment {
 		public ArrayRealVector corner1, corner2;
 		public Obstacle(double obstSize) {
 			ArrayRealVector dims = new ArrayRealVector(size, obstSize);
-			dims.setEntry(random.nextInt(size), maxStepSize); // Make the obstacle a line/plane.
+			dims.setEntry(random.nextInt(size), maxStepSize*1.01); // Make the obstacle a line/plane.
 			corner1 = new ArrayRealVector(size);
 			for (int d = 0; d < size; d++) {
 				double start = -obstSize/2, end = 1-obstSize/2, range = end-start;

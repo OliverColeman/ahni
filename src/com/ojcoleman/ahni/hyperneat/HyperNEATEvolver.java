@@ -386,7 +386,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 			
 			
 			if (properties.logFilesEnabled()) {
-				logChamp(bestPerforming, false);
+				logChamp(bestPerforming, false, "");
 				//logChamp(fittest);
 			}
 
@@ -555,7 +555,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 		}
 	}
 
-	public void logChamp(Chromosome champ, boolean force) {
+	public void logChamp(Chromosome champ, boolean force, String label) {
 		boolean finished = evolutionFinished();
 		boolean finishedOrForce = force || evolutionFinished();
 		boolean logString = (finishedOrForce && logChampToString >= 0) || (logChampToString > 0 && generation % logChampToString == 0);
@@ -574,7 +574,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 				if (substrate == null) {
 					logger.warn("Champ substrate is null, which probably means it's been classified as a dud by the transcriber (e.g. perhaps because there are no connections from input to output.");
 				} else {
-					String baseFileName = properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "best_performing-" + (finished ? "final" : generation) + "-" + champ.getId();
+					String baseFileName = properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + label + "best_performing-" + (finished ? "final" : generation) + "-" + champ.getId();
 					if (logString) {
 						BufferedWriter outputfile = new BufferedWriter(new FileWriter(baseFileName + ".txt"));
 						outputfile.write("String representation of " + msg + ":\n" + substrate);

@@ -190,7 +190,7 @@ public class IntegerAllele extends Allele {
 	/**
 	 * @return value
 	 */
-	public Integer getValue() {
+	public double getValue() {
 		return m_value;
 	}
 
@@ -593,5 +593,10 @@ public class IntegerAllele extends Allele {
 		if (!(otherAllele instanceof IntegerAllele))
 			return false;
 		return m_value == ((IntegerAllele) otherAllele).m_value;
+	}
+
+	@Override
+	public void setValue(double aValue) {
+		m_value = (int) Math.round(aValue);
 	}
 }

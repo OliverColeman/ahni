@@ -20,10 +20,12 @@
 package com.anji.integration;
 
 import java.awt.Graphics2D;
+import java.util.Arrays;
 
 import com.anji.nn.AnjiNet;
 import com.anji.nn.Neuron;
 import com.anji.nn.Pattern;
+import com.ojcoleman.ahni.util.ArrayUtil;
 
 /**
  * Simple neural network implementation of Activator interface.
@@ -76,6 +78,8 @@ public class AnjiActivator implements Activator {
 	}
 
 	public double[] next(double[] newInputValues) {
+		assert !Double.isNaN(ArrayUtil.sum(newInputValues)) : "input array contains NaN: " + Arrays.toString(newInputValues);
+		
 		if (newInputValues != null)
 			inputPattern.setValues(newInputValues);
 
@@ -99,7 +103,9 @@ public class AnjiActivator implements Activator {
 		if (net.isRecurrent()) {
 			net.fullyActivate();
 		}
-
+		
+		assert !Double.isNaN(ArrayUtil.sum(result)) : "result array contains NaN: " + Arrays.toString(result);
+		
 		return result;
 	}
 
