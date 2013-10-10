@@ -133,7 +133,7 @@ following changes were made to ANJI:
 * Added more parameters to control speciation, including: minimum species size 
   to select elites1 from; minimum number of elites to select; and target number 
   of species (this is controlled by adjusting the compatibility threshold 
-  between species).
+  between species), and a K-Means speciation strategy.
 * In the original NEAT algorithm there is a parameter to specify the 
   percentage of individuals used as parents to produce the next generation but 
   that do not necessarily become part of the next generation. In the ANJI 
