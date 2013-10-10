@@ -111,7 +111,7 @@ public class SimpleSelector extends NaturalSelector {
 	 * @return <code>List</code> contains <code>Chromosome</code> objects
 	 */
 	protected List<Chromosome> select(Configuration a_activeConfiguration, int a_howManyToSelect) {
-		Collections.sort(chromosomes, new ChromosomeFitnessComparator<Chromosome>(false /* asc */, speciatedFitness /*
+		Collections.sort(chromosomes, new ChromosomeFitnessComparator(false /* asc */, speciatedFitness /*
 																										 * speciated
 																										 * fitness
 																										 */));

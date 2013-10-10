@@ -77,15 +77,6 @@ public class ConnectionAllele extends Allele {
 		return allele;
 	}
 
-	/**
-	 * @param target should be <code>ConnectionAllele</code> with same gene
-	 * @return <code>double</code> compatibility distance based on weight; always positive
-	 * @see Allele#distance(Allele)
-	 */
-	public double distance(Allele target) {
-		assert target.getInnovationId().equals(getInnovationId()) : "Should not compute distance for alleles of different gene.";
-		return Math.abs(weight - ((ConnectionAllele) target).getWeight());
-	}
 
 	/**
 	 * Set weight to random value from a Gaussian distribution determined by {@link #RANDOM_STD_DEV}

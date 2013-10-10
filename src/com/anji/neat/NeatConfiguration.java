@@ -123,6 +123,11 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	 */
 	public final static String CHROM_COMPAT_NORMALISE_KEY = "chrom.compat.normalise";
 	/**
+	 * properties key, specifies whether mismatched genes (disjoint or excess) in chromosome distance calculations 
+	 * should have their (weight) values added to the distance instead of adding a constant amount to the difference.
+	 */
+	public final static String CHROM_COMPAT_MISMATCH_USE_VALUES = "chrom.compat.mismatch_use_values";
+	/**
 	 * properties key, speciation threshold
 	 */
 	public final static String SPECIATION_THRESHOLD_KEY = "speciation.threshold";
@@ -420,11 +425,12 @@ public class NeatConfiguration extends Configuration implements Configurable {
 	}
 
 	protected void initSpeciationParms() {
-		getSpeciationParms().setSpecieCompatExcessCoeff(props.getDoubleProperty(CHROM_COMPAT_EXCESS_COEFF_KEY));
-		getSpeciationParms().setSpecieCompatDisjointCoeff(props.getDoubleProperty(CHROM_COMPAT_DISJOINT_COEFF_KEY));
-		getSpeciationParms().setSpecieCompatCommonCoeff(props.getDoubleProperty(CHROM_COMPAT_COMMON_COEFF_KEY));
+		getSpeciationParms().setSpecieCompatExcessCoeff(props.getDoubleProperty(CHROM_COMPAT_EXCESS_COEFF_KEY, 1));
+		getSpeciationParms().setSpecieCompatDisjointCoeff(props.getDoubleProperty(CHROM_COMPAT_DISJOINT_COEFF_KEY, 1));
+		getSpeciationParms().setSpecieCompatCommonCoeff(props.getDoubleProperty(CHROM_COMPAT_COMMON_COEFF_KEY, 1));
 		getSpeciationParms().setSpecieCompatNormalise(props.getBooleanProperty(CHROM_COMPAT_NORMALISE_KEY, false));
-		getSpeciationParms().setSpeciationThreshold(props.getDoubleProperty(SPECIATION_THRESHOLD_KEY));
+		getSpeciationParms().setSpecieCompatMismatchUseValues(props.getBooleanProperty(CHROM_COMPAT_MISMATCH_USE_VALUES, false));
+		getSpeciationParms().setSpeciationThreshold(props.getDoubleProperty(SPECIATION_THRESHOLD_KEY, 16));
 		getSpeciationParms().setSpeciationThresholdMin(props.getDoubleProperty(SPECIATION_THRESHOLD_MIN_KEY, 0));
 		getSpeciationParms().setSpeciationThresholdMax(props.getDoubleProperty(SPECIATION_THRESHOLD_MAX_KEY, Double.MAX_VALUE));
 		getSpeciationParms().setSpeciationTarget(props.getIntProperty(SPECIATION_TARGET_KEY, (int) Math.round(Math.pow(getPopulationSize(), 0.6))));

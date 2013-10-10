@@ -83,15 +83,6 @@ public class NeuronAllele extends Allele {
 	}
 
 	/**
-	 * @param target should be <code>NeuronAllele</code> with same gene TODO - activation type and slope
-	 * @see org.jgapcustomised.Allele#distance(org.jgapcustomised.Allele)
-	 */
-	public double distance(Allele target) {
-		assert target.getInnovationId().equals(getInnovationId()) : "Should not compute distance for alleles of different gene.";
-		return Math.abs(bias - ((NeuronAllele) target).getBias());
-	}
-
-	/**
 	 * @return neuron type
 	 * @see NeuronGene#getType()
 	 */

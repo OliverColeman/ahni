@@ -24,9 +24,7 @@ import java.io.Serializable;
 /**
  * Genes represent the discrete components of a potential solution (the Chromosome). This abstract class exists so that
  * custom gene implementations can be easily plugged-in, which can add a great deal of flexibility and convenience for
- * many applications. Note that it's very important that implementations of this interface also implement the
- * <code>equals()</code> method. Without a proper implementation of <code>equals()</code>, some genetic operations will
- * fail to work properly. Innovation ID is used as a historical marker and aids in crossover and determining "distance"
+ * many applications. Innovation ID is used as a historical marker and aids in crossover and determining "distance"
  * between 2 chromosomes for speciation. Not the difference between <code>compareTo()</code> and <code>distance()</code>
  * :<code>compareTo()</code> is used by container classes to sort genes by innovation ID, <code>distance()</code> is the
  * genetic distance between genes with the same innovation ID.

@@ -41,17 +41,6 @@ public class IntegerAllele extends Allele {
 	}
 
 	/**
-	 * @param target
-	 * @return compatibility distance based on intValue; always positive
-	 * @see Allele#distance(Allele)
-	 */
-	public double distance(Allele target) {
-		if (target.getInnovationId().equals(getInnovationId()) && (target instanceof IntegerAllele))
-			return Math.abs(intValue() - ((IntegerAllele) target).intValue());
-		return Float.MAX_VALUE;
-	}
-
-	/**
 	 * Represents the constant range of values supported by integers.
 	 */
 	protected final static long INTEGER_RANGE = (long) Integer.MAX_VALUE - (long) Integer.MIN_VALUE;

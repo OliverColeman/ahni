@@ -28,6 +28,8 @@ import java.util.List;
 
 import org.jgapcustomised.impl.CloneReproductionOperator;
 
+import com.ojcoleman.ahni.util.Parallel;
+
 /**
  * Abstract class for reproduction operators. Handles intra-species breeding and someday will handle inter-species
  * breeding. Each specie gets a number of offspring relative to its fitness, following <a
@@ -57,33 +59,45 @@ public abstract class ReproductionOperator {
 	 * @see ReproductionOperator#reproduce(Configuration, List, int, List)
 	 */
 	final public void reproduce(final Configuration config, final List<Species> parentSpecies, List<ChromosomeMaterial> offspring) throws InvalidConfigurationException {
-		int targetNewOffspringCount = (int) Math.round(config.getPopulationSize() * getSlice());
+		final int targetNewOffspringCount = (int) Math.round(config.getPopulationSize() * getSlice());
 
 		if (targetNewOffspringCount > 0) {
 			if (parentSpecies.isEmpty()) {
 				throw new IllegalStateException("no parent species from which to produce offspring");
 			}
-			List<ChromosomeMaterial> newOffspring = new ArrayList<ChromosomeMaterial>(targetNewOffspringCount);
+			final List<ChromosomeMaterial> newOffspring = Collections.synchronizedList(new ArrayList<ChromosomeMaterial>(targetNewOffspringCount));
 
 			// calculate total fitness
-			double totalSpeciesFitness = 0;
-			for (Species specie : parentSpecies) {
-				totalSpeciesFitness += specie.getAverageFitnessValue();
+			double totalSpeciesFitnessTemp = 0;
+			for (Species species : parentSpecies) {
+				totalSpeciesFitnessTemp += species.getAverageFitnessValue();
 			}
+			final double totalSpeciesFitness = totalSpeciesFitnessTemp;
+			
+			final Thread currentThread = Thread.currentThread();
 
 			// reproduce from each specie relative to its percentage of total fitness
-			for (Species specie : parentSpecies) {
-				double percentFitness = specie.getAverageFitnessValue() / totalSpeciesFitness;
-				int numSpecieOffspring =  (int) Math.round(percentFitness * targetNewOffspringCount) - specie.getEliteCount();
-				// Always create at least one offspring with the clone operator, or any operator if it has more than 50% of the slice.
-				// (Otherwise there's no point hanging on to a species).
-				if (numSpecieOffspring <= 0 && (getSlice() > 0.5 || getClass().equals(CloneReproductionOperator.class)))
-					numSpecieOffspring = 1;
+			Parallel.foreach(parentSpecies, new Parallel.Operation<Species>() {
+				public void perform(Species species) {
+					if (!species.isEmpty()) {
+						double percentFitness = species.getAverageFitnessValue() / totalSpeciesFitness;
+						int numSpecieOffspring =  (int) Math.round(percentFitness * targetNewOffspringCount) - species.getEliteCount();
+						// Always create at least one offspring with the clone operator, or any operator if it has more than 50% of the slice.
+						// (Otherwise there's no point hanging on to a species).
+						if (numSpecieOffspring <= 0 && (getSlice() > 0.5 || getClass().equals(CloneReproductionOperator.class)))
+							numSpecieOffspring = 1;
+						
+						if (numSpecieOffspring > 0)
+							try {
+								reproduce(config, species.getChromosomes(), numSpecieOffspring, newOffspring);
+							} catch (InvalidConfigurationException e) {
+								e.printStackTrace();
+							}
+					}
+				}
 				
-				if (numSpecieOffspring > 0)
-					reproduce(config, specie.getChromosomes(), numSpecieOffspring, newOffspring);
-			}
-
+			});
+			
 			// Remove random offspring if we have too many.
 			while (newOffspring.size() > targetNewOffspringCount) {
 				Collections.shuffle(newOffspring, config.getRandomGenerator());

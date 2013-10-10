@@ -25,6 +25,8 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.Set;
 
+import com.anji.neat.ConnectionAllele;
+
 /**
  * Allele contains gene data that can be different for multiple chromosomes with the same gene.
  * 
@@ -60,7 +62,10 @@ public abstract class Allele implements Comparable {
 	 *         computing distance between chromosomes, which in turn is used to compute speciation compatibility.
 	 * @see Chromosome#distance(Chromosome, SpeciationParms)
 	 */
-	public abstract double distance(Allele target);
+	public double distance(Allele target) {
+		assert target.getInnovationId().equals(getInnovationId()) : "Should not compute distance for alleles of different gene.";
+		return Math.abs(getValue() - target.getValue());
+	}
 
 	/**
 	 * Sets the value of this Gene to a random legal value for the implementation. This method exists for the benefit of

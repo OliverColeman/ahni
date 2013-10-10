@@ -106,7 +106,7 @@ public abstract class NaturalSelector {
 
 		if (result.size() > numToSelect) {
 			// remove least fittest from selected
-			Collections.sort(result, new ChromosomeFitnessComparator<Chromosome>(true /* asc */, speciatedFitness /* speciated fitness */));
+			Collections.sort(result, new ChromosomeFitnessComparator(true /* asc */, speciatedFitness /* speciated fitness */));
 			int numToRemove = result.size() - numToSelect;
 			for (int i = 0; i < numToRemove; ++i) {
 				result.remove(0);

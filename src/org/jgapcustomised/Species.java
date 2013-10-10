@@ -20,9 +20,11 @@
 package org.jgapcustomised;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -65,9 +67,9 @@ public class Species {
 	 * chromosomes active in current population; these logically should be a <code>Set</code>, but we use a
 	 * <code>List</code> to make random selection easier, specifically in <code>ReproductionOperator</code>
 	 */
-	private List<Chromosome> chromosomes = new ArrayList<Chromosome>();
+	private List<Chromosome> chromosomes = Collections.synchronizedList(new LinkedList<Chromosome>());
 
-	private Chromosome representative = null;
+	private ChromosomeMaterial representative = null;
 
 	private SpeciationParms speciationParms = null;
 
@@ -84,10 +86,7 @@ public class Species {
 	
 	private double averageFitness = 0;
 
-	/**
-	 * for hibernate
-	 */
-	private Long id;
+	private long id;
 
 	/**
 	 * True iff this species contains the bestPerforming individual from the entire population.
@@ -98,7 +97,8 @@ public class Species {
 	 * @see java.lang.Object#hashCode()
 	 */
 	public int hashCode() {
-		return representative.hashCode();
+		return (int) id;
+		//return representative.hashCode();
 		//return getFittest().hashCode();
 	}
 
@@ -107,74 +107,141 @@ public class Species {
 	 */
 	public boolean equals(Object o) {
 		Species other = (Species) o;
-		return representative.equals(other.representative);
+		return id == other.id;
+		//return representative.equals(other.representative);
 		//return getFittest().equals(other.getFittest());
 	}
 
 	/**
-	 * @return unique ID; this is chromosome ID of representative
+	 * Create new species defined by given representative material.
+	 * 
+	 * @param aSpeciationParms
+	 * @param representativeMaterial The representative chromosome material. Need not correspond to any material in actual population, it just represents a point in genome space. The material is cloned.
 	 */
-	public Long getRepresentativeId() {
-		return representative.getId();
-		//if (getFittest() == null) {
-		//	return -1l;
-		//}
-		//return getFittest().getId();
+	public Species(SpeciationParms aSpeciationParms, ChromosomeMaterial representativeMaterial) {
+		representative = representativeMaterial.clone(null);
+		bestPerforming = null;
+		speciationParms = aSpeciationParms;
+		// Synchronize on ID_TAG, for want of something better (can't synch on idCount as Long is immutable.
+		synchronized (ID_TAG) {
+			id = idCount;
+			idCount++;
+		}
 	}
 
 	/**
-	 * Create new specie from representative. Representative is first member of specie, and all other members of specie
-	 * are determined by compatibility with representative. Even if representative dies from population, a reference is
-	 * kept here to determine specie membership.
+	 * Create new species with given Chromosome as first member of species. The material of given Chromosome is cloned and used as the (initial) representative material. 
 	 * 
 	 * @param aSpeciationParms
-	 * @param aRepresentative
+	 * @param first
 	 */
-	public Species(SpeciationParms aSpeciationParms, Chromosome aRepresentative) {
-		representative = aRepresentative;
-		bestPerforming = aRepresentative;
-		aRepresentative.setSpecie(this);
-		chromosomes.add(aRepresentative);
+	public Species(SpeciationParms aSpeciationParms, Chromosome first) {
+		representative = first.getMaterial().clone(null);
 		speciationParms = aSpeciationParms;
-		id = idCount;
-		idCount++;
+		// Synchronize on ID_TAG, for want of something better (can't synch on idCount as Long is immutable.
+		synchronized (ID_TAG) {
+			id = idCount;
+			idCount++;
+		}
+		add(first);
+		bestPerforming = first;
 	}
 
 	/**
 	 * @return representative chromosome
 	 */
-	protected Chromosome getRepresentative() {
+	public ChromosomeMaterial getRepresentative() {
 		return representative;
-		//return getFittest();
 	}
 
 	/**
+	 * Sets the representative material. Need not correspond to any material in actual population, it just represents a point in genome space. The material is cloned.
+	 */
+	public void setRepresentative(ChromosomeMaterial material) {
+		representative = material.clone(null);
+	}
+
+	/**
+	 * Add a chromosome to this species. Updates the species reference in the chromosome.
 	 * @param aChromosome
-	 * @return true if chromosome is added, false if chromosome already is a member of this species
+	 * @return true if chromosome is added, false if chromosome already is a member of this species. 
+	 * 
 	 */
 	public boolean add(Chromosome aChromosome) {
+		if (aChromosome.getSpecie() != null) {
+			throw new IllegalArgumentException("Chromosome is already a member of another species. Try moveFromCurrentSpecies() instead?");
+		}
 		// if (chromosomes.isEmpty() && !match(aChromosome))
 		// throw new IllegalArgumentException("chromosome does not match specie: " + aChromosome);
 		if (chromosomes.contains(aChromosome))
 			return false;
 		aChromosome.setSpecie(this);
-		bestPerforming = null; // Set to null rather than test as the performance comparator checks ID as well as performance.
+		bestPerforming = null; // Set to null rather than test as the performance comparator checks ID as well as performance
 		return chromosomes.add(aChromosome);
 	}
-
+	
 	/**
 	 * @param aChromosome
 	 * @return true if chromosome was removed, false if chromosome not a member of this specie
 	 */
 	public boolean remove(Chromosome aChromosome) {
+		int index = chromosomes.indexOf(aChromosome);
+		if (index == -1) {
+			return false;
+		}
 		aChromosome.resetSpecie();
 		if (aChromosome == bestPerforming)
 			bestPerforming = null;
-		return chromosomes.remove(aChromosome);
+		chromosomes.remove(index);
+		return true;
+	}
+	
+	/**
+	 * Move the given Chromosome from it's current species to this species. An IllegalArgumentException is thrown if the chromosome is not currently in a species.
+	 * @return false if the chromosome's current species is this species, otherwise true.
+	 */
+	public boolean moveFromCurrentSpecies(Chromosome c) {
+		if (c.getSpecie() == null) {
+			throw new IllegalArgumentException("Can't move from null species.");
+		}
+		
+		if (c.getSpecie().equals(this)) return false;
+		
+		c.getSpecie().chromosomes.remove(c);
+		if (c == c.getSpecie().bestPerforming) {
+			c.getSpecie().bestPerforming = null;
+		}
+		
+		chromosomes.add(c);
+		c.resetSpecie();
+		c.setSpecie(this);
+		
+		return true;
+	}
+	
+	/**
+	 * Add the given Chromosome to this species, removing it from it's current species if necessary. 
+	 * @return false if the chromosome's current species is this species, otherwise true.
+	 */
+	public boolean addOrMoveFromCurrentSpecies(Chromosome c) {
+		if (c.getSpecie() != null && c.getSpecie().equals(this)) return false;
+
+		if (c.getSpecie() != null) {
+			c.getSpecie().chromosomes.remove(c);
+			if (c == c.getSpecie().bestPerforming) {
+				c.getSpecie().bestPerforming = null;
+			}
+		}
+		
+		chromosomes.add(c);
+		c.resetSpecie();
+		c.setSpecie(this);
+		
+		return true;
 	}
 
 	/**
-	 * @return all chromosomes in specie
+	 * @return all chromosomes in specie as an immutable list.
 	 */
 	public List<Chromosome> getChromosomes() {
 		return Collections.unmodifiableList(chromosomes);
@@ -373,25 +440,13 @@ public class Species {
 		return result;
 	}
 
-	/**
-	 * @param aChromosome
-	 * @return boolean true iff compatibility difference between <code>aChromosome</code? and representative is less
-	 *         than speciation threshold
-	 */
-	public boolean match(Chromosome aChromosome) {
-		if (isEmpty()) {
-			return false;
-		}
-		return (representative.distance(aChromosome, speciationParms) < speciationParms.getSpeciationThreshold());
-		//return (getFittest().distance(aChromosome, speciationParms) < speciationParms.getSpeciationThreshold());
-	}
 
 	/**
 	 * @see java.lang.Object#toString()
 	 */
 	public String toString() {
 		StringBuffer result = new StringBuffer("Specie ");
-		result.append(getRepresentativeId());
+		result.append(getID());
 		return result.toString();
 	}
 
@@ -401,7 +456,7 @@ public class Species {
 	public String toXml() {
 		StringBuffer result = new StringBuffer();
 		result.append("<").append(SPECIE_TAG).append(" ").append(ID_TAG).append("=\"");
-		result.append(getRepresentativeId()).append("\" ").append(COUNT_TAG).append("=\"");
+		//result.append(getRepresentativeId()).append("\" ").append(COUNT_TAG).append("=\"");
 		result.append(getChromosomes().size()).append("\">\n");
 		Iterator<Chromosome> chromIter = getChromosomes().iterator();
 		while (chromIter.hasNext()) {
@@ -475,14 +530,27 @@ public class Species {
 	 */
 	@SuppressWarnings("unchecked")
 	public List<Chromosome> cullClones() {
+		ArrayList<Chromosome> chromosomesArr = new ArrayList<Chromosome>(chromosomes);
+		
+		/*
 		// Sort in descending order of fitness so we can't remove fittest (elites haven't been set when this is called so don't worry about them).
-		Collections.sort(chromosomes, new ChromosomeFitnessComparator(false /* asc */, false /* speciated fitness */));
+		Collections.sort(chromosomesArr, new ChromosomeFitnessComparator(false, false));
+		*/
+		
+		// Make sure best performing is first
+		getBestPerforming();
+		if (bestPerforming != null && chromosomesArr.get(0) != bestPerforming) {
+			chromosomesArr.remove(bestPerforming);
+			chromosomesArr.add(0, bestPerforming);
+		}
+		
 		List<Chromosome> toRemove = new ArrayList<Chromosome>();
-		for (int i = 0; i < chromosomes.size(); i++) {
-			Chromosome c1 = chromosomes.get(i);
-			for (int j = i+1; j < chromosomes.size(); j++) {
-				Chromosome c2 = chromosomes.get(j);
+		for (int i = 0; i < chromosomesArr.size(); i++) {
+			Chromosome c1 = chromosomesArr.get(i);
+			for (int j = i+1; j < chromosomesArr.size(); j++) {
+				Chromosome c2 = chromosomesArr.get(j);
 				if (!toRemove.contains(c2) && c1.isEquivalent(c2)) {
+					assert (c2 != bestPerforming) : "shouldn't remove best performing, index is " + j + "\n" + chromosomesArr + "\n" + chromosomes;
 					toRemove.add(c2);
 					originalSize--;
 				}

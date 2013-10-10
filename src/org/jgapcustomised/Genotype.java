@@ -31,10 +31,14 @@ import org.jgapcustomised.event.GeneticEvent;
 
 import org.apache.log4j.Logger;
 
+import com.anji.integration.ActivatorTranscriber;
+import com.anji.integration.Transcriber;
 import com.anji.neat.AddConnectionMutationOperator;
 import com.anji.neat.Evolver;
 import com.anji.neat.NeatConfiguration;
+import com.anji.neat.SpeciationStrategyOriginal;
 import com.anji.util.Properties;
+import com.ojcoleman.ahni.util.ArrayUtil;
 
 /**
  * Genotypes are fixed-length populations of chromosomes. As an instance of a <code>Genotype</code> is evolved, all of
@@ -50,12 +54,16 @@ import com.anji.util.Properties;
  */
 public class Genotype implements Serializable {
 	private static Logger logger = Logger.getLogger(Genotype.class);
+	
+	public static final String SPECIATION_STRATEGY_CLASS_KEY = "speciation.class";
+	
 	/**
 	 * The current active Configuration instance.
 	 */
 	protected Configuration m_activeConfiguration;
 	protected Properties props;
 	protected SpeciationParms m_specParms;
+	protected SpeciationStrategy m_specStrategy;
 	/**
 	 * Species that makeup this Genotype's population.
 	 */
@@ -66,12 +74,12 @@ public class Genotype implements Serializable {
 	protected List<Chromosome> m_chromosomes = new ArrayList<Chromosome>();
 
 	protected int generation;
-	protected int lastGenChangedSpeciesCompatThreshold;
 
 	protected int targetPerformanceType;
 	protected Chromosome fittest = null;
 	protected Chromosome bestPerforming = null;
 	protected int zeroPerformanceCount = 0;
+	protected int zeroFitnessCount = 0;
 	
 	Chromosome previousFittest = null;
 	Chromosome previousBestPerforming = null;
@@ -118,13 +126,13 @@ public class Genotype implements Serializable {
 		m_activeConfiguration = a_activeConfiguration;
 
 		m_specParms = m_activeConfiguration.getSpeciationParms();
+		m_specStrategy = (SpeciationStrategy) props.singletonObjectProperty(props.getClassProperty(SPECIATION_STRATEGY_CLASS_KEY, SpeciationStrategyOriginal.class));
 
 		adjustChromosomeList(a_initialChromosomes, a_activeConfiguration.getPopulationSize(), null);
 
 		addChromosomes(a_initialChromosomes);
 
 		generation = 0;
-		lastGenChangedSpeciesCompatThreshold = 0;
 	}
 
 	/**
@@ -152,7 +160,7 @@ public class Genotype implements Serializable {
 			while (chroms.size() > targetSize && popIter.hasNext()) {
 				Chromosome c = popIter.next();
 				// don't randomly remove elites or population fittest (they're supposed to survive till next generation)
-				if (!c.isElite && c != popFittest && (c.getSpecie() == null || c.getSpecie().getRepresentative() != c)) {
+				if (!c.isElite && c != popFittest) {
 					if (c.getSpecie() != null)
 						c.getSpecie().remove(c); // remove from species
 					popIter.remove();
@@ -210,86 +218,7 @@ public class Genotype implements Serializable {
 	 * true; } } if (!added) { specie = new Species(m_activeConfiguration.getSpeciationParms(), chrom);
 	 * m_species.add(specie); //System.out.println("adding species"); } }
 	 */
-	/**
-	 * Clears all species and creates a fresh speciation.
-	 */
-	protected void respeciate() {
-		m_species.clear();
-		for (Chromosome chrom : m_chromosomes) {
-			chrom.resetSpecie();
-		}
-		speciate();
-	}
-
-	/**
-	 * (Re)assigns all chromosomes to a species. If no existing species are compatible with a chromosome a new species
-	 * is created.
-	 */
-	protected void speciate() {
-		// If true then chromosomes from previous generations will never be removed from their current species.
-		boolean keepExistingSpecies = false;
-		
-		// sort so fittest are first as the fittest is used as the representative of a species (in case of creating new
-		// species)
-		Collections.sort(m_chromosomes, new ChromosomeFitnessComparator<Chromosome>(false, false));
-		//Collections.shuffle(m_chromosomes, m_activeConfiguration.getRandomGenerator());
-
-		// First determine new species for each chromosome (but don't assign yet).
-		for (Chromosome chrom : m_chromosomes) {
-			if (!keepExistingSpecies || chrom.getSpecie() == null) {
-				chrom.resetSpecie();
-				boolean added = false;
-				for	(Species species : m_species) {
-					if (species.match(chrom)) {
-						chrom.setSpecie(species);
-						added = true;
-						break;
-					}
-				}
-				if (!added) {
-					// this also sets the species of chrom to the new species.
-					Species species = new Species(m_activeConfiguration.getSpeciationParms(), chrom); 
-					m_species.add(species);
-					// System.out.println("Added new species");
-				}
-			}
-		}
-
-		// remove chromosomes from all species and record previous fittest
-		for	(Species species : m_species) {
-			species.setPreviousBestPerforming(species.getBestPerforming());
-			species.clear();
-		}
-
-		// then (re)assign chromosomes to their correct species
-		for (Chromosome chrom : m_chromosomes) {
-			Species newSpecies = chrom.getSpecie();
-			chrom.resetSpecie();
-			newSpecies.add(chrom); // Also updates species reference in chrom.
-		}
-
-		// remove empty species (if any), and collect some stats
-		minSpeciesSize = Integer.MAX_VALUE;
-		maxSpeciesSize = 0;
-		Iterator<Species> speciesIter = m_species.iterator();
-		while (speciesIter.hasNext()) {
-			Species species = speciesIter.next();
-
-			if (species.isEmpty()) {
-				species.originalSize = 0;
-				speciesIter.remove();
-				// System.out.println("Removed species (empty after speciation): " + species.getID() + "  age: " +
-				// species.getAge());
-			} else {
-				if (species.size() > maxSpeciesSize)
-					maxSpeciesSize = species.size();
-				if (species.size() < minSpeciesSize)
-					minSpeciesSize = species.size();
-
-				species.originalSize = species.size();
-			}
-		}
-	}
+	
 
 	/**
 	 * @return List contains Chromosome objects, the population of Chromosomes.
@@ -389,26 +318,39 @@ public class Genotype implements Serializable {
 			m_activeConfiguration.getEventManager().fireGeneticEvent(new GeneticEvent(GeneticEvent.GENOTYPE_EVALUATED_EVENT, this));
 
 			
-			// Speciate population.
-			speciate();
-			
-			// Attempt to maintain species count target, don't change threshold too frequently.
-			int targetSpeciesCount = m_specParms.getSpeciationTarget();
-			int maxAdjustFreq = (int) Math.round(Math.pow(m_activeConfiguration.getPopulationSize(), 0.333));
-			if (targetSpeciesCount > 0 && m_species.size() != targetSpeciesCount && (generation - lastGenChangedSpeciesCompatThreshold > maxAdjustFreq)) {
-				double ratio = (double) m_species.size() / targetSpeciesCount;
-				double factor = (ratio - 1) * 0.2 + 1;
-				double newSpecThresh = m_specParms.getSpeciationThreshold() * factor;
-				if (newSpecThresh < m_specParms.getSpeciationThresholdMin()) newSpecThresh = m_specParms.getSpeciationThresholdMin();
-				if (newSpecThresh > m_specParms.getSpeciationThresholdMax()) newSpecThresh = m_specParms.getSpeciationThresholdMax();
-				m_specParms.setSpeciationThreshold(newSpecThresh);
-				lastGenChangedSpeciesCompatThreshold = generation;
+			// Remove all chromosomes which have 0 fitness value(s), no point putting resources into speciating and 
+			// otherwise processing them when they're almost certainly going to be discarded when selection takes place.
+			zeroFitnessCount = 0;
+			Iterator<Chromosome> chromItr = m_chromosomes.iterator();
+			while (chromItr.hasNext()) {
+				Chromosome c = chromItr.next();
+				double f = ArrayUtil.sum(c.getFitnessValues());
+				if (Double.isNaN(f) || f == 0) {
+					chromItr.remove();
+					zeroFitnessCount++;
+				}
 			}
 			
-			// Remove clones from population. We do this after speciation.
+			
+			// Speciate population.
+			m_specStrategy.speciate(m_chromosomes, m_species, this);
+			// Update originalSize for each species.
+			for (Species species : m_species) {
+				species.originalSize = species.size();
+			}
+			
+			
+			// Remove clones from population and collect some stats. We do this after speciation.
+			minSpeciesSize = Integer.MAX_VALUE;
+			maxSpeciesSize = 0;
 			for (Species s : m_species) {
-				List<Chromosome> removed = s.cullClones();
-				m_chromosomes.removeAll(removed);
+				//List<Chromosome> removed = s.cullClones();
+				//m_chromosomes.removeAll(removed);
+				
+				if (s.size() > maxSpeciesSize)
+					maxSpeciesSize = s.size();
+				if (s.size() < minSpeciesSize)
+					minSpeciesSize = s.size();
 			}
 			
 			// Find best performing individual.
@@ -440,9 +382,8 @@ public class Genotype implements Serializable {
 			}
 			
 			
-			// Select chromosomes to generate new population from,
-			// and determine elites that will survive unchanged to next generation
-			// Note that speciation must occur before selection to allow using speciated fitness.
+			// Select chromosomes to generate new population from, and determine elites that will survive unchanged to next generation.
+			// Note that speciation must occur before selection to allow selecting correct proportion of parents and elites for each species.
 			// ------------------------------------------------------------
 			NaturalSelector selector = m_activeConfiguration.getNaturalSelector();
 			selector.add(m_activeConfiguration, m_species, m_chromosomes, bestPerforming);
@@ -477,12 +418,8 @@ public class Genotype implements Serializable {
 				// Set the average species fitness using its full complement of individuals from this generation.
 				s.calculateAverageFitness();
 
-				// remove any individuals not in m_chromosomes from the species
+				// Remove any individuals not selected as parents from the species.
 				s.cull(m_chromosomes);
-				if (s.isEmpty()) {
-					s.originalSize = 0;
-					speciesIter.remove();
-				}
 			}
 			if (m_species.isEmpty()) {
 				logger.info("All species removed!");
@@ -520,10 +457,7 @@ public class Genotype implements Serializable {
 			while (speciesIter.hasNext()) {
 				Species s = speciesIter.next();
 				s.cullToElites(bestPerforming);
-				if (s.isEmpty()) {
-					s.originalSize = 0;
-					speciesIter.remove();
-				} else {
+				if (!s.isEmpty()) {
 					s.newGeneration(); // updates internal variables
 					m_chromosomes.addAll(s.getChromosomes());
 				}
@@ -537,10 +471,16 @@ public class Genotype implements Serializable {
 			// ------------------------------
 			addChromosomesFromMaterial(offspring);
 			
-			// In case we're off due to rounding errors
-			if (m_chromosomes.size() != m_activeConfiguration.getPopulationSize()) {
-				adjustChromosomeList(m_chromosomes, m_activeConfiguration.getPopulationSize(), bestPerforming);
+			for (Species s : m_species) {
+				List<Chromosome> removed = s.cullClones();
+				m_chromosomes.removeAll(removed);
 			}
+			
+			// Do we really care if we're a little bit off the target population size?
+			// In case we're off due to rounding errors
+			//if (m_chromosomes.size() != m_activeConfiguration.getPopulationSize()) {
+			//	adjustChromosomeList(m_chromosomes, m_activeConfiguration.getPopulationSize(), bestPerforming);
+			//}
 			
 			assert m_chromosomes.contains(bestPerforming) : "Global bestPerforming removed from population.";
 
@@ -578,6 +518,10 @@ public class Genotype implements Serializable {
 		return zeroPerformanceCount;
 	}
 
+	public int getNumberOfChromosomesWithZeroFitnessFromLastGen() {
+		return zeroFitnessCount;
+	}
+
 	public SpeciationParms getParameters() {
 		return m_specParms;
 	}
@@ -588,6 +532,14 @@ public class Genotype implements Serializable {
 
 	public int getMinSpeciesSize() {
 		return minSpeciesSize;
+	}
+	
+	public Configuration getConfiguration() {
+		return m_activeConfiguration;
+	}
+	
+	public int getGeneration() {
+		return generation;
 	}
 
 	/**

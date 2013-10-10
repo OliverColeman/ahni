@@ -234,7 +234,7 @@ public class ParameterTuner {
 			}
 			resultFile.append("gens, mean perf\n");
 
-			ExecutorService runExecutor = Executors.newCachedThreadPool();
+			ExecutorService runExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory(ParameterTuner.class.getName()));
 			
 			System.out.println("Determining initial fitness with values:");
 			for (int p = 0; p < propCount; p++) {

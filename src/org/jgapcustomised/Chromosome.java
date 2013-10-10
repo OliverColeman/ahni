@@ -432,7 +432,7 @@ public class Chromosome implements Comparable, Serializable {
 	 * 
 	 * @param aSpecie
 	 */
-	void setSpecie(Species aSpecie) {
+	public void setSpecie(Species aSpecie) {
 		if (m_specie != null)
 			throw new IllegalStateException("chromosome can't be added to " + aSpecie + ", already a member of specie " + m_specie);
 		m_specie = aSpecie;
@@ -440,10 +440,8 @@ public class Chromosome implements Comparable, Serializable {
 
 	/**
 	 * Resets (clears) the specie this chromose belongs to.
-	 * 
-	 * @param aSpecie
 	 */
-	void resetSpecie() {
+	public void resetSpecie() {
 		m_specie = null;
 	}
 	

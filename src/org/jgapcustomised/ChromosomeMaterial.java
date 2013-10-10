@@ -414,60 +414,73 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 		//boolean log = Math.random() < 0.01;
 		boolean log = false;
 		
+		boolean useValues = speciationParms.specieCompatMismatchUseValues();
+		double disjointCountOrValueSum = 0, excessCountOrValueSum = 0, commonCount = 0;
+		double weightDifference = 0;
+		int maxSize = Math.max(this.getAlleles().size(), target.getAlleles().size());
+		
 		if (m_alleles.isEmpty() || target.m_alleles.isEmpty()) {
 			if (log) System.err.println("empty");
-			return 1; // disjointCount / Math.max(m_alleles.size(), target.m_alleles.size()) will always equal 1 (no excess and no weight diff between common genes).
-		}
-		double disjointCount = 0, excessCount = 0, commonCount = 0;
-		double weightDifference = 0;
-		Iterator<Allele> thisIter = m_alleles.iterator(), targetIter = target.m_alleles.iterator();
-		Allele thisCurrent = thisIter.next(), targetCurrent = targetIter.next();
-		long thisMaxInnoID = this.getMaxInnovationID(), targetMaxInnoID = target.getMaxInnovationID();
-		// Iterate through this and target alleles counting up common and disjoint genes as we go.
-		do {
-			if (thisCurrent.getInnovationId() == targetCurrent.getInnovationId()) {
-				commonCount++;
-				weightDifference += thisCurrent.distance(targetCurrent);
-				thisCurrent = thisIter.hasNext() ? thisIter.next() : null;
-				targetCurrent = targetIter.hasNext() ? targetIter.next() : null;
+			
+			ChromosomeMaterial m = m_alleles.isEmpty() ? target : this;
+			for (Allele a : m.getAlleles()) {
+				excessCountOrValueSum += getMismatchValue(a, useValues);
 			}
-			else {
-				disjointCount++;
-				if (thisCurrent.getInnovationId() < targetCurrent.getInnovationId()) {
+		}
+		else {
+			Iterator<Allele> thisIter = m_alleles.iterator(), targetIter = target.m_alleles.iterator();
+			Allele thisCurrent = thisIter.next(), targetCurrent = targetIter.next();
+			long thisMaxInnoID = this.getMaxInnovationID(), targetMaxInnoID = target.getMaxInnovationID();
+			// Iterate through this and target alleles counting up common and disjoint genes as we go.
+			do {
+				if (thisCurrent.getInnovationId() == targetCurrent.getInnovationId()) {
+					commonCount++;
+					weightDifference += thisCurrent.distance(targetCurrent);
 					thisCurrent = thisIter.hasNext() ? thisIter.next() : null;
-				}
-				else {
 					targetCurrent = targetIter.hasNext() ? targetIter.next() : null;
 				}
+				else {
+					Allele a = thisCurrent.getInnovationId() < targetCurrent.getInnovationId() ? thisCurrent : targetCurrent;
+					disjointCountOrValueSum += getMismatchValue(a, useValues);
+					
+					if (thisCurrent.getInnovationId() < targetCurrent.getInnovationId()) {
+						thisCurrent = thisIter.hasNext() ? thisIter.next() : null;
+					}
+					else {
+						targetCurrent = targetIter.hasNext() ? targetIter.next() : null;
+					}
+				}
+			} while (thisCurrent != null && targetCurrent != null);
+			
+			// If the last gene pulled from this set of genes is out of the range of innovation IDs of the target, add it to excess.
+			if (thisCurrent != null && thisCurrent.getInnovationId() > targetMaxInnoID) {
+				excessCountOrValueSum += getMismatchValue(thisCurrent, useValues);
 			}
-		} while (thisCurrent != null && targetCurrent != null);
+			// If the last gene pulled from the target set of genes is out of the range of innovation IDs of this set of genes, add it to excess.
+			if (targetCurrent != null && targetCurrent.getInnovationId() > thisMaxInnoID) {	
+				excessCountOrValueSum += getMismatchValue(targetCurrent, useValues);
+			}
 		
-		// If the last gene pulled from this set of genes is out of the range of innovation IDs of the target, add it to excess.
-		if (thisCurrent != null && thisCurrent.getInnovationId() > targetMaxInnoID) excessCount++;
-		// If the last gene pulled from the target set of genes is out of the range of innovation IDs of this set of genes, add it to excess.
-		if (targetCurrent != null && targetCurrent.getInnovationId() > thisMaxInnoID) excessCount++;
-		// Iterate over and count up any remaining excess genes.
-		while (thisIter.hasNext()) {
-			thisIter.next();
-			excessCount++;
-		}
-		while (targetIter.hasNext()) {
-			targetIter.next();
-			excessCount++;
+			// Iterate over and count up any remaining excess genes.
+			while (thisIter.hasNext()) {
+				excessCountOrValueSum += getMismatchValue(thisIter.next(), useValues);
+			}
+			while (targetIter.hasNext()) {
+				excessCountOrValueSum += getMismatchValue(targetIter.next(), useValues);
+			}
 		}
 		
 		if (speciationParms.specieCompatNormalise()) {
-			int maxSize = Math.max(this.getAlleles().size(), target.getAlleles().size());
-			excessCount /= maxSize;
-			disjointCount /= maxSize;
+			excessCountOrValueSum /= maxSize;
+			disjointCountOrValueSum /= maxSize;
 			if (commonCount > 0) weightDifference /= commonCount;
 		}
 		
-		double result2 = (speciationParms.getSpecieCompatExcessCoeff() * excessCount) + (speciationParms.getSpecieCompatDisjointCoeff() * disjointCount) + (speciationParms.getSpecieCompatCommonCoeff() * weightDifference);
+		double result2 = (speciationParms.getSpecieCompatExcessCoeff() * excessCountOrValueSum) + (speciationParms.getSpecieCompatDisjointCoeff() * disjointCountOrValueSum) + (speciationParms.getSpecieCompatCommonCoeff() * weightDifference);
 		
 		if (log) {
-			System.err.println("\nexcessCount " + excessCount);
-			System.err.println("disjointCount " + disjointCount);
+			System.err.println("\nexcessCount " + excessCountOrValueSum);
+			System.err.println("disjointCount " + disjointCountOrValueSum);
 			System.err.println("commonCount " + commonCount);
 			System.err.println("weightDifference " + weightDifference);
 			System.err.println("result2 " + result2);
@@ -479,6 +492,12 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 		//	System.err.println("result " + result  + " != " + result2 + "     " + (result - result2));
 		//}
 		return result2;
+	}
+	
+	// Distance value of a mismatched allele as determined by whether we're using a constant value (1), 
+	// or the stored value of the allele (eg the connection weight or neuron bias).
+	private double getMismatchValue(Allele a, boolean useValues) {
+		return useValues ? a.getValue() : 1;
 	}
 
 	/**

@@ -28,7 +28,7 @@ import com.ojcoleman.ahni.util.ArrayUtil;
  * 
  * @author Philip Tucker
  */
-public class ChromosomeFitnessComparator<T> implements Comparator<T> {
+public class ChromosomeFitnessComparator implements Comparator<Chromosome> {
 
 	private boolean isAscending = true;
 
@@ -58,15 +58,22 @@ public class ChromosomeFitnessComparator<T> implements Comparator<T> {
 	/**
 	 * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
 	 */
-	public int compare(T o1, T o2) {
-		Chromosome c1 = (Chromosome) o1;
-		Chromosome c2 = (Chromosome) o2;
+	public int compare(Chromosome c1, Chromosome c2) {
 		double fitness1 = (isSpeciated ? c1.getSpeciatedFitnessValue() : c1.getFitnessValue());
 		double fitness2 = (isSpeciated ? c2.getSpeciatedFitnessValue() : c2.getFitnessValue());
 		
 		if (Double.isNaN(fitness1)) fitness1 = -1; // Use -1 as NaN should be lower than 0.
 		if (Double.isNaN(fitness2)) fitness2 = -1;
 		
+		// If the overall fitness is the same (eg because it's based on a ranking produced by NSGA-II), 
+		// then we might be able to differentiate based on the performance value.
+		if (fitness1 == fitness2) {
+			fitness1 = c1.getPerformanceValue();
+			fitness2 = c2.getPerformanceValue();
+			if (Double.isNaN(fitness1)) fitness1 = -1;
+			if (Double.isNaN(fitness2)) fitness2 = -1;
+		}
+		/*
 		// If the overall fitness is the same (eg because it's based on a ranking produced by NSGA-II), 
 		// then we might be able to differentiate based on the average over multiple objectives.
 		if (fitness1 == fitness2) {
@@ -75,6 +82,8 @@ public class ChromosomeFitnessComparator<T> implements Comparator<T> {
 			if (Double.isNaN(fitness1)) fitness1 = -1;
 			if (Double.isNaN(fitness2)) fitness2 = -1;
 		}
+		*/
+		
 		// If the fitness is still identical then use ID to sort in order to maintain a stable sorting.
 		if (fitness1 == fitness2) {
 			fitness1 = c1.getId();

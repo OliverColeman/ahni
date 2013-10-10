@@ -429,7 +429,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 				m.append(" (F: " + nf4.format(bestPerforming.getFitnessValue()) + (bulkFitnessFunc.getObjectiveCount() > 1 ? " [" + ArrayUtil.toString(bestPerforming.getFitnessValues(), ", ", nf4) + "]" : ""));
 				m.append(" P: " + nf4.format(bestPerforming.getPerformanceValue()) + ")");
 
-				m.append("  ZPC: " + genotype.getNumberOfChromosomesWithZeroPerformanceFromLastGen() + "  ABSP: " + nf4.format(avgBestSpeciesPerformance));
+				m.append("  ZPC: " + genotype.getNumberOfChromosomesWithZeroPerformanceFromLastGen() + "  ZFC: " + genotype.getNumberOfChromosomesWithZeroFitnessFromLastGen() + "  ABSP: " + nf4.format(avgBestSpeciesPerformance));
 				m.append("  S: " + numSpecies + "  NS/ES: " + numNewSpecies + "/" + numExtinctSpecies + "  SCT: " + nf1.format(speciationCompatThreshold) + "  Min/Max SS: " + minSpeciesSize + "/" + maxSpeciesSize + "  Min/Max SA: " + minSpeciesAge + "/" + maxSpeciesAge + "  SNB: " + numSpeciesWithNewPerformance);
 				m.append("  Min/Avg/Max GS: " + minSize + "/" + avgSize + "/" + maxSize);
 				m.append("  Time: " + nf3.format(cumulativeDurationBetweenLogging / logPerGenerations) + "s  ETA: " + Misc.formatTimeInterval(eta) + "  Mem: " + memUsed + "MB");

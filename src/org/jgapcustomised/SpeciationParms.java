@@ -51,6 +51,8 @@ public class SpeciationParms {
 	private double compatCommonCoeff = DEFAULT_COMPATIBILITY_COMMON_COEFF;
 	
 	private boolean specieCompatNormalise = false;
+	
+	private boolean specieCompatMismatchUseValues = false;
 
 	private double speciationThreshold = DEFAULT_SPECIATION_THRESHOLD;
 	private double speciationThresholdMin = 0;
@@ -166,5 +168,13 @@ public class SpeciationParms {
 
 	public void setSpecieCompatNormalise(boolean specieCompatNormalise) {
 		this.specieCompatNormalise = specieCompatNormalise;
+	}
+
+	public boolean specieCompatMismatchUseValues() {
+		return specieCompatMismatchUseValues;
+	}
+
+	public void setSpecieCompatMismatchUseValues(boolean specieCompatMismatchUseValues) {
+		this.specieCompatMismatchUseValues = specieCompatMismatchUseValues;
 	}
 }

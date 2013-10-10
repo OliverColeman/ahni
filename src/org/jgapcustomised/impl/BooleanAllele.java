@@ -520,13 +520,6 @@ public class BooleanAllele extends Allele {
 
 	}
 
-	/**
-	 * @see org.jgapcustomised.Allele#distance(org.jgapcustomised.Allele)
-	 */
-	public double distance(Allele target) {
-		return 0;
-	}
-
 	@Override
 	public boolean isEquivalent(Allele otherAllele) {
 		if (!(otherAllele instanceof BooleanAllele))
