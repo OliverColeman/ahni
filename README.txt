@@ -62,8 +62,8 @@ with the run number.
 DEVELOPMENT AND CREATING NEW EXPERIMENTS
 
 To create your own experiments you will most likely want to extend 
-com.ojcoleman.ahni.hyperneat.HyperNEATFitnessFunction or 
-com.ojcoleman.ahni.hyperneat.HyperNEATTargetFitnessFunction 
+com.ojcoleman.ahni.evaluation.HyperNEATFitnessFunction or 
+com.ojcoleman.ahni.evaluation.HyperNEATTargetFitnessFunction 
 For examples see: 
 com.ojcoleman.ahni.experiments.TestTargetFitnessFunction and 
 com.ojcoleman.ahni.experiments.objectrecognition.* 
