@@ -16,6 +16,7 @@ com.ojcoleman.ahni.experiments.csb
 com.ojcoleman.ahni.experiments.doublepolebalancing
 com.ojcoleman.ahni.experiments.objectrecognition
 com.ojcoleman.ahni.hyperneat
+com.ojcoleman.ahni.integration
 com.ojcoleman.ahni.misc
 com.ojcoleman.ahni.nn
 com.ojcoleman.ahni.transcriber
