@@ -512,7 +512,7 @@ public abstract class TranscriberAdaptor<T extends Activator> implements Transcr
 	}
 
 	/**
-	 * Gets the neuron parameter values for each parameter in each parameter class the specified chromosome, in the
+	 * Gets the neuron parameter values for each parameter in each parameter class for the specified chromosome, in the
 	 * format [class][param] (param order same as {@link #neuronParamNames}).
 	 * 
 	 * @see #SUBSTRATE_NEURON_MODEL_PARAMS_CLASSES
@@ -557,7 +557,7 @@ public abstract class TranscriberAdaptor<T extends Activator> implements Transcr
 	}
 
 	/**
-	 * Returns a list of {@link Allele}s, or more importantly {@link Gene}s referenced by the Alleles, that this
+	 * Returns a list of {@link Allele}s, or more importantly {@link org.jgapcustomised.Gene}s referenced by the Alleles, that this
 	 * transcriber knows what to do with. This default implementation adds {@link ParamAllele}s for each neuron and
 	 * synapse model parameter class (see {@link #SUBSTRATE_NEURON_MODEL_PARAMS_CLASSES} and
 	 * {@link #SUBSTRATE_SYNAPSE_MODEL_PARAMS_CLASSES}). It also adds the ParamMutationOperator to the list of mutation

@@ -1131,7 +1131,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		}
 		
 		/**
-		 * Get the neuron parameter class index. May be used as an index into {@link #getNeuronParametersForClass(Chromosome, int)}.
+		 * Get the neuron parameter class index.
 		 * 
 		 * @see #getSelectorValue(int[])
 		 */
@@ -1140,7 +1140,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		}
 		
 		/**
-		 * Get the synapse parameter class index. May be used as an index into {@link #getSynapseParameterValues(Chromosome, int)}.
+		 * Get the synapse parameter class index.
 		 * 
 		 * @see #getSelectorValue(int[])
 		 */
