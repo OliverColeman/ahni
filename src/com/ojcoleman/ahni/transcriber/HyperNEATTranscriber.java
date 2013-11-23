@@ -29,6 +29,7 @@ import com.ojcoleman.ahni.util.Range;
  */
 public abstract class HyperNEATTranscriber<T extends Activator> extends TranscriberAdaptor<T> implements Configurable {
 	private final static Logger logger = Logger.getLogger(HyperNEATTranscriber.class);
+	private final static double notQuiteOne = Math.nextAfter(1, 0);
 
 	/**
 	 * Set to true to restrict the substrate network to a strictly feed-forward topology.
@@ -318,12 +319,17 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	// neuron expression (either a single output for all layers or one output per layer OR neuron type)
 	private int[] cppnIdxNEO = new int[0];
 	// The set of CPPN outputs that determine which neuron or synapse type should be used.
-	private int[] cppnIDXNeuronTypeSelector = new int[1]; // Indices into CPPN output array
-	private int[] cppnIDXSynapseTypeSelector = new int[1]; // Indices into CPPN output array
+	private int[] cppnIDXNeuronTypeSelector = new int[0]; // Indices into CPPN output array
+	private int[] cppnIDXSynapseTypeSelector = new int[0]; // Indices into CPPN output array
 
 	// The index of CPPN outputs for neuron and synapse model parameters, format is [type][param].
 	private int[][] cppnIDXNeuronParams = new int[0][0];
 	private int[][] cppnIDXSynapseParams = new int[0][0];
+
+	// The set of CPPN outputs that determine which neuron or synapse parameter class should be used.
+	private int[] cppnIDXNeuronParamClassSelector; // Indices into CPPN output array
+	//private int[] cppnIDXSynapseParamClassSelector; // Indices into CPPN output array
+	private int cppnIDXSynapseParamClass; // Indices into CPPN output array
 
 	/**
 	 * This method should be called from overriding methods.
@@ -332,7 +338,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 	 */
 	public void init(Properties props) {
 		super.init(props);
-
+		
 		// If the properties specify a separate weight output per layer.
 		if (!props.getBooleanProperty(HYPERNEAT_LAYER_ENCODING, layerEncodingIsInput)) {
 			if (neuronParamsEnabled || synapseParamsEnabled) {
@@ -472,8 +478,9 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		// Determine CPPN output size and mapping.
 		cppnOutputCount = 0;
 		if (layerEncodingIsInput) { // same output for all layers
-			// The CPPN only needs to specify the neuron type to use if there is more than one type.
-			if (neuronModelTypeCount > 1) {
+			// The CPPN only needs to specify the neuron type to use if there is more than one type 
+			// and only if parameter classes are not used.
+			if (neuronModelTypeCount > 1 && neuronModelParamClassCount == 0) {
 				// If there are only two neuron types then we can use a single CPPN output to specify which to
 				// use,
 				// otherwise use a "whichever has the highest output value" encoding to specify the type.
@@ -494,10 +501,10 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 			}
 
 			// The CPPN only needs to specify the synapse type to use if there is more than one type.
-			if (synapseModelTypeCount > 1) {
+			// and only if parameter classes are not used.
+			if (synapseModelTypeCount > 1 && synapseModelParamClassCount == 0) {
 				// If there are only two synapse types then we can use a single CPPN output to specify which to
-				// use,
-				// otherwise use a "whichever has the highest output value" encoding to specify the type.
+				// use, otherwise use a "whichever has the highest output value" encoding to specify the type.
 				cppnIDXSynapseTypeSelector = new int[synapseModelTypeCount > 2 ? synapseModelTypeCount : 1];
 				for (int i = 0; i < cppnIDXSynapseTypeSelector.length; i++) {
 					cppnIDXSynapseTypeSelector[i] = cppnOutputCount++;
@@ -530,30 +537,59 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 			// If neuron model parameter outputs are enabled (to set the parameters for substrate neurons (other than
 			// bias)).
 			if (neuronParamsEnabled) {
-				int paramCount = getNeuronParameterCount();
-				if (paramCount > 0) {
-					cppnIDXNeuronParams = new int[neuronModelTypeCount][paramCount];
-					for (int t = 0; t < neuronModelTypeCount; t++) {
-						for (int p = 0; p < paramCount; p++) {
-							cppnIDXNeuronParams[t][p] = cppnOutputCount++;
+				if (neuronModelParamClassCount > 0) {
+					if (neuronModelParamClassCount > 1) {
+						// If there are only two classes then we can use a single CPPN output to specify which to
+						// use, otherwise use a "whichever has the highest output value" encoding to specify the type.
+						cppnIDXNeuronParamClassSelector = new int[neuronModelParamClassCount > 2 ? neuronModelParamClassCount : 1];
+						for (int i = 0; i < cppnIDXNeuronParamClassSelector.length; i++) {
+							cppnIDXNeuronParamClassSelector[i] = cppnOutputCount++;
 						}
+						logger.info("CPPN: Added " + cppnIDXNeuronParamClassSelector.length + " neuron parameter class selector outputs.");
 					}
-					logger.info("CPPN: Added " + neuronModelTypeCount + " x " + paramCount + " = " + (neuronModelTypeCount * paramCount) + " neuron parameter outputs (number of neuron model types times number of parameters).");
+				}
+				else {
+					int paramCount = getNeuronParameterCount();
+					if (paramCount > 0) {
+						cppnIDXNeuronParams = new int[neuronModelTypeCount][paramCount];
+						for (int t = 0; t < neuronModelTypeCount; t++) {
+							for (int p = 0; p < paramCount; p++) {
+								cppnIDXNeuronParams[t][p] = cppnOutputCount++;
+							}
+						}
+						logger.info("CPPN: Added " + neuronModelTypeCount + " x " + paramCount + " = " + (neuronModelTypeCount * paramCount) + " neuron parameter outputs (number of neuron model types times number of parameters).");
+					}
 				}
 			}
 
 			// If synapse model parameter outputs are enabled (to set the parameters for substrate synapses (other than
 			// weight)).
 			if (synapseParamsEnabled) {
-				int paramCount = getSynapseParameterCount();
-				if (paramCount > 0) {
-					cppnIDXSynapseParams = new int[synapseModelTypeCount][paramCount];
-					for (int t = 0; t < synapseModelTypeCount; t++) {
-						for (int p = 0; p < paramCount; p++) {
-							cppnIDXSynapseParams[t][p] = cppnOutputCount++;
-						}
+				if (synapseModelParamClassCount > 0) {
+					if (synapseModelParamClassCount > 1) {
+						// If there are only two classes then we can use a single CPPN output to specify which to
+						// use, otherwise use a "whichever has the highest output value" encoding to specify the type.
+						//cppnIDXSynapseParamClassSelector = new int[synapseModelParamClassCount > 2 ? synapseModelParamClassCount : 1];
+						//for (int i = 0; i < cppnIDXSynapseParamClassSelector.length; i++) {
+						//	cppnIDXSynapseParamClassSelector[i] = cppnOutputCount++;
+						//}
+						//logger.info("CPPN: Added " + cppnIDXSynapseParamClassSelector.length + " synapse parameter class selector outputs.");
+						
+						cppnIDXSynapseParamClass = cppnOutputCount++;
+						logger.info("CPPN: Added 1 synapse parameter class selector output.");
 					}
-					logger.info("CPPN: Added " + synapseModelTypeCount + " x " + paramCount + " = " + (synapseModelTypeCount * paramCount) + " synapse parameter outputs (number of synapse model types times number of parameters).");
+				}
+				else {
+					int paramCount = getSynapseParameterCount();
+					if (paramCount > 0) {
+						cppnIDXSynapseParams = new int[synapseModelTypeCount][paramCount];
+						for (int t = 0; t < synapseModelTypeCount; t++) {
+							for (int p = 0; p < paramCount; p++) {
+								cppnIDXSynapseParams[t][p] = cppnOutputCount++;
+							}
+						}
+						logger.info("CPPN: Added " + synapseModelTypeCount + " x " + paramCount + " = " + (synapseModelTypeCount * paramCount) + " synapse parameter outputs (number of synapse model types times number of parameters).");
+					}
 				}
 			}
 		} else { // (!layerEncodingIsInput), one output per layer
@@ -1093,7 +1129,28 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		public boolean getNEO(int index) {
 			return !enableNEO || cppnOutput[cppnIdxNEO[index]] > neoThreshold;
 		}
-
+		
+		/**
+		 * Get the neuron parameter class index. May be used as an index into {@link #getNeuronParametersForClass(Chromosome, int)}.
+		 * 
+		 * @see #getSelectorValue(int[])
+		 */
+		public int getNeuronParamClassIndex() {
+			return neuronModelParamClassCount > 1 ? getSelectorValue(cppnIDXNeuronParamClassSelector) : 0;
+		}
+		
+		/**
+		 * Get the synapse parameter class index. May be used as an index into {@link #getSynapseParameterValues(Chromosome, int)}.
+		 * 
+		 * @see #getSelectorValue(int[])
+		 */
+		public int getSynapseParamClassIndex() {
+			if (synapseModelParamClassCount == 0) return 0;
+			double v = getRangedOutput(cppnIDXSynapseParamClass, 0, notQuiteOne, notQuiteOne, 0);
+			return (int) (v * synapseModelParamClassCount);
+			//return synapseModelParamClassCount > 1 ? getSelectorValue(cppnIDXSynapseParamClassSelector) : 0;
+		}
+		
 		/**
 		 * Get the value of a neuron model parameter output for the specified neuron type and parameter. Should be
 		 * called after calling {@link #query()}.

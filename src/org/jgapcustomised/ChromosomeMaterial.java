@@ -153,7 +153,7 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 	 */
 	public String toString() {
 		StringBuffer representation = new StringBuffer();
-		representation.append("[ ");
+		//representation.append("[ ");
 
 		// Append the representations of each of the gene Alleles.
 		// -------------------------------------------------------
@@ -164,10 +164,10 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 		}
 		while (iter.hasNext()) {
 			Allele allele = (Allele) iter.next();
-			representation.append(", ");
+			representation.append("\n");
 			representation.append(allele.toString());
 		}
-		representation.append(" ]");
+		//representation.append(" ]");
 
 		return representation.toString();
 	}

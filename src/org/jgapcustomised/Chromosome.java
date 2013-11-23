@@ -203,7 +203,7 @@ public class Chromosome implements Comparable, Serializable {
 	/**
 	 * @return SortedSet alleles, sorted by innovation ID
 	 */
-	public SortedSet getAlleles() {
+	public SortedSet<Allele> getAlleles() {
 		return m_alleles;
 	}
 

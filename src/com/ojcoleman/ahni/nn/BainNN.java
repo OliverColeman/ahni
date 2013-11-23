@@ -432,7 +432,8 @@ public class BainNN extends NNAdaptor {
 		for (int i = 0; i < neuronCount; i++) {
 			if (!neuronDisabled[i]) neuronDisabledCount++;
 		}
-		DecimalFormat nf = new DecimalFormat(" 0.00;-0.00");
+		DecimalFormat floatf = new DecimalFormat(" 0.00;-0.00");
+		DecimalFormat intf = new DecimalFormat("000000000");
 		StringBuilder out = new StringBuilder(125 + synapseCount * 30);
 		out.append("Neuron class: " + nn.getNeurons().getClass());
 		out.append("\nSynapse class: " + nn.getSynapses().getClass());
@@ -458,13 +459,13 @@ public class BainNN extends NNAdaptor {
 		for (int i = 0; i < neuronCount; i++) {
 			out.append("\n\t" + (neuronDisabled[i] ? "0" : "1") + "\t");
 			if (coordsEnabled()) {
-				out.append("\t(" + nf.format(getXCoord(i)) + ", " + nf.format(getYCoord(i)) + ", " + nf.format(getZCoord(i)) + ")");
+				out.append("\t(" + floatf.format(getXCoord(i)) + ", " + floatf.format(getYCoord(i)) + ", " + floatf.format(getZCoord(i)) + ")");
 			}
 			if (biasNeurons != null) {
-				out.append("\t" + nf.format(biasNeurons.getBias(i)));
+				out.append("\t" + floatf.format(biasNeurons.getBias(i)));
 			}
 			if (paramNames != null && nn.getNeurons().getComponentConfiguration(i) != null) {
-				out.append("\t" + ArrayUtil.toString(nn.getNeurons().getComponentConfiguration(i).getParameterValues(), "\t", nf));
+				out.append("\t" + ArrayUtil.toString(nn.getNeurons().getComponentConfiguration(i).getParameterValues(), "\t", floatf));
 			}
 		}
 		
@@ -472,7 +473,7 @@ public class BainNN extends NNAdaptor {
 		out.append("\n\tpre > post\tEnabled\tweight");
 		paramNames = nn.getSynapses().getConfigSingleton() != null ? nn.getSynapses().getConfigSingleton().getParameterNames() : null;
 		if (paramNames != null) {
-			out.append("\t");
+			out.append("\tConf\t");
 			for (int p = 0; p < paramNames.length; p++) {
 				out.append(paramNames[p].substring(0, Math.min(6, paramNames[p].length())) + "\t");
 			}
@@ -484,17 +485,29 @@ public class BainNN extends NNAdaptor {
 			String preType = isInput(pre) ? "i" : isOutput(pre) ? "o" : "h";
 			String postType = isInput(post) ? "i" : isOutput(post) ? "o" : "h";
 			String enabled = nn.getSynapses().isNotUsed(i) ? "0" : "1";
-			String efficacy = nf.format(nn.getSynapses().getEfficacy(i));
+			String efficacy = floatf.format(nn.getSynapses().getEfficacy(i));
+			String zero = nn.getSynapses().getEfficacy(i) == 0 ? "z" : " ";
 			
-			String key = pre + ":" + post;
-			String value = preType + ":" + pre + " > " + postType + ":" + post + "\t" + enabled + "\t" + efficacy;
+			String key = intf.format(pre) + ":" + intf.format(post) + ":" + intf.format(i);
+			String value = preType + ":" + pre + " > " + postType + ":" + post + "\t" + enabled + "\t" + efficacy + zero;
 			if (paramNames != null && nn.getSynapses().getComponentConfiguration(i) != null) {
-				value += "\t" + ArrayUtil.toString(nn.getSynapses().getComponentConfiguration(i).getParameterValues(), "\t", nf);
+				value += "\t" + nn.getSynapses().getComponentConfigurationIndex(i) + "\t" + ArrayUtil.toString(nn.getSynapses().getComponentConfiguration(i).getParameterValues(), "\t", floatf);
 			}
 			sortedSynapses.put(key, value);			
 		}
 		for (String cs : sortedSynapses.values()) {
 			out.append("\n\t" + cs);
+		}
+		
+		if (nn.getSynapses().getConfigurationCount() < synapseCount && nn.getSynapses().getConfigurationCount() > 0) {
+			out.append("\n\nConfigurations:\n");
+			for (int p = 0; p < paramNames.length; p++) {
+				out.append("\t" + paramNames[p].substring(0, Math.min(6, paramNames[p].length())));
+			}
+			out.append("\n");
+			for (int i = 0; i < nn.getSynapses().getConfigurationCount(); i++) {
+				out.append("\t" + ArrayUtil.toString(nn.getSynapses().getConfiguration(i).getParameterValues(), ",\t", floatf) + "\n");
+			}
 		}
 		
 		out.append("\n");

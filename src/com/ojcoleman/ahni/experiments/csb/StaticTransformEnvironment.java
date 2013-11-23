@@ -85,9 +85,19 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 	 * The function types that may be used in the input and output transforms.
 	 */
 	public final static String TRANSFORM_FUNCTIONS = "fitness.function.rlcss.transform.functions";
+	/**
+	 * Specify whether a transform function is used for the input. Default is true.
+	 */
+	public final static String TRANSFORM_INPUT_ENABLE = "fitness.function.rlcss.transform.input";
+	/**
+	 * Specify whether a transform function is used for the output. Default is true.
+	 */
+	public final static String TRANSFORM_OUTPUT_ENABLE = "fitness.function.rlcss.transform.output";
 
 	protected int inputSize;
 	protected int outputSize;
+	protected boolean enableInputTransform;
+	protected boolean enableOutputTransform;
 	protected String[] transformFuncTypes;
 	protected Random random;
 	protected int funcCount = 4;
@@ -110,6 +120,8 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 
 		inputSize = props.getIntProperty(INPUT_SIZE, size);
 		outputSize = props.getIntProperty(OUTPUT_SIZE, size + 1);
+		enableInputTransform = props.getBooleanProperty(TRANSFORM_INPUT_ENABLE, true);
+		enableOutputTransform = props.getBooleanProperty(TRANSFORM_OUTPUT_ENABLE, true);
 		transformFuncTypes = props.getProperty(TRANSFORM_FUNCTIONS).split(",");
 		for (int i = 0; i < transformFuncTypes.length; i++) {
 			transformFuncTypes[i] = transformFuncTypes[i].trim().toLowerCase();
@@ -121,8 +133,12 @@ public class StaticTransformEnvironment extends SimpleNavigationEnvironment {
 		super.setUp(id);
 		random = props.getConfig().getRandomGenerator();
 
-		inputTransform = new Transform(TransformType.INPUT, inputSize, size, funcCount, inDegree, new Range(-1, 1));
-		outputTransform = new Transform(TransformType.OUTPUT, size, outputSize - 1, funcCount, inDegree, outputTransformInputRange);
+		if (enableInputTransform) {
+			inputTransform = new Transform(TransformType.INPUT, inputSize, size, funcCount, inDegree, new Range(-1, 1));
+		}
+		if (enableOutputTransform) {
+			outputTransform = new Transform(TransformType.OUTPUT, size, outputSize - 1, funcCount, inDegree, outputTransformInputRange);
+		}
 
 		double path = findPath();
 		// multiply path length by 2 because when checking to make sure that the input transform allows producing all

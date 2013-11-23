@@ -1,11 +1,19 @@
 package com.ojcoleman.ahni.transcriber;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.ojcoleman.bain.NeuralNetwork;
+import com.ojcoleman.bain.base.ComponentConfiguration;
 import com.ojcoleman.bain.base.NeuronCollection;
 import com.ojcoleman.bain.base.SynapseCollection;
+import com.ojcoleman.bain.base.SynapseConfiguration;
 
 import org.apache.log4j.Logger;
 import org.jgapcustomised.*;
@@ -13,8 +21,10 @@ import org.jgapcustomised.*;
 import com.amd.aparapi.Kernel;
 import com.anji.integration.Transcriber;
 import com.anji.integration.TranscriberException;
+import com.ojcoleman.ahni.hyperneat.HyperNEATConfiguration;
 import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.nn.BainNN;
+import com.ojcoleman.ahni.util.ArrayUtil;
 import com.ojcoleman.ahni.util.Point;
 
 /**
@@ -38,6 +48,8 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 	public static final String SUBSTRATE_MAX_RECURRENT_CYCLE = "ann.transcriber.bain.maxrecurrentcyclesearchlength";
 
 	private final static Logger logger = Logger.getLogger(HyperNEATTranscriberBain.class);
+	private final static DecimalFormat nf = new DecimalFormat(" 0.00;-0.00");
+	
 
 	private Properties properties;
 	private int[] neuronLayerSize, bainIndexForNeuronLayer, ffSynapseLayerSize, bainIndexForFFSynapseLayer; // ff=feed
@@ -84,8 +96,14 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 		return newBainNN(genotype, substrate, options);
 	}
 	
-	//static HashMap<Long, String> debug = new HashMap<Long, String>();
-	//static HashMap<Long, String> debug2 = new HashMap<Long, String>();
+//	static ConcurrentHashMap<Long, String> debug = new ConcurrentHashMap<Long, String>();
+//	static ConcurrentHashMap<Long, String> debug2 = new ConcurrentHashMap<Long, String>();
+//	static ConcurrentHashMap<String, String> debugCPPNInput = new ConcurrentHashMap<String, String>();
+//	static ConcurrentHashMap<String, String> debugCPPNOutput = new ConcurrentHashMap<String, String>();
+//	static ConcurrentHashMap<String, String> debugWeights = new ConcurrentHashMap<String, String>();
+//	static ConcurrentHashMap<String, String> debugSynapseType = new ConcurrentHashMap<String, String>();
+//	static ConcurrentHashMap<String, String> debugClassParams = new ConcurrentHashMap<String, String>();
+//	static ConcurrentHashMap<String, String> debugConfigParams = new ConcurrentHashMap<String, String>();
 
 	/**
 	 * Create a new neural network from a genotype.
@@ -118,10 +136,103 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 				e.printStackTrace();
 				throw new TranscriberException("Error creating synapses for Bain neural network. Have you specified the name of the synapse collection class correctly, including the containing packages?", e);
 			}
+			
+			if (neuronParamsEnabled && neuronModelParamClassCount > 0) {
+				// Create configurations for neuron parameter classes.
+				for (int c = 0; c < neuronModelParamClassCount; c++) {
+					ComponentConfiguration config = neurons.getConfigSingleton().createConfiguration();
+					neurons.addConfiguration(config);
+				}
+			}
+			if (synapseParamsEnabled && synapseModelParamClassCount > 0) {
+				// Create configurations for neuron parameter classes.
+				for (int c = 0; c < synapseModelParamClassCount; c++) {
+					ComponentConfiguration config = synapses.getConfigSingleton().createConfiguration();
+					synapses.addConfiguration(config);
+				}
+				// Add an additional config for disabled synapses if necessary.
+				if (synapseDisableParamName != null) {
+					ComponentConfiguration config = synapses.getConfigSingleton().createConfiguration();
+					config.setParameterValue(synapseDisableParamName, 0, true);
+					synapses.addConfiguration(config);
+					synapseDisableParamClassIndex = synapseModelParamClassCount;
+				}
+			}
 		} else {
 			neurons = substrate.getNeuralNetwork().getNeurons();
 			synapses = substrate.getNeuralNetwork().getSynapses();
 		}
+		
+		if (neuronParamsEnabled && neuronModelParamClassCount > 0) {
+			double[][] values = this.getNeuronParameterValues(genotype);
+			for (int c = 0; c < neuronModelParamClassCount; c++) {
+				// Set parameters for the config.
+				ComponentConfiguration config = neurons.getConfiguration(c);
+				for (int p = 0; p < neuronParamNames.length; p++) {
+					// If this is the parameter for the neuron type...
+					if (neuronTypesEnabled && neuronParamNames[p].equals(neuronModelTypeParam)) {
+						// The value will be in the range [0, neuronModelTypeCount), so apply the floor function to make it valid.
+						config.setParameterValue(neuronParamNames[p], (int) values[c][p], true);
+					} else {
+						// Otherwise apply value as normal.
+						config.setParameterValue(neuronParamNames[p], values[c][p], true);
+					}
+				}
+			}
+		}
+		
+		if (synapseParamsEnabled && synapseModelParamClassCount > 0) {
+			double[][] values = this.getSynapseParameterValues(genotype);
+			
+			
+//			String key = genotype.getId() + ":v";
+//			String val = Arrays.deepToString(values);
+//			if (debugConfigParams.containsKey(key)) {
+//				if (!debugConfigParams.get(key).equals(val)) {
+//					System.err.println("---------------------config param v differ:\n" + val + "\n" + debugConfigParams.get(key));
+//				}
+//			}
+//			else { 
+//				debugConfigParams.put(key, val);
+//			}
+			
+			
+			for (int c = 0; c < synapseModelParamClassCount; c++) {
+				// Set parameters for the config.
+				SynapseConfiguration config = (SynapseConfiguration) synapses.getConfiguration(c);
+				for (int p = 0; p < synapseParamNames.length; p++) {
+					//System.err.println("synapseParamNames: " + Arrays.toString(synapseParamNames));
+					//System.err.println("synapseModelTypeParam: " + synapseModelTypeParam);
+					// If this is the parameter for the synapse type...
+					if (synapseTypesEnabled && synapseParamNames[p].equals(synapseModelTypeParam)) {
+						// The value will be in the range [0, synapseModelTypeCount), so apply the floor function to make it valid.
+						config.setParameterValue(synapseParamNames[p], (int) values[c][p], true);
+					} else {
+						// Otherwise apply value as normal.
+						config.setParameterValue(synapseParamNames[p], values[c][p], true);
+					}
+				}
+				config.minimumEfficacy = connectionWeightMin;
+				config.maximumEfficacy = connectionWeightMax;
+			}
+		}
+		
+//		for (int c = 0; c < synapses.getConfigurationCount(); c++) {
+//			// Set parameters for the config.
+//			SynapseConfiguration config = (SynapseConfiguration) synapses.getConfiguration(c);
+//		
+//			String key = genotype.getId() + ":" + c;
+//			String val = ArrayUtil.toString(config.getParameterValues(), ", ", nf);
+//			if (debugConfigParams.containsKey(key)) {
+//				if (!debugConfigParams.get(key).equals(val)) {
+//					System.err.println("---------------------config param " + c + " differ:\n" + val + "\n" + debugConfigParams.get(key));
+//				}
+//			}
+//			else { 
+//				debugConfigParams.put(key, val);
+//			}
+//		}
+		
 		double[] synapseWeights = synapses.getEfficacies();
 		double sumOfSquaredConnectionLengths = 0;
 		
@@ -137,10 +248,21 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 					cppn.query();
 					
 					int bainNeuronIndex = getBainNeuronIndex(x, y, z);
-					int neuronType = cppn.getNeuronTypeIndex();
+					int neuronType = 0;
+					if (neuronTypesEnabled) {
+						if (neuronModelParamClassCount > 0) {
+							int classIndex = cppn.getNeuronParamClassIndex();
+							ComponentConfiguration c = neurons.getConfiguration(classIndex);
+							neuronType = (int) c.getParameterValue(neuronModelTypeParam);
+						}
+						else {
+							neuronType = cppn.getNeuronTypeIndex();
+						}
+					}
+
 					int outputIndex = layerEncodingIsInput ? neuronType : z;
 					
-					setNeuronParameters(neurons, bainNeuronIndex, cppn, createNewPhenotype);
+					setNeuronParameters(neurons, bainNeuronIndex, cppn, createNewPhenotype && neuronModelParamClassCount == 0);
 					
 					// Only allow disabling hidden neurons.
 					neuronDisabled[bainNeuronIndex] = z > 0 && z < depth-1 && !cppn.getNEO(outputIndex);
@@ -167,10 +289,65 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 						for (int sy = 0; sy < height[sz]; sy++) {
 							for (int sx = 0; sx < width[sz]; sx++) {
 								cppn.setSourceCoordinatesFromGridIndices(sx, sy, sz);
+								
+//								String key = genotype.getId() + ":" + synapseIndex;
+//								String val = ArrayUtil.toString(cppn.cppnInput, ", ", nf);
+//								if (debugCPPNInput.containsKey(key)) {
+//									if (!debugCPPNInput.get(key).equals(val)) {
+//										System.err.println("---------------------CPPN input differ:\n" + val + "\n" + debugCPPNInput.get(key));
+//									}
+//								}
+//								else { 
+//									debugCPPNInput.put(key, val);
+//								}
+								
 								cppn.query();
+								
+//								val = ArrayUtil.toString(cppn.cppnOutput, ", ", nf);
+//								if (debugCPPNOutput.containsKey(key)) {
+//									if (!debugCPPNOutput.get(key).equals(val)) {
+//										System.err.println("---------------------CPPN output differ:\n" + val + "\n" + debugCPPNOutput.get(key));
+//									}
+//								}
+//								else { 
+//									debugCPPNOutput.put(key, val);
+//								}
 
 								int bainNeuronIndexSource = getBainNeuronIndex(sx, sy, sz);
-								int synapseType = cppn.getSynapseTypeIndex();
+								int synapseType = 0;
+								if (synapseTypesEnabled) {
+									if (synapseModelParamClassCount > 0) {
+										int classIndex = cppn.getSynapseParamClassIndex();
+
+										ComponentConfiguration c = synapses.getConfiguration(classIndex);
+										synapseType = (int) c.getParameterValue(synapseModelTypeParam);
+										
+//										val = classIndex + " : " + ArrayUtil.toString(c.getParameterValues(), ", ", nf);
+//										if (debugClassParams.containsKey(key)) {
+//											if (!debugClassParams.get(key).equals(val)) {
+//												System.err.println("---------------------class params differ:\n" + val + "\n" + debugClassParams.get(key));
+//											}
+//										}
+//										else { 
+//											debugClassParams.put(key, val);
+//										}
+
+										
+//										val = ""+synapseType;
+//										if (debugSynapseType.containsKey(key)) {
+//											if (!debugSynapseType.get(key).equals(val)) {
+//												System.err.println("---------------------synapseType differ:\n" + val + "\n" + debugSynapseType.get(key));
+//											}
+//										}
+//										else { 
+//											debugSynapseType.put(key, val);
+//										}
+																	}
+									else {
+										synapseType = cppn.getSynapseTypeIndex();
+									}
+								}
+																
 								int outputIndex = layerEncodingIsInput ? synapseType : sz;
 								
 								synapses.setPreAndPostNeurons(synapseIndex, bainNeuronIndexSource, bainNeuronIndexTarget);
@@ -184,10 +361,10 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 								
 								// If we're not using LEO to explicitly enable synapses, then consider a synapse disabled if the weight is zero.
 								if (!enableLEO && synapseWeights[synapseIndex] == 0) {
-									disabled = true;
+									//disabled = true;
 								}
 								
-								setSynapseParameters(synapses, synapseIndex, cppn, disabled, createNewPhenotype);
+								setSynapseParameters(synapses, synapseIndex, cppn, disabled, createNewPhenotype && synapseModelParamClassCount == 0);
 								
 								if (!disabled) {
 									sumOfSquaredConnectionLengths += cppn.getSynapseLength() * cppn.getSynapseLength();
@@ -207,10 +384,22 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 				} // tx
 			} // ty
 		} // tz
+		
+//		String key = ""+genotype.getId();
+//		String val = ArrayUtil.toString(synapseWeights, ", ", nf);
+//		if (debugWeights.containsKey(key)) {
+//			if (!debugWeights.get(key).equals(val)) {
+//				System.err.println("---------------------weights differ:\n" + val + "\n" + debugWeights.get(key));
+//			}
+//		}
+//		else { 
+//			debugWeights.put(key, val);
+//		}
+
 		synapses.setEfficaciesModified();
 		
 		// Remove unused synapses from simulation calculations.
-		//synapses.compress();
+		//synapses.compress(); // Seems broken
 		
 		if (createNewPhenotype) {
 			int simRes = properties.getIntProperty(BainNN.SUBSTRATE_SIMULATION_RESOLUTION, 1000);
@@ -255,24 +444,38 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 		synapses.init();
 		substrate.reset();
 
-		/*String dbg2 = "";
-		for (int i = 0; i < synapses.getSize(); i++) {
-			dbg2 += (synapses.isNotUsed(i) ? i+"\n" : "");
-		}
-		if (substrate != null) {
-			String rep = substrate.toString();
-			String repOrig = debug.get(genotype.getId());
-			if (repOrig != null) {
-				if (!rep.equals(repOrig)) {
-					System.err.println("\ntranscriptions differ for " + genotype.getId() + "\n\n" + rep + dbg2 + "\n\n" + repOrig + debug2.get(genotype.getId()));
-				}
-			}
-			else {
-				debug.put(genotype.getId(), rep);
-				debug2.put(genotype.getId(), dbg2);
-			}
-		}*/
-				
+		
+//		String dbg2 = "" + genotype.getMaterial();
+//		if (substrate != null) {
+//			String rep = substrate.toString();
+//			String repOrig = debug.get(genotype.getId());
+//			if (repOrig != null) {
+//				if (!rep.equals(repOrig)) {
+//					synchronized(debug) {
+//						String msg = "\ntranscriptions differ for " + genotype.getId() + "\n\n" + rep + "\n\n" + dbg2 + "\n\n" + repOrig + debug2.get(genotype.getId());
+//
+//						String baseFileName = properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "debug -" + genotype.getId();
+//						BufferedWriter outputfile;
+//						try {
+//							outputfile = new BufferedWriter(new FileWriter(baseFileName + ".txt"));
+//							outputfile.write(msg);
+//							outputfile.close();
+//						} catch (IOException e) {
+//							// TODO Auto-generated catch block
+//							e.printStackTrace();
+//						}
+//							
+//						System.err.println(msg);
+//						System.exit(1);
+//					}
+//				}
+//			}
+//			else {
+//				debug.put(genotype.getId(), rep);
+//				debug2.put(genotype.getId(), dbg2);
+//			}
+//		}
+		
 		return substrate;
 	}
 

@@ -56,7 +56,7 @@ public class IdFactory {
 	/**
 	 * @return long next unique ID
 	 */
-	public long next() {
+	public synchronized long next() {
 		return nextId++;
 	}
 

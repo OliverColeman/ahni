@@ -581,6 +581,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 						if (cppn != null) {
 							outputfile.write("\n\n\nString representation of CPPN:\n" + cppn);
 						}
+						outputfile.write("\n\n\nString representation of Chromosome:\n" + champ.getMaterial());
 						outputfile.close();
 					}
 

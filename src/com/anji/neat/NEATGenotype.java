@@ -89,8 +89,6 @@ public class NEATGenotype extends Genotype {
 			}
 			
 			chroms.add(new Chromosome(material, a_activeConfiguration.nextChromosomeId(), a_activeConfiguration.getObjectiveCount(), a_activeConfiguration.getNoveltyObjectiveCount()));
-			
-			//System.err.println(material);
 		}
 		
 		if (!props.getBooleanProperty(NeatConfiguration.INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, true)) {

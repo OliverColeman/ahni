@@ -54,6 +54,9 @@ import com.ojcoleman.bain.neuron.rate.SigmoidNeuronCollection;
 import com.ojcoleman.bain.neuron.rate.SigmoidNeuronConfiguration;
 import com.ojcoleman.bain.synapse.rate.FixedSynapseCollection;
 
+/**
+ * Implements something like a continuous-time MDP. Work in progress.
+ */
 public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHNIEventListener {
 	private static final long serialVersionUID = 1L;
 	private static Logger logger = Logger.getLogger(BulkFitnessFunctionMT.class);

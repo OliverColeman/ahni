@@ -17,6 +17,14 @@ import com.ojcoleman.ahni.util.Point;
  */
 public abstract class HyperNEATTranscriberBainBase extends HyperNEATTranscriber<BainNN> {
 	/**
+	 * If synapse parameter classes are being used (see {@link TranscriberAdaptor#SUBSTRATE_SYNAPSE_MODEL_PARAMS_CLASSES}, {@link #synapseDisableParamName}) and 
+	 * a synapse disable parameter has been specified (see {@link #SUBSTRATE_SYNAPSE_MODEL_DISABLE_PARAM}), then this should
+	 * be set to the index of a {@link SynapseConfiguration} in the {@link SynapseCollection} passed to {@link #setSynapseParameters(SynapseCollection, int, com.ojcoleman.ahni.transcriber.HyperNEATTranscriber.CPPN, boolean, boolean)}
+	 * that has the disable parameter set to 0, otherwise it should be left with the value -1.
+	 */ 
+	protected int synapseDisableParamClassIndex = -1;
+	
+	/**
 	 * Set the parameters for a neuron, specifying the neuron coordinates directly (see
 	 * {@link HyperNEATTranscriber.CPPN#setTargetCoordinates(double, double, double)}).
 	 * 
@@ -104,14 +112,22 @@ public abstract class HyperNEATTranscriberBainBase extends HyperNEATTranscriber<
 			}
 
 			if (neuronParamsEnabled) {
-				// Set parameters for the config.
-				for (int p = 0; p < neuronParamNames.length; p++) {
-					double v = cppn.getRangedNeuronParam(neuronType, p);
-					c.setParameterValue(neuronParamNames[p], v, true);
+				if (neuronModelParamClassCount > 0) {
+					int classIndex = cppn.getNeuronParamClassIndex();
+					neurons.setComponentConfiguration(bainIndex, classIndex);
+				}
+				else {
+					// Set parameters for the config.
+					for (int p = 0; p < neuronParamNames.length; p++) {
+						double v = cppn.getRangedNeuronParam(neuronType, p);
+						c.setParameterValue(neuronParamNames[p], v, true);
+					}
 				}
 			}
 			
 			if (addNewConfig) {
+				assert neuronModelParamClassCount == 0 : "Shouldn't be adding new neuron configs when using parameter classes.";
+						
 				// Add the configuration to the neuron collection.
 				neurons.addConfiguration(c);
 				// Set the current neuron to use the new configuration.
@@ -126,37 +142,51 @@ public abstract class HyperNEATTranscriberBainBase extends HyperNEATTranscriber<
 	 * 
 	 * @param synapses The synapse collection to set parameters for.
 	 * @param bainIndex The index into the synapse collection to specify the synapse to set parameters for.
-	 * @param cppn The CPPN to use to generate parameter values for the given neuron.
+	 * @param cppn The CPPN to use to generate parameter values for the given synapse.
 	 * @param disabled Whether the synapse should be disabled (by setting the parameter specified by {@link #synapseDisableParamName} to 0).
 	 * @param addNewConfig Whether to add a new configuration object to the synapse collection (Set to TRUE if creating a new synapse collection).
 	 */
 	public void setSynapseParameters(SynapseCollection synapses, int bainIndex, CPPN cppn, boolean disabled, boolean addNewConfig) {
-		if (synapseParamsEnabled || synapseTypesEnabled) {
-			int synapseType = cppn.getSynapseTypeIndex();
-			
-			// Each synapse has its own configuration object.
-			SynapseConfiguration c = (SynapseConfiguration) (addNewConfig ? synapses.getConfigSingleton().createConfiguration() : synapses.getComponentConfiguration(bainIndex));
-			c.minimumEfficacy = connectionWeightMin;
-			c.maximumEfficacy = connectionWeightMax;
-			
-			if (synapseTypesEnabled) {
-				c.setParameterValue(synapseModelTypeParam, synapseModelTypes[synapseType], true);
+		if (synapseParamsEnabled || synapseTypesEnabled) {			
+			if (synapseModelParamClassCount > 0) {
+				int classIndex = 0;
+				// If this synapse should be disabled and a specific parameter indicates this, and a 
+				if (disabled && synapseDisableParamClassIndex >= 0) {
+					// Use config that has synapseDisableParamName set to 0.
+					classIndex = synapseDisableParamClassIndex;
+				}
+				else {
+					classIndex = cppn.getSynapseParamClassIndex();
+				}
+				synapses.setComponentConfiguration(bainIndex, classIndex);
 			}
-	
-			// Set parameters for the config.
-			for (int p = 0; p < synapseParamNames.length; p++) {
-				double v = cppn.getRangedSynapseParam(synapseType, p);
-				c.setParameterValue(synapseParamNames[p], v, true);
-			}
-			if (synapseDisableParamName != null && disabled) {
-				c.setParameterValue(synapseDisableParamName, 0, true);
-			}
-			
-			if (addNewConfig) {
-				// Add the configuration to the synapse collection.
-				synapses.addConfiguration(c);
-				// Set the current synapse to use the new configuration.
-				synapses.setComponentConfiguration(bainIndex, bainIndex);
+			else {
+				// Each synapse has its own configuration object.
+				SynapseConfiguration c = (SynapseConfiguration) (addNewConfig ? synapses.getConfigSingleton().createConfiguration() : synapses.getComponentConfiguration(bainIndex));
+
+				int synapseType = cppn.getSynapseTypeIndex();
+				if (synapseTypesEnabled) {
+					c.setParameterValue(synapseModelTypeParam, synapseModelTypes[synapseType], true);
+				}
+				
+				// Set parameters for the config.
+				for (int p = 0; p < synapseParamNames.length; p++) {
+					double v = cppn.getRangedSynapseParam(synapseType, p);
+					c.setParameterValue(synapseParamNames[p], v, true);
+				}
+				if (synapseDisableParamName != null && disabled) {
+					c.setParameterValue(synapseDisableParamName, 0, true);
+				}
+				
+				if (addNewConfig) {
+					c.minimumEfficacy = connectionWeightMin;
+					c.maximumEfficacy = connectionWeightMax;
+
+					// Add the configuration to the synapse collection.
+					synapses.addConfiguration(c);
+					// Set the current synapse to use the new configuration.
+					synapses.setComponentConfiguration(bainIndex, bainIndex);
+				}
 			}
 		}
 	}

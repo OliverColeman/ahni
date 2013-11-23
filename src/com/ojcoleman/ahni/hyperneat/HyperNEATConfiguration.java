@@ -28,6 +28,10 @@ import com.anji.neat.NeuronGene;
 import com.anji.neat.NeuronType;
 import com.anji.nn.activationfunction.StepActivationFunction;
 import com.anji.nn.activationfunction.GaussianActivationFunction;
+import com.ojcoleman.ahni.integration.ParamCollection;
+import com.ojcoleman.ahni.integration.ParamMutationOperator;
+import com.ojcoleman.ahni.integration.ParamAllele;
+import com.ojcoleman.ahni.integration.ParamGene;
 import com.ojcoleman.ahni.transcriber.HyperNEATTranscriber;
 import com.ojcoleman.ahni.transcriber.TranscriberAdaptor;
 
@@ -80,10 +84,21 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 		if (transcriber instanceof TranscriberAdaptor) {
 			TranscriberAdaptor taTranscriber = (TranscriberAdaptor) transcriber; 
 			
-			ChromosomeMaterial sample = null;
 			short stimulusSize = (short) taTranscriber.getChromosomeInputNeuronCount();
 			short responseSize = (short) taTranscriber.getChromosomeOutputNeuronCount();
-		
+			boolean fullyConnected = props.getBooleanProperty(INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, false);
+
+			// Determine extra alleles defined by the transcriber.
+			List<Allele> sampleAlleles = taTranscriber.getExtraGenesForInitialChromosome(this);
+			if (sampleAlleles == null) {
+				sampleAlleles = new ArrayList<Allele>();
+			}
+			if (!sampleAlleles.isEmpty()) {
+				logger.info("Added " + sampleAlleles.size() + " extra genes defined by transcriber.");
+			}
+			
+			boolean customSampleCreated = false;
+			
 			if (transcriber instanceof HyperNEATTranscriber) {
 				HyperNEATTranscriber hnTranscriber = ((HyperNEATTranscriber) transcriber);
 				
@@ -92,10 +107,10 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 					throw new IllegalArgumentException(HyperNEATEvolver.INITIAL_CPPN + " cannot be specified when " + HyperNEATTranscriber.HYPERNEAT_LEO_LOCALITY + "is enabled.");
 				}
 				
+				
 				// If a custom initial CPPN has been specified.
 				if (initalCPPNString != null) {
 					logger.info("Creating custom Chromosome for initial sample."); 
-					boolean fullyConnected = props.getBooleanProperty(INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, false);
 					if (fullyConnected) {
 						logger.warn("Ignoring " + INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY + " as custom CPPN specified.");
 					}
@@ -104,7 +119,7 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 					}
 					
 					// Generate CPPN Chromosome alleles with only input and output neurons.
-					List<Allele> sampleAlleles = NeatChromosomeUtility.initAlleles(stimulusSize, (short) 0, responseSize, this, false);
+					sampleAlleles.addAll(NeatChromosomeUtility.initAlleles(stimulusSize, (short) 0, responseSize, this, false));
 					// Maps from IDs used in properties file to neuron alleles.
 					HashMap<String, NeuronAllele> neuronMap = new HashMap<String, NeuronAllele>();
 					
@@ -171,13 +186,13 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 							sampleAlleles.add(newConnectionAllele(src.getInnovationId(), trg.getInnovationId(), weight));
 						}
 					}
-					sample = new ChromosomeMaterial(sampleAlleles);
+					
+					customSampleCreated = true;
 				}
 				
 				// Else if LEO locality seeding is enabled.
 				else if (hnTranscriber.leoEnabled() && props.getBooleanProperty(HyperNEATTranscriber.HYPERNEAT_LEO_LOCALITY, false)) {
 					logger.info("Creating initial sample Chromosome with LEO global locality seed."); 
-					boolean fullyConnected = props.getBooleanProperty(INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, false);
 					if (fullyConnected) {
 						logger.warn("It's generally best not to have a fully connected initial CPPN topology (" + INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY + "=true) when LEO locality seeding is enabled (" + HyperNEATTranscriber.HYPERNEAT_LEO_LOCALITY + "=true).");
 					}
@@ -185,7 +200,7 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 						logger.warn("Ignoring specified hidden neuron count for CPPN (" + INITIAL_TOPOLOGY_NUM_HIDDEN_NEURONS_KEY + ") because LEO locality seeding is enabled (" + HyperNEATTranscriber.HYPERNEAT_LEO_LOCALITY + "=true).");
 					}
 					
-					List<Allele> sampleAlleles = NeatChromosomeUtility.initAlleles(stimulusSize, (short) 0, responseSize, this, fullyConnected);
+					sampleAlleles.addAll(NeatChromosomeUtility.initAlleles(stimulusSize, (short) 0, responseSize, this, fullyConnected));
 					
 					// Add hidden nodes for locality seed.
 					int[] idxSrc = new int[]{hnTranscriber.getCPPNIndexSourceX(), hnTranscriber.getCPPNIndexSourceY(), hnTranscriber.getCPPNIndexSourceZ()};
@@ -226,23 +241,29 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 					
 					// Add bias to stepNeuron.
 					sampleAlleles.add(newConnectionAllele(inputNeuronAlleles.get(hnTranscriber.getCPPNIndexBiasInput()).getInnovationId(), stepNeuron.getInnovationId(), stepNeuronBiasValue));
-				
-					sample = new ChromosomeMaterial(sampleAlleles);
+					
+					customSampleCreated = true;
 				}
 			}
 			
 			// Generate default random initial Chromosome if no special-purpose one specified (eg custom or LEO).
-			if (sample == null) { 
-				sample = NeatChromosomeUtility.newSampleChromosomeMaterial(stimulusSize, props.getShortProperty(INITIAL_TOPOLOGY_NUM_HIDDEN_NEURONS_KEY, DEFAULT_INITIAL_HIDDEN_SIZE), responseSize, this, props.getBooleanProperty(INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, true));
+			if (!customSampleCreated) {
+				sampleAlleles.addAll(NeatChromosomeUtility.initAlleles(stimulusSize, (short) 0, responseSize, this, fullyConnected));
 			}
+			
+			ChromosomeMaterial sample = new ChromosomeMaterial(sampleAlleles);
 			setSampleChromosomeMaterial(sample);
 		}
 		
 		if (enableLogFiles) {
 			try {
+				BufferedWriter outputfile = new BufferedWriter(new FileWriter(getOutputDirPath() + "initial-sample-chromosome.txt"));
+				outputfile.write(getSampleChromosomeMaterial().toString());
+				outputfile.close();
+
 				Transcriber cppnTranscriber = (Transcriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
 				Activator n = cppnTranscriber.transcribe(new Chromosome(getSampleChromosomeMaterial(), 0L, 0, 0));
-				BufferedWriter outputfile = new BufferedWriter(new FileWriter(getOutputDirPath() + "initial-sample-chromosome.txt"));
+				outputfile = new BufferedWriter(new FileWriter(getOutputDirPath() + "initial-sample-network.txt"));
 				outputfile.write(n.toString());
 				outputfile.close();
 			} catch (Exception e) {

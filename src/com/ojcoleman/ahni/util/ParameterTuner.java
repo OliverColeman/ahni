@@ -333,10 +333,13 @@ public class ParameterTuner {
 							}
 							
 							if (bestResult.solvedByGeneration() != -1) {
-								numGens = bestResult.solvedByGeneration();
-								totalEvaluations = numGens * popSize;
-								props.setProperty("num.generations", "" + numGens);
-								System.out.println("  Reduced number of generations to " + numGens);
+								int newNumGens = (int) Math.round(bestResult.solvedByGeneration() * 1.1);
+								if (newNumGens < numGens) {
+									numGens = newNumGens;
+									totalEvaluations = numGens * popSize;
+									props.setProperty("num.generations", "" + numGens);
+									System.out.println("  Reduced number of generations to " + numGens);
+								}
 							}
 							
 							noImprovement = false;

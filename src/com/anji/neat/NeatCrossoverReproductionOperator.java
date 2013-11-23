@@ -60,7 +60,7 @@ public class NeatCrossoverReproductionOperator extends CrossoverReproductionOper
 						// Use value somewhere between those from both parents.
 						double s = config.getRandomGenerator().nextDouble();
 						allele1.setValue(allele1.getValue() * s + allele2.getValue() * (1-s));
-					} 
+					}
 				}
 			}
 		}
