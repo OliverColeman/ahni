@@ -42,18 +42,16 @@ The various labels are:
 --- | ---
 Gen | Current generation number.
 Fittest | The ID of fittest chromosome (it's fitness level, and performance)
-Best perf | The ID of the  chromosome with highest performance (it's fitness 
-    level, and performance)
+Best perf | The ID of the  chromosome with highest performance (it's fitness level, and performance)
 ZFC | Zero Fitness Count, number of chromosomes with a fitness of 0.
 ABSF | Average Best Species Fitness
 S | The number of species.
 NS/ES | Number of New Species / Extinct Species this generation.
-SCT | Species Compatibility Threshold  .
+SCT | Species Compatibility Threshold.
 Min/Max SS | The minimum and maximum species sizes.  
 Min/Max SA | The minimum and maximum species ages (in number of generations).  
 SNF | The number of Species with a New Fittest chromosome.
-Min/Avg/Max GS | The minimum, average and maximum (CPPN) genome size (total
-    number of nodes and connections). 
+Min/Avg/Max GS | The minimum, average and maximum (CPPN) genome size (total number of nodes and connections). 
 AS | The average number of neurons and connections within the (CPPN) networks.  
 Time | The duration of the generation in seconds.
 ETA | The estimated run finish time (Days HH:MM:SS).  
