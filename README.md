@@ -57,7 +57,7 @@ Time | The duration of the generation in seconds.
 ETA | The estimated run finish time (Days HH:MM:SS).  
 Mem | Total memory usage.
 
-By setting the num.runs property to a value > 1 it is possible to perform multiple evolutionary runs and have the average fitness / performance results for each generation averaged over all runs. If only one run is performed then most output files will be placed directly in the directory specified by the output.dir property. If multiple runs are performed then the output files specific to a run will be placed in a sub-directory of this directory labelled with the run number.
+By setting the `num.runs` property to a value > 1 it is possible to perform multiple evolutionary runs and have the average fitness / performance results for each generation averaged over all runs. If only one run is performed then most output files will be placed directly in the directory specified by the output.dir property. If multiple runs are performed then the output files specific to a run will be placed in a sub-directory of this directory labelled with the run number.
 
 ## Development and Creating New Experiments
 
@@ -65,7 +65,7 @@ To create your own experiments you will most likely want to extend `com.ojcolema
 
 For examples see `com.ojcoleman.ahni.experiments.TestTargetFitnessFunction` and `com.ojcoleman.ahni.experiments.objectrecognition`.
 
-The main class is com.ojcoleman.ahni.hyperneat.Run. It expects a `.properties` file containing parameters for NEAT, HyperNEAT, typically the specific experiment being run, and various settings.
+The main class is `com.ojcoleman.ahni.hyperneat.Run`. It expects a `.properties` file containing parameters for NEAT, HyperNEAT, typically the specific experiment being run, and various settings.
 
 API documentation is available at http://olivercoleman.github.com/ahni/doc/index.html.
 
@@ -79,7 +79,7 @@ AHNI supports the Link Expression Output (LEO) extension described in *P. Verban
 
 AHNI supports the Evolvable Substrate HyperNEAT (ES-HyperNEAT) extension (See http://eplex.cs.ucf.edu/ESHyperNEAT/).
 
-Currently only transcription to a Bain NeuralNetwork is supported, via the `com.ojcoleman.ahni.hyperneat.ESHyperNEATTranscriberBain` class. Currently 2D substrates and pseudo-3D substrates are supported. See the second properties file mentioned below for a description of pseudo-3D. Real 3D substrates will likely be coming soon (or let me know if you want to implement this ;)).
+Currently only transcription to a Bain NeuralNetwork is supported, via the `com.ojcoleman.ahni.hyperneat.ESHyperNEATTranscriberBain` class. Currently 2D substrates and pseudo-3D substrates are supported. See the second properties file mentioned below for a description of pseudo-3D. Real 3D substrates will likely be coming soon (or let me know if you want to implement this :wink:).
 
 See `ESHN-bain-test-pass-through.properties` and `bain-test-parity.properties` for usage examples (make sure `ann.transcriber.class` is set to `com.ojcoleman.ahni.hyperneat.ESHyperNEATTranscriberBain`).
 
