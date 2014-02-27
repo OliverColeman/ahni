@@ -6,15 +6,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.*;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,10 +15,10 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.PropertyConfigurator;
 
+
 import com.anji.util.Misc;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
-import com.ojcoleman.ahni.experiments.RLRecurrentNetworkBased;
 import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 import com.ojcoleman.ahni.util.PropertiesConverter;
 import com.ojcoleman.ahni.util.Results;
@@ -71,6 +64,9 @@ public class Run {
 
 	@Parameter(names = { "-outputdir", "-od" }, description = "Directory to write output files to (overrides output.dir in properties file).")
 	public String outputDir = null;
+
+	@Parameter(names = { "-outputprefix", "-op" }, description = "Prefix to apply to output files (overrides output.prefix in properties file).")
+	public String outputPrefix = null;
 
 	@Parameter(names = { "-force", "-f" }, description = "Force using the specified output directory even if it exists.")
 	public boolean forceOutputDir = false;
@@ -124,12 +120,20 @@ public class Run {
 			properties = propertiesFiles.get(0);
 		}
 		
+		if (outputPrefix != null) {
+			properties.setProperty(HyperNEATConfiguration.OUTPUT_PREFIX_KEY, outputPrefix);
+		}
+
 		String runLogFile = properties.getProperty("log4j.appender.RunLog.File", null);
 		
 		if (!properties.containsKey(EXPERIMENT_ID_KEY)) {
 			properties.setProperty(EXPERIMENT_ID_KEY, "" + System.currentTimeMillis());
 		}
 		long experimentID = properties.getLongProperty(EXPERIMENT_ID_KEY);
+		
+		if (!properties.containsKey("run.id")) {
+			properties.setProperty("run.id", "0");
+		}
 		
 		// If there should be no output whatsoever.
 		if (noOutput) {
@@ -146,7 +150,8 @@ public class Run {
 			outputDir = null;
 			resultFileNameBase = null;
 			runLogFile = null;
-			configureLog4J(true);
+			configureLog4J(true);			
+			logEnv();
 		}
 		// If all or aggregate output is allowed.
 		else {
@@ -164,7 +169,9 @@ public class Run {
 			}
 
 			configureLog4J(aggFilesOnly);
-			resultFileNameBase = outputDir + resultFileNameBase;
+			logEnv();
+
+			resultFileNameBase = outputDir + properties.getProperty(HyperNEATConfiguration.OUTPUT_PREFIX_KEY, "") + resultFileNameBase;
 
 			// If only aggregate result files should be produced.
 			if (aggFilesOnly) {
@@ -190,11 +197,13 @@ public class Run {
 		int solvedCount = 0;
 		for (int run = 0; run < numRuns; run++) {
 			long startRun = System.currentTimeMillis();
-
+			
 			Properties runProps = new Properties(properties);
-			String runID = properties.getProperty("run.name") + "-" + experimentID + (numRuns > 1 ? "-" + run : "");
+			
+			// Look for AHNI_RUN_ID env variable set by ParameterTuner for HTCondor runs.
+			String runID = System.getenv("AHNI_RUN_ID") == null ? ""+run : System.getenv("AHNI_RUN_ID");
 			runProps.setProperty("run.id", runID);
-
+			
 			String runOutputDir = outputDir + (numRuns > 1 ? run + File.separator : "");
 			if (outputDir != null) {
 				runProps.setProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY, runOutputDir);
@@ -207,7 +216,7 @@ public class Run {
 
 				}
 			}
-
+			
 			logger.info("\n\n--- START RUN: " + (run + 1) + " of " + numRuns + " (" + ((run * 100) / (numRuns)) + "%) ---------------------------------------\n\n");
 			HyperNEATEvolver evolver = (HyperNEATEvolver) runProps.singletonObjectProperty(HyperNEATEvolver.class);
 
@@ -277,6 +286,19 @@ public class Run {
 				logger.info("Wrote statistics for best fitness over each run for each generation to " + statsFitnessFileName);
 			}
 		}
+	}
+	
+	private void logEnv() {
+		StringBuffer out = new StringBuffer();
+		out.append("\nEnvironment vars:");
+		for(java.util.Map.Entry<String, String> e : System.getenv().entrySet()) {
+			out.append("\n\t" + e.toString());
+		}
+		out.append("\nJRE system props:");
+		for(java.util.Map.Entry<Object, Object> e : System.getProperties().entrySet()) {
+			out.append("\n\t" + e.toString());
+		}
+		logger.info(out);
 	}
 
 	private void configureLog4J(boolean disableFiles) {

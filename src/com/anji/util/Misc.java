@@ -16,4 +16,11 @@ public class Misc {
 
 		return days + " " + nf1.format(hours) + ":" + nf1.format(minutes) + ":" + nf1.format(seconds);
 	}
+	
+	public static String repeatString(String str, int times) {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < times; i++)
+			sb.append(str);
+		return sb.toString();
+	}
 }

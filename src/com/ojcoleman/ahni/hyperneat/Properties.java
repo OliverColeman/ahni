@@ -88,7 +88,6 @@ public class Properties extends com.anji.util.Properties {
 	public String getOutputDirPath() {
 		return getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY, null);
 	}
-		
 	
 	/**
 	 * Set the HyperNEATEvolver that is handling this run. This method should generally only be called by {@link HyperNEATEvolver}.

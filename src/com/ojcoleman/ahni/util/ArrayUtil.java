@@ -371,8 +371,14 @@ public class ArrayUtil {
 		return index;
 	}
 
-	public static int getMin(double[] minOutputValue) {
-		// TODO Auto-generated method stub
-		return 0;
+	/**
+	 * Multiply each element in the given array by the given factor.
+	 * The original array is returned with altered values.
+	 */
+	public static double[] multiply(double[] a, double m) {
+		for (int i = 0; i < a.length; i++) {
+			a[i] *= m;
+		}
+		return a;
 	}
 }

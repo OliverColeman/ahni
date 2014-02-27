@@ -42,8 +42,17 @@ public class ConnectionAllele extends Allele {
 	public final static double DEFAULT_WEIGHT = 0;
 	/**
 	 * Standard deviation of perturbations to weight values. This is generally set by WeightMutationOperator according to the loaded properties file.
+	 * TODO This really shouldn't be a static class member.
 	 */
 	public static double RANDOM_STD_DEV = 1;
+
+	/**
+	 * Initial standard deviation of perturbations to weight values when creating initial population or adding neurons. 
+	 * This is generally set by WeightMutationOperator according to the loaded properties file.
+	 * TODO This really shouldn't be a static class member.
+	 */
+	public static double RANDOM_STD_DEV_INITIAL = 0.1;
+	
 	private double weight = DEFAULT_WEIGHT;
 
 	/**

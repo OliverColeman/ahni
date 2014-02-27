@@ -223,4 +223,9 @@ public abstract class NaturalSelector {
 			}
 		}
 	}
+	
+	/**
+	 * Should return true iff this selector changes the overall fitness of the Chromosomes selected from via {@link Chromosome#setFitnessValue(double)}).
+	 */
+	public abstract boolean changesOverallFitness();
 }

@@ -328,8 +328,8 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 
 	// The set of CPPN outputs that determine which neuron or synapse parameter class should be used.
 	private int[] cppnIDXNeuronParamClassSelector; // Indices into CPPN output array
-	//private int[] cppnIDXSynapseParamClassSelector; // Indices into CPPN output array
-	private int cppnIDXSynapseParamClass; // Indices into CPPN output array
+	private int[] cppnIDXSynapseParamClassSelector; // Indices into CPPN output array
+	//private int cppnIDXSynapseParamClass; // Indices into CPPN output array
 
 	/**
 	 * This method should be called from overriding methods.
@@ -569,14 +569,14 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 					if (synapseModelParamClassCount > 1) {
 						// If there are only two classes then we can use a single CPPN output to specify which to
 						// use, otherwise use a "whichever has the highest output value" encoding to specify the type.
-						//cppnIDXSynapseParamClassSelector = new int[synapseModelParamClassCount > 2 ? synapseModelParamClassCount : 1];
-						//for (int i = 0; i < cppnIDXSynapseParamClassSelector.length; i++) {
-						//	cppnIDXSynapseParamClassSelector[i] = cppnOutputCount++;
-						//}
-						//logger.info("CPPN: Added " + cppnIDXSynapseParamClassSelector.length + " synapse parameter class selector outputs.");
+						cppnIDXSynapseParamClassSelector = new int[synapseModelParamClassCount > 2 ? synapseModelParamClassCount : 1];
+						for (int i = 0; i < cppnIDXSynapseParamClassSelector.length; i++) {
+							cppnIDXSynapseParamClassSelector[i] = cppnOutputCount++;
+						}
+						logger.info("CPPN: Added " + cppnIDXSynapseParamClassSelector.length + " synapse parameter class selector outputs.");
 						
-						cppnIDXSynapseParamClass = cppnOutputCount++;
-						logger.info("CPPN: Added 1 synapse parameter class selector output.");
+						//cppnIDXSynapseParamClass = cppnOutputCount++;
+						//logger.info("CPPN: Added 1 synapse parameter class selector output.");
 					}
 				}
 				else {
@@ -1145,10 +1145,10 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		 * @see #getSelectorValue(int[])
 		 */
 		public int getSynapseParamClassIndex() {
-			if (synapseModelParamClassCount == 0) return 0;
-			double v = getRangedOutput(cppnIDXSynapseParamClass, 0, notQuiteOne, notQuiteOne, 0);
-			return (int) (v * synapseModelParamClassCount);
-			//return synapseModelParamClassCount > 1 ? getSelectorValue(cppnIDXSynapseParamClassSelector) : 0;
+			//if (synapseModelParamClassCount <= 1) return 0;
+			//double v = getRangedOutput(cppnIDXSynapseParamClass, 0, notQuiteOne, notQuiteOne, 0);
+			//return (int) (v * synapseModelParamClassCount);
+			return synapseModelParamClassCount > 1 ? getSelectorValue(cppnIDXSynapseParamClassSelector) : 0;
 		}
 		
 		/**

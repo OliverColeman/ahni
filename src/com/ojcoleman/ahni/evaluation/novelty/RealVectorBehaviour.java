@@ -1,11 +1,20 @@
 package com.ojcoleman.ahni.evaluation.novelty;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.List;
+
+import javax.imageio.ImageIO;
 
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.jgapcustomised.Chromosome;
 
+import com.ojcoleman.ahni.hyperneat.HyperNEATConfiguration;
 import com.ojcoleman.ahni.util.ArrayUtil;
 
 /**
@@ -36,5 +45,52 @@ public class RealVectorBehaviour extends Behaviour {
 	@Override
 	public double defaultThreshold() {
 		return 1.0 / p.getDimension();
+	}
+	
+	@Override
+	public void renderArchive(List<Behaviour> archive, String fileName) {
+		if (archive.isEmpty()) return;
+		
+		int dims = ((RealVectorBehaviour) archive.get(0)).p.getDimension();
+		
+		// If only 2 dimensions render as scatter plot.
+		if (dims == 2) {
+			int imageSize = 254;
+			BufferedImage image = new BufferedImage(imageSize + 2, imageSize + 2, BufferedImage.TYPE_BYTE_GRAY);
+			Graphics2D g = image.createGraphics();
+			
+			g.setColor(Color.WHITE);
+			for (Behaviour b : archive) {
+				RealVectorBehaviour brv = (RealVectorBehaviour) b;
+				g.fillRect((int) Math.round(brv.p.getEntry(0) * imageSize), (int) Math.round(brv.p.getEntry(1) * imageSize), 1, 1);
+			}
+			File outputfile = new File(fileName);
+			try {
+				ImageIO.write(image, "png", outputfile);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		} else { // Render as intensity plot.
+			int imageScale = 1;
+			int size = archive.size();
+			BufferedImage image = new BufferedImage(size * imageScale, dims * imageScale, BufferedImage.TYPE_BYTE_GRAY);
+			Graphics2D g = image.createGraphics();
+
+			for (int i = 0; i < size; i++) {
+				RealVectorBehaviour brv = (RealVectorBehaviour) archive.get(i);
+				for (int j = 0; j < dims; j++) {
+					float c = (float) brv.p.getEntry(j);
+					g.setColor(new Color(c, c, c));
+					g.fillRect(i * imageScale, j * imageScale, imageScale, imageScale);
+				}
+			}
+			File outputfile = new File(fileName);
+			try {
+				ImageIO.write(image, "png", outputfile);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+		}
 	}
 }

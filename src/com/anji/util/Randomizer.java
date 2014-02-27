@@ -23,9 +23,9 @@ public class Randomizer implements Configurable {
 
 	private static final String RANDOM_SEED_KEY = "random.seed";
 
-	private Random rand = new Random();
-
 	private long seed = 0;
+
+	private Random rand = new Random(seed);
 
 	/**
 	 * should call <code>init()</code> after ctor

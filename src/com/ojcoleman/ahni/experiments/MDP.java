@@ -1,0 +1,1402 @@
+package com.ojcoleman.ahni.experiments;
+
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
+
+import javax.imageio.ImageIO;
+
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.math3.util.MultidimensionalCounter;
+import org.apache.log4j.Logger;
+import org.jgapcustomised.Chromosome;
+
+import com.anji.integration.Activator;
+import com.ojcoleman.ahni.evaluation.BulkFitnessFunctionMT;
+import com.ojcoleman.ahni.evaluation.novelty.Behaviour;
+import com.ojcoleman.ahni.evaluation.novelty.RealVectorBehaviour;
+import com.ojcoleman.ahni.event.AHNIEvent;
+import com.ojcoleman.ahni.event.AHNIEventListener;
+import com.ojcoleman.ahni.hyperneat.Properties;
+import com.ojcoleman.ahni.util.ArrayUtil;
+import com.ojcoleman.ahni.util.DoubleVector;
+import com.ojcoleman.ahni.util.NiceWriter;
+import com.ojcoleman.ahni.util.Point;
+import com.ojcoleman.ahni.util.Range;
+
+/**
+ * A fitness function that generates MDP environments to assess agents against.
+ */
+public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
+	private static final long serialVersionUID = 1L;
+	private static Logger logger = Logger.getLogger(BulkFitnessFunctionMT.class);
+	private static final NumberFormat nf = new DecimalFormat("0.00");
+
+	/**
+	 * The initial number of states in the generated environments.
+	 */
+	public static final String STATE_COUNT_INITIAL = "fitness.function.mdp.states.initial";
+	/**
+	 * The amount to increase the number of states in the generated environments when the current size has been
+	 * sufficiently mastered (see {@link #DIFFICULTY_INCREASE_PERFORMANCE}. If the value is followed by an "x" then the
+	 * value is considered a factor (and so should be > 1).
+	 */
+	public static final String STATE_COUNT_INCREASE_DELTA = "fitness.function.mdp.states.delta";
+	/**
+	 * The maximum amount to increase the number of states in the generated environments to.
+	 */
+	public static final String STATE_COUNT_MAX = "fitness.function.mdp.states.maximum";
+	/**
+	 * The initial number of actions available in the generated environments.
+	 */
+	public static final String ACTION_COUNT_INITIAL = "fitness.function.mdp.actions.initial";
+	/**
+	 * The amount to increase the available number of actions in the generated environments when the current size has
+	 * been sufficiently mastered (see {@link #DIFFICULTY_INCREASE_PERFORMANCE}. If the value is followed by an "x" then
+	 * the value is considered a factor (and so should be > 1).
+	 */
+	public static final String ACTION_COUNT_INCREASE_DELTA = "fitness.function.mdp.actions.delta";
+	/**
+	 * The maximum amount to increase the available number of actions in the generated environments to.
+	 */
+	public static final String ACTION_COUNT_MAX = "fitness.function.mdp.actions.maximum";
+	/**
+	 * The performance indicating when the environment size/difficulty should be increased as the current size has been
+	 * sufficiently mastered.
+	 */
+	public static final String DIFFICULTY_INCREASE_PERFORMANCE = "fitness.function.mdp.difficulty.increase.performance";
+	/**
+	 * The proportion of actions that will map to some other state. This is evaluated probabilistically for all states
+	 * and actions when generating an environment.
+	 */
+	public static final String ACTION_MAP_RATIO = "fitness.function.mdp.action.map.ratio";
+	/**
+	 * The proportion of state transitions that will yield a reward value greater than 0.
+	 */
+	public static final String TRANSITION_REWARD_RATIO = "fitness.function.mdp.transition.reward.ratio";
+	/**
+	 * The randomness of state transitions. A value of 0 will make state transitions deterministic (purely determined by
+	 * the action performed), a value of 1 will make transitions completely envRandom (action performed will be
+	 * ignored).
+	 */
+	public static final String TRANSITION_RANDOMNESS = "fitness.function.mdp.transition.randomness";
+	/**
+	 * The number of environments to evaluate candidates against. Increasing this will provide a more accurate
+	 * evaluation but take longer.
+	 */
+	public static final String ENVIRONMENT_COUNT = "fitness.function.mdp.environment.count";
+	/**
+	 * The fraction of environments that should be replaced with new environments per generation. This is evaluated
+	 * probabilistically.
+	 */
+	public static final String ENVIRONMENT_CHANGE_RATE = "fitness.function.mdp.environment.replacerate";
+	/**
+	 * The number of trials per environment. If not set or set to <= 0 then this will be set to the grid size if
+	 * fitness.function.mdp.grid is true and fitness.function.mdp.single_reward_state is true, otherwise to
+	 * fitness.function.mdp.environment.count if fitness.function.mdp.environment.replacerate is 0, otherwise to
+	 * fitness.function.mdp.states.maximum * fitness.function.mdp.actions.maximum .
+	 */
+	public static final String TRIAL_COUNT = "fitness.function.mdp.trial.count";
+	/**
+	 * The number of steps in the environment per trial. If not set or set to <= 0 then this will be set depending on
+	 * the number of trials. If the number of trials is 1 then it will be set to (actionCount * stateCount * stateCount)
+	 * / trialCount, if the number of trials > 1 then it will be set to stateCount.
+	 */
+	public static final String STEPS_PER_TRIAL = "fitness.function.mdp.trial.steps";
+
+	/**
+	 * If true enables novelty search for which behaviours are defined by the current state for each step of each trial
+	 * of each environment. Default is false.
+	 */
+	public static final String NOVELTY_SEARCH = "fitness.function.mdp.noveltysearch";
+	/**
+	 * If set to an integer > 0 then this many environments will be used to characterise an agents behaviour for novelty
+	 * search. Defaults to fitness.function.mdp.environment.count.
+	 */
+	public static final String NOVELTY_SEARCH_ENV_COUNT = "fitness.function.mdp.noveltysearch.envs.count";
+
+	/**
+	 * Seed to use to generate and simulate environments.
+	 */
+	public static final String ENV_RANDOM_SEED = "fitness.function.mdp.environment.randomseed";
+
+	/**
+	 * Whether to include the previously performed action in the input to the agent. Default is false.
+	 */
+	public static final String INPUT_INCLUDE_PREVIOUS_ACTION = "fitness.function.mdp.input.include.previous.action";
+	/**
+	 * Whether to include the previous state in the input to the agent. Default is false.
+	 */
+	public static final String INPUT_INCLUDE_PREVIOUS_STATE = "fitness.function.mdp.input.include.previous.state";
+	/**
+	 * Whether to include an input that indicates whether the agent should be exploring to learn about the environment
+	 * or exploiting the knowledge its learnt. Default is false.
+	 */
+	public static final String INPUT_INCLUDE_EXPL = "fitness.function.mdp.input.include.expl";
+
+	/**
+	 * Whether to generate environments where the states are organised in a grid. The number of states is forced to
+	 * (ceil(sqrt(state_count)))^2. The number of actions is forced to 4 and each action will move the agent to a
+	 * neighbouring state. The input to the agent is the row and column index of the current state (1-of-N encoding for
+	 * each). The environments are forced to be deterministic (no transition randomness). The grid wraps around (is a
+	 * toroidal grid). Default is false.
+	 */
+	public static final String GRID_ENVIRONMENT = "fitness.function.mdp.grid";
+
+	/**
+	 * Whether to make the grid toroidal (wrap around at edges). Default is false.
+	 */
+	public static final String GRID_ENVIRONMENT_WRAP = "fitness.function.mdp.grid.wrap";
+
+	/**
+	 * Whether there should be a single state which when reached yields a reward value of 1 (rather than any transition
+	 * to any state yielding a randomly generated reward value according to
+	 * fitness.function.mdp.transition.reward.ratio.
+	 */
+	public static final String SINGLE_REWARD_STATE = "fitness.function.mdp.single_reward_state";
+
+	private int environmentCount;
+	private double environmentReplaceProb;
+	private int trialCount;
+	private int stateCount;
+	private int actionCount;
+	private int stateCountMax;
+	private int actionCountMax;
+	private double transitionRandomness;
+	private double mapRatio;
+	private double transitionRewardRatio;
+	private int stepsForReward;
+	private Environment[] environments, nsEnvironments;
+	private int environmentCounter = 0;
+	private int environmentMasteredTrialCount = 3;
+	private int stepsPerTrial;
+	private boolean noveltySearchEnabled = false;
+	private long envRandomSeed;
+	private Random envRandom;
+	private boolean includePrevAction;
+	private boolean includePrevState;
+	private boolean includeExpl;
+	private boolean gridEnvs, gridWrap;
+	private int gridSize, gridSizeMax; // Only if gridEnvs == true;
+	private boolean singleRewardState;
+
+	// Indexes into agent input array.
+	private int currentStateIndex = 0;
+	private int previousStateIndex = -1;
+	private int previousActionIndex = -1;
+	private int explIndex = -1;
+	private int rewardIndex = -1;
+
+	@Override
+	public void init(Properties props) {
+		this.props = props;
+
+		environmentCount = props.getIntProperty(ENVIRONMENT_COUNT);
+		environmentReplaceProb = props.getDoubleProperty(ENVIRONMENT_CHANGE_RATE);
+		actionCount = props.getIntProperty(ACTION_COUNT_INITIAL);
+		stateCount = props.getIntProperty(STATE_COUNT_INITIAL);
+		actionCountMax = props.getIntProperty(ACTION_COUNT_MAX);
+		stateCountMax = props.getIntProperty(STATE_COUNT_MAX);
+
+		singleRewardState = props.getBooleanProperty(SINGLE_REWARD_STATE, false);
+		gridEnvs = props.getBooleanProperty(GRID_ENVIRONMENT, false);
+		gridWrap = props.getBooleanProperty(GRID_ENVIRONMENT_WRAP, false);
+		adustStateCountForEnvType();
+
+		trialCount = props.getIntProperty(TRIAL_COUNT, 0);
+		if (trialCount <= 0) {
+			if (gridEnvs && singleRewardState)
+				trialCount = gridSize;
+			else if (environmentReplaceProb == 0)
+				trialCount = environmentCount;
+			else
+				trialCount = actionCountMax * stateCountMax;
+			logger.info("MDP trial count set to " + trialCount);
+		}
+
+		transitionRandomness = props.getDoubleProperty(TRANSITION_RANDOMNESS);
+		Range.checkUnitRange(transitionRandomness, TRANSITION_RANDOMNESS);
+		mapRatio = props.getDoubleProperty(ACTION_MAP_RATIO);
+		Range.checkUnitRange(mapRatio, ACTION_MAP_RATIO, false, true);
+		transitionRewardRatio = props.getDoubleProperty(TRANSITION_REWARD_RATIO);
+		Range.checkUnitRange(transitionRewardRatio, TRANSITION_REWARD_RATIO, false, true);
+
+		determineStepsPerTrial();
+		
+		envRandomSeed = props.getLongProperty(ENV_RANDOM_SEED, System.currentTimeMillis());
+		logger.info("MDP random seed is " + envRandomSeed);
+		envRandom = new Random(envRandomSeed);
+
+		includePrevAction = props.getBooleanProperty(INPUT_INCLUDE_PREVIOUS_ACTION, false);
+		includePrevState = props.getBooleanProperty(INPUT_INCLUDE_PREVIOUS_STATE, false);
+		includeExpl = props.getBooleanProperty(INPUT_INCLUDE_EXPL, false);
+
+		if (gridEnvs) {
+			if (actionCount != 4 || actionCountMax != 4) {
+				actionCount = 4;
+				actionCountMax = 4;
+				logger.warn("MDP: forcing initial and maximum action counts to 4 for grid environment.");
+			}
+			if (mapRatio != 1) {
+				mapRatio = 1;
+				logger.warn("MDP: forcing fitness.function.mdp.action.map.ratio to 1 for grid environment.");
+			}
+		}
+
+		environments = new Environment[environmentCount];
+		for (int e = 0; e < environments.length; e++) {
+			environments[e] = new Environment();
+			environments[e].setUp(environmentCounter++);
+			// System.err.println(environments[e] + "\n\n\n");
+		}
+
+		noveltySearchEnabled = props.getBooleanProperty(NOVELTY_SEARCH, false);
+		if (noveltySearchEnabled) {
+			int nsEnvCount = props.getIntProperty(NOVELTY_SEARCH_ENV_COUNT, environmentCount);
+			logger.info("Novelty search behaviours have dimensionality " + (nsEnvCount * trialCount * stepsPerTrial));
+
+			// If the same environments aren't used throughout evolution.
+			if (environmentReplaceProb > 0) {
+				// Create a set of environments that don't change over the course of evolution to test novelty on.
+				nsEnvironments = new Environment[nsEnvCount];
+				for (int e = 0; e < nsEnvironments.length; e++) {
+					nsEnvironments[e] = new Environment();
+					// If possible, generate environments of varying difficulty.
+					// for (int i = 1; i < e && nsEnvironments[e].increaseDifficultyPossible(); i++) {
+					// nsEnvironments[e].increaseDifficulty();
+					// }
+					nsEnvironments[e].setUp(e);
+				}
+				logger.info("Created " + nsEnvironments.length + " environments for novelty search.");
+			}
+		}
+
+		((Properties) props).getEvolver().addEventListener(this);
+
+		super.init(props);
+	}
+
+	private void determineStepsPerTrial() {
+		stepsPerTrial = props.getIntProperty(STEPS_PER_TRIAL, 0);
+		if (stepsPerTrial <= 0) {
+			if (gridEnvs && singleRewardState) {
+				// Enough steps to reach any state in the grid (Manhattan distance).
+				stepsPerTrial = 2 * gridSizeMax - 1;
+			} else if (!gridEnvs && singleRewardState) {
+				// Enough steps to reach any state.
+				stepsPerTrial = stateCountMax - 1;
+			} else if (environmentReplaceProb > 0) {
+				if (trialCount == 1) {
+					// Enough steps to try every action in every state at least once then exploit the info gained.
+					// The last term should be same as stepsForReward below for single trial.
+					stepsPerTrial = actionCount * stateCount * stateCount + stateCount * 2;
+				} else {
+					// Enough steps to try every action in every state at least once then exploit the info gained.
+					stepsPerTrial = (actionCount * stateCount * stateCount) / (trialCount - 1);
+				}
+			} else {
+				// Somewhat arbitrary, probably always want it to be >= stateCount
+				stepsPerTrial = stateCount;
+			}
+			logger.info("MDP steps per trial set to " + stepsPerTrial);
+		}
+		
+		// If trialCount > 1 then the reward received during the entire last trial will be used.
+		stepsForReward = trialCount == 1 ? stateCount * 2 : stepsPerTrial;
+		logger.info("MDP number of final steps contributing to fitness set to " + stepsForReward);
+	}
+
+	/**
+	 * Make sure stateCount meets requirements of environment type (eg grid environments).
+	 */
+	private void adustStateCountForEnvType() {
+		if (gridEnvs) {
+			int initStateCount = stateCount;
+			gridSize = (int) Math.ceil(Math.sqrt(stateCount));
+			stateCount = gridSize * gridSize;
+			if (stateCount != initStateCount) {
+				logger.warn("MDP: forcing state count to " + stateCount + " for grid environment.");
+			}
+
+			initStateCount = stateCountMax;
+			gridSizeMax = (int) Math.ceil(Math.sqrt(stateCountMax));
+			stateCountMax = gridSizeMax * gridSizeMax;
+			if (stateCountMax != initStateCount) {
+				logger.warn("MDP: forcing maximum state count to " + stateCountMax + " for grid environment.");
+			}
+		}
+	}
+
+	@Override
+	public void initialiseEvaluation() {
+		// Create (some) new environments every generation.
+		for (Environment e : environments) {
+			if (environmentReplaceProb > envRandom.nextDouble()) {
+				e.setUp(environmentCounter++);
+			}
+		}
+	}
+
+	@Override
+	protected void evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, double[] fitnessValues, Behaviour[] behaviours) {
+		if (nsEnvironments == null) {
+			// Evaluate fitness and behaviour on same environments.
+			_evaluate(genotype, substrate, null, false, false, fitnessValues, behaviours, environments);
+		} else {
+			// Evaluate fitness on changing environments and behaviour on fixed novelty search environments.
+			_evaluate(genotype, substrate, null, false, false, fitnessValues, null, environments);
+			_evaluate(genotype, substrate, null, false, false, null, behaviours, nsEnvironments);
+		}
+	}
+
+	@Override
+	public void evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
+		_evaluate(genotype, substrate, baseFileName, logText, logImage, null, null, environments);
+	}
+
+	public void _evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage, double[] fitnessValues, Behaviour[] behaviours, Environment[] environments) {
+		super.evaluate(genotype, substrate, baseFileName, logText, logImage);
+		double randomCompare = 0;
+		int solvedCount = 0;
+		// Random testRandom = new Random(System.currentTimeMillis());
+
+		int[][][] behaviour = behaviours != null && behaviours.length > 0 ? new int[nsEnvironments.length][trialCount][nsEnvironments[0].getStepsPerTrial()] : null;
+
+		int imageScale = 128;
+
+		try {
+			NiceWriter logOutput = !logText ? null : new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
+
+			double[] input = new double[substrate.getInputDimension()[0]];
+			double[] avgRewardForEachTrial = new double[trialCount];
+			for (Environment env : environments) {
+
+				if (logText) {
+					logOutput.put("\n\nBEGIN EVALUATION ON ENVIRONMENT " + env.id + "\n");
+					logOutput.put(env).put("\n");
+				}
+
+				// Reset substrate to initial state to begin learning new environment.
+				substrate.reset();
+
+				double trialReward = 0;
+				int consecutivePerfectTrialCount = 0;
+				for (int trial = 0; trial < trialCount; trial++) {
+					// Create an RNG instance that is the same for a given trial in a given environment so that the
+					// environment behaviour is exactly the same for each agent and across runs if necessary.
+					Random envTrialRandom = new Random((envRandomSeed + env.id * trialCount + trial) * 10);
+					if (logText) {
+						logOutput.put("\n  BEGIN TRIAL " + (trial + 1) + " of " + trialCount + "\n");
+					}
+
+					BufferedImage image = null;
+					Graphics2D g = null;
+					if (logImage && gridEnvs) {
+						image = new BufferedImage(gridSize * imageScale, gridSize * imageScale, BufferedImage.TYPE_3BYTE_BGR);
+						g = image.createGraphics();
+						g.setColor(Color.WHITE);
+						g.fillRect(0, 0, gridSize * imageScale, gridSize * imageScale);
+						if (singleRewardState) {
+							State rewardState = env.getRewardState();
+							g.setColor(Color.GREEN);
+							g.fillRect(rewardState.x * imageScale, rewardState.y * imageScale, imageScale, imageScale);
+						}
+					}
+
+					State currentState = env.states[0];
+					Transition transition = null;
+					trialReward = 0;
+					double[] output = null;
+					double[] previousOutput = new double[substrate.getOutputDimension()[0]];
+					int prevAction = -1;
+					State prevState = null;
+					boolean rewardCountsTowardFitness = false;
+
+					// The network can perform a number of steps equal to the number of states times two.
+					int step = 0;
+					for (step = 0; step < env.getStepsPerTrial(); step++) {
+						// If we're doing multiple trials then count reward for last trial,
+						// or if we're doing a single long trial then only include reward for last half,
+						// or if there's a single reward state then include reward as we'll exit if the agent found
+						// the reward state.
+						rewardCountsTowardFitness = (trialCount > 1 && trial == trialCount - 1) || (trialCount == 1 && step >= stepsPerTrial - stepsForReward);
+
+						// Set up the inputs to the network.
+						Arrays.fill(input, 0);
+						input[currentStateIndex + currentState.id] = 1;
+						if (includePrevState && prevState != null) {
+							input[previousStateIndex + prevState.id] = 1;
+						}
+						prevState = currentState;
+						if (includePrevAction && prevAction >= 0) {
+							input[previousActionIndex + prevAction] = 1;
+						}
+						if (includeExpl && rewardCountsTowardFitness) {
+							input[explIndex] = 1;
+						}
+						if (transition != null) {
+							// Set reward signal from previous transition.
+							input[rewardIndex] = transition.reward;
+						}
+
+						// Ask the network what it wants to do next, and let it know the reward for the previous state
+						// transition.
+						output = substrate.next(input);
+						// The action to perform is the one corresponding to the output with the highest output value.
+						int action = ArrayUtil.getMaxIndex(output);
+						prevAction = action;
+						// int action = testRandom.nextInt(actionCount);
+
+						if (logText) {
+							boolean outputChanged = step > 0 && !ArrayUtils.isEquals(output, previousOutput);
+							logOutput.put("    Agent is at " + currentState.id + "\n");
+							logOutput.put("    Input: " + ArrayUtil.toString(input, ", ", nf) + "\n");
+							logOutput.put("    Output: " + ArrayUtil.toString(output, ", ", nf) + (outputChanged ? " [changed]" : "") + "\n");
+							logOutput.put("    Action: " + action + "\n");
+							logOutput.put("    Current reward: " + nf.format(trialReward) + "\n\n");
+							System.arraycopy(output, 0, previousOutput, 0, output.length);
+						}
+						if (logImage && gridEnvs) {
+							float c = ((float) step / env.getStepsPerTrial()) * 0.75f;
+							int size = ((env.getStepsPerTrial() - step) * (imageScale / 2)) / env.getStepsPerTrial() + imageScale / 2 - 2;
+							int offset = (imageScale - size) / 2;
+							g.setColor(new Color(0, c, c));
+							g.fillOval(currentState.x * imageScale + offset, currentState.y * imageScale + offset, size, size);
+						}
+
+						// If a transition is defined for the current state and specified action.
+						transition = currentState.getNextTransition(action, envTrialRandom);
+						if (transition != null) {
+							currentState = transition.nextState;
+							// Add reward to record if reward counts toward fitness,
+							// or if there's a single reward state then include reward as we'll exit if the agent found
+							// the reward state.
+							if (rewardCountsTowardFitness || singleRewardState) {
+								trialReward += transition.reward;
+							}
+						}
+
+						if (behaviour != null) {
+							behaviour[env.id][trial][step] = currentState.id;
+						}
+
+						if (singleRewardState && currentState.id == env.rewardState) {
+							break;
+						}
+
+						// If the maximum reward has been reached, end the trial.
+						// if (trialReward > env.getMaxReward() * 0.99) {
+						// break;
+						// }
+					}
+
+					if (logText) {
+						logOutput.put("    Agent is at " + currentState.id + "\n");
+						logOutput.put("    Current reward: " + nf.format(trialReward) + "\n\n");
+					}
+
+					if (logImage && gridEnvs) {
+						float c = ((float) step / env.getStepsPerTrial());
+						int size = ((env.getStepsPerTrial() - step) * (imageScale / 2)) / env.getStepsPerTrial() + imageScale / 2 - 2;
+						int offset = (imageScale - size) / 2;
+						g.setColor(new Color(0, c, c));
+						g.fillOval(currentState.x * imageScale + offset, currentState.y * imageScale + offset, size, size);
+
+						File outputfile = new File(baseFileName + ".env_ " + env.id + ".trial_" + trial + ".png");
+						ImageIO.write(image, "png", outputfile);
+					}
+
+					// If last trial
+					if (trial == trialCount - 1) {
+						// Ratio of reward received versus reward received by random agent.
+						randomCompare += trialReward / env.getRandomReward();
+					}
+
+					avgRewardForEachTrial[trial] += trialReward / env.getMaxReward();
+
+					// If environmentMasteredTrialCount perfect trials have been executed then we can probably assume
+					// this environment has been mastered [this won't work until we use Q-learning or similar to
+					// determine optimal reward.]
+					// if (trialReward > 0.99) {
+					// consecutivePerfectTrialCount++;
+					// if (consecutivePerfectTrialCount == environmentMasteredTrialCount) {
+					// solvedCount++;
+					// // Fill in reward values for trials we're skipping.
+					// for (int t = trial+1; t < trialCount; t++) {
+					// avgRewardForEachTrial[t] += trialReward;
+					// envReward += trialReward;
+					// perf += trialReward / env.getRandomReward();
+					// }
+					// if (logText) {
+					// logOutput.put("  ENVIRONMENT MASTERED.\n\n");
+					// }
+					// break; // breaks out of: for (int trial = 0; trial < trialCount; trial++)
+					// }
+					// } else {
+					// consecutivePerfectTrialCount = 0;
+					// }
+				}
+
+				// If the agent got 99% of the maximum reward last trial
+				if (trialReward / env.getMaxReward() > 0.99) {
+					solvedCount++;
+				}
+			}
+
+			randomCompare /= environmentCount;
+			for (int trial = 0; trial < trialCount; trial++) {
+				avgRewardForEachTrial[trial] /= environmentCount;
+			}
+			if (logText) {
+				logOutput.put("\n\nReward for each trial averaged over all environments:\n");
+				logOutput.put(Arrays.toString(avgRewardForEachTrial));
+				logOutput.close();
+			}
+
+			if (fitnessValues != null && fitnessValues.length > 0) {
+				double fitness = 0;
+				if (getEnvOptimalRewardCalcType().equals(EnvOptimalRewardCalcType.NOT_SUPPORTED)) {
+					// Use comparison to random agent if optimal reward not available for comparison.
+					// Fitness is 10% of ratio of reward received versus reward received by random agent.
+					fitness = randomCompare > 10 ? 1 : randomCompare * 0.1 * 0.99;
+				} else {
+					// Average of final trial from each environment.
+					fitness = avgRewardForEachTrial[trialCount - 1] * 0.1;
+					genotype.setPerformanceValue("2VSOptimal", fitness);
+				}
+				if (fitness == 0)
+					fitness = Double.MIN_VALUE;
+				fitnessValues[0] = fitness;
+
+				genotype.setPerformanceValue("0Solved", (double) solvedCount / environmentCount);
+				genotype.setPerformanceValue("1VSRandom", randomCompare > 10 ? 1 : randomCompare * 0.1 * 0.99);
+			}
+			if (behaviours != null && behaviours.length > 0) {
+				behaviours[0] = new MDPBehaviour(behaviour);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private boolean increaseDifficulty() {
+		boolean increasedDifficulty = false;
+		if (stateCount < props.getIntProperty(STATE_COUNT_MAX)) {
+			String deltaString = props.getProperty(STATE_COUNT_INCREASE_DELTA).trim().toLowerCase();
+			boolean isFactor = deltaString.endsWith("x");
+			double delta = Double.parseDouble(deltaString.replaceAll("x", ""));
+			if (delta >= 1) {
+				int initStateCount = stateCount;
+				if (!isFactor) {
+					stateCount += (int) Math.round(delta);
+				} else if (delta > 1) {
+					stateCount = Math.max(1, (int) Math.round(stateCount * delta));
+				}
+
+				adustStateCountForEnvType();
+				increasedDifficulty = initStateCount != stateCount;
+
+				if (increasedDifficulty) {
+					determineStepsPerTrial();
+				}
+			}
+		}
+
+		if (actionCount < props.getIntProperty(ACTION_COUNT_MAX)) {
+			String deltaString = props.getProperty(ACTION_COUNT_INCREASE_DELTA).trim().toLowerCase();
+			boolean isFactor = deltaString.endsWith("x");
+			double delta = Double.parseDouble(deltaString.replaceAll("x", ""));
+			if (delta >= 1) {
+				if (!isFactor) {
+					actionCount += (int) Math.round(delta);
+					increasedDifficulty = true;
+				} else if (delta > 1) {
+					actionCount = Math.max(1, (int) Math.round(actionCount * delta));
+					increasedDifficulty = true;
+				}
+			}
+		}
+
+		if (increasedDifficulty) {
+			reportedEnvOptimalRewardCalcType = null;
+		}
+
+		return increasedDifficulty;
+	}
+
+	@Override
+	public int noveltyObjectiveCount() {
+		return noveltySearchEnabled ? 1 : 0;
+	}
+
+	@Override
+	public int fitnessObjectivesCount() {
+		// if (trialCount > 1) return 2;
+		return 1;
+	}
+	
+	@Override 
+	public String[] objectiveLabels() {
+		String[] labels = new String[1 + (noveltySearchEnabled ? 1 : 0)];
+		labels[0] = "Fitness";
+		if (noveltySearchEnabled) labels[1] = "Novelty";
+		return labels;
+	}
+
+	@Override
+	public boolean fitnessValuesStable() {
+		return false; // environmentReplaceProb == 0;
+	}
+
+	// The method to use to determine the (approx) optimal reward per step in an environment.
+	enum EnvOptimalRewardCalcType {
+		NOT_SUPPORTED, APPROXIMATE, EXACT
+	}
+
+	static EnvOptimalRewardCalcType reportedEnvOptimalRewardCalcType;
+
+	private synchronized EnvOptimalRewardCalcType getEnvOptimalRewardCalcType() {
+		if (reportedEnvOptimalRewardCalcType == null) {
+			if (transitionRandomness > 0) {
+				reportedEnvOptimalRewardCalcType = EnvOptimalRewardCalcType.NOT_SUPPORTED;
+				logger.info("Calculating optimal reward for non-deterministic environments not currently supported.");
+			} else {
+				// If it looks like we can calculate an exact optimal value (no more than a million steps to try).
+				if (Math.pow(actionCount, stepsPerTrial + 1) <= 1024 * 1024) {
+					reportedEnvOptimalRewardCalcType = EnvOptimalRewardCalcType.EXACT;
+					logger.info("Calculating exact optimal reward for environments.");
+				} else {
+					reportedEnvOptimalRewardCalcType = EnvOptimalRewardCalcType.APPROXIMATE;
+					logger.info("Calculating approximate optimal reward for environments.");
+				}
+			}
+		}
+		return reportedEnvOptimalRewardCalcType;
+	}
+
+	private class Environment {
+		static final double MIN_REWARD = 0.0;
+		public int id;
+		private double maxReward, randomReward;
+		private State[] states;
+		private int[] optimalStateSequence;
+		private int[] optimalActionSequence;
+		private int rewardState = -1; // Only used if singleRewardState == true.
+		private int envStateCount;
+		private int envActionCount;
+		private int envStepsPerTrial;
+		private int envStepsForReward;
+		
+		public int getStateCount() {
+			return envStateCount;
+		}
+
+		public int getActionCount() {
+			return envActionCount;
+		}
+
+		public int getStepsPerTrial() {
+			return envStepsPerTrial;
+		}
+
+		public int getStepsForReward() {
+			return envStepsForReward;
+		}
+
+		private void setUp(int id) {
+			this.id = id;
+			envStateCount = stateCount;
+			envActionCount = actionCount;
+			envStepsPerTrial = stepsPerTrial;
+			envStepsForReward = stepsForReward;
+			
+			// Create an RNG instance that is the same given the same seed and environment ID,
+			// so we can reproduce the same environments in different runs.
+			Random envSetupRandom = new Random(id * 1000 + envRandomSeed);
+
+			// Only used if singleRewardState == true.
+			if (singleRewardState) {
+				rewardState = envSetupRandom.nextInt(envStateCount);
+			}
+			
+			double overallPrimaryNextStateProb = 1 - transitionRandomness + transitionRandomness * (1.0 / envActionCount);
+			double primaryNextStateProbVariance = 1 - overallPrimaryNextStateProb;
+
+			boolean atLeastOneNonZeroReward = false;
+
+			do {
+				if (gridEnvs) {
+					// Create environment where states organised in a grid with transitions only to neighbouring states.
+
+					// Create states.
+					states = new State[envStateCount];
+					State[][] stateGrid = new State[gridSize][gridSize];
+					for (int x = 0, s = 0; x < gridSize; x++) {
+						for (int y = 0; y < gridSize; y++, s++) {
+							states[s] = new State(s, x, y);
+							stateGrid[x][y] = states[s];
+						}
+					}
+					// Create transitions.
+					for (int x = 0; x < gridSize; x++) {
+						for (int y = 0; y < gridSize; y++) {
+							// If there's a single reward state, and this is it, don't add transitions away from it.
+							if (stateGrid[x][y].id != rewardState) {
+								for (int actionID = 0; actionID < 4; actionID++) {
+									Action action = new Action(actionID);
+
+									int xt = x + (actionID == 0 ? -1 : (actionID == 2 ? 1 : 0));
+									int yt = y + (actionID == 1 ? -1 : (actionID == 3 ? 1 : 0));
+
+									// If we're not wrapping and action would lead to out of bounds.
+									if (!gridWrap && (xt < 0 || xt >= gridSize))
+										continue;
+									if (!gridWrap && (yt < 0 || yt >= gridSize))
+										continue;
+
+									if (xt < 0)
+										xt += gridSize;
+									else if (xt >= gridSize)
+										xt -= gridSize;
+
+									if (yt < 0)
+										yt += gridSize;
+									else if (yt >= gridSize)
+										yt -= gridSize;
+
+									State nextState = stateGrid[xt][yt];
+
+									double reward = rewardForTransition(nextState, envSetupRandom);
+									atLeastOneNonZeroReward |= reward > MIN_REWARD;
+
+									Transition tran = new Transition(1, nextState, reward);
+									action.addTransition(tran);
+									stateGrid[x][y].addAction(action);
+								}
+							}
+						}
+					}
+					if (id == 1)
+						System.out.println(toString());
+				} else {
+					// Create completely random environment.
+					// Create states.
+					states = new State[envStateCount];
+					for (int s = 0; s < envStateCount; s++) {
+						states[s] = new State(s);
+					}
+
+					atLeastOneNonZeroReward = false;
+					for (int stateID = 0; stateID < envStateCount; stateID++) {
+						for (int actionID = 0; actionID < envActionCount; actionID++) {
+							// If a mapping should be created for this action.
+							if (mapRatio > envSetupRandom.nextDouble()) {
+								Action action = new Action(actionID);
+
+								double primaryNextStateProb = overallPrimaryNextStateProb + (2 * primaryNextStateProbVariance * envSetupRandom.nextDouble() - primaryNextStateProbVariance);
+								int primaryNextState = envSetupRandom.nextInt(envStateCount);
+								while (primaryNextState == stateID)
+									primaryNextState = envSetupRandom.nextInt(envStateCount);
+
+								double reward = rewardForTransition(states[primaryNextState], envSetupRandom);
+								atLeastOneNonZeroReward |= reward > MIN_REWARD;
+
+								Transition tran = new Transition(primaryNextStateProb, states[primaryNextState], reward);
+								action.addTransition(tran);
+
+								if (transitionRandomness > 0) {
+									// Actions map probabilistically to (any possible) next state.
+									// Generate list of probabilities for transitions to non-primary state;
+									double[] tranProb = new double[envStateCount];
+									do {
+										for (int nextStateID = 0; nextStateID < envStateCount; nextStateID++) {
+											if (nextStateID != primaryNextState && transitionRandomness > envSetupRandom.nextDouble()) {
+												tranProb[nextStateID] = envSetupRandom.nextDouble();
+											}
+										}
+									} while (ArrayUtil.sum(tranProb) == 0);
+									ArrayUtil.normaliseSum(tranProb);
+									ArrayUtil.multiply(tranProb, 1 - primaryNextStateProb);
+
+									for (int nextStateID = 0; nextStateID < envStateCount; nextStateID++) {
+										if (nextStateID != primaryNextState) {
+											reward = rewardForTransition(states[nextStateID], envSetupRandom);
+											atLeastOneNonZeroReward |= reward > MIN_REWARD;
+
+											tran = new Transition(tranProb[nextStateID], states[nextStateID], reward);
+											action.addTransition(tran);
+										}
+									}
+								}
+
+								states[stateID].addAction(action);
+							}
+						}
+					}
+				}
+
+				// System.err.println(toString());
+				//
+				// for (int stateID = 0; stateID < stateCount; stateID++) {
+				// System.err.println(stateID);
+				// for (int actionID = 0; actionID < actionCount; actionID++) {
+				// System.err.println("\t" + actionID);
+				// int[] counts = new int[stateCount];
+				// for (int i = 0; i < 1000; i++) {
+				// counts[states[stateID].getNextState(actionID, envRandom).id]++;
+				// }
+				// for (int nextStateID = 0; nextStateID < stateCount; nextStateID++) {
+				// System.err.println("\t\t" + counts[nextStateID]);
+				// }
+				// }
+				// }
+			} while (!atLeastOneNonZeroReward || !allStatesReachableFromAnyState());
+
+			// } while (!atLeastOneNonZeroReward);
+
+			// TODO: ensure non-zero reward can be received when starting from first state using a TD-learning method.
+			// (and use the best policy found to determine the maximum reward value so we can accurately measure
+			// performance).
+
+			// For now set max reward to theoretical upper bound. Reward values are in range (0, 1).
+			// If we're doing a single long trial then only reward from the last half of it is included.
+
+			// maxReward = stepsForReward;
+
+			//if (getEnvOptimalRewardCalcType().equals(EnvOptimalRewardCalcType.NOT_SUPPORTED)) {
+				// Determine reward received by a random agent, for comparison.
+				randomReward = calcRandomReward(envSetupRandom);
+				randomReward *= envStepsForReward;
+			//} else {
+				maxReward = calcOptimalReward();
+				if (!singleRewardState) {
+					maxReward *= envStepsForReward;
+				}
+			//}
+		}
+
+		public State getRewardState() {
+			if (rewardState != -1) {
+				return states[rewardState];
+			}
+			return null;
+		}
+
+		private double rewardForTransition(State nextState, Random envSetupRandom) {
+			if (singleRewardState) {
+				if (nextState.id == rewardState) {
+					return 1;
+				}
+			} else {
+				// return (transitionRewardRatio > envSetupRandom.nextDouble()) ? envSetupRandom.nextDouble() :
+				// MIN_REWARD;
+				return (transitionRewardRatio > envSetupRandom.nextDouble()) ? envSetupRandom.nextInt(2) : MIN_REWARD;
+			}
+			return MIN_REWARD;
+		}
+
+		// Make sure all states are reachable and that there are no dead ends.
+		private boolean allStatesReachableFromAnyState() {
+			if (gridEnvs) {
+				return true;
+			}
+
+			HashSet<Integer> toExplore = new HashSet<Integer>();
+			HashSet<Integer> nextToExplore = new HashSet<Integer>();
+
+			for (int si = 0; si < envStateCount; si++) {
+				boolean[] covered = new boolean[envStateCount];
+				toExplore.clear();
+				nextToExplore.clear();
+
+				toExplore.add(si);
+				covered[si] = true;
+				int coveredCount = 1;
+
+				while (!toExplore.isEmpty()) {
+					for (Integer s : toExplore) {
+						for (Action a : states[s].getActions()) {
+							for (Transition t : a.getTransitions()) {
+								if (!covered[t.nextState.id]) {
+									nextToExplore.add(t.nextState.id);
+									covered[t.nextState.id] = true;
+									coveredCount++;
+								}
+							}
+						}
+					}
+
+					HashSet<Integer> t = toExplore;
+					toExplore = nextToExplore;
+					nextToExplore = t;
+					nextToExplore.clear();
+				}
+
+				if (coveredCount != envStateCount)
+					return false;
+			}
+			return true;
+		}
+
+		// Determine reward received by a random agent, for comparison.
+		// Returns a value in range (0, 1), representing average reward for a single step.
+		private double calcRandomReward(Random random) {
+			// Determine reward received by a random agent, for comparison.
+			double randomReward = 0;
+			State currentState = states[0];
+			for (int step = 0; step < 1000; step++) {
+				int action = random.nextInt(envActionCount);
+
+				// If a transition is defined for the current state and specified action.
+				Transition transition = currentState.getNextTransition(action, random);
+				if (transition != null) {
+					currentState = transition.nextState;
+					randomReward += transition.reward;
+				}
+			}
+			randomReward /= 1000;
+			return randomReward;
+		}
+
+		// Determine the reward received by an optimal agent, for comparison.
+		// Returns a value in range (0, 1), representing average reward for a single step.
+		private double calcOptimalReward() {
+			if (singleRewardState) {
+				return 1;
+			}
+
+			if (getEnvOptimalRewardCalcType().equals(EnvOptimalRewardCalcType.EXACT)) {
+				double optReward = 0;
+				optimalStateSequence = new int[envStepsPerTrial + 1];
+				optimalActionSequence = new int[envStepsPerTrial];
+				MultidimensionalCounter mc = new MultidimensionalCounter(ArrayUtil.newArray(envStepsPerTrial, envActionCount));
+				MultidimensionalCounter.Iterator mci = mc.iterator();
+				// Try every combination of action sequences of length stepsPerTrial starting from start state.
+				while (mci.hasNext()) {
+					mci.next();
+					State currentState = states[0];
+					double reward = 0;
+					int[] stateSequence = new int[envStepsPerTrial];
+					for (int step = 0; step < envStepsPerTrial; step++) {
+						int action = mci.getCount(step);
+						// If a transition is defined for the current state and specified action.
+						Transition transition = currentState.getNextTransition(action, random);
+						if (transition != null) {
+							currentState = transition.nextState;
+							stateSequence[step] = currentState.id;
+							reward += transition.reward;
+						}
+					}
+					// Average over steps taken.
+					reward /= envStepsPerTrial;
+					if (reward > optReward) {
+						optReward = reward;
+						System.arraycopy(mci.getCounts(), 0, optimalActionSequence, 0, envStepsPerTrial);
+						System.arraycopy(stateSequence, 0, optimalStateSequence, 1, envStepsPerTrial);
+					}
+				}
+				return optReward;
+			} else if (getEnvOptimalRewardCalcType().equals(EnvOptimalRewardCalcType.APPROXIMATE)) {
+				// Since every state is reachable from every other state and we're using deterministic transitions,
+				// the optimal sequence of actions will be of length in range [2, stateCount] (shortest loop to longest
+				// loop). So just try every permutation of actions of length [2, stateCount]. Since the start state may
+				// not be in this loop and the number of steps per trial might not be a factor of the loop length
+				// this will only give an approximate optimal reward value.
+				double optReward = 0;
+				for (int sequenceLength = 2; sequenceLength <= envStateCount; sequenceLength++) {
+					MultidimensionalCounter mc = new MultidimensionalCounter(ArrayUtil.newArray(sequenceLength, envActionCount));
+					for (int startState = 0; startState < envStateCount; startState++) {
+						MultidimensionalCounter.Iterator mci = mc.iterator();
+						while (mci.hasNext()) {
+							mci.next();
+							State currentState = states[startState];
+							double reward = 0;
+							int[] stateSequence = new int[sequenceLength + 1];
+							stateSequence[0] = startState;
+							for (int step = 0; step < sequenceLength; step++) {
+								int action = mci.getCount(step);
+								// If a transition is defined for the current state and specified action.
+								Transition transition = currentState.getNextTransition(action, random);
+								if (transition != null) {
+									currentState = transition.nextState;
+									stateSequence[step + 1] = currentState.id;
+									reward += transition.reward;
+								}
+							}
+
+							// We can only include this sequence if it forms a loop (which can then be repeated).
+							if (currentState.id == startState) {
+								// Average over steps taken.
+								reward /= sequenceLength;
+								if (reward > optReward) {
+									optReward = reward;
+									optimalStateSequence = new int[sequenceLength + 1];
+									optimalActionSequence = new int[sequenceLength];
+									System.arraycopy(stateSequence, 0, optimalStateSequence, 0, sequenceLength + 1);
+									System.arraycopy(mci.getCounts(), 0, optimalActionSequence, 0, sequenceLength);
+								}
+							}
+						}
+					}
+				}
+				return optReward;
+			}
+			optimalActionSequence = null;
+			return 1; // Assume maximum possible value.
+		}
+
+		public double getMaxReward() {
+			return maxReward;
+		}
+
+		public double getRandomReward() {
+			return randomReward;
+		}
+
+		public String toString() {
+			StringBuilder sb = new StringBuilder();
+			sb.append("Random reward: " + nf.format(randomReward) + "\n\n");
+			sb.append("(Approx) optimal reward: " + nf.format(maxReward) + "\n");
+			if (optimalStateSequence != null) {
+				sb.append("\tState sequence: " + ArrayUtil.toString(optimalStateSequence, "\t", null) + "\n");
+				sb.append("\tAction sequence:  " + ArrayUtil.toString(optimalActionSequence, "\t  ", null) + "\n");
+			}
+			if (gridEnvs && singleRewardState) {
+				sb.append("Goal state: " + rewardState);
+			} else {
+				for (int s = 0; s < envStateCount; s++) {
+					sb.append(states[s] + "\n");
+				}
+			}
+			return sb.toString();
+		}
+	}
+
+	private class State {
+		final int id;
+		final int x, y;
+		// Available actions.
+		private final ArrayList<Action> actions;
+
+		public State(int id) {
+			this.id = id;
+			x = id;
+			y = 0;
+			actions = new ArrayList<Action>();
+		}
+
+		public State(int id, int x, int y) {
+			this.id = id;
+			this.x = x;
+			this.y = y;
+			actions = new ArrayList<Action>();
+		}
+
+		public void addAction(Action a) {
+			actions.add(a);
+		}
+
+		public Transition getNextTransition(int actionID, Random r) {
+			// Search for the specified action in the list of allowed actions.
+			for (Action a : actions) {
+				if (a.id == actionID) {
+					return a.getNextTransition(r);
+				}
+			}
+			// If this action is not allowed then the state doesn't change.
+			return null;
+		}
+
+		public List<Action> getActions() {
+			return Collections.unmodifiableList(actions);
+		}
+
+		public String toString() {
+			StringBuilder sb = new StringBuilder();
+			sb.append("State " + id + (gridEnvs ? "(" + x + ", " + y + ")" : "") + ", actions:\n");
+			for (Action a : actions) {
+				sb.append(a + "\n");
+			}
+			return sb.toString();
+		}
+	}
+
+	// An action performed in some State.
+	private class Action {
+		final int id;
+		// Probabilities for transitioning to each available state.
+		final ArrayList<Transition> transitions;
+		final DoubleVector probSum;
+
+		public Action(int id) {
+			this.id = id;
+			transitions = new ArrayList<Transition>();
+			probSum = new DoubleVector();
+		}
+
+		public void addTransition(Transition t) {
+			transitions.add(t);
+			probSum.add(getTotalProbSum() + t.probability);
+		}
+
+		public Transition getNextTransition(Random r) {
+			if (transitions.size() == 1)
+				return transitions.get(0);
+
+			int index = probSum.binarySearchIP(r.nextDouble() * getTotalProbSum());
+			return transitions.get(index);
+		}
+
+		private double getTotalProbSum() {
+			return probSum.isEmpty() ? 0 : probSum.get(probSum.size() - 1);
+		}
+
+		public List<Transition> getTransitions() {
+			return Collections.unmodifiableList(transitions);
+		}
+
+		public String toString() {
+			StringBuilder sb = new StringBuilder();
+			sb.append("\tAction " + id + ", transitions:\n");
+			for (Transition t : transitions) {
+				sb.append("\t\t" + t + "\n");
+			}
+			return sb.toString();
+		}
+	}
+
+	private class Transition {
+		final double probability;
+		final State nextState;
+		final double reward;
+
+		public Transition(double probability, State nextState, double reward) {
+			this.probability = probability;
+			this.nextState = nextState;
+			this.reward = reward;
+		}
+
+		public String toString() {
+			return nextState.id + ", " + nf.format(probability) + ", " + nf.format(reward);
+		}
+	}
+
+	@Override
+	public void ahniEventOccurred(AHNIEvent event) {
+		if (event.getType() == AHNIEvent.Type.GENERATION_END) {
+			Chromosome bestPerforming = event.getEvolver().getBestPerformingFromLastGen();
+			if (bestPerforming.getPerformanceValue() >= props.getDoubleProperty(DIFFICULTY_INCREASE_PERFORMANCE)) {
+				if (increaseDifficulty())
+					logger.info("Increased difficulty. State/action counts are now " + stateCount + " / " + actionCount);
+			}
+		}
+	}
+
+	private int getInputSize() {
+		return stateCountMax + (includePrevState ? stateCountMax : 0) + (includePrevAction ? actionCountMax : 0) + (includeExpl ? 1 : 0) + 1;
+	}
+
+	@Override
+	public int[] getLayerDimensions(int layer, int totalLayerCount) {
+		if (layer == 0) { // Input layer.
+			// Current state plus previously performed action plus reinforcement signal.
+			return new int[] { getInputSize(), 1 };
+		} else if (layer == totalLayerCount - 1) { // Output layer.
+			// Action to perform next.
+			return new int[] { actionCountMax, 1 };
+		}
+		return null;
+	}
+
+	@Override
+	public Point[] getNeuronPositions(int layer, int totalLayerCount) {
+		Point[] positions = null;
+
+		if (gridEnvs) {
+			if (layer == 0) { // Input layer.
+				positions = new Point[getInputSize()];
+				int posIndex = 0;
+				// Current state.
+				for (int x = 0; x < gridSizeMax; x++) {
+					for (int y = 0; y < gridSizeMax; y++) {
+						positions[posIndex++] = new Point((double) x / (gridSizeMax - 1), (double) y / (gridSizeMax - 1), 0);
+					}
+				}
+				// if (includePrevAction || includePrevState) {
+				// double horizFactor = includePrevAction && includePrevState ? 1.0 / 3 : 0.5;
+				// int horizPos = 1;
+				// if (includePrevState) {
+				// for (int i = 0; i < stateCountMax; i++) {
+				// positions[posIndex++] = new Point((double) i / (stateCountMax - 1), horizPos * horizFactor, 0);
+				// }
+				// horizPos++;
+				// }
+				// if (includePrevAction) {
+				// for (int i = 0; i < actionCountMax; i++) {
+				// positions[posIndex++] = new Point((double) i / (actionCountMax - 1), horizPos * horizFactor, 0);
+				// }
+				// }
+				// }
+
+				// if (includeExpl) {
+				// // Exploration/Exploitation signal, at top-left.
+				// positions[posIndex++] = new Point(0, 1, 0);
+				// }
+
+				// Reinforcement signal, behind state input layer.
+				positions[stateCountMax] = new Point(0.5, 0.5, -0.5);
+			} else if (layer == totalLayerCount - 1) { // Output layer.
+				positions = new Point[actionCountMax];
+
+				// int xt = x + (actionID == 0 ? -1 : (actionID == 2 ? 1 : 0));
+				positions[0] = new Point(0, 0.5, 1);
+				positions[2] = new Point(1, 0.5, 1);
+
+				// int yt = y + (actionID == 1 ? -1 : (actionID == 3 ? 1 : 0));
+				positions[1] = new Point(0.5, 0, 1);
+				positions[3] = new Point(0.5, 1, 1);
+			}
+		} else {
+			if (layer == 0) { // Input layer.
+				System.err.println(getInputSize());
+				positions = new Point[getInputSize()];
+				int posIndex = 0;
+				// Current state.
+				for (int i = 0; i < stateCountMax; i++) {
+					// Horizontal along bottom.
+					positions[posIndex++] = new Point((double) i / (stateCountMax - 1), 0, 0);
+				}
+				if (includePrevAction || includePrevState) {
+					double horizFactor = includePrevAction && includePrevState ? 1.0 / 3 : 0.5;
+					int horizPos = 1;
+					if (includePrevState) {
+						previousStateIndex = posIndex;
+						for (int i = 0; i < stateCountMax; i++) {
+							positions[posIndex++] = new Point((double) i / (stateCountMax - 1), horizPos * horizFactor, 0);
+						}
+						horizPos++;
+					}
+					if (includePrevAction) {
+						previousActionIndex = posIndex;
+						for (int i = 0; i < actionCountMax; i++) {
+							positions[posIndex++] = new Point((double) i / (actionCountMax - 1), horizPos * horizFactor, 0);
+						}
+					}
+				}
+
+				if (includeExpl) {
+					explIndex = posIndex;
+					// Exploration/Exploitation signal, at top-left.
+					positions[posIndex++] = new Point(0, 1, 0);
+				}
+
+				rewardIndex = posIndex;
+				// Reinforcement signal, at top-right.
+				positions[posIndex++] = new Point(1, 1, 0);
+			} else if (layer == totalLayerCount - 1) { // Output layer.
+				positions = new Point[actionCountMax];
+				// Action to perform next.
+				for (int i = 0; i < actionCountMax; i++) {
+					// Horizontal along middle.
+					positions[i] = new Point((double) i / (actionCountMax - 1), 0.5, 1);
+				}
+			}
+		}
+		return positions;
+	}
+
+	/**
+	 * Behaviour for novelty search for MDP environment. The sequence of states visited is recorded and the difference
+	 * (novelty) between two agents is calculated as a factor of the number of the same states visited from the
+	 * beginning of a trial before the two agents diverge. TODO If the environment is non-deterministic then this
+	 * approach doesn't make sense, it would make more sense to compare what action(s) an agent performs in a given
+	 * state.
+	 */
+	class MDPBehaviour extends Behaviour {
+		public int[][][] p;
+		double maxDist;
+
+		public MDPBehaviour(int[][][] p) {
+			this.p = p;
+			maxDist = p.length;
+		}
+
+		@Override
+		public double distanceFrom(Behaviour b) {
+			int[][][] bp = ((MDPBehaviour) b).p;
+			assert p.length == bp.length && p[0].length == bp[0].length && p[0][0].length == bp[0][0].length;
+			double diff = 0;
+			for (int env = 0; env < nsEnvironments.length; env++) {
+				for (int trial = 0; trial < trialCount; trial++) {
+					int step = 0;
+					for (step = 0; step < nsEnvironments[env].getStepsPerTrial(); step++) {
+						if (p[env][trial][step] != bp[env][trial][step])
+							break;
+					}
+					diff += (double) (nsEnvironments[env].getStepsPerTrial() - step) / nsEnvironments[env].getStepsPerTrial();
+				}
+			}
+			diff /= nsEnvironments.length * trialCount;
+			
+			return diff;
+		}
+
+		@Override
+		public String toString() {
+			return Arrays.deepToString(p);
+		}
+
+		@Override
+		public double defaultThreshold() {
+			return 1.0 / p.length * p[0].length * p[0][0].length;
+		}
+
+		@Override
+		public void renderArchive(List<Behaviour> archive, String fileName) {
+			if (archive.isEmpty())
+				return;
+			
+			int height = nsEnvironments.length * trialCount * nsEnvironments[0].getStepsPerTrial() + nsEnvironments.length * trialCount;
+			int imageScale = 1;
+			int size = archive.size();
+			BufferedImage image = new BufferedImage(size * imageScale, (height + (nsEnvironments.length-1) + (trialCount - 1)) * imageScale, BufferedImage.TYPE_3BYTE_BGR);
+			Graphics2D g = image.createGraphics();
+
+			for (int i = 0; i < size; i++) {
+				MDPBehaviour brv = (MDPBehaviour) archive.get(i);
+				int y = 0;
+				for (int env = 0; env < nsEnvironments.length; env++) {
+					for (int trial = 0; trial < trialCount; trial++) {
+						for (int step = 0; step < nsEnvironments[env].getStepsPerTrial(); step++) {
+							float c = (float) brv.p[env][trial][step] / stateCountMax;
+							//g.setColor(Color.getHSBColor(c, 1f, c * 0.7f + 0.3f));
+							g.setColor(Color.getHSBColor(c, 1f, 1f));
+							g.fillRect(i * imageScale, y * imageScale, imageScale, imageScale);
+							y++;
+						}
+						y++;
+					}
+					y++;
+				}
+			}
+			File outputfile = new File(fileName);
+			try {
+				ImageIO.write(image, "png", outputfile);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+}

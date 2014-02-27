@@ -128,5 +128,8 @@ public class SimpleSelector extends NaturalSelector {
 	protected void emptyImpl() {
 		chromosomes.clear();
 	}
-
+	
+	public boolean changesOverallFitness() {
+		return false;
+	}
 }

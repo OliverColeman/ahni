@@ -150,7 +150,7 @@ public abstract class HyperNEATTranscriberBainBase extends HyperNEATTranscriber<
 		if (synapseParamsEnabled || synapseTypesEnabled) {			
 			if (synapseModelParamClassCount > 0) {
 				int classIndex = 0;
-				// If this synapse should be disabled and a specific parameter indicates this, and a 
+				// If this synapse should be disabled and a specific parameter indicates this.
 				if (disabled && synapseDisableParamClassIndex >= 0) {
 					// Use config that has synapseDisableParamName set to 0.
 					classIndex = synapseDisableParamClassIndex;

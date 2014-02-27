@@ -96,8 +96,8 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 		return newBainNN(genotype, substrate, options);
 	}
 	
-//	static ConcurrentHashMap<Long, String> debug = new ConcurrentHashMap<Long, String>();
-//	static ConcurrentHashMap<Long, String> debug2 = new ConcurrentHashMap<Long, String>();
+	static ConcurrentHashMap<Long, String> debug = new ConcurrentHashMap<Long, String>();
+	static ConcurrentHashMap<Long, String> debug2 = new ConcurrentHashMap<Long, String>();
 //	static ConcurrentHashMap<String, String> debugCPPNInput = new ConcurrentHashMap<String, String>();
 //	static ConcurrentHashMap<String, String> debugCPPNOutput = new ConcurrentHashMap<String, String>();
 //	static ConcurrentHashMap<String, String> debugWeights = new ConcurrentHashMap<String, String>();
@@ -399,7 +399,7 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 		synapses.setEfficaciesModified();
 		
 		// Remove unused synapses from simulation calculations.
-		//synapses.compress(); // Seems broken
+		synapses.compress();
 		
 		if (createNewPhenotype) {
 			int simRes = properties.getIntProperty(BainNN.SUBSTRATE_SIMULATION_RESOLUTION, 1000);

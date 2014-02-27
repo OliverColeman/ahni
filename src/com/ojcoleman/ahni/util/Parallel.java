@@ -2,6 +2,7 @@ package com.ojcoleman.ahni.util;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -14,28 +15,50 @@ import java.util.concurrent.Future;
  * interface. Code adapted from http://stackoverflow.com/questions/4010185/parallel-for-for-java#4010275
  */
 public class Parallel {
-	private static ExecutorService forPool = null;
-
+	private static HashMap<Integer, ExecutorService> forPoolMap = new HashMap<Integer, ExecutorService>();
+	private static int defaultThreads = Runtime.getRuntime().availableProcessors();
+	
 	/**
-	 * Perform the given {@link Parallel.Operation} on the given elements.
+	 * Sets the default number of threads that will be used. Calls to the forEach(...) methods made prior to calling this method will not be affected.
+	 * The default number of threads is initially set to Runtime.getRuntime().availableProcessors().
 	 */
-	public static <T> void foreach(final Collection<T> elements, final Operation<T> operation) {
-		submitAndWait(elements, operation, elements.size());
+	public static void setDefaultThreads(int mt) {
+		defaultThreads = mt;
 	}
-
+	
 	/**
-	 * Perform the given {@link Parallel.Operation} on the given elements.
+	 * Perform the given {@link Parallel.Operation} on the given elements. Returns when all elements have been processed.
+	 * @param elements The Collection of elements to apply the operation to.
+	 * @param threads The number of threads to use. If set to 0 then the default number will be used.
+	 * @param operation The operation to apply to each element.
 	 */
-	public static <T> void foreach(final Iterable<T> elements, final Operation<T> operation) {
-		submitAndWait(elements, operation, 8);
+	public static <T> void foreach(final Collection<T> elements, int threads, final Operation<T> operation) {
+		submitAndWait(elements, operation, threads, elements.size());
 	}
-
-	private static <T> void submitAndWait(final Iterable<T> elements, final Operation<T> operation, int size) {
-		if (forPool == null) {
-			forPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), new DaemonThreadFactory(Parallel.class.getName()));
-		}
-
+	
+	/**
+	 * Perform the given {@link Parallel.Operation} on the given elements. Returns when all elements have been processed.
+	 * @param elements An Iterator over elements to apply the operation to.
+	 * @param threads The number of threads to use. If set to 0 then the default number will be used.
+	 * @param operation The operation to apply to each element.
+	 */
+	public static <T> void foreach(final Iterable<T> elements, int threads, final Operation<T> operation) {
+		submitAndWait(elements, operation, threads, 8);
+	}
+	
+	private static <T> void submitAndWait(final Iterable<T> elements, final Operation<T> operation, int threads, int size) {
 		try {
+			ExecutorService forPool = null;
+			
+			if (threads == 0) threads = defaultThreads;
+			synchronized(forPoolMap) {
+				forPool = forPoolMap.get(threads);
+				if (forPool == null) {
+					forPool = Executors.newFixedThreadPool(threads, new DaemonThreadFactory(Parallel.class.getName()));
+					forPoolMap.put(threads, forPool);
+				}
+			}
+	
 			List<Future<Void>> futures = forPool.invokeAll(createCallables(elements, operation, size));
 			assert (futures.size() == size) : futures.size() + " != " + size;
 

@@ -203,7 +203,7 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 		
 		environmentOrder = ArrayUtil.newRandomIndexing(environmentCount, random);
 	}
-
+	
 	@Override
 	protected void evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, double[] fitnessValues, Behaviour[] behaviours) {
 		_evaluate(genotype, substrate, null, false, false, fitnessValues, behaviours);

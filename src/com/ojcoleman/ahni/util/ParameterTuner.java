@@ -213,17 +213,26 @@ public class ParameterTuner {
 			solvedPerformance = props.getDoubleProperty("parametertuner.solvedperformance", 1);
 			htCondorTpl = props.getProperty("parametertuner.htcondor", null);
 			if (htCondorTpl != null) {
-				// Clean up generated files from abortive runs.
+				// Clean up generated files from previous aborted runs.
 				Paths paths = new Paths("./", "pt-condor-*");
 				paths.delete();
+
+				// TODO Allow keeping file output (tricky/painful with Condor 7.0)
+				props.remove("output.dir");
 			}
 			
 			props.setProperty("num.runs", "1"); // We'll calculate our own average so we can report progress as we go.
 			props.setProperty("num.generations", "" + numGens);
-			props.setProperty("log4j.rootLogger", "OFF"); // Suppress logging.
-			Logger.getRootLogger().setLevel(Level.OFF);
+			
+			boolean suppressLog = props.getBooleanProperty("parametertuner.suppresslog", true); 
+			if (suppressLog) {
+				props.setProperty("log4j.rootLogger", "OFF"); // Suppress logging.
+				Logger.getRootLogger().setLevel(Level.OFF);
+				props.remove("output.dir");
+			}
+			
 			props.remove("random.seed"); // Make sure the runs are randomised.
-
+			
 			adjustIneffectiveCount = new int[propCount];
 			adjustCountDown = new int[propCount];
 			
@@ -236,24 +245,30 @@ public class ParameterTuner {
 
 			ExecutorService runExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory(ParameterTuner.class.getName()));
 			
-			System.out.println("Determining initial fitness with values:");
+			System.out.println("Initial values:");
 			for (int p = 0; p < propCount; p++) {
 				String propKey = propsToTune[p].name;
 				props.setProperty(propKey, currentBestValues[p].toString());
 				System.out.println("  " + propsToTune[p] + "=" + props.getProperty(propKey));
 			}
 			System.out.println("  num.generations=" + numGens);
-			bestResult = runExecutor.submit(new DoRuns(props, "initial", "0")).get();
-			System.out.println();
-			if (bestResult.solvedByGeneration() != -1) {
-				numGens = bestResult.solvedByGeneration();
-				totalEvaluations = numGens * popSize;
-				props.setProperty("num.generations", "" + numGens);
-				System.out.println("Set generations to " + numGens);
-			}
-			System.out.println("Initial performance: " + nf.format(bestResult.performance()));
 			
-			addResult(bestResult);
+			if (!props.getBooleanProperty("parametertuner.skipinitial", false)) {
+				System.out.println("Determining fitness for initial values:");
+				bestResult = runExecutor.submit(new DoRuns(props, "initial", "0")).get();
+				System.out.println();
+				if (bestResult.solvedByGeneration() != -1) {
+					numGens = bestResult.solvedByGeneration();
+					totalEvaluations = numGens * popSize;
+					props.setProperty("num.generations", "" + numGens);
+					System.out.println("Set generations to " + numGens);
+				}
+				System.out.println("Initial performance: " + nf.format(bestResult.performance()));
+				addResult(bestResult);
+			}
+			else {
+				System.out.println("Skipping determining performance for initial parameter values."); 
+			}
 			
 			int stagnantCount = 0;
 			
@@ -274,7 +289,8 @@ public class ParameterTuner {
 					if (adjustCountDown[property] == 0) {
 						System.out.println("\tTuning " + propKey + " (current value is " + currentBestValues[property] + "). ");
 						
-						Param.Value[] variations = currentBestValues[property].variations();
+						// If we didn't determine performance with the initial values, include it now.
+						Param.Value[] variations = currentBestValues[property].variations(bestResult == null);
 						int varCount = variations.length;
 						Future<Result>[] futures = (Future<Result>[]) Array.newInstance(Future.class, varCount);
 						
@@ -301,7 +317,7 @@ public class ParameterTuner {
 							for (int var = 0; var < varCount; var++) {
 								if (!done[var] && futures[var].isDone()) {
 									Result adjustResult = futures[var].get();
-									boolean better = adjustResult.betterThan(bestResult);
+									boolean better = bestResult == null || adjustResult.betterThan(bestResult);
 									System.out.println("\n\t\tValue " + variations[var] + (tuningPopSize ? " (" + adjustResult.maxGens() + " max gens)" : "") +  " gave " + adjustResult + "." + (better ? " BETTER THAN CURRENT BEST." : ""));
 									if (better) {
 										bestResult = adjustResult;
@@ -514,7 +530,7 @@ public class ParameterTuner {
 			condorSubmit.put("universe", "java");
 			condorSubmit.put("executable", mainJAR);
 			condorSubmit.put("jar_files", jarFiles);
-			condorSubmit.put("arguments", "com.ojcoleman.ahni.hyperneat.Run -ao -od ./ -f -ar result-$(Process) ./pt.properties");
+			condorSubmit.put("arguments", "com.ojcoleman.ahni.hyperneat.Run -od ./ -f -op cp$(Process)- -ar result ./pt.properties");
 			condorSubmit.put("universe", "java");
 			String tif = (condorSubmit.containsKey("transfer_input_files") ? condorSubmit.get("transfer_input_files") + ", " : "") + "pt.properties";
 			condorSubmit.put("transfer_input_files", tif);
@@ -523,6 +539,7 @@ public class ParameterTuner {
 			condorSubmit.put("log", "condorlog-$(Process).txt");
 			condorSubmit.put("when_to_transfer_output", "ON_EXIT_OR_EVICT");
 			condorSubmit.put("should_transfer_files", "YES");
+			condorSubmit.put("environment", "\"AHNI_RUN_ID=$(Process)\"");
 			condorSubmit.remove("queue");
 			BufferedWriter fileWriter = new BufferedWriter(new FileWriter(new File(condorOutDirSep + "submit.txt")));
 			for (Map.Entry<String, String> entry : condorSubmit.entrySet()) {
@@ -578,7 +595,7 @@ public class ParameterTuner {
 			int currentDoneCount = 0;
 			while (currentDoneCount != numRuns) {
 				Thread.sleep(1000); // Wait for 1 second.
-				Paths paths = new Paths(condorOutDir, "result-*-performance.csv");
+				Paths paths = new Paths(condorOutDir, "cp*-result-performance.csv");
 				if (currentDoneCount != paths.count()) {
 					for (; currentDoneCount < paths.count(); currentDoneCount++) {
 						System.out.print(label);
@@ -594,7 +611,7 @@ public class ParameterTuner {
 			}
 			
 			// Collate results.
-			Results results = PostProcess.combineResults(condorOutDirSep + "result-*-performance.csv", false);
+			Results results = PostProcess.combineResults(condorOutDirSep + "cp*-result-performance.csv", false);
 			
 			// Write them out to disk for later inspection if desired.
 			BufferedWriter resultsAllWriter = new BufferedWriter(new FileWriter(condorOutDirSep + "results-all-performance.csv"));
@@ -765,12 +782,12 @@ public class ParameterTuner {
 				return (v.value == value) ? null : v;
 			}
 			
-			public Value[] variations() {
+			public Value[] variations(boolean includeCurrentForDiscrete) {
 				if (type == Type.DISCRETE && adjustType == AdjustType.ALL) {
-					Value[] values = new Value[discreteVals.length-1];
+					Value[] values = new Value[discreteVals.length - (includeCurrentForDiscrete ? 0 : 1)];
 					for (int i = 0, j = 0; i < discreteVals.length; i++) {
 						// Skip current value.
-						if (i != value)
+						if (includeCurrentForDiscrete || i != value)
 							values[j++] = new Value(i);
 					}
 					return values;

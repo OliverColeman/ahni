@@ -5,6 +5,7 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -87,6 +88,13 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	 * fitness to something else based on the multiple objectives, in which case the weightings here will be ignored.
 	 */
 	public static final String MULTI_WEIGHTING_KEY = "fitness.function.multi.weighting";
+	
+	/**
+	 * Property key for specifying whether the performance for an individual should be forced to the overall
+	 * fitness. Default is false.
+	 */
+	public static final String FORCE_PERF_FITNESS = "fitness.function.performance.force.fitness";
+
 
 	protected Properties props;
 	protected Transcriber transcriber;
@@ -100,7 +108,9 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	protected boolean isRealMultiObjective;
 	protected int objectiveCount;
 	protected int noveltyObjectiveCount;
+	protected String[] objectiveLabels;
 	protected NoveltySearch[] noveltyArchives;
+	protected boolean forcePerfFitness;
 
 	/**
 	 * This RNG should be used by all sub-classes for all randomness.
@@ -180,32 +190,47 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 			evaluators[i].start();
 		}
 
+		int fitnessObjectiveCount = fitnessObjectivesCount();
 		noveltyObjectiveCount = noveltyObjectiveCount();
-		objectiveCount = fitnessObjectivesCount();
-
+		
+		ArrayList<String> fitnessLabels = new ArrayList<String>();
+		ArrayList<String> noveltyLabels = new ArrayList<String>();
+		String[] labels = objectiveLabels();
+		for (int i = 0; i < fitnessObjectiveCount; i++) fitnessLabels.add(labels[i]);
+		for (int i = 0; i < noveltyObjectiveCount; i++) fitnessLabels.add(labels[fitnessObjectiveCount + i]);
+		
 		multiFitnessFunctions = new BulkFitnessFunctionMT[0];
 		if (props.containsKey(MULTI_KEY)) {
-			if (props.containsKey(MULTI_KEY)) {
-				String[] mffs = props.getProperty(MULTI_KEY).split(",");
-				multiFitnessFunctions = new BulkFitnessFunctionMT[mffs.length];
-				// Prevent recursively loading multi fitness functions that extend this class.
-				String multiKeyValue = (String) props.remove(MULTI_KEY);
-				props.put("fitness.function.multi.addingsub", "true");
-				for (int i = 0; i < mffs.length; i++) {
-					String tempKey = MULTI_KEY + "." + i;
-					props.put(tempKey + ".class", mffs[i].trim());
-					multiFitnessFunctions[i] = (BulkFitnessFunctionMT) props.newObjectProperty(tempKey);
-					props.remove(tempKey + ".class");
+			String[] mffs = props.getProperty(MULTI_KEY).split(",");
+			multiFitnessFunctions = new BulkFitnessFunctionMT[mffs.length];
+			// Prevent recursively loading multi fitness functions that extend this class.
+			String multiKeyValue = (String) props.remove(MULTI_KEY);
+			props.put("fitness.function.multi.addingsub", "true");
+			for (int i = 0; i < mffs.length; i++) {
+				String tempKey = MULTI_KEY + "." + i;
+				props.put(tempKey + ".class", mffs[i].trim());
+				multiFitnessFunctions[i] = (BulkFitnessFunctionMT) props.newObjectProperty(tempKey);
+				props.remove(tempKey + ".class");
 
-					noveltyObjectiveCount += multiFitnessFunctions[i].noveltyObjectiveCount();
-					objectiveCount += multiFitnessFunctions[i].fitnessObjectivesCount();
-				}
-				props.remove("fitness.function.multi.addingsub");
-				props.put(MULTI_KEY, multiKeyValue);
+				int mffObjCount = multiFitnessFunctions[i].fitnessObjectivesCount();
+				int mffNovCount = multiFitnessFunctions[i].noveltyObjectiveCount();
+				fitnessObjectiveCount += mffObjCount;
+				noveltyObjectiveCount += mffNovCount;
+				
+				labels = multiFitnessFunctions[i].objectiveLabels();
+				for (int j = 0; j < mffObjCount; j++) fitnessLabels.add(labels[j]);
+				for (int j = 0; j < mffNovCount; j++) fitnessLabels.add(labels[mffObjCount + j]);
+
 			}
+			props.remove("fitness.function.multi.addingsub");
+			props.put(MULTI_KEY, multiKeyValue);
 		}
 
-		objectiveCount += noveltyObjectiveCount;
+		objectiveCount = fitnessObjectiveCount + noveltyObjectiveCount;
+		
+		fitnessLabels.addAll(noveltyLabels);
+		objectiveLabels = new String[fitnessLabels.size()];
+		fitnessLabels.toArray(objectiveLabels);
 
 		multiFitnessFunctionWeights = props.getDoubleArrayProperty(MULTI_WEIGHTING_KEY, ArrayUtil.newArray(objectiveCount, 1.0));
 		ArrayUtil.normaliseSum(multiFitnessFunctionWeights);
@@ -214,7 +239,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		}
 		logger.info("Number of objectives is " + objectiveCount + ".");
 		logger.info("Normalised fitness function weightings: " + Arrays.toString(multiFitnessFunctionWeights));
-
+		
 		if (noveltyObjectiveCount > 0) {
 			logger.info("Enabling novelty search with " + noveltyObjectiveCount + " archive(s).");
 			noveltyArchives = new NoveltySearch[noveltyObjectiveCount];
@@ -222,6 +247,8 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 				noveltyArchives[n] = props.newObjectProperty(NoveltySearch.class);
 			}
 		}
+		
+		forcePerfFitness = props.getBooleanProperty(FORCE_PERF_FITNESS, false);
 	}
 
 	/**
@@ -263,6 +290,22 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	public int fitnessObjectivesCount() {
 		return 1;
 	}
+	
+	/**
+	 * This is akin to {@link #getObjectiveLabels()} but allows for handling multiple fitness functions, some of which
+	 * may define multiple fitness or novelty objectives. This default implementation returns an array containing {@link #fitnessObjectivesCount()} + {@link #noveltyObjectiveCount()} strings 
+	 * constructed of the class name of the sub-class prefixed with either F# or N# where F denotes a regular fitness objective, N denotes a novelty objective and
+	 * # is the index of the objective.
+	 */
+	public String[] objectiveLabels() {
+		String[] labels = new String[fitnessObjectivesCount() + noveltyObjectiveCount()];
+		int index = 0;
+		for (int f = 0; f < fitnessObjectivesCount(); f++)
+			labels[index++] = "F" + f + this.getClass().getSimpleName();
+		for (int f = 0; f < getNoveltyObjectiveCount(); f++)
+			labels[index++] = "N" + f + this.getClass().getSimpleName();
+		return labels;
+	}
 
 	/**
 	 * {@inheritDoc}
@@ -293,7 +336,22 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	public final int getNoveltyObjectiveCount() {
 		return noveltyObjectiveCount;
 	}
-
+	
+	/**
+	 * {@inheritDoc}
+	 * <p>
+	 * This implementation is set as final to allow this class to make use of multiple separate fitness functions for a
+	 * multi-objective setup.
+	 * </p>
+	 * 
+	 * @see #fitnessObjectivesCount()
+	 * @see #noveltyObjectiveCount()
+	 */
+	@Override
+	public final String[] getObjectiveLabels() {
+		return objectiveLabels;
+	}
+	
 	/**
 	 * If the fitness value(s) and behaviour(s) for novelty search (if used) for this fitness function do not change
 	 * between generations then subclasses should override this method to return true in order to avoid unnecessarily
@@ -570,16 +628,10 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 									// based on the multiple objectives.
 									// If novelty is to be assessed wait until this is done for all chromosomes before
 									// calculating overall fitness.
-									if (noveltyArchives == null)
-										calculateOverallFitness(chrom);
-
-									synchronized (this) {
-										if ((targetPerformanceType == 1 && chrom.getPerformanceValue() > bestPerformance) || (targetPerformanceType == 0 && chrom.getPerformanceValue() < bestPerformance)) {
-											bestPerformance = chrom.getPerformanceValue();
-											newBestChrom = chrom;
-										}
+									if (noveltyArchives == null) {
+										finaliseEvaluation(chrom);
 									}
-									if (noveltyArchives != null) {
+									else {
 										for (int n = 0; n < noveltyObjectiveCount; n++) {
 											noveltyArchives[n].addToCurrentPopulation(chrom.behaviours[n]);
 										}
@@ -601,7 +653,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 								for (int n = 0; n < noveltyArchives.length; n++) {
 									chrom.setFitnessValue(noveltyArchives[n].testNovelty(chrom.behaviours[n]), fitnessSlot++);
 								}
-								calculateOverallFitness(chrom);
+								finaliseEvaluation(chrom);
 							}
 						}
 					}
@@ -619,18 +671,29 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 				}
 			}
 		}
-
-		private void calculateOverallFitness(Chromosome c) {
+		
+		private void finaliseEvaluation(Chromosome chrom) {
 			double overallFitness = 0;
 			for (int i = 0; i < objectiveCount; i++) {
-				overallFitness += c.getFitnessValue(i) * multiFitnessFunctionWeights[i];
+				overallFitness += chrom.getFitnessValue(i) * multiFitnessFunctionWeights[i];
 			}
-			c.setFitnessValue(overallFitness);
+			chrom.setFitnessValue(overallFitness);
 
-			// If the fitness function hasn't explicitly set a performance value, just set it to
+			// If the fitness function hasn't explicitly set any performance values, just set it to
 			// overall fitness value.
-			if (Double.isNaN(c.getPerformanceValue()) && !Double.isNaN(c.getFitnessValue())) {
-				c.setPerformanceValue(c.getFitnessValue());
+			//if (chrom.getAllPerformanceValues().isEmpty() && !Double.isNaN(chrom.getFitnessValue())) {
+			//	chrom.setPerformanceValue(chrom.getFitnessValue());
+			//}
+			
+			if (forcePerfFitness) {
+				chrom.setPerformanceValue(chrom.getFitnessValue());
+			}
+
+			synchronized (this) {
+				if ((targetPerformanceType == 1 && chrom.getPerformanceValue() > bestPerformance) || (targetPerformanceType == 0 && chrom.getPerformanceValue() < bestPerformance)) {
+					bestPerformance = chrom.getPerformanceValue();
+					newBestChrom = chrom;
+				}
 			}
 		}
 
@@ -709,53 +772,9 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		for (int n = 0; n < noveltyArchives.length; n++) {
 			if (noveltyArchives[n].archive.isEmpty())
 				continue;
-
-			Behaviour tmp = noveltyArchives[n].archive.get(0);
-			if (tmp instanceof RealVectorBehaviour) {
-				int dims = ((RealVectorBehaviour) tmp).p.getDimension();
-				// If only 2 dimensions render as scatter plot.
-				if (dims == 2) {
-					int imageSize = 254;
-					BufferedImage image = new BufferedImage(imageSize + 2, imageSize + 2, BufferedImage.TYPE_BYTE_GRAY);
-					Graphics2D g = image.createGraphics();
-
-					g.setColor(Color.WHITE);
-					for (Behaviour b : noveltyArchives[n].archive) {
-						RealVectorBehaviour brv = (RealVectorBehaviour) b;
-						g.fillRect((int) Math.round(brv.p.getEntry(0) * imageSize), (int) Math.round(brv.p.getEntry(1) * imageSize), 1, 1);
-					}
-					String fileName = props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "novelty_archive-" + props.getEvolver().getGeneration() + "-" + n + ".png";
-					File outputfile = new File(fileName);
-					try {
-						ImageIO.write(image, "png", outputfile);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				} else { // Render as intensity plot.
-					int imageScale = 1;
-					int size = noveltyArchives[n].archive.size();
-					BufferedImage image = new BufferedImage(size * imageScale, dims * imageScale, BufferedImage.TYPE_BYTE_GRAY);
-					Graphics2D g = image.createGraphics();
-
-					for (int i = 0; i < size; i++) {
-						RealVectorBehaviour brv = (RealVectorBehaviour) noveltyArchives[n].archive.get(i);
-						for (int j = 0; j < dims; j++) {
-							float c = (float) brv.p.getEntry(j);
-							g.setColor(new Color(c, c, c));
-							g.fillRect(i * imageScale, j * imageScale, imageScale, imageScale);
-						}
-					}
-					String fileName = props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "novelty_archive-" + n + ".png";
-					File outputfile = new File(fileName);
-					try {
-						ImageIO.write(image, "png", outputfile);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-
-				}
-			}
-
+			
+			String fileName = props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + props.getProperty(HyperNEATConfiguration.OUTPUT_PREFIX_KEY, "") + "novelty_archive-" + n + ".png";
+			noveltyArchives[n].archive.get(0).renderArchive(noveltyArchives[n].archive, fileName);
 		}
 	}
 	

@@ -134,10 +134,10 @@ public class AddNeuronMutationOperator extends MutationOperatorMultiple implemen
 			// and add 2 new connections ...
 			ConnectionAllele newConnectAllele1 = config.newConnectionAllele(oldConnectAllele.getSrcNeuronId(), newNeuronAllele.getInnovationId());
 			newConnectAllele1.setWeight(1);
-
+			
 			ConnectionAllele newConnectAllele2 = config.newConnectionAllele(newNeuronAllele.getInnovationId(), oldConnectAllele.getDestNeuronId());
 			newConnectAllele2.setWeight(oldConnectAllele.getWeight());
-
+			
 			allelesToRemove.add(oldConnectAllele);
 			allelesToAdd.add(newNeuronAllele);
 			allelesToAdd.add(newConnectAllele1);

@@ -73,11 +73,9 @@ public abstract class ReproductionOperator {
 				totalSpeciesFitnessTemp += species.getAverageFitnessValue();
 			}
 			final double totalSpeciesFitness = totalSpeciesFitnessTemp;
-			
-			final Thread currentThread = Thread.currentThread();
 
 			// reproduce from each specie relative to its percentage of total fitness
-			Parallel.foreach(parentSpecies, new Parallel.Operation<Species>() {
+			Parallel.foreach(parentSpecies, 0, new Parallel.Operation<Species>() {
 				public void perform(Species species) {
 					if (!species.isEmpty()) {
 						double percentFitness = species.getAverageFitnessValue() / totalSpeciesFitness;

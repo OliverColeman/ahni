@@ -27,6 +27,7 @@ import org.apache.log4j.Logger;
 import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.Chromosome;
 import org.jgapcustomised.Genotype;
+import org.jgapcustomised.NaturalSelector;
 import org.jgapcustomised.Species;
 import org.jgapcustomised.event.GeneticEvent;
 import org.jgapcustomised.event.GeneticEventListener;
@@ -291,6 +292,8 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 				logger.debug(substrate.toXml());
 			}
 		}
+		
+		NaturalSelector selector = config.getNaturalSelector();
 
 		// Initialise result data.
 		int generationOfFirstSolution = -1;
@@ -301,7 +304,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 			File dirFile = new File(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY));
 			if (!dirFile.exists())
 				dirFile.mkdirs();
-			speciesInfoWriter = new BufferedWriter(new FileWriter(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "species-history-size.txt"));
+			speciesInfoWriter = new BufferedWriter(new FileWriter(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + properties.getProperty(HyperNEATConfiguration.OUTPUT_PREFIX_KEY, "") + "species-history-size.txt"));
 			StringBuffer output = new StringBuffer();
 			output.append("Gen,\tTSE,\tTS,\tNew,\tExt");
 			for (int i = 0; i < 100; i++)
@@ -345,7 +348,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 			int numNewSpecies = 0;
 			int maxSpeciesAge = 0;
 			int minSpeciesAge = Integer.MAX_VALUE;
-			double avgBestSpeciesPerformance = 0;
+			//double avgBestSpeciesPerformance = 0;
 			for (Species species : genotype.getSpecies()) {
 				if (species.previousOriginalSize > maxSpeciesSize)
 					maxSpeciesSize = species.previousOriginalSize;
@@ -357,8 +360,8 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 				if (species.getAge() < minSpeciesAge)
 					minSpeciesAge = species.getAge();
 
-				if (species.getBestPerforming() != null)
-					avgBestSpeciesPerformance += species.getBestPerforming().getPerformanceValue();
+				//if (species.getBestPerforming() != null)
+				//	avgBestSpeciesPerformance += species.getBestPerforming().getPerformanceValue();
 
 				Long speciesKey = new Long(species.getID());
 				if (allSpeciesEver.containsKey(speciesKey)) { // if existing species
@@ -369,7 +372,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 					allSpeciesEver.put(speciesKey, species);
 				}
 			}
-			avgBestSpeciesPerformance /= numSpecies;
+			//avgBestSpeciesPerformance /= numSpecies;
 			int numExtinctSpecies = previousSpeciesCount - numSpecies + numNewSpecies;
 
 			if (properties.logFilesEnabled() && properties.getBooleanProperty(LOG_SPECIES_HISTORY_KEY, false)) {
@@ -400,6 +403,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 			cumulativeDurationBetweenLogging += duration;
 			
 			if (generation % logPerGenerations == 0) {
+				int objectiveCount = fittest.getFitnessValues().length;
 				int avgSize = 0;
 				int maxSize = 0;
 				int minSize = Integer.MAX_VALUE;
@@ -419,21 +423,72 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 				int eta = (int) Math.round(avgGenTime * (numEvolutions - generation));
 
 				StringBuilder m = new StringBuilder();
+				if (generation % (logPerGenerations * 20) == 0) {
+					String fitLabels = "";
+					for (String label : bulkFitnessFunc.getObjectiveLabels()) {
+						fitLabels += label.substring(0, Math.min(label.length(), 6)) + "\t";
+					}
+					
+					String perfLabels = "";
+					for (Map.Entry<String, Double> pv : fittest.getAllPerformanceValues().entrySet()) {
+						String key = pv.getKey().replaceFirst("^\\d*", "");
+						perfLabels += key.substring(0, Math.min(key.length(), 6)) + "\t";
+					}
+					
+					m.append("Gen\tFittest\tOvFtns\t");
+					if ((selector.changesOverallFitness() || objectiveCount > 1))
+						m.append(fitLabels);
+					m.append(perfLabels);
+					
+					m.append("BestPrf\tOvFtns\t");
+					if ((selector.changesOverallFitness() || objectiveCount > 1))
+						m.append(fitLabels);
+					m.append(perfLabels);
+					
+					m.append("ZPC\tZFC\tSC\tNS\tES\tSCT\tSS\tSA    \tSNB\tGS      \tTime\tETA      \tMem");
+					
+					logger.info(m);
+					m = new StringBuilder();
+				}
+				
+				m.append(generation + " \t");
+				
+				m.append(fittest.getId() + "\t");
+				m.append(nf4.format(fittest.getFitnessValue()) + "\t");
+				if (selector.changesOverallFitness() || objectiveCount > 1)
+					m.append(ArrayUtil.toString(fittest.getFitnessValues(), "\t", nf4) + "\t");
+				for (Map.Entry<String, Double> pv : fittest.getAllPerformanceValues().entrySet())
+					m.append(nf4.format(pv.getValue()) + "\t");
+				
+				m.append(bestPerforming.getId() + "\t");
+				m.append(nf4.format(bestPerforming.getFitnessValue()) + "\t");
+				if (selector.changesOverallFitness() || objectiveCount > 1)
+					m.append(ArrayUtil.toString(bestPerforming.getFitnessValues(), "\t", nf4) + "\t");
+				for (Map.Entry<String, Double> pv : bestPerforming.getAllPerformanceValues().entrySet())
+					m.append(nf4.format(pv.getValue()) + "\t");
+				
+				m.append(genotype.getNumberOfChromosomesWithZeroPerformanceFromLastGen() + "\t" + genotype.getNumberOfChromosomesWithZeroFitnessFromLastGen() + "\t");
+				//m.append(nf4.format(avgBestSpeciesPerformance) + "\t");
+				m.append(numSpecies + "\t" + numNewSpecies + "\t" + numExtinctSpecies + "\t" + nf1.format(speciationCompatThreshold) + "\t" + minSpeciesSize + "/" + maxSpeciesSize + "\t" + minSpeciesAge + "/" + maxSpeciesAge + "\t" + numSpeciesWithNewPerformance + "\t");
+				m.append(minSize + "/" + avgSize + "/" + maxSize + "\t");
+				m.append(nf3.format(cumulativeDurationBetweenLogging / logPerGenerations) + "\t" + Misc.formatTimeInterval(eta) + "\t" + memUsed + "MB");
+				
+				/*
 				m.append("Gen: " + generation);
 
 				m.append("  Fittest: " + fittest.getId());
-				m.append(" (F: " + nf4.format(fittest.getFitnessValue()) + (bulkFitnessFunc.getObjectiveCount() > 1 ? " [" + ArrayUtil.toString(fittest.getFitnessValues(), ", ", nf4) + "]" : ""));
+				m.append(" (F: " + nf4.format(fittest.getFitnessValue()) + (selector.changesOverallFitness() ? " [" + ArrayUtil.toString(fittest.getFitnessValues(), ", ", nf4) + "]" : ""));
 				m.append(" P: " + nf4.format(fittest.getPerformanceValue()) + ")");
 				
 				m.append("  Best perf: " + bestPerforming.getId());
-				m.append(" (F: " + nf4.format(bestPerforming.getFitnessValue()) + (bulkFitnessFunc.getObjectiveCount() > 1 ? " [" + ArrayUtil.toString(bestPerforming.getFitnessValues(), ", ", nf4) + "]" : ""));
+				m.append(" (F: " + nf4.format(bestPerforming.getFitnessValue()) + (selector.changesOverallFitness() ? " [" + ArrayUtil.toString(bestPerforming.getFitnessValues(), ", ", nf4) + "]" : ""));
 				m.append(" P: " + nf4.format(bestPerforming.getPerformanceValue()) + ")");
 
 				m.append("  ZPC: " + genotype.getNumberOfChromosomesWithZeroPerformanceFromLastGen() + "  ZFC: " + genotype.getNumberOfChromosomesWithZeroFitnessFromLastGen() + "  ABSP: " + nf4.format(avgBestSpeciesPerformance));
 				m.append("  S: " + numSpecies + "  NS/ES: " + numNewSpecies + "/" + numExtinctSpecies + "  SCT: " + nf1.format(speciationCompatThreshold) + "  Min/Max SS: " + minSpeciesSize + "/" + maxSpeciesSize + "  Min/Max SA: " + minSpeciesAge + "/" + maxSpeciesAge + "  SNB: " + numSpeciesWithNewPerformance);
 				m.append("  Min/Avg/Max GS: " + minSize + "/" + avgSize + "/" + maxSize);
 				m.append("  Time: " + nf3.format(cumulativeDurationBetweenLogging / logPerGenerations) + "s  ETA: " + Misc.formatTimeInterval(eta) + "  Mem: " + memUsed + "MB");
-				
+				*/
 				logger.info(m);
 				cumulativeDurationBetweenLogging = 0;
 			}
@@ -459,12 +514,10 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 
 		// run finish
 		config.getEventManager().fireGeneticEvent(new GeneticEvent(GeneticEvent.RUN_COMPLETED_EVENT, genotype));
-		if (properties.logFilesEnabled()) {
-			logConclusion(generationOfFirstSolution, bestPerforming);
-		}
-
-		bulkFitnessFunc.evolutionFinished(this);
 		
+		logConclusion(generationOfFirstSolution, bestPerforming);
+		
+		bulkFitnessFunc.evolutionFinished(this);
 		bulkFitnessFunc.dispose();
 
 		return bestPerformances;
@@ -509,10 +562,52 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 	 * @param generationOfFirstSolution
 	 * @param champ
 	 */
-	private void logConclusion(int generationOfFirstSolution, Chromosome champ) {
+	private void logConclusion(int generationOfFirstSolution, Chromosome champ) {		
+		if (!properties.containsKey(HyperNEATConfiguration.OUTPUT_DIR_KEY)) {
+			// If we're not logging to separate files, output the final champ to the console.
+			Map<String, Object> transcribeOptions = new HashMap<String, Object>();
+			transcribeOptions.put("recordCoordinates", Boolean.TRUE);
+			Transcriber<? extends Activator> transcriber = (Transcriber<? extends Activator>) properties.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
+			try {
+				Activator substrate = (transcriber instanceof TranscriberAdaptor) ? ((TranscriberAdaptor) transcriber).transcribe(champ, null, transcribeOptions) : transcriber.transcribe(champ, null);
+				HyperNEATTranscriber.CPPN cppn = (transcriber instanceof HyperNEATTranscriber) ? ((HyperNEATTranscriber) transcriber).getCPPN(champ) : null;
+				if (substrate == null) {
+					logger.warn("Champ substrate is null, which probably means it's been classified as a dud by the transcriber (e.g. perhaps because there are no connections from input to output.");
+				} else {
+					logger.info("\nString representation of substrate:\n" + substrate + "\nEnd string representation of substrate.");
+					if (cppn != null) {
+						logger.info("\nString representation of CPPN:\n" + cppn + "\nEnd string representation of CPPN.");
+					}
+					logger.info("\nString representation of chromosome:\n" + champ.getMaterial() + "\nEnd string representation of chromosome.");
+				}
+			} catch (TranscriberException e) {
+				System.err.println("Error transcribing best performing individual.");
+				e.printStackTrace();
+			}
+		}
+		else {
+			try {
+				// Write out all the properties to a file to make sure we can refer back to them later or re-run the 
+				// experiment exactly (including random seed).
+				BufferedWriter propsWriter = new BufferedWriter(new FileWriter(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + properties.getProperty(HyperNEATConfiguration.OUTPUT_PREFIX_KEY, "") + "run.properties"));
+				propsWriter.write("# " + (new Date()).toString() + "\n");
+				SortedSet<String> propNames = new TreeSet<String>(properties.stringPropertyNames());
+				for (String key : propNames) {
+					propsWriter.write(key + "=" + properties.getProperty(key) + "\n");
+				}
+				if (!properties.containsKey("random.seed")) {
+					propsWriter.write("random.seed=" + ((Randomizer) properties.singletonObjectProperty(Randomizer.class)).getSeed() + "\n");
+				}
+				propsWriter.close();
+			} catch (IOException e) {
+				System.err.println("Error saving run properties to file.");
+				e.printStackTrace();
+			}
+		}
+		
 		logger.info("    Generation of first solution: " + generationOfFirstSolution);
 		logger.info("    Final species compatability threshold: " + config.getSpeciationParms().getSpeciationThreshold());
-
+		
 		DecimalFormat nf3 = new DecimalFormat("0.000");
 		logger.info("Best performance for this run (average per 10 gens): ");
 		int i;
@@ -535,24 +630,6 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 			bfAvg += nf3.format(v) + ", ";
 		}
 		logger.info(bfAvg);
-
-		try {
-			// Write out all the properties to make sure we can refer back to them later or re-run the experiment
-			// exactly (including random seed).
-			BufferedWriter propsWriter = new BufferedWriter(new FileWriter(properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "run.properties"));
-			propsWriter.write("# " + (new Date()).toString() + "\n");
-			SortedSet<String> propNames = new TreeSet<String>(properties.stringPropertyNames());
-			for (String key : propNames) {
-				propsWriter.write(key + "=" + properties.getProperty(key) + "\n");
-			}
-			if (!properties.containsKey("random.seed")) {
-				propsWriter.write("random.seed=" + ((Randomizer) properties.singletonObjectProperty(Randomizer.class)).getSeed() + "\n");
-			}
-			propsWriter.close();
-		} catch (IOException e) {
-			System.err.println("Error saving run properties to file.");
-			e.printStackTrace();
-		}
 	}
 
 	public void logChamp(Chromosome champ, boolean force, String label) {
@@ -574,7 +651,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 				if (substrate == null) {
 					logger.warn("Champ substrate is null, which probably means it's been classified as a dud by the transcriber (e.g. perhaps because there are no connections from input to output.");
 				} else {
-					String baseFileName = properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + label + "best_performing-" + (finished ? "final" : generation) + "-" + champ.getId();
+					String baseFileName = properties.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + properties.getProperty(HyperNEATConfiguration.OUTPUT_PREFIX_KEY, "") + label + "best_performing-" + (finished ? "final" : generation) + "-" + champ.getId();
 					if (logString) {
 						BufferedWriter outputfile = new BufferedWriter(new FileWriter(baseFileName + ".txt"));
 						outputfile.write("String representation of " + msg + ":\n" + substrate);
@@ -597,14 +674,17 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 					
 					if (bulkFitnessFunc instanceof AHNIFitnessFunction) {
 						// Record original performance and fitness values
-						double origPerformance = bestPerforming.getPerformanceValue();
+						Map<String, Double> origPerformanceValues = new HashMap<String, Double>(bestPerforming.getAllPerformanceValues());
 						double origFitness = bestPerforming.getFitnessValue();
 						double[] origFitnesses = new double[bestPerforming.getFitnessValues().length];
 						System.arraycopy(bestPerforming.getFitnessValues(), 0, origFitnesses, 0, origFitnesses.length);
 						
 						((AHNIFitnessFunction) bulkFitnessFunc).evaluate(bestPerforming, substrate, baseFileName + "-evaluation", logString, logImage);
 						
-						if (!Double.isNaN(origPerformance)) bestPerforming.setPerformanceValue(origPerformance);
+						bestPerforming.resetPerformanceValues();
+						for (Map.Entry<String, Double> e : origPerformanceValues.entrySet()) {
+							bestPerforming.setPerformanceValue(e.getKey(), e.getValue());
+						}
 						if (!Double.isNaN(origFitness)) bestPerforming.setFitnessValue(origFitness);
 						System.arraycopy(origFitnesses, 0, bestPerforming.getFitnessValues(), 0, origFitnesses.length);
 					}
@@ -618,6 +698,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 			}
 		}
 	}
+	
 
 	/**
 	 * @return The fittest Chromosome from the last generation.

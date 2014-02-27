@@ -62,6 +62,22 @@ public abstract class BulkFitnessFunction implements Serializable {
 	public int getNoveltyObjectiveCount() {
 		return 0;
 	}
+
+	/**
+	 * @return Labels for each objective defined by this fitness function, with regular fitness objectives followed by novelty objectives. 
+	 * This default implementation returns an array containing {@link #getObjectiveCount()} strings 
+	 * constructed of the class name of the sub-class prefixed with either F# or N# where F denotes a regular fitness objective, N denotes a novelty objective and
+	 * # is the index of the objective.
+	 */
+	public String[] getObjectiveLabels() {
+		String[] labels = new String[getObjectiveCount() + getNoveltyObjectiveCount()];
+		int index = 0;
+		for (int f = 0; f < getObjectiveCount() - getNoveltyObjectiveCount(); f++)
+			labels[index++] = "F" + f + this.getClass().getSimpleName();
+		for (int f = 0; f < getNoveltyObjectiveCount(); f++)
+			labels[index++] = "N" + f + this.getClass().getSimpleName();
+		return labels;
+	}
 	
 	public abstract void dispose();
 

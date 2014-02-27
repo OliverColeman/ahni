@@ -74,6 +74,7 @@ public class WeightMutationOperator extends MutationOperator implements Configur
 		stdDev = props.getDoubleProperty(WEIGHT_MUTATE_STD_DEV_KEY, DEFAULT_STD_DEV);
 		
 		ConnectionAllele.RANDOM_STD_DEV = props.getDoubleProperty(WEIGHT_MUTATE_STD_DEV_INITIAL_KEY, stdDev);
+		ConnectionAllele.RANDOM_STD_DEV_INITIAL = props.getDoubleProperty(WEIGHT_MUTATE_STD_DEV_INITIAL_KEY, stdDev * 0.1);
 	}
 
 	/**

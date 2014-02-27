@@ -289,7 +289,7 @@ public class Properties extends java.util.Properties {
 						throw new IllegalArgumentException("Bad substitution in property " + key + ": could not find referenced property " + subKey + "."); 
 					}
 				}
-				setProperty(key, value);
+				//setProperty(key, value);  // Don't cache, sometimes we want to change referenced properties, worth the negligible performance hit.
 			}
 		}
 		log(key, value, defaultVal);

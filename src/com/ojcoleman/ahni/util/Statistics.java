@@ -1,5 +1,7 @@
 package com.ojcoleman.ahni.util;
 
+import java.util.Random;
+
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
@@ -196,20 +198,52 @@ public class Statistics {
 	}
 	
 	/**
-	 * Returns a Results object that contains basic statistics, including mean, standard deviation, minimum, maximum
-	 * and estimates of 25th, 50th and 75th percentiles.
+	 * Get bootstrapped confidence interval of the median.
+	 * @param percent The interval size, in range (0, 100].
+	 * @param sampleCount The number of samples to generate by sampling with replacement (typically between 1,000 and 10,000).
+	 * @return Array of format [lower,upper][generation].
+	 */
+	public double[][] getBootstrappedConfidenceIntervalOfMedian(double percent, int sampleCount) {
+		double[][] result = new double[2][gens];
+		DescriptiveStatistics medians = new DescriptiveStatistics(sampleCount);
+		DescriptiveStatistics sample = new DescriptiveStatistics(runs);
+		Random r = new Random();
+		double lowerP = (100-percent)/2;
+		double upperP = lowerP + percent;
+		
+		for (int g = 0; g < gens; g++) {
+			medians.clear();
+			for (int mi = 0; mi < sampleCount; mi++) {
+				sample.clear();
+				for (int si = 0; si < runs; si++) {
+					sample.addValue(data[g].getElement(r.nextInt(runs)));
+				}
+				medians.addValue(sample.getPercentile(50));
+			}
+			result[0][g] = medians.getPercentile(lowerP);
+			result[1][g] = medians.getPercentile(upperP);
+		}
+		return result;
+	}
+	
+	/**
+	 * Returns a Results object that contains basic statistics, including mean, standard deviation, minimum, maximum,
+	 * estimates of 25th, median and 75th percentiles, and bootstrapped 95th percentile confidence interval of the median.
 	 */
 	public Results getBasicStats() {
-		String[] labels = new String[]{"Mean", "Std. Dev.", "Minimum", "25th pct.", "50th pct.", "75th pct.", "Maximum"};
+		String[] labels = new String[]{"Mean", "SD", "Min", "25th", "MedBCI95L", "Median", "MedBCI95U", "75th", "Max"};
 		int seriesCount = labels.length;
+		double[][] ci = getBootstrappedConfidenceIntervalOfMedian(95, 1000);
 		double[][] stats = new double[seriesCount][];
 		stats[0] = getMean();
 		stats[1] = getStandardDeviation();
 		stats[2] = getMin();
 		stats[3] = getPercentile(25);
-		stats[4] = getPercentile(50);
-		stats[5] = getPercentile(75);
-		stats[6] = getMax();
+		stats[4] = ci[0];
+		stats[5] = getPercentile(50);
+		stats[6] = ci[1];
+		stats[7] = getPercentile(75);
+		stats[8] = getMax();
 		return new Results(stats, labels);
 	}
 }

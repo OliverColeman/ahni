@@ -243,6 +243,11 @@ public class WeightedRouletteSelector extends NaturalSelector {
 		m_wheel.clear();
 		m_totalNumberOfUsedSlots = 0;
 	}
+
+	@Override
+	public boolean changesOverallFitness() {
+		return false;
+	}
 }
 
 /**

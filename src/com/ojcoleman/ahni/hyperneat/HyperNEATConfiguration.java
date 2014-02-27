@@ -59,6 +59,11 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 	public static final String OUTPUT_DIR_KEY = "output.dir";
 	
 	/**
+	 * Optional prefix to add to all output files.
+	 */
+	public static final String OUTPUT_PREFIX_KEY = "output.prefix";
+	
+	/**
 	 * Whether to display experiment information graphically.
 	 */
 	public static final String ENABLE_VISUALS_KEY = "visuals.enable";
@@ -257,13 +262,13 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 		
 		if (enableLogFiles) {
 			try {
-				BufferedWriter outputfile = new BufferedWriter(new FileWriter(getOutputDirPath() + "initial-sample-chromosome.txt"));
+				BufferedWriter outputfile = new BufferedWriter(new FileWriter(getOutputDirPath() + getOutputFilesPrefix() + "initial-sample-chromosome.txt"));
 				outputfile.write(getSampleChromosomeMaterial().toString());
 				outputfile.close();
 
 				Transcriber cppnTranscriber = (Transcriber) props.singletonObjectProperty(AnjiNetTranscriber.class);
 				Activator n = cppnTranscriber.transcribe(new Chromosome(getSampleChromosomeMaterial(), 0L, 0, 0));
-				outputfile = new BufferedWriter(new FileWriter(getOutputDirPath() + "initial-sample-network.txt"));
+				outputfile = new BufferedWriter(new FileWriter(getOutputDirPath() + getOutputFilesPrefix() + "initial-sample-network.txt"));
 				outputfile.write(n.toString());
 				outputfile.close();
 			} catch (Exception e) {
@@ -301,6 +306,13 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 	 */
 	public String getOutputDirPath() {
 		return props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY, null);
+	}
+	
+	/**
+	 * Returns the prefix that should be applied to the file names of all output files for this experiment.
+	 */
+	public String getOutputFilesPrefix() {
+		return props.getProperty(OUTPUT_PREFIX_KEY, "");
 	}
 	
 	/**

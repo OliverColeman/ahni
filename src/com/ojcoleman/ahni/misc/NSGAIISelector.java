@@ -203,7 +203,7 @@ public class NSGAIISelector extends NaturalSelector implements Configurable {
 			if (!dirFile.exists())
 				dirFile.mkdirs();
 			try {
-				BufferedWriter logFile = new BufferedWriter(new FileWriter(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "nsgaii-" + props.getEvolver().getGeneration() + ".csv"));
+				BufferedWriter logFile = new BufferedWriter(new FileWriter(props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + props.getProperty(HyperNEATConfiguration.OUTPUT_PREFIX_KEY, "") + "nsgaii-" + props.getEvolver().getGeneration() + ".csv"));
 				logFile.write(log.toString());
 				logFile.close();
 			} catch (IOException e) {
@@ -228,5 +228,9 @@ public class NSGAIISelector extends NaturalSelector implements Configurable {
 	protected void emptyImpl() {
 		population.clear();
 		species.clear();
+	}
+	
+	public boolean changesOverallFitness() {
+		return true;
 	}
 }

@@ -87,7 +87,7 @@ public class AddNeuronAnywhereMutationOperator extends MutationOperatorMultiple 
 				connections.add(newConn);
 
 				newConn = config.newConnectionAllele(newNeuronAllele.getInnovationId(), dest.getInnovationId());
-				newConn.setWeight(random.nextGaussian() * ConnectionAllele.RANDOM_STD_DEV);
+				newConn.setWeight(random.nextGaussian() * ConnectionAllele.RANDOM_STD_DEV_INITIAL);
 				//newConn.setWeight((random.nextBoolean() ? 1 : -1) * random.nextDouble() * ConnectionAllele.RANDOM_STD_DEV);
 				allelesToAdd.add(newConn);
 				connections.add(newConn);

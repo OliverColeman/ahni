@@ -331,6 +331,9 @@ public class Genotype implements Serializable {
 				}
 			}
 			
+			if (m_chromosomes.isEmpty()) {
+				logger.warn("Entire population received zero fitness value.");
+			}
 			
 			// Speciate population.
 			m_specStrategy.speciate(m_chromosomes, m_species, this);

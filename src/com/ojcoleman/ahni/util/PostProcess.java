@@ -28,24 +28,46 @@ public class PostProcess {
 		for (String a : argsArray)
 			args.add(a);
 
+		System.out.println("Running with args: " + args);
+		
 		if (args.isEmpty()) {
 			printUsageAndExit();
 		}
 
 		String op = args.removeFirst();
+		if (op.equals("compressAverage") || op.equals("ca")) op = "ca";
+		else if (op.equals("generateStats") || op.equals("gs")) op = "stats";
 		try {
-			if (op.equals("compressAverage") || op.equals("ca") || op.equals("generateStats") || op.equals("gs")) {
-				BufferedReader resultsReader = new BufferedReader(new FileReader(new File(args.removeFirst())));
-				BufferedWriter resultsWriter = new BufferedWriter(new FileWriter(new File(args.removeFirst())));
-	
-				if (op.equals("compressAverage") || op.equals("ca")) {
-					compressAverage(resultsReader, resultsWriter, args.isEmpty() ? 100 : Integer.parseInt(args.removeFirst()));
-				} else if (op.equals("generateStats") || op.equals("gs")) {
-					generateStats(resultsReader, resultsWriter);
+			if (op.equals("ca") || op.equals("stats")) {
+				String inputFiles = args.removeFirst();
+				boolean isGlob = inputFiles.contains("?") || inputFiles.contains("*");
+				List<File> files = getFilesFromGlob(inputFiles);
+				for (File f : files) {					
+					BufferedReader resultsReader = new BufferedReader(new FileReader(f));
+					
+					String outputFile = null;
+					if (isGlob) {
+						outputFile = f.getName();
+						if (outputFile.endsWith(".csv")) {
+							outputFile = outputFile.substring(0, outputFile.length()-4);
+						}
+						outputFile += ".stats.csv";
+						System.out.println("Processing " + f.getAbsolutePath() + "   Will write result to " + outputFile);
+					}
+					else {
+						outputFile = args.removeFirst();
+					}
+					BufferedWriter resultsWriter = new BufferedWriter(new FileWriter(new File(outputFile)));
+					
+					if (op.equals("ca")) {
+						compressAverage(resultsReader, resultsWriter, args.isEmpty() ? 100 : Integer.parseInt(args.removeFirst()));
+					} else if (op.equals("stats")) {
+						generateStats(resultsReader, resultsWriter);
+					}
+					
+					resultsReader.close();
+					resultsWriter.close();
 				}
-				
-				resultsReader.close();
-				resultsWriter.close();
 			}
 			else if (op.equals("combineResults") || op.equals("cr")) {
 				if (args.size() != 2) {
@@ -72,6 +94,7 @@ public class PostProcess {
 				System.out.println("Wrote extracted results to " + output.getAbsolutePath());
 			}
 			else {
+				System.err.println("It looks like you provided an invalid option.");
 				printUsageAndExit();
 			}
 		} catch (FileNotFoundException e) {
@@ -86,11 +109,14 @@ public class PostProcess {
 	private static void printUsageAndExit() {
 		System.out.println("The post process utility performs post processing on a result file from a set of runs.");
 		System.out.println("Usage:\n<post process command> <op> <input file> [<output file>] [options]");
-		System.out.println("  op may be generateStats (ga), compressAverage (ca) or extractFinal (ef).");
-		System.out.println("    gs: calculates basic statistics over all runs for each generation.");
+		System.out.println("  op may be one of the following.");
+		System.out.println("    gs: calculates statistics over all runs for each generation. ");
+		System.out.println("        If a glob pattern is provided then the output file names are based on the input file names.");
 		System.out.println("    ca: For each run, computes averages over some number of generations (the window size) within the run.");
 		System.out.println("        The default number of result values for each run in the output file is 100,");
 		System.out.println("        but a different number of result values can be specified after the name of the output file.");
+		System.out.println("        If a glob pattern is provided then the output file names are based on the input file names,");
+		System.out.println("        the input file pattern should be followed by the result size if desired.");
 		System.out.println("    cr:  Combine the result files from multiple runs into one file.");
 		System.out.println("        The <input file> argument should be the path to the result files as a glob pattern. The pattern ");
 		System.out.println("        supports the typical glob format, and in order to match more than one file must necessarily include");
@@ -185,14 +211,7 @@ public class PostProcess {
 	 * @return A Results object containing the combined results.
 	 */
 	public static Results combineResults(String filePattern, boolean verbose) throws IOException {
-		String baseDir = "./";
-		// If absolute path. TODO handle windows absolute path?
-		if (filePattern.charAt(0) == File.separatorChar) {
-			baseDir = File.separator;
-			filePattern = filePattern.substring(1);
-		}
-		Paths paths = new Paths(baseDir, filePattern);
-		List<File> files = paths.getFiles();
+		List<File> files = getFilesFromGlob(filePattern);
 		Iterator<File> fileItr = files.iterator();
 
 		File f = fileItr.next();
@@ -218,14 +237,7 @@ public class PostProcess {
 	 * @param resultsWriter A stream to write the results to.
 	 */
 	public static void extractFinal(String filePattern, BufferedWriter resultsWriter) throws IOException {
-		String baseDir = "./";
-		// If absolute path. TODO handle windows absolute path?
-		if (filePattern.charAt(0) == File.separatorChar) {
-			baseDir = File.separator;
-			filePattern = filePattern.substring(1);
-		}
-		Paths paths = new Paths(baseDir, filePattern);
-		List<File> files = paths.getFiles();
+		List<File> files = getFilesFromGlob(filePattern);
 		Iterator<File> fileItr = files.iterator();
 		int resultCount = 0;
 		while (fileItr.hasNext()) {
@@ -244,5 +256,16 @@ public class PostProcess {
 			lastLine = line;
 		}
 		return lastLine;
+	}
+	
+	private static List<File> getFilesFromGlob(String filePattern) {
+		String baseDir = "./";
+		// If absolute path. TODO handle windows absolute path?
+		if (filePattern.charAt(0) == File.separatorChar) {
+			baseDir = File.separator;
+			filePattern = filePattern.substring(1);
+		}
+		Paths paths = new Paths(baseDir, filePattern);
+		return paths.getFiles();
 	}
 }

@@ -22,6 +22,8 @@ import org.jgapcustomised.SpeciationParms;
 import org.jgapcustomised.SpeciationStrategy;
 import org.jgapcustomised.Species;
 
+import com.anji.util.Configurable;
+import com.anji.util.Properties;
 import com.ojcoleman.ahni.util.Parallel;
 import com.ojcoleman.ahni.util.Parallel.Operation;
 
@@ -32,10 +34,24 @@ import com.ojcoleman.ahni.util.Parallel.Operation;
  * 
  * This code was adapted from SharpNEAT by Colin Green (see http://sharpneat.sourceforge.net/).
  */
-public class SpeciationStrategyKMeans implements SpeciationStrategy {
+public class SpeciationStrategyKMeans implements SpeciationStrategy, Configurable {
 	private static Logger logger = Logger.getLogger(SpeciationStrategyKMeans.class);
 	
+	/**
+	 * Whether to use multiple threads to execute the k-means algorithm. If exact reproduction of runs is required then this must be set to false
+	 * as the ordering of assignment of individuals to species can affect the final clustering/speciation produced. Note that this must be set to false
+	 * in the original and later runs for exact reproducibility. Default is true.
+	 */
+	static final String MULTI_THREADED = "speciation.kmeans.multithreaded";
+	
 	static final int MAX_KMEANS_LOOPS = 5;
+	
+	private boolean multiThreaded = true;
+	
+	@Override
+	public void init(Properties props) throws Exception {
+		multiThreaded = props.getBooleanProperty(MULTI_THREADED, true);
+	}
 	
 	@Override
 	public synchronized void respeciate(final List<Chromosome> genomeList, final List<Species> speciesList, final Genotype genotype) {
@@ -59,7 +75,7 @@ public class SpeciationStrategyKMeans implements SpeciationStrategy {
 		}
 		speciate(genomeList, speciesList, genotype);
 	}
-
+	
 	@Override
 	public synchronized void speciate(final List<Chromosome> genomeList, final List<Species> speciesList, final Genotype genotype) {
 		final Configuration config = genotype.getConfiguration();
@@ -74,9 +90,9 @@ public class SpeciationStrategyKMeans implements SpeciationStrategy {
 		// Update the centroid of each species. If we're adding offspring this means that old genomes
 		// have been removed from the population and therefore the centroids are out-of-date.
 		calculateSpecieCentroids(speciesList);
-
+		
 		// Allocate each genome to the species it is closest to.
-		Parallel.foreach(genomeList, new Operation<Chromosome>() {
+		Parallel.foreach(genomeList, 0, new Operation<Chromosome>() {
 			@Override
 			public void perform(Chromosome genome) {
 				Species closestSpecies = findClosestSpecies(genome, speciesList, specParms);
@@ -90,7 +106,7 @@ public class SpeciationStrategyKMeans implements SpeciationStrategy {
 		calculateSpecieCentroids(speciesList);
 		
 		//double initialDistance = calculateAverageDistance(genomeList, specParms);
-
+		
 		// Perform the main k-means loop until convergence.
 		speciateUntilConvergence(genomeList, speciesList, specParms);
 		
@@ -128,7 +144,7 @@ public class SpeciationStrategyKMeans implements SpeciationStrategy {
 
 			// Loop over genomes. For each one find the species it is closest to; if it is not the species
 			// it is currently in then reallocate it.
-			Parallel.foreach(genomeList, new Operation<Chromosome>() {
+			Parallel.foreach(genomeList, 0, new Operation<Chromosome>() {
 				@Override
 				public void perform(Chromosome genome) {
 					Species closestSpecies = findClosestSpecies(genome, speciesList, speciationParms);
@@ -227,7 +243,7 @@ public class SpeciationStrategyKMeans implements SpeciationStrategy {
 	}
 	
 	private void calculateSpecieCentroids(Collection<Species> speciesList) {
-		Parallel.foreach(speciesList, new Operation<Species>() {
+		Parallel.foreach(speciesList, 0, new Operation<Species>() {
 			@Override
 			public void perform(Species species) {
 				if (!species.isEmpty()) {
