@@ -325,7 +325,7 @@ public class NeatConfiguration extends Configuration implements Configurable {
 			selector = new WeightedRouletteSelector();
 			logger.warn("Property " + WEIGHTED_SELECTOR_KEY + " is deprecated. Use " + SELECTOR_CLASS_KEY + " instead.");
 		} else {
-			selector = props.newObjectProperty(props.getClassProperty(SELECTOR_CLASS_KEY, SimpleSelector.class));
+			selector = (NaturalSelector) props.newObjectProperty(props.getClassProperty(SELECTOR_CLASS_KEY, SimpleSelector.class));
 		}
 		
 		BulkFitnessFunction bulkFitnessFunc = (BulkFitnessFunction) props.singletonObjectProperty(Evolver.FITNESS_FUNCTION_CLASS_KEY);
