@@ -76,7 +76,7 @@ public class Species {
 	private Chromosome bestPerforming = null, previousBestPerforming = null;
 
 	private int stagnantGenerationsCount = 0;
-	private double previousGenBestPerformance = 0;
+	private double bestPerformanceEver = 0;
 	private int age = 0;
 
 	private int eliteCount;
@@ -300,13 +300,13 @@ public class Species {
 
 		if (bestPerforming != null) {
 			// if performance hasn't improved increase stagnant generations count
-			if (bestPerforming.getPerformanceValue() <= previousGenBestPerformance) {
+			if (bestPerforming.getPerformanceValue() <= bestPerformanceEver) {
 				stagnantGenerationsCount++;
 				// System.out.println("Stagnant generations increased to " +
 				// stagnantGenerationsCount);
 			} else {
 				stagnantGenerationsCount = 0;
-				previousGenBestPerformance = bestPerforming.getPerformanceValue();
+				bestPerformanceEver = bestPerforming.getPerformanceValue();
 				// System.out.println("Stagnant generations reset");
 			}
 		}
@@ -375,6 +375,13 @@ public class Species {
 
 	public Chromosome getPreviousBestPerforming() {
 		return previousBestPerforming;
+	}
+	
+	public double getBestPerformanceEver() {
+		return bestPerformanceEver;
+	}
+	public boolean performanceIncreasedLastGen() {
+		return stagnantGenerationsCount == 0 && age > 0;
 	}
 
 	public void setPreviousBestPerforming(Chromosome previousBestPerforming) {

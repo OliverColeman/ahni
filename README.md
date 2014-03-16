@@ -27,32 +27,31 @@ java -jar ahni.jar properties/or3.properties
 
 See `properties/bain-test-pass-through-flip.properties` for an example properties file describing the function of each parameter and setting.
 
-By default a line containing a brief summary of the current progress is sent to the log (which for most `example.properties` files goes to the console). The line looks something like this:
-
-```
-INFO  Gen: 635  Fittest: 320278  (F: 0.0069  P: 0.4375)  Best perf: 321496  
-(F: 0.0057  P: 0.4414)  ZFC: 0  ABSF: 0.0053  S: 26  NS/ES: 0/0  SCT: 0.7  
-Min/Max SS: 12/29  Min/Max SA: 7/636  SNF: 12  Min/Avg/Max GS: 63/127/168  
-Time: 0s  ETA: 0 00:04:57  Mem: 119MB
-```
-
-The various labels are:
+By default a brief summary of the current progress is sent to the log every generation (which for most `example.properties` files goes to the console). 
+The summary is a tab-separated list of statistics with a heading line printed every 20 lines. The following values are included:
 
 **Label** | **Description**
 --- | ---
 Gen | Current generation number.
-Fittest | The ID of fittest chromosome (it's fitness level, and performance)
-Best perf | The ID of the  chromosome with highest performance (it's fitness level, and performance)
+
+Fittest | The ID of fittest chromosome.
+OvFtns | (Overall) fitness of the fittest chromosome.
+Perfor | Performance of the fittest chromosome.
+
+BestPrf | The ID of the chromosome with highest performance.
+OvFtns | (Overall) fitness of the chromosome with highest performance.
+Perfor | Performance of the chromosome with highest performance.
+
+ZPC | Zero Performance Count, number of chromosomes with a performance of 0.
 ZFC | Zero Fitness Count, number of chromosomes with a fitness of 0.
-ABSF | Average Best Species Fitness
-S | The number of species.
-NS/ES | Number of New Species / Extinct Species this generation.
+SC | The number of species.
+NS | Number of New Species this generation.
+ES | Number of Extinct Species this generation.
 SCT | Species Compatibility Threshold.
-Min/Max SS | The minimum and maximum species sizes.  
-Min/Max SA | The minimum and maximum species ages (in number of generations).  
-SNF | The number of Species with a New Fittest chromosome.
-Min/Avg/Max GS | The minimum, average and maximum (CPPN) genome size (total number of nodes and connections). 
-AS | The average number of neurons and connections within the (CPPN) networks.  
+SS | The minimum/maximum species sizes.  
+SA | The minimum/maximum species ages (in number of generations).  
+SNBP | The number of Species with a New Best Performing chromosome. 
+GS | The minimum/average/maximum (CPPN) genome size (total number of nodes and connections). 
 Time | The duration of the generation in seconds.
 ETA | The estimated run finish time (Days HH:MM:SS).  
 Mem | Total memory usage.

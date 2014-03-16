@@ -365,7 +365,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 
 				Long speciesKey = new Long(species.getID());
 				if (allSpeciesEver.containsKey(speciesKey)) { // if existing species
-					if (species.getBestPerforming() != species.getPreviousBestPerforming())
+					if (species.performanceIncreasedLastGen())
 						numSpeciesWithNewPerformance++;
 				} else {
 					numNewSpecies++;
@@ -445,7 +445,7 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 						m.append(fitLabels);
 					m.append(perfLabels);
 					
-					m.append("ZPC\tZFC\tSC\tNS\tES\tSCT\tSS\tSA    \tSNB\tGS      \tTime\tETA      \tMem");
+					m.append("ZPC\tZFC\tSC\tNS\tES\tSCT\tSS\tSA    \tSNBP\tGS      \tTime\tETA      \tMem");
 					
 					logger.info(m);
 					m = new StringBuilder();
@@ -473,22 +473,6 @@ public class HyperNEATEvolver implements Configurable, GeneticEventListener {
 				m.append(minSize + "/" + avgSize + "/" + maxSize + "\t");
 				m.append(nf3.format(cumulativeDurationBetweenLogging / logPerGenerations) + "\t" + Misc.formatTimeInterval(eta) + "\t" + memUsed + "MB");
 				
-				/*
-				m.append("Gen: " + generation);
-
-				m.append("  Fittest: " + fittest.getId());
-				m.append(" (F: " + nf4.format(fittest.getFitnessValue()) + (selector.changesOverallFitness() ? " [" + ArrayUtil.toString(fittest.getFitnessValues(), ", ", nf4) + "]" : ""));
-				m.append(" P: " + nf4.format(fittest.getPerformanceValue()) + ")");
-				
-				m.append("  Best perf: " + bestPerforming.getId());
-				m.append(" (F: " + nf4.format(bestPerforming.getFitnessValue()) + (selector.changesOverallFitness() ? " [" + ArrayUtil.toString(bestPerforming.getFitnessValues(), ", ", nf4) + "]" : ""));
-				m.append(" P: " + nf4.format(bestPerforming.getPerformanceValue()) + ")");
-
-				m.append("  ZPC: " + genotype.getNumberOfChromosomesWithZeroPerformanceFromLastGen() + "  ZFC: " + genotype.getNumberOfChromosomesWithZeroFitnessFromLastGen() + "  ABSP: " + nf4.format(avgBestSpeciesPerformance));
-				m.append("  S: " + numSpecies + "  NS/ES: " + numNewSpecies + "/" + numExtinctSpecies + "  SCT: " + nf1.format(speciationCompatThreshold) + "  Min/Max SS: " + minSpeciesSize + "/" + maxSpeciesSize + "  Min/Max SA: " + minSpeciesAge + "/" + maxSpeciesAge + "  SNB: " + numSpeciesWithNewPerformance);
-				m.append("  Min/Avg/Max GS: " + minSize + "/" + avgSize + "/" + maxSize);
-				m.append("  Time: " + nf3.format(cumulativeDurationBetweenLogging / logPerGenerations) + "s  ETA: " + Misc.formatTimeInterval(eta) + "  Mem: " + memUsed + "MB");
-				*/
 				logger.info(m);
 				cumulativeDurationBetweenLogging = 0;
 			}

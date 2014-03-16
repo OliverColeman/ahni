@@ -17,6 +17,8 @@ public class Range {
 	}
 	
 	public void set(double s, double e) {
+		if (e <= s)
+			throw new IllegalArgumentException("The start of a Range must be less than the end of the Range, values given were: [" + s + ", " + e + "].");
 		start = s;
 		end = e;
 		range = e - s;
@@ -121,5 +123,14 @@ public class Range {
 	
 	public String toString() {
 		return "[" + start + ", " + end + "]";
+	}
+
+	/**
+	 * Returns the given value clamped within the interval defined by this Range.
+	 */
+	public double clamp(double v) {
+		if (v < start) return start;
+		if (v > end) return end;
+		return v;
 	}
 }
