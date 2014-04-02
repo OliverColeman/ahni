@@ -185,7 +185,7 @@ public class BainNN extends NNAdaptor {
 			for (int s = 0; s < stepsPerStep; s++) {
 				if (stimuli != null) {
 					System.arraycopy(stimuli, 0, nnOutputs, 0, stimuli.length);
-					nn.getNeurons().setOutputsModified();
+					nn.getNeurons().setOutputsModified(0, stimuli.length);
 				}
 				nn.step();
 			}
@@ -193,7 +193,7 @@ public class BainNN extends NNAdaptor {
 		} else {
 			if (stimuli != null) {
 				System.arraycopy(stimuli, 0, nnOutputs, 0, stimuli.length);
-				nn.getNeurons().setOutputsModified();
+				nn.getNeurons().setOutputsModified(0, stimuli.length);
 			}
 			nn.run(stepsPerStep);
 		}
@@ -218,7 +218,7 @@ public class BainNN extends NNAdaptor {
 			for (int stimuliIndex = 0, responseIndex = 1 - stepsPerStep; stimuliIndex < stimuliCount + stepsPerStep - 1; stimuliIndex++, responseIndex++) {
 				if (stimuliIndex < stimuliCount) {
 					System.arraycopy(stimuli[stimuliIndex], 0, nnOutputs, 0, stimuli[stimuliIndex].length);
-					nn.getNeurons().setOutputsModified();
+					nn.getNeurons().setOutputsModified(0, stimuli[stimuliIndex].length);
 				}
 				nn.step();
 				if (responseIndex >= 0) {
