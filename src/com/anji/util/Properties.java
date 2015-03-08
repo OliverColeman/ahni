@@ -72,9 +72,9 @@ public class Properties extends java.util.Properties {
 	public static final String SUBSTITUTION_ENABLE_KEY = "substitution.enable";
 	
 	/**
-	 * Optional property key. A comma-separated list of property files to include. In the event of the same property
-	 * being defined by both the including and included file, the properties in the including file will override
-	 * properties defined in the included file.
+	 * Optional property key. A comma-separated list of property files to include (minus the '.properties' extension). 
+	 * In the event of the same property being defined by both the including and included file, the properties in the 
+	 * including file will override properties defined in the included file.
 	 */
 	public static final String INCLUDE_KEY = "properties.include";
 	

@@ -28,9 +28,6 @@ import java.util.Stack;
  *  the <em>cycle</em> operation takes time proportional
  *  to the length of the cycle.
  *  <p>
- *  See {@link Topological} to compute a topological order if the edge-weighted
- *  digraph is acyclic.
- *  <p>
  *  For additional documentation, see <a href="http://algs4.cs.princeton.edu/algs4/44sp">Section 4.4</a> of
  *  <i>Algorithms, 4th Edition</i> by Robert Sedgewick and Kevin Wayne.
  *

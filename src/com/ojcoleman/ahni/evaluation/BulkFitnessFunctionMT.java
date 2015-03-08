@@ -723,7 +723,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	 * This implementation of
 	 * {@link AHNIFitnessFunction#evaluateGeneralisation(Chromosome, Activator, String, boolean, boolean)} is marked as
 	 * final to allow this class to handle multiple fitness functions, some of which may define multiple objectives.
-	 * {@link BulkFitnessFunctionMT#evaluateGeneralisation(Chromosome, Activator, String, boolean, boolean, double[])
+	 * {@link BulkFitnessFunctionMT#evaluateGeneralisation(Chromosome, Activator, String, boolean, boolean, double[])}
 	 * may be used instead.
 	 */
 	@Override

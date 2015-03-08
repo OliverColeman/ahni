@@ -131,9 +131,9 @@ public class BainNN extends NNAdaptor {
 	}
 	
 	/**
-	 * Same as {@link #BainNN(NeuralNetwork, int[], int[], int, Topology, String) 
+	 * Same as {@link #BainNN(NeuralNetwork, int[], int[], int, Topology, String)} 
 	 * but has the defunct maxCycleLength parameter. Here for backward compatibility.
-	 * @deprecared
+	 * @deprecated
 	 */
 	public BainNN(NeuralNetwork nn, int[] inputDimensions, int[] outputDimensions, int stepsPerStep, Topology topology, String name, int maxCycleLength) throws Exception {
 		init(nn, inputDimensions, outputDimensions, stepsPerStep, topology, name);

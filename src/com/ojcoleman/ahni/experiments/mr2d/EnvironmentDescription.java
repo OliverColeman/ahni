@@ -16,7 +16,7 @@ import com.ojcoleman.ahni.hyperneat.Properties;
 /**
  * Describes an environment for a Mobile Robot 2D simulation. An experiment run typically creates a singleton instance
  * of this class (initialised via {@link #init(Properties)}) which contains some pre-calculated values and then
- * instances used for simulations are generated via the {@link #generateInstance(Properties, Random)} method.
+ * instances used for simulations are generated via the {@link #generateInstance(int, Random, MobileRobot2D)} method.
  */
 public class EnvironmentDescription implements Configurable {
 	// singleton variables.
