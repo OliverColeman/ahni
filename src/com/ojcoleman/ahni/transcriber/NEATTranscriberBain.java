@@ -1,5 +1,8 @@
 package com.ojcoleman.ahni.transcriber;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -10,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.ojcoleman.bain.NeuralNetwork;
 import com.ojcoleman.bain.base.ComponentCollection;
@@ -31,10 +35,10 @@ import com.anji.neat.NeatChromosomeUtility;
 import com.anji.neat.NeatConfiguration;
 import com.anji.neat.NeuronAllele;
 import com.anji.neat.NeuronType;
-
 import com.anji.nn.RecurrencyPolicy;
 import com.ojcoleman.ahni.evaluation.AHNIFitnessFunction;
 import com.ojcoleman.ahni.hyperneat.Configurable;
+import com.ojcoleman.ahni.hyperneat.HyperNEATConfiguration;
 import com.ojcoleman.ahni.hyperneat.HyperNEATEvolver;
 import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.nn.BainNN;
@@ -69,6 +73,9 @@ public class NEATTranscriberBain extends TranscriberAdaptor<BainNN> implements C
 	private RecurrencyPolicy recurrencyPolicy = RecurrencyPolicy.BEST_GUESS;
 	
 	private int inputSize = -1, outputSize = -1;
+	
+	//static ConcurrentHashMap<Long, String> debug = new ConcurrentHashMap<Long, String>();
+	//static ConcurrentHashMap<Long, String> debug2 = new ConcurrentHashMap<Long, String>();
 
 	public NEATTranscriberBain() {
 	}
@@ -136,7 +143,7 @@ public class NEATTranscriberBain extends TranscriberAdaptor<BainNN> implements C
 	public BainNN transcribe(Chromosome genotype, BainNN substrate) throws TranscriberException {
 		return newBainNN(genotype);
 	}
-
+	
 	/**
 	 * create new <code>AnjiNet</code> from <code>genotype</code>
 	 * 
@@ -244,7 +251,42 @@ public class NEATTranscriberBain extends TranscriberAdaptor<BainNN> implements C
 		int[] inputDims = new int[] { inputNeuronAlleles.size() };
 		int[] outputDims = new int[] { outputNeuronAlleles.size() };
 		try {
-			return new BainNN(nn, inputDims, outputDims, cyclesPerStep, topology, "network " + genotype.getId(), 1000);
+			BainNN substrate = new BainNN(nn, inputDims, outputDims, cyclesPerStep, topology, "network " + genotype.getId(), 1000);
+			
+			// See if transcriptions differ for same Chromosome.
+//			String dbg2 = "" + genotype.getMaterial();
+//			if (substrate != null) {
+//				String rep = substrate.toString();
+//				String repOrig = debug.get(genotype.getId());
+//				if (repOrig != null) {
+//					if (!rep.equals(repOrig)) {
+//						synchronized(debug) {
+//							String msg = "\ntranscriptions differ for " + genotype.getId() + "\n\n" + rep + "\n\n" + dbg2 + "\n\n" + repOrig + debug2.get(genotype.getId());
+//	
+//							String baseFileName = props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + "debug -" + genotype.getId();
+//							BufferedWriter outputfile;
+//							try {
+//								outputfile = new BufferedWriter(new FileWriter(baseFileName + ".txt"));
+//								outputfile.write(msg);
+//								outputfile.close();
+//							} catch (IOException e) {
+//								// TODO Auto-generated catch block
+//								e.printStackTrace();
+//							}
+//								
+//							System.err.println(msg);
+//							System.exit(1);
+//						}
+//					}
+//				}
+//				else {
+//					debug.put(genotype.getId(), rep);
+//					debug2.put(genotype.getId(), dbg2);
+//				}
+//			}
+			
+			
+			return substrate;
 		} catch (Exception e) {
 			throw new TranscriberException(e);
 		}

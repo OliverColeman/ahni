@@ -30,7 +30,9 @@ public class RecipriocalActivationFunction implements ActivationFunction {
 	 */
 	public double apply(double input) {
 		double val = 1 / input;
-		if (Double.isInfinite(val) || Double.isNaN(val)) return input < 0 ? -Double.MAX_VALUE : Double.MAX_VALUE;
+		if (Double.isNaN(val)) return input < 0 ? getMinValue() : getMaxValue();
+		if (val < getMinValue()) val = getMinValue();
+		else if (val > getMaxValue()) val = getMaxValue();
 		return val;
 	}
 
@@ -38,14 +40,14 @@ public class RecipriocalActivationFunction implements ActivationFunction {
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMaxValue()
 	 */
 	public double getMaxValue() {
-		return Double.MAX_VALUE;
+		return Double.MAX_VALUE * 0.1;
 	}
 
 	/**
 	 * @see com.anji.nn.activationfunction.ActivationFunction#getMinValue()
 	 */
 	public double getMinValue() {
-		return -Double.MAX_VALUE;
+		return -getMaxValue();
 	}
 
 	/**

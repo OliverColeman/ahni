@@ -573,7 +573,9 @@ public abstract class TranscriberAdaptor<T extends Activator> implements Transcr
 			for (int p = 0; p < getNeuronParameterCount(); p++) {
 				ParamGene gene = new ParamGene(config.nextInnovationId(), subCollection, p);
 				ParamAllele allele = new ParamAllele(gene);
-				allele.setValue((gene.getMaxValue() + gene.getMinValue()) / 2);
+				//allele.setValue((gene.getMaxValue() + gene.getMinValue()) / 2);
+				double r = gene.getMaxValue() - gene.getMinValue();
+				allele.setValue(Math.random() * r + gene.getMinValue());
 				extraAlleles.add(allele);
 			}
 		}
@@ -583,7 +585,9 @@ public abstract class TranscriberAdaptor<T extends Activator> implements Transcr
 			for (int p = 0; p < getSynapseParameterCount(); p++) {
 				ParamGene gene = new ParamGene(config.nextInnovationId(), subCollection, p);
 				ParamAllele allele = new ParamAllele(gene);
-				allele.setValue((gene.getMaxValue() + gene.getMinValue()) / 2);
+				//allele.setValue((gene.getMaxValue() + gene.getMinValue()) / 2);
+				double r = gene.getMaxValue() - gene.getMinValue();
+				allele.setValue(Math.random() * r + gene.getMinValue());
 				extraAlleles.add(allele);
 			}
 		}

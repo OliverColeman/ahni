@@ -163,10 +163,6 @@ public class AnjiNet {
 	/**
 	 * @see java.lang.Object#toString()
 	 */
-
-	/**
-	 * @see java.lang.Object#toString()
-	 */
 	public String toString() {
 		HashMap<Neuron, Integer> neuronIndexMap = new HashMap<Neuron, Integer>();
 		int connCount = 0;

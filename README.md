@@ -116,4 +116,10 @@ networks for online learning". For more details see http://ojcoleman.com .
 
 ## License
   
-AHNI is licensed under the GNU General Public License v3. A copy of the license is included in the distribution. Please note that Bain is distributed WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. Please refer to the license for details.
+AHNI is licensed under the GNU General Public License v3. A copy of the license is included in the distribution. Please note that AHNI is distributed WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. Please refer to the license for details.
+
+
+AHNI makes use of GifSequenceWriter by Elliot Kroo: http://elliot.kroo.net/software/java/GifSequenceWriter/
+GifSequenceWriter is licensed under the Creative Commons Attribution 3.0 Unported License. 
+To view a copy of this license, visit http://creativecommons.org/licenses/by/3.0/ or send a letter to 
+Creative Commons, 171 Second Street, Suite 300, San Francisco, California, 94105, USA.

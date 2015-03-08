@@ -43,13 +43,6 @@ public class NeuronAllele extends Allele {
 	private double bias = ConnectionAllele.DEFAULT_WEIGHT;
 
 	/**
-	 * for hibernate
-	 */
-	private NeuronAllele() {
-		super();
-	}
-
-	/**
 	 * @param aNeuronGene
 	 */
 	public NeuronAllele(NeuronGene aNeuronGene, double bias) {

@@ -93,7 +93,7 @@ public class SpeciationStrategyOriginal implements SpeciationStrategy {
 		int maxAdjustFreq = (int) Math.round(Math.pow(genotype.getConfiguration().getPopulationSize(), 0.333));
 		if (targetSpeciesCount > 0 && speciesList.size() != targetSpeciesCount && (genotype.getGeneration() - lastGenChangedSpeciesCompatThreshold > maxAdjustFreq)) {
 			double ratio = (double) speciesList.size() / targetSpeciesCount;
-			double factor = (ratio - 1) * 0.2 + 1;
+			double factor = (ratio - 1) * 0.1 + 1;
 			double newSpecThresh = specParms.getSpeciationThreshold() * factor;
 			if (newSpecThresh < specParms.getSpeciationThresholdMin()) newSpecThresh = specParms.getSpeciationThresholdMin();
 			if (newSpecThresh > specParms.getSpeciationThresholdMax()) newSpecThresh = specParms.getSpeciationThresholdMax();

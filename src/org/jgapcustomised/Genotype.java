@@ -357,17 +357,18 @@ public class Genotype implements Serializable {
 			}
 			
 			// Find best performing individual.
-			if (previousBestPerforming != null && m_chromosomes.contains(previousBestPerforming)) {
-				// Attempt to reuse previous bestPerforming if available.
-				bestPerforming = previousBestPerforming;
+			Collections.sort(m_chromosomes, new ChromosomePerformanceComparator(targetPerformanceType == 0));
+			Chromosome topChrom = m_chromosomes.get(0);
+			if (previousBestPerforming == null || !m_chromosomes.contains(previousBestPerforming) ||
+				topChrom.getPerformanceValue() > previousBestPerforming.getPerformanceValue() || 
+					((int) (topChrom.getPerformanceValue() * 1000) == (int) (previousBestPerforming.getPerformanceValue() * 1000) && topChrom.getFitnessValue() > previousBestPerforming.getFitnessValue())) {
+
+				bestPerforming = topChrom;
 			}
 			else {
-				bestPerforming = null;
+				bestPerforming = previousBestPerforming;
 			}
-			Collections.sort(m_chromosomes, new ChromosomePerformanceComparator(targetPerformanceType == 0));
-			if (bestPerforming == null || m_chromosomes.get(0).getPerformanceValue() != bestPerforming.getPerformanceValue()) {
-				bestPerforming = m_chromosomes.get(0);
-			}
+
 			previousBestPerforming = bestPerforming;
 			// Set which species contains the best performing individual.
 			for (Species s : m_species) {

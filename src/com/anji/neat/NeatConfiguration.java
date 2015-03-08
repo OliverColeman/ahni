@@ -22,7 +22,6 @@ package com.anji.neat;
 import java.io.IOException;
 import java.util.Arrays;
 
-
 import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;
 import org.jgapcustomised.BulkFitnessFunction;
@@ -319,16 +318,28 @@ public class NeatConfiguration extends Configuration implements Configurable {
 		//logger.info( "Crossover proportion: " + crossoverSlice);
 		double crossoverProportion = props.getDoubleProperty(CROSSOVER_PROPORTION_KEY, DEFAULT_CROSSOVER_PROPORTION);
 
+		BulkFitnessFunction bulkFitnessFunc = (BulkFitnessFunction) props.singletonObjectProperty(Evolver.FITNESS_FUNCTION_CLASS_KEY);
+		
 		// selector
 		NaturalSelector selector = null;
 		if (props.getBooleanProperty(WEIGHTED_SELECTOR_KEY, false)) {
 			selector = new WeightedRouletteSelector();
 			logger.warn("Property " + WEIGHTED_SELECTOR_KEY + " is deprecated. Use " + SELECTOR_CLASS_KEY + " instead.");
 		} else {
-			selector = (NaturalSelector) props.newObjectProperty(props.getClassProperty(SELECTOR_CLASS_KEY, SimpleSelector.class));
+			String selStr = props.getProperty(SELECTOR_CLASS_KEY, "auto").trim();
+			if (selStr.toLowerCase().equals("auto")) {
+				selStr = bulkFitnessFunc.getObjectiveCount() > 1 ? "com.ojcoleman.ahni.misc.NSGAIISelector" : "com.anji.integration.SimpleSelector";
+				logger.info("Using " + selStr + " as the NaturalSelector.");
+			}
+			Class selCls;
+			try {
+				selCls = Class.forName(selStr);
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+				throw new InvalidConfigurationException("Unable to find class for NaturalSelector.");
+			}
+			selector = (NaturalSelector) props.newObjectProperty(selCls);
 		}
-		
-		BulkFitnessFunction bulkFitnessFunc = (BulkFitnessFunction) props.singletonObjectProperty(Evolver.FITNESS_FUNCTION_CLASS_KEY);
 		
 		selector.setSurvivalRate(survivalRate);
 		selector.setElitismProportion(props.getFloatProperty(ELITISM_PROPORTION_KEY, 0.1f));

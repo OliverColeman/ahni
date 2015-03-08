@@ -79,7 +79,7 @@ public class TargetFitnessFunctionMT extends BulkFitnessFunctionMT {
 		this.minTargetOutputValue = minTargetOutputValue;
 		this.maxTargetOutputValue = maxTargetOutputValue;
 	}
-
+	
 	@Override
 	protected double evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex) {
 		return _evaluate(genotype, substrate, null, false, false);

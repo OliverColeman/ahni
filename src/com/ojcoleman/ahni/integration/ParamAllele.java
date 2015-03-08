@@ -27,13 +27,6 @@ public class ParamAllele extends Allele {
 	}
 
 	/**
-	 * for hibernate
-	 */
-	private ParamAllele() {
-		super();
-	}
-
-	/**
 	 * @param paramGene
 	 */
 	public ParamAllele(ParamGene paramGene) {

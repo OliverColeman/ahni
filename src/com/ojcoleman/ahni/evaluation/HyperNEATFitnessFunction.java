@@ -72,10 +72,10 @@ public abstract class HyperNEATFitnessFunction extends BulkFitnessFunctionMT {
 	 * 
 	 * @see #SCALE_COUNT_KEY
 	 */
+	private int scaleTimes = 0;
+	
 	protected int scaleCount = 0;
-
 	private int scaleFactor = 2;
-	private int scaleTimes = 2;
 	private boolean scaleRecordIntermediatePerf = true;
 
 	/**

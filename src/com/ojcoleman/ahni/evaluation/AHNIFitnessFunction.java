@@ -53,4 +53,23 @@ public abstract class AHNIFitnessFunction extends BulkFitnessFunction {
 	 */
 	public void evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
 	}
+	
+	/**
+	 * This method may optionally be overridden to perform an evaluation that performs a generalisation test of an 
+	 * individual genotype and output the results to a log. The generalisation test should use training examples or 
+	 * environments that are not used for fitness evaluations. The evaluation is not used for any purpose other than 
+	 * generating a record of the generalisation performance of the given genotype. The function should set the 
+	 * performance values and fitness values of the given Chromosome using the functions setFitnessValue(...) and 
+	 *   setPerformanceValue(...).
+	 * @param genotype the genotype being evaluated. This is not usually required but may be useful in some cases.
+	 * @param substrate the phenotypic substrate of the genotype being evaluated.
+	 * @param baseFileName The base/prefix of the names of log file(s) that should be created.
+	 * @param logText If true then text representations should be output.
+	 * @param logImage If true then image representations should be output.
+	 * @return Implementations of this method must return true. This default implementation returns false to indicate
+	 *   that it's a dummy implementation.
+	 */
+	public boolean evaluateGeneralisation(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
+		return false;
+	}
 }

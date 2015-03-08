@@ -78,10 +78,9 @@ public class TestTargetFitnessFunction extends HyperNEATTargetFitnessFunction {
 	}
 
 	private void generatePatterns() {
-		HyperNEATTranscriber transcriber = (HyperNEATTranscriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
-		int[] width = transcriber.getWidth();
-		int[] height = transcriber.getHeight();
-		int depth = transcriber.getDepth();
+		int[] width = HyperNEATTranscriber.getProvisionalLayerSize(props, HyperNEATTranscriber.SUBSTRATE_WIDTH);
+		int[] height = HyperNEATTranscriber.getProvisionalLayerSize(props, HyperNEATTranscriber.SUBSTRATE_HEIGHT);
+		int depth = width.length;
 		
 		double[][][] inputPatterns = new double[numTrials][height[0]][width[0]];
 		double[][][] targetOutputPatterns = new double[numTrials][height[depth - 1]][width[depth - 1]];

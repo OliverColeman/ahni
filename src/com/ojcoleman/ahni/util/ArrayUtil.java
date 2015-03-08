@@ -251,7 +251,45 @@ public class ArrayUtil {
 	public static double getMinValue(double[] a) {
 		return a[getMinIndex(a)];
 	}
-
+	
+	/**
+	 * Returns the index of the element with the largest value in the given array.
+	 */
+	public static int getMaxIndex(int[] a) {
+		int maxIndex = 0;
+		for (int i = 1; i < a.length; i++) {
+			if (a[i] > a[maxIndex])
+				maxIndex = i;
+		}
+		return maxIndex;
+	}
+	
+	/**
+	 * Returns the largest value in the given array.
+	 */
+	public static int getMaxValue(int[] a) {
+		return a[getMaxIndex(a)];
+	}
+	
+	/**
+	 * Returns the index of the element with the smallest value in the given array.
+	 */
+	public static int getMinIndex(int[] a) {
+		int minIndex = 0;
+		for (int i = 1; i < a.length; i++) {
+			if (a[i] < a[minIndex])
+				minIndex = i;
+		}
+		return minIndex;
+	}
+	
+	/**
+	 * Returns the smallest value in the given array.
+	 */
+	public static double getMinValue(int[] a) {
+		return a[getMinIndex(a)];
+	}
+	
 	/** 
 	 * Returns a new array that is the result of row-packing the given 2D array into a 1D array.
 	 * @see #unpack(double[], int, int, int)

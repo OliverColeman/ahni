@@ -99,6 +99,8 @@ public class TargetFitnessCalculator implements Configurable {
 	private double acceptableError = 0.1;
 	private Properties properties;
 	
+	private static boolean outputRangeChecked = false;
+	
 	public TargetFitnessCalculator() {
 	}
 
@@ -185,7 +187,15 @@ public class TargetFitnessCalculator implements Configurable {
 			throw new IllegalStateException("The response range of the substrate does not encompass the target output range.");
 		}
 
-		double maxErrorPerOutput = Math.max(substrate.getMaxResponse() - minTargetOutputValue, maxTargetOutputValue - substrate.getMinResponse());
+		double maxResponse = substrate.getMaxResponse();
+		double minResponse = substrate.getMinResponse();
+		if (!outputRangeChecked && maxResponse - minResponse > 100) {
+			logger.warn("The substrate output range seems quite large (" + (maxResponse - minResponse) + "), you might want to consider using a more tightly bounded activation function for the output neuron(s) to facilitate calculating the target error.");
+			outputRangeChecked = true;
+		}
+		
+		double maxErrorPerOutput = Math.max(maxResponse - minTargetOutputValue, maxTargetOutputValue - minResponse);
+		
 		if (errorTypeOutput.squareErrors())
 			maxErrorPerOutput = maxErrorPerOutput * maxErrorPerOutput;
 		if (errorTypeOutput.sumErrors())
@@ -194,7 +204,7 @@ public class TargetFitnessCalculator implements Configurable {
 			maxErrorPerOutput = Math.sqrt(maxErrorPerOutput);
 		else if (errorTypeOutput.squareTotalError())
 			maxErrorPerOutput = maxErrorPerOutput * maxErrorPerOutput;
-
+		
 		maxError = errorTypeTrial.squareErrors() ? maxErrorPerOutput * maxErrorPerOutput : maxErrorPerOutput;
 		if (errorTypeTrial.sumErrors())
 			maxError = trialCount * maxError;
@@ -273,6 +283,15 @@ public class TargetFitnessCalculator implements Configurable {
 		results.percentCorrect = (double) percentCorrect / trialCount;
 		results.fitness = fitnessConversionType.equals("proportional") ? results.proportionalFitness : results.inverseFitness;
 		results.performance = performanceMetric.equals("proportional") ? proportionalPerformance : results.percentCorrect;
+		
+		if (logOutput != null) {
+			try {
+				logOutput.put("\nResults:\n").put(results);
+			} catch (IOException e) {
+				logger.info("Error writing to evaluation log file: " + Arrays.toString(e.getStackTrace()));
+			}
+		}
+		
 		return results;
 	}
 
@@ -313,6 +332,15 @@ public class TargetFitnessCalculator implements Configurable {
 		 * {@link TargetFitnessCalculator#FITNESS_ACCEPTABLE_ERROR_KEY}.
 		 */
 		public double percentCorrect;
+		
+		public String toString() {
+			String out = "fitness: " + fitness;
+			out += "\nperformance: " + performance;
+			out += "\ninverse fitness: " + inverseFitness;
+			out += "\nproportional fitness: " + proportionalFitness;
+			out += "\npercent correct: " + percentCorrect;
+			return out;
+		}
 	}
 
 	/**

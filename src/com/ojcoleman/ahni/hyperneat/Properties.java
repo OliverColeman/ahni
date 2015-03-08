@@ -1,6 +1,8 @@
 package com.ojcoleman.ahni.hyperneat;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,7 +40,7 @@ public class Properties extends com.anji.util.Properties {
 	 */
 	public Properties(String resource) throws IOException {
 		super();
-		loadFromResourceWithoutLogging(resource);
+		loadFromFileWithoutLogging(resource);
 	}
 	
 	/**
@@ -79,6 +81,51 @@ public class Properties extends com.anji.util.Properties {
 	 */
 	public boolean logFilesEnabled() {
 		return containsKey(HyperNEATConfiguration.OUTPUT_DIR_KEY);
+	}
+	
+	/**
+	 * Modifies the Log4J settings to configure the file loggers.
+	 * @param outputDir The directory that file loggers should create files in.
+	 * @param disableFiles If true then all file logging is disabled. 
+	 */
+	public void configureLog4JSettings(String outputDir, boolean disableFiles) {
+		// If logging is not disabled.
+		if (!getProperty("log4j.rootLogger", "OFF").trim().startsWith("OFF")) {
+			Set<String> propKeys = stringPropertyNames();
+			// Find all logger labels that correspond to file loggers.
+			ArrayList<String> fileLogLabels = new ArrayList<String>();
+			ArrayList<String> fileLogProps = new ArrayList<String>();
+			Pattern p = Pattern.compile("log4j\\.appender\\.(\\w*)\\.file", Pattern.CASE_INSENSITIVE);
+			for (String k : propKeys) {
+				Matcher m = p.matcher(k);
+				if (m.matches()) {
+					fileLogProps.add(m.group());
+					fileLogLabels.add(m.group(1));
+				}
+			}
+			if (!fileLogLabels.isEmpty()) {
+				if (disableFiles) {
+					// Construct a new root logger without the logger labels that corresponding to file loggers.
+					String[] rootLoggerProp = getProperty("log4j.rootLogger").split(",");
+					String newRootLoggerProp = rootLoggerProp[0];
+					for (int i = 1; i < rootLoggerProp.length; i++) {
+						if (!fileLogLabels.contains(rootLoggerProp[i].trim())) {
+							newRootLoggerProp += ", " + rootLoggerProp[i].trim();
+						}
+					}
+					setProperty("log4j.rootLogger", newRootLoggerProp);
+				} else {
+					// Make sure all file loggers are configured to output to the output dir.
+					for (String prop : fileLogProps) {
+						String val = getProperty(prop);
+						if (!val.contains(outputDir)) {
+							val = outputDir + val;
+							setProperty(prop, val);
+						}
+					}
+				}
+			}
+		}
 	}
 	
 	/**

@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import com.anji.neat.ConnectionAllele;
+import com.thoughtworks.xstream.XStream;
 
 /**
  * This is the guts of the original Chromosome object, pulled out so the genes can be modified by genetic operators
@@ -42,9 +42,9 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 	private Long secondaryParentId = null;
 	private SortedSet<Allele> m_alleles = null;
 	private boolean shouldMutate = true;
-
+	
 	public boolean pruned;
-
+	
 	/**
 	 * Create chromosome with two parents. Used for crossover.
 	 * 
@@ -171,7 +171,20 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 
 		return representation.toString();
 	}
-
+	
+	/**
+	 * Returns an XML representation of this Chromosome. Useful for exporting.
+	 */
+	public String toXML() {
+		XStream xstream = new XStream();
+		return xstream.toXML(this);
+	}
+	
+	public static ChromosomeMaterial fromXML(String xml) {
+		XStream xstream = new XStream();
+		return (ChromosomeMaterial) xstream.fromXML(xml);
+	}
+	
 	/**
 	 * Convenience method that returns a new Chromosome instance with its genes values (alleles) randomized. Note that,
 	 * if possible, this method will acquire a Chromosome instance from the active ChromosomePool (if any) and then
@@ -208,7 +221,7 @@ public class ChromosomeMaterial implements Comparable, Serializable {
 
 			// Perturb the gene's value (allele) a random amount.
 			// ------------------------------------------------
-			if (newAllele instanceof ConnectionAllele)
+			//if (newAllele instanceof ConnectionAllele)
 				newAllele.setToRandomValue(a_activeConfiguration.getRandomGenerator(), true);
 		}
 

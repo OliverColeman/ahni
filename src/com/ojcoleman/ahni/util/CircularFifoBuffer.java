@@ -1,8 +1,9 @@
 package com.ojcoleman.ahni.util;
 
+import java.io.Serializable;
 import java.util.ArrayDeque;
 
-public class CircularFifoBuffer<E> {
+public class CircularFifoBuffer<E> implements Serializable {
 	int capacity;
 	ArrayDeque<E> storage;
 

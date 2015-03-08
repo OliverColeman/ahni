@@ -41,7 +41,9 @@ public class PowerActivationFunction implements ActivationFunction, ActivationFu
 		if (input.length < 2)
 			return input[0];
 		double v = Math.pow(input[0], Math.abs(input[1]));
-		return Double.isNaN(v) ? 0 : v;
+		if (Double.isNaN(v)) return 0;
+		if (Double.isInfinite(v)) return v < 0 ? -Double.MAX_VALUE / 2 : Double.MAX_VALUE / 2;
+		return v;
 	}
 
 	/**

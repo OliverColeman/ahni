@@ -28,6 +28,7 @@ import java.util.List;
 
 import org.jgapcustomised.impl.CloneReproductionOperator;
 
+import com.ojcoleman.ahni.util.ArrayUtil;
 import com.ojcoleman.ahni.util.Parallel;
 
 /**
@@ -59,27 +60,54 @@ public abstract class ReproductionOperator {
 	 * @see ReproductionOperator#reproduce(Configuration, List, int, List)
 	 */
 	final public void reproduce(final Configuration config, final List<Species> parentSpecies, List<ChromosomeMaterial> offspring) throws InvalidConfigurationException {
-		final int targetNewOffspringCount = (int) Math.round(config.getPopulationSize() * getSlice());
+		// Calculate total fitness and number of elites
+		int totalEliteCount = 0;
+		//double totalSpeciesFitnessTemp = 0;
+		final double[] speciesNewSizeProportional = new double[parentSpecies.size()];
+		int si = 0;
+		for (Species species : parentSpecies) {
+			//totalSpeciesFitnessTemp += species.getAverageFitnessValue();
+			totalEliteCount += species.getEliteCount();
+			speciesNewSizeProportional[si++] = species.getAverageFitnessValue();
+		}
+		ArrayUtil.normaliseSum(speciesNewSizeProportional);
+		
+		final int targetNewOffspringCount = (int) Math.round((config.getPopulationSize() - totalEliteCount) * getSlice());
 
+		//final double totalSpeciesFitness = totalSpeciesFitnessTemp;
+		
+		
+		// Make sure species don't drastically increase in size (in some cases an oscillation can develop in the size 
+		// of a species where the species size increases massively and then decreases massively in alternate 
+		// generations, for a reason too long to explain here). 
+		si = 0;
+		for (Species species : parentSpecies) {
+			int newSpeciesSize = (int) Math.round(speciesNewSizeProportional[si] * targetNewOffspringCount);
+			if (newSpeciesSize > 1.5 * species.size()) {
+				// Reduce new size.
+				speciesNewSizeProportional[si] /= newSpeciesSize / (species.size() * 1.45);
+			}
+			si++;
+		}
+		// Allow for adjustments just made for proportional sizes.
+		ArrayUtil.normaliseSum(speciesNewSizeProportional);
+		si = 0;
+		for (Species species : parentSpecies) {
+			species.newProportionalSize = speciesNewSizeProportional[si++];
+		}
+		
 		if (targetNewOffspringCount > 0) {
 			if (parentSpecies.isEmpty()) {
 				throw new IllegalStateException("no parent species from which to produce offspring");
 			}
 			final List<ChromosomeMaterial> newOffspring = Collections.synchronizedList(new ArrayList<ChromosomeMaterial>(targetNewOffspringCount));
-
-			// calculate total fitness
-			double totalSpeciesFitnessTemp = 0;
-			for (Species species : parentSpecies) {
-				totalSpeciesFitnessTemp += species.getAverageFitnessValue();
-			}
-			final double totalSpeciesFitness = totalSpeciesFitnessTemp;
-
-			// reproduce from each specie relative to its percentage of total fitness
+			
+			// Reproduce from each species relative to its percentage of total fitness
 			Parallel.foreach(parentSpecies, 0, new Parallel.Operation<Species>() {
 				public void perform(Species species) {
 					if (!species.isEmpty()) {
-						double percentFitness = species.getAverageFitnessValue() / totalSpeciesFitness;
-						int numSpecieOffspring =  (int) Math.round(percentFitness * targetNewOffspringCount) - species.getEliteCount();
+						double percentFitness = species.getAverageFitnessValue() / species.newProportionalSize;
+						int numSpecieOffspring =  (int) Math.round(species.newProportionalSize * targetNewOffspringCount) - species.getEliteCount();
 						// Always create at least one offspring with the clone operator, or any operator if it has more than 50% of the slice.
 						// (Otherwise there's no point hanging on to a species).
 						if (numSpecieOffspring <= 0 && (getSlice() > 0.5 || getClass().equals(CloneReproductionOperator.class)))

@@ -31,12 +31,6 @@ import com.anji.nn.activationfunction.ActivationFunction;
  * @author Philip Tucker
  */
 public class NeuronGene extends Gene {
-
-	/**
-	 * for hibernate
-	 */
-	private Long id;
-
 	private NeuronType type = NeuronType.HIDDEN;
 
 	private String activationType;
@@ -45,7 +39,7 @@ public class NeuronGene extends Gene {
 	 * @see Object#toString()
 	 */
 	public String toString() {
-		return getInnovationId().toString();
+		return getInnovationId().toString() + " (" + type.toString().substring(0, 1) + ")";
 	}
 
 	/**
@@ -94,41 +88,5 @@ public class NeuronGene extends Gene {
 	 */
 	String getActivationType() {
 		return activationType;
-	}
-
-	/**
-	 * for hibernate
-	 * 
-	 * @param anActivationType The activationType to set.
-	 */
-	private void setActivationType(String anActivationType) {
-		activationType = anActivationType;
-	}
-
-	/**
-	 * for hibernate
-	 * 
-	 * @param aType
-	 */
-	private void setType(NeuronType aType) {
-		type = aType;
-	}
-
-	/**
-	 * for hibernate
-	 * 
-	 * @return unique id
-	 */
-	private Long getId() {
-		return id;
-	}
-
-	/**
-	 * for hibernate
-	 * 
-	 * @param aId
-	 */
-	private void setId(Long aId) {
-		id = aId;
 	}
 }

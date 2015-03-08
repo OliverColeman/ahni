@@ -83,6 +83,7 @@ public class Species {
 
 	public int originalSize;
 	public int previousOriginalSize;
+	public double newProportionalSize; // Used in ReproductionOperator.
 	
 	private double averageFitness = 0;
 

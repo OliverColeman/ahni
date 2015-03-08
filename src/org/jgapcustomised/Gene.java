@@ -30,12 +30,6 @@ import java.io.Serializable;
  * genetic distance between genes with the same innovation ID.
  */
 public class Gene implements Comparable, Serializable {
-
-	/**
-	 * for hibernate
-	 */
-	private Long id;
-
 	private Long innovationId = null;
 
 	/**
@@ -104,23 +98,5 @@ public class Gene implements Comparable, Serializable {
 	 */
 	public String toString() {
 		return innovationId.toString();
-	}
-
-	/**
-	 * for hibernate
-	 * 
-	 * @return unique id
-	 */
-	private Long getId() {
-		return id;
-	}
-
-	/**
-	 * for hibernate
-	 * 
-	 * @param aId
-	 */
-	private void setId(Long aId) {
-		id = aId;
 	}
 }

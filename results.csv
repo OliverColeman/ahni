@@ -1,0 +1,6 @@
+iteration, tuned property, add.neuron.anywhere.mutation.rate, add.connection.mutation.rate, gens, mean perf
+"0","<initial>","0.02","0.02","2","0.9180500031557898"
+"1","add.neuron.anywhere.mutation.rate","0.01","0.02","2","0.96370765226362"
+"1","add.neuron.anywhere.mutation.rate","0.04","0.02","2","0.9449557232158428"
+"1","add.connection.mutation.rate","0.01","0.01","2","0.9861872855293732"
+"1","add.connection.mutation.rate","0.01","0.04","2","0.8963700486934459"

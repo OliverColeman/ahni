@@ -8,8 +8,11 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.lang.reflect.InvocationTargetException;
 import java.text.DecimalFormat;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
+import java.util.Iterator;
 import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
@@ -17,7 +20,9 @@ import org.apache.log4j.Logger;
 import com.anji.integration.Activator;
 import com.anji.integration.TranscriberException;
 import com.ojcoleman.ahni.util.ArrayUtil;
-
+import com.ojcoleman.ahni.util.bellmanfordsp.BellmanFordSP;
+import com.ojcoleman.ahni.util.bellmanfordsp.DirectedEdge;
+import com.ojcoleman.ahni.util.bellmanfordsp.EdgeWeightedDigraph;
 import com.ojcoleman.bain.NeuralNetwork;
 import com.ojcoleman.bain.base.ComponentCollection;
 import com.ojcoleman.bain.base.ComponentConfiguration;
@@ -41,6 +46,7 @@ import com.ojcoleman.bain.neuron.rate.NeuronCollectionWithBias;
  */
 public class BainNN extends NNAdaptor {
 	private final static Logger logger = Logger.getLogger(BainNN.class);
+	private final static DecimalFormat nfInt = new DecimalFormat("0000");
 
 	public static final String SUBSTRATE_EXECUTION_MODE = "ann.transcriber.bain.executionmode";
 	public static final String SUBSTRATE_SIMULATION_RESOLUTION = "ann.transcriber.bain.resolution";
@@ -78,7 +84,6 @@ public class BainNN extends NNAdaptor {
 	double sumOfSquaredConnectionLengths;
 
 	private int synapseCount;
-	private int maxCycleLength;
 
 	private static boolean reportedExecutionModeProblem = false;
 
@@ -100,7 +105,7 @@ public class BainNN extends NNAdaptor {
 	 * @throws Exception
 	 */
 	public BainNN(NeuralNetwork nn, int[] inputDimensions, int[] outputDimensions, int stepsPerStep, Topology topology) throws Exception {
-		init(nn, inputDimensions, outputDimensions, stepsPerStep, topology, null, 1000);
+		init(nn, inputDimensions, outputDimensions, stepsPerStep, topology, null);
 	}
 
 	/**
@@ -119,16 +124,23 @@ public class BainNN extends NNAdaptor {
 	 *            supplied value will be ignored.</strong>
 	 * @param topology Specifies the network topology, see {@link #topology}.
 	 * @param name A name for this BainNN.
-	 * @param maxCycleLength When determining if this network is recurrent, the maximum cycle length to search for
-	 *            before the network is considered recurrent. Note that this is set to the smaller of the given value
-	 *            and number of neurons in the network.
 	 * @throws Exception
 	 */
+	public BainNN(NeuralNetwork nn, int[] inputDimensions, int[] outputDimensions, int stepsPerStep, Topology topology, String name) throws Exception {
+		init(nn, inputDimensions, outputDimensions, stepsPerStep, topology, name);
+	}
+	
+	/**
+	 * Same as {@link #BainNN(NeuralNetwork, int[], int[], int, Topology, String) 
+	 * but has the defunct maxCycleLength parameter. Here for backward compatibility.
+	 * @deprecared
+	 */
 	public BainNN(NeuralNetwork nn, int[] inputDimensions, int[] outputDimensions, int stepsPerStep, Topology topology, String name, int maxCycleLength) throws Exception {
-		init(nn, inputDimensions, outputDimensions, stepsPerStep, topology, name, maxCycleLength);
+		init(nn, inputDimensions, outputDimensions, stepsPerStep, topology, name);
 	}
 
-	private void init(NeuralNetwork nn, int[] inputDimensions, int[] outputDimensions, int stepsPerStep, Topology topology, String name, int maxCycleLength) throws Exception {
+
+	private void init(NeuralNetwork nn, int[] inputDimensions, int[] outputDimensions, int stepsPerStep, Topology topology, String name) throws Exception {
 		this.nn = nn;
 		this.stepsPerStep = stepsPerStep;
 		this.topology = topology;
@@ -138,7 +150,6 @@ public class BainNN extends NNAdaptor {
 		this.neuronCount = nn.getNeurons().getSize();
 		this.synapseCount = nn.getSynapses().getSize();
 		
-		this.maxCycleLength = Math.min(neuronCount, maxCycleLength);
 		inputSize = 1;
 		for (int i = 0; i < inputDimensions.length; i++) {
 			inputSize *= inputDimensions[i];
@@ -360,65 +371,46 @@ public class BainNN extends NNAdaptor {
 	public void setStepsPerStepForNonLayeredFF() {
 		if (topology != Topology.FEED_FORWARD_NONLAYERED)
 			return;
-
-		// For each neuron store the list of neurons which have connections to it.
-		ArrayList<ArrayList<Integer>> neuronSourceIDs = new ArrayList<ArrayList<Integer>>();
-		for (int id = 0; id < neuronCount; id++) {
-			neuronSourceIDs.add(new ArrayList<Integer>());
-		}
+		
+		// To find the longest path from any output node to any input node
+		// create a directed acyclic graph representing the network where
+		// each edge has the opposite direction of the corresponding 
+		// connection and has weight/value = -1. Then use the Bellman-Ford 
+		// algorithm for finding the lowest value path starting from each 
+		// output node/vertex to each input node/vertex. The lowest value path
+		// corresponds to the longest path since the edges have value -1.
+		EdgeWeightedDigraph graph = new EdgeWeightedDigraph(neuronCount);
 		SynapseCollection<? extends ComponentConfiguration> synapses = nn.getSynapses();
 		for (int c = 0; c < synapses.getSizePopulated(); c++) {
-			if (neuronSourceIDs.get(synapses.getPostNeuron(c)) == null) {
-				logger.error("neuronSourceIDs.get(synapses.getPostNeuron(c)) == null");
-				logger.error("synapses.getPostNeuron(c) = " + synapses.getPostNeuron(c));
-				logger.error("neuronCount = " + neuronCount);
-			}
-			neuronSourceIDs.get(synapses.getPostNeuron(c)).add(synapses.getPreNeuron(c));
+			graph.addEdge(new DirectedEdge(synapses.getPostNeuron(c), synapses.getPreNeuron(c), -1));
 		}
 
-		// Start at output neurons, iterate through network finding source neurons until we reach dead ends or find a
-		// cycle.
+		// Apply Bellman-Ford algo for each output neuron, query for lowest 
+		// value path to each input.
 		int maxDepth = 0;
-		boolean[] visited = new boolean[neuronCount];
 		boolean cyclic = false;
-		ArrayList<Integer> current = new ArrayList<Integer>();
-		ArrayList<Integer> next = new ArrayList<Integer>();
-		for (int id = outputIndex; id < neuronCount && !cyclic; id++) {
-			int depth = 0;
-			Arrays.fill(visited, false);
-			current.clear();
-
-			current.add(id);
-			visited[id] = true;
-			while (!current.isEmpty() && depth < maxCycleLength && !cyclic) {
-				next.clear();
-				// Get the neurons in the next "layer".
-				for (Integer c : current) {
-					for (Integer source : neuronSourceIDs.get(c)) {
-						if (visited[source]) {
-							cyclic = true;
-							break;
-						} else {
-							next.add(source);
-							visited[source] = true;
-						}
-					}
-					if (cyclic)
-						break;
-				}
-				ArrayList<Integer> temp = current;
-				current = next;
-				next = temp;
-				depth++;
+		for (int o = outputIndex; o < neuronCount && !cyclic; o++) {
+			BellmanFordSP bfsp = new BellmanFordSP(graph, o);
+			
+			if (bfsp.hasNegativeCycle()) {
+				cyclic = true;
+				break;
 			}
-			if (depth > maxDepth)
-				maxDepth = depth;
+			
+			for (int i = 0; i < inputSize; i++) {
+				double dist = bfsp.distTo(i);
+				if (dist != Double.POSITIVE_INFINITY && -dist > maxDepth) {
+					maxDepth = (int) Math.round(-dist);
+				}
+			}
 		}
-
-		if (!cyclic && maxDepth < maxCycleLength) {
+		
+		//System.err.println("maxDepth " + maxDepth + "  cyclic " + (cyclic ? "T" : "F"));
+		
+		if (!cyclic) {
 			stepsPerStep = maxDepth - 1;
 		} else {
-			logger.debug("Error determining depth of non-layered feed forward Bain network, stopping at apparent depth of " + maxCycleLength + ", perhaps the network contains cycles? Switching to recurrent topology mode with " + stepsPerStep + " activation cycles per step.");
+			logger.warn("The Bain network marked as non-layered feed forward contains cycles. Switching to recurrent topology mode with " + stepsPerStep + " activation cycles per step.");
 			this.topology = Topology.RECURRENT;
 		}
 	}
@@ -428,6 +420,14 @@ public class BainNN extends NNAdaptor {
 	 */
 	@Override
 	public String toString() {
+		if (topology != Topology.FEED_FORWARD_NONLAYERED)
+			try {
+				throw new Exception("bah");
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		
 		int neuronDisabledCount = 0;
 		for (int i = 0; i < neuronCount; i++) {
 			if (!neuronDisabled[i]) neuronDisabledCount++;
@@ -485,15 +485,19 @@ public class BainNN extends NNAdaptor {
 			String preType = isInput(pre) ? "i" : isOutput(pre) ? "o" : "h";
 			String postType = isInput(post) ? "i" : isOutput(post) ? "o" : "h";
 			String enabled = nn.getSynapses().isNotUsed(i) ? "0" : "1";
-			String efficacy = floatf.format(nn.getSynapses().getEfficacy(i));
-			String zero = nn.getSynapses().getEfficacy(i) == 0 ? "z" : " ";
+			//if (!nn.getSynapses().isNotUsed(i)) {
+			//	System.err.println(i + "\t" + nn.getSynapses().getEfficacy(i) + "\t " + nn.getSynapses().getInitialEfficacy(i) + "\t " + nn.getSynapses().getComponentConfiguration(i).getParameterValue("n"));
+			//}
+			String efficacy = floatf.format(nn.getSynapses().getInitialEfficacy(i));
+			String zero = nn.getSynapses().getInitialEfficacy(i) == 0 ? "z" : " ";
 			
 			String key = intf.format(pre) + ":" + intf.format(post) + ":" + intf.format(i);
 			String value = preType + ":" + pre + " > " + postType + ":" + post + "\t" + enabled + "\t" + efficacy + zero;
 			if (paramNames != null && nn.getSynapses().getComponentConfiguration(i) != null) {
 				value += "\t" + nn.getSynapses().getComponentConfigurationIndex(i) + "\t" + ArrayUtil.toString(nn.getSynapses().getComponentConfiguration(i).getParameterValues(), "\t", floatf);
 			}
-			sortedSynapses.put(key, value);			
+			//sortedSynapses.put(key, value);			
+			sortedSynapses.put(nfInt.format(i), value);
 		}
 		for (String cs : sortedSynapses.values()) {
 			out.append("\n\t" + cs);
@@ -691,6 +695,8 @@ public class BainNN extends NNAdaptor {
 		// If we're not setting neuron model parameters and the neuron collection is configurable and the configuration
 		// has a default preset.
 		if (!(paramsEnabled || typesEnabled) && neurons.getConfigSingleton() != null && neurons.getConfigSingleton().getPreset(0) != null) {
+			ComponentConfiguration config = neurons.getConfigSingleton().getPreset(0);
+			//logger.info(config);
 			neurons.addConfiguration(neurons.getConfigSingleton().getPreset(0));
 		}
 		return neurons;

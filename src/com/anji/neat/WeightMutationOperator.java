@@ -84,6 +84,8 @@ public class WeightMutationOperator extends MutationOperator implements Configur
 		super(DEFAULT_MUTATE_RATE);
 	}
 	
+	static boolean dbg = false;
+	
 	/**
 	 * Removes from <code>genesToAdd</code> and adds to <code>genesToRemove</code> all connection genes that are
 	 * modified.
@@ -98,10 +100,16 @@ public class WeightMutationOperator extends MutationOperator implements Configur
 			throw new AnjiRequiredException(NeatConfiguration.class.toString());
 		}
 		NeatConfiguration config = (NeatConfiguration) jgapConfig;
-
+		
 		// If bias is provided via an input to the network then just get connection alleles, otherwise get connection and neuron alleles.
 		List<Allele> alleles = config.biasViaInput() ? NeatChromosomeUtility.getConnectionList(target.getAlleles()) : new ArrayList(target.getAlleles());
 		Collections.shuffle(alleles, config.getRandomGenerator());
+
+		if (!dbg) {
+			dbg=true;
+			System.out.println((config.biasViaInput() ? "" : "not ") + "bias via input");
+		}
+
 
 		int numMutations = numMutations(config.getRandomGenerator(), alleles.size());
 		Iterator<Allele> iter = alleles.iterator();

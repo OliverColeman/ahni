@@ -2,15 +2,19 @@ package com.ojcoleman.ahni.hyperneat;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-
+import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.jgapcustomised.Allele;
+import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.Chromosome;
 import org.jgapcustomised.ChromosomeMaterial;
 import org.jgapcustomised.InvalidConfigurationException;
@@ -68,6 +72,11 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 	 */
 	public static final String ENABLE_VISUALS_KEY = "visuals.enable";
 	
+	/**
+	 * The file name of a seed chromosome in XML format.
+	 */
+	public static final String SEED_CHROMOSOME_KEY = "chrom.seed";
+	
 	private Properties props;
 	
 	private boolean enableVisuals;
@@ -83,10 +92,41 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 				dirFile.mkdirs();
 		}
 		
-		// If the transcriber is a TranscriberAdaptor or HyperNEATTranscriber we generate an initial chromosome which encodes 
-		// the number of inputs and outputs defined by the transcriber class and/or fitness function and/or hyperneat settings. 
 		Transcriber transcriber = (Transcriber) props.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
-		if (transcriber instanceof TranscriberAdaptor) {
+		
+		// If a seed chromosome has not been specified, increase the current global ID register
+		// to help avoid ID collisions if a Chromsosome from this run is exported and then
+		// imported via SEED_CHROMOSOME_KEY in a future run.
+		// This is a bit of a hack, we should probably adjust the IDs from imported seed chromosomes
+		// to avoid collisions.
+		if (!props.containsKey(HyperNEATConfiguration.SEED_CHROMOSOME_KEY)) {
+			this.getIdFactory().resetID(this.getIdFactory().nextNoIncrement() + 1000);
+			// Sample material has already been generated with non-adjusted IDs, so generate another sample with updated IDs.
+			ChromosomeMaterial sample = NeatChromosomeUtility.newSampleChromosomeMaterial(props.getShortProperty(STIMULUS_SIZE_KEY, DEFAULT_STIMULUS_SIZE), props.getShortProperty(INITIAL_TOPOLOGY_NUM_HIDDEN_NEURONS_KEY, DEFAULT_INITIAL_HIDDEN_SIZE), props.getShortProperty(RESPONSE_SIZE_KEY, DEFAULT_RESPONSE_SIZE), this, props.getBooleanProperty(INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, true));
+			setSampleChromosomeMaterial(sample);
+		}
+		
+		// If a (non-cppn) seed chromosome has been specified.
+		// TODO merge this with the INITIAL_CPPN handling code, or discard INITIAL_CPPN?
+		if (props.containsKey(HyperNEATConfiguration.SEED_CHROMOSOME_KEY)) {
+			try {
+				String seedStr = IOUtils.toString(new FileInputStream(props.getProperty(SEED_CHROMOSOME_KEY)), Charset.defaultCharset());
+				ChromosomeMaterial seedMaterial = ChromosomeMaterial.fromXML(seedStr);
+				if (seedMaterial.getMinInnovationID() < this.getIdFactory().nextNoIncrement()) {
+					throw new InvalidConfigurationException("Invalid property: " + SEED_CHROMOSOME_KEY + ". The smallest innovation ID in the seed has already been assigned.");
+				}
+				this.getIdFactory().resetID(seedMaterial.getMaxInnovationID()+1);
+				setSampleChromosomeMaterial(ChromosomeMaterial.fromXML(seedStr));
+			} catch (FileNotFoundException e) {
+				throw new InvalidConfigurationException("Invalid property: " + SEED_CHROMOSOME_KEY + ". Could not find the specified file.");
+			} catch (IOException e) {
+				throw new InvalidConfigurationException("Invalid property: " + SEED_CHROMOSOME_KEY + ". IOException occurred while reading the specified file:" + e.getMessage());
+			}
+		}
+		
+		// Else if the transcriber is a TranscriberAdaptor or HyperNEATTranscriber we generate an initial chromosome which encodes 
+		// the number of inputs and outputs defined by the transcriber class and/or fitness function and/or hyperneat settings. 
+		else if (transcriber instanceof TranscriberAdaptor) {
 			TranscriberAdaptor taTranscriber = (TranscriberAdaptor) transcriber; 
 			
 			short stimulusSize = (short) taTranscriber.getChromosomeInputNeuronCount();
@@ -263,7 +303,7 @@ public class HyperNEATConfiguration extends NeatConfiguration implements Configu
 		if (enableLogFiles) {
 			try {
 				BufferedWriter outputfile = new BufferedWriter(new FileWriter(getOutputDirPath() + getOutputFilesPrefix() + "initial-sample-chromosome.txt"));
-				outputfile.write(getSampleChromosomeMaterial().toString());
+				outputfile.write(getSampleChromosomeMaterial().toXML());
 				outputfile.close();
 
 				Transcriber cppnTranscriber = (Transcriber) props.singletonObjectProperty(AnjiNetTranscriber.class);

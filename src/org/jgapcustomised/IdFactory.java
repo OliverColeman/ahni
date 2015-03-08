@@ -59,6 +59,13 @@ public class IdFactory {
 	public synchronized long next() {
 		return nextId++;
 	}
+	
+	/**
+	 * @return long next unique ID, without incrementing the ID.
+	 */
+	public synchronized long nextNoIncrement() {
+		return nextId;
+	}
 
 	/**
 	 * construct new factory with default values
@@ -153,5 +160,11 @@ public class IdFactory {
 			}
 		}
 	}
-
+	
+	/**
+	 * Set the next ID to the given value.
+	 */
+	public void resetID(long newID) {
+		nextId = newID;
+	}
 }

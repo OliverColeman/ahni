@@ -9,8 +9,7 @@
 	</target>
 	
 	<target name="build">
-		<javac srcdir="src" destdir="antbin" debug="on" source="1.6"
-			target="1.6" includeAntRuntime="false">
+		<javac srcdir="src" destdir="antbin" debug="on" includeAntRuntime="false">
 			<classpath>
 				<fileset dir="lib">
 					<include name="**/*.jar" />

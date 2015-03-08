@@ -156,9 +156,9 @@ public class RLContinuousStateBased extends BulkFitnessFunctionMT implements AHN
 			//throw new IllegalArgumentException("Can't enable novelty search and environment replacement.");
 			
 			// Create a set of environments that don't change over the course of evolution to test novelty on.
-			//nsEnvironments = new Environment[environmentCount];
+			//nsEnvironments = new Dyn4JEnvironment[environmentCount];
 			nsEnvironments = new Environment[(int) Math.pow(3, envSize)-1];
-			//nsEnvironments = new Environment[1];
+			//nsEnvironments = new Dyn4JEnvironment[1];
 			for (int e = 0; e < nsEnvironments.length; e++) {
 				nsEnvironments[e] = (Environment) props.newObjectProperty(props.getClassProperty(ENVIRONMENT_CLASS, SimpleNavigationEnvironment.class));
 				nsEnvironments[e].rlcsb = this;

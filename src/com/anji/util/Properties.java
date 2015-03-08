@@ -20,6 +20,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
@@ -67,7 +69,14 @@ public class Properties extends java.util.Properties {
 	 * myProp3=$(myProp2)$(myProp3)
 	 * </code>
 	 */ 
-	private static final String SUBSTITUTION_ENABLE_KEY = "substitution.enable";
+	public static final String SUBSTITUTION_ENABLE_KEY = "substitution.enable";
+	
+	/**
+	 * Optional property key. A comma-separated list of property files to include. In the event of the same property
+	 * being defined by both the including and included file, the properties in the including file will override
+	 * properties defined in the included file.
+	 */
+	public static final String INCLUDE_KEY = "properties.include";
 	
 
 	private static Logger logger;
@@ -97,6 +106,7 @@ public class Properties extends java.util.Properties {
 	public Properties(java.util.Properties values) {
 		super();
 		putAll(values);
+		loadIncluded();
 		enableSubstitution = containsKey(SUBSTITUTION_ENABLE_KEY) && super.getProperty(SUBSTITUTION_ENABLE_KEY).toLowerCase().equals("true");
 	}
 
@@ -108,7 +118,7 @@ public class Properties extends java.util.Properties {
 	 */
 	public Properties(String resource) throws IOException {
 		super();
-		loadFromResource(resource);
+		loadFromFile(resource);
 		// logger.info("loaded properties from " + resource);
 	}
 
@@ -118,12 +128,11 @@ public class Properties extends java.util.Properties {
 	 * @param resource a file in the application classpath
 	 * @throws IOException
 	 */
-	public void loadFromResource(String resource) throws IOException {
-		loadFromResourceWithoutLogging(resource);
+	public void loadFromFile(String resource) throws IOException {
+		loadFromFileWithoutLogging(resource);
 		java.util.Properties log4jProps = new java.util.Properties();
 		log4jProps.putAll(this);
 		PropertyConfigurator.configure(log4jProps);
-		enableSubstitution = containsKey(SUBSTITUTION_ENABLE_KEY) && super.getProperty(SUBSTITUTION_ENABLE_KEY).toLowerCase().equals("true");
 	}
 
 	/**
@@ -132,12 +141,22 @@ public class Properties extends java.util.Properties {
 	 * @param resource a file in the application classpath
 	 * @throws IOException
 	 */
-	public void loadFromResourceWithoutLogging(String resource) throws IOException {
+	public void loadFromFileWithoutLogging(String resource) throws IOException {
 		FileReader in = new FileReader(resource);
-		load(in);
-		setName(resource);
+		loadFromReader(in, resource);
+	}
+	
+	/**
+	 * Load properties from an character input stream.
+	 * @throws IOException
+	 */
+	public void loadFromReader(Reader reader, String name) throws IOException {
+		load(reader);
+		setName(name);
+		loadIncluded();
 		enableSubstitution = containsKey(SUBSTITUTION_ENABLE_KEY) && super.getProperty(SUBSTITUTION_ENABLE_KEY).toLowerCase().equals("true");
 	}
+	
 
 	/**
 	 * Log each key/value pair requested of this object exactly once. If value is not specified in properties, log
@@ -289,7 +308,7 @@ public class Properties extends java.util.Properties {
 						throw new IllegalArgumentException("Bad substitution in property " + key + ": could not find referenced property " + subKey + "."); 
 					}
 				}
-				//setProperty(key, value);  // Don't cache, sometimes we want to change referenced properties, worth the negligible performance hit.
+				//setProperty(key, value);  // Don't cache, sometimes we want to change referenced properties.
 			}
 		}
 		log(key, value, defaultVal);
@@ -961,5 +980,40 @@ public class Properties extends java.util.Properties {
 	public void configureLogger() {
 		if (logger == null)
 			logger = Logger.getLogger(Properties.class.getName());
+	}
+	
+	// Load property files included from this set of properties.
+	// Only properties which are not already defined are included.
+	private void loadIncluded() {
+		if (this.containsKey(INCLUDE_KEY)) {
+			String[] propFiles = this.getStringArrayProperty(INCLUDE_KEY);
+			ArrayList<String> included = new ArrayList<String>();
+			for (String pf : propFiles) {
+				if (!pf.endsWith(".properties")) pf += ".properties";
+				try {
+					Properties p = new Properties(pf);
+					included.add(pf);
+					for (Map.Entry<Object, Object> kv : p.entrySet()) {
+						String k = (String) kv.getKey();
+						if (!this.containsKey(k)) {
+							this.put(k, (String) kv.getValue());
+						}
+						// Record properties files included from the included properties file.
+						if (k.equals(INCLUDE_KEY + ".processed")) {
+							for (String pfi : getStringArrayFromString((String) kv.getValue())) {
+								included.add(pfi);
+							}
+						}
+					}
+				} catch (IOException e) {
+					if (logger != null) logger.error("Unable to load included property file " + pf);
+					e.printStackTrace();
+				}
+			}
+			// Record the files successfully included.
+			this.put(INCLUDE_KEY + ".processed", ArrayUtil.toString(included.toArray(), ", "));
+			// Make sure we don't try and include them twice (for example if we duplicate this Properties object.
+			this.remove(INCLUDE_KEY);
+		}
 	}
 }

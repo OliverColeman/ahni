@@ -5,7 +5,6 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -29,7 +28,9 @@ import com.ojcoleman.ahni.evaluation.novelty.Behaviour;
 import com.ojcoleman.ahni.evaluation.novelty.RealVectorBehaviour;
 import com.ojcoleman.ahni.event.AHNIEvent;
 import com.ojcoleman.ahni.event.AHNIEventListener;
+import com.ojcoleman.ahni.experiments.mr2d.EnvironmentDescription;
 import com.ojcoleman.ahni.hyperneat.Properties;
+import com.ojcoleman.ahni.nn.BainNN;
 import com.ojcoleman.ahni.util.ArrayUtil;
 import com.ojcoleman.ahni.util.DoubleVector;
 import com.ojcoleman.ahni.util.NiceWriter;
@@ -126,6 +127,11 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 	 * search. Defaults to fitness.function.mdp.environment.count.
 	 */
 	public static final String NOVELTY_SEARCH_ENV_COUNT = "fitness.function.mdp.noveltysearch.envs.count";
+	/**
+	 * If true then makes novelty search the only objective.  Performance values are still calculated. 
+	 * Default is false. If true then fitness.function.mdp.noveltysearch is also forced to true.
+	 */
+	public static final String NOVELTY_SEARCH_ONLY = "fitness.function.mdp.noveltysearch.only";
 
 	/**
 	 * Seed to use to generate and simulate environments.
@@ -169,20 +175,23 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 
 	private int environmentCount;
 	private double environmentReplaceProb;
-	private int trialCount;
+	int trialCount;
 	private int stateCount;
 	private int actionCount;
-	private int stateCountMax;
+	int stateCountMax;
 	private int actionCountMax;
 	private double transitionRandomness;
 	private double mapRatio;
 	private double transitionRewardRatio;
 	private int stepsForReward;
-	private Environment[] environments, nsEnvironments;
+	ArrayList<Environment> environments;
+	ArrayList<Environment> nsEnvironments;
+	private ArrayList<Environment> genEnvironments;
 	private int environmentCounter = 0;
 	private int environmentMasteredTrialCount = 3;
 	private int stepsPerTrial;
 	private boolean noveltySearchEnabled = false;
+	private boolean noveltySearchOnly = false;
 	private long envRandomSeed;
 	private Random envRandom;
 	private boolean includePrevAction;
@@ -209,22 +218,12 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 		stateCount = props.getIntProperty(STATE_COUNT_INITIAL);
 		actionCountMax = props.getIntProperty(ACTION_COUNT_MAX);
 		stateCountMax = props.getIntProperty(STATE_COUNT_MAX);
+		trialCount = props.getIntProperty(TRIAL_COUNT, 0);
 
 		singleRewardState = props.getBooleanProperty(SINGLE_REWARD_STATE, false);
 		gridEnvs = props.getBooleanProperty(GRID_ENVIRONMENT, false);
 		gridWrap = props.getBooleanProperty(GRID_ENVIRONMENT_WRAP, false);
 		adustStateCountForEnvType();
-
-		trialCount = props.getIntProperty(TRIAL_COUNT, 0);
-		if (trialCount <= 0) {
-			if (gridEnvs && singleRewardState)
-				trialCount = gridSize;
-			else if (environmentReplaceProb == 0)
-				trialCount = environmentCount;
-			else
-				trialCount = actionCountMax * stateCountMax;
-			logger.info("MDP trial count set to " + trialCount);
-		}
 
 		transitionRandomness = props.getDoubleProperty(TRANSITION_RANDOMNESS);
 		Range.checkUnitRange(transitionRandomness, TRANSITION_RANDOMNESS);
@@ -255,32 +254,60 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 			}
 		}
 
-		environments = new Environment[environmentCount];
-		for (int e = 0; e < environments.length; e++) {
-			environments[e] = new Environment();
-			environments[e].setUp(environmentCounter++);
-			// System.err.println(environments[e] + "\n\n\n");
+		environments = new ArrayList<Environment>();
+		for (int e = 0; e < environmentCount; e++) {
+			Environment newEnv = new Environment();
+			if (newEnv.setUp(environmentCounter, environments)) {
+				environments.add(newEnv);
+				environmentCounter++;
+			}
+		}
+		if (environments.size() != environmentCount) {
+			environmentCount = environments.size();
+			logger.warn("Could not generate specified number of MDP environments, number of environments set to " + environmentCount);
 		}
 
-		noveltySearchEnabled = props.getBooleanProperty(NOVELTY_SEARCH, false);
+		noveltySearchOnly = props.getBooleanProperty(NOVELTY_SEARCH_ONLY, false);
+		noveltySearchEnabled = noveltySearchOnly || props.getBooleanProperty(NOVELTY_SEARCH, false);
 		if (noveltySearchEnabled) {
-			int nsEnvCount = props.getIntProperty(NOVELTY_SEARCH_ENV_COUNT, environmentCount);
-			logger.info("Novelty search behaviours have dimensionality " + (nsEnvCount * trialCount * stepsPerTrial));
+			int nsEnvCount = props.getIntProperty(NOVELTY_SEARCH_ENV_COUNT, 0);
 
 			// If the same environments aren't used throughout evolution.
-			if (environmentReplaceProb > 0) {
+			if (environmentReplaceProb > 0 || nsEnvCount > 0) {
+				if (nsEnvCount <= 0)
+					nsEnvCount = environmentCount;
 				// Create a set of environments that don't change over the course of evolution to test novelty on.
-				nsEnvironments = new Environment[nsEnvCount];
-				for (int e = 0; e < nsEnvironments.length; e++) {
-					nsEnvironments[e] = new Environment();
+				nsEnvironments = new ArrayList<Environment>();
+				for (int e = 0; e < nsEnvCount; e++) {
+					Environment newEnv = new Environment();
 					// If possible, generate environments of varying difficulty.
 					// for (int i = 1; i < e && nsEnvironments[e].increaseDifficultyPossible(); i++) {
 					// nsEnvironments[e].increaseDifficulty();
 					// }
-					nsEnvironments[e].setUp(e);
+					if (newEnv.setUp(nsEnvironments.size(), nsEnvironments)) {
+						nsEnvironments.add(newEnv);
+					}
 				}
-				logger.info("Created " + nsEnvironments.length + " environments for novelty search.");
+				if (nsEnvironments.size() != nsEnvCount) {
+					nsEnvCount = nsEnvironments.size();
+					logger.warn("Could not generate specified number of MDP environments for novelty search, number of environments for novelty search set to " + nsEnvCount);
+				}
+				logger.info("Created " + nsEnvCount + " environments for novelty search.");
 			}
+			
+			if (nsEnvCount == 0) nsEnvCount = environments.size();
+
+			logger.info("Novelty search behaviours have dimensionality " + (nsEnvCount * trialCount * stepsPerTrial));
+		}
+		
+		if (trialCount <= 0) {
+			if (gridEnvs && singleRewardState)
+				trialCount = gridSize;
+			else if (environmentReplaceProb == 0)
+				trialCount = environmentCount;
+			else
+				trialCount = actionCountMax * stateCountMax;
+			logger.info("MDP trial count set to " + trialCount);
 		}
 
 		((Properties) props).getEvolver().addEventListener(this);
@@ -308,7 +335,7 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 				}
 			} else {
 				// Somewhat arbitrary, probably always want it to be >= stateCount
-				stepsPerTrial = stateCount;
+				stepsPerTrial = stateCount*actionCount*3;
 			}
 			logger.info("MDP steps per trial set to " + stepsPerTrial);
 		}
@@ -342,9 +369,14 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 	@Override
 	public void initialiseEvaluation() {
 		// Create (some) new environments every generation.
-		for (Environment e : environments) {
+		for (int i = 0; i < environments.size(); i++) {
 			if (environmentReplaceProb > envRandom.nextDouble()) {
-				e.setUp(environmentCounter++);
+				Environment newEnv = new Environment();
+				if (newEnv.setUp(environmentCounter++, environments)) {
+					environments.set(i, newEnv);
+				} else {
+					logger.warn("Could not replace existing MDP environment with a newly generated one.");					
+				}
 			}
 		}
 	}
@@ -366,13 +398,14 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 		_evaluate(genotype, substrate, baseFileName, logText, logImage, null, null, environments);
 	}
 
-	public void _evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage, double[] fitnessValues, Behaviour[] behaviours, Environment[] environments) {
+	public void _evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage, double[] fitnessValues, Behaviour[] behaviours, ArrayList<Environment> environments) {
 		super.evaluate(genotype, substrate, baseFileName, logText, logImage);
+		int environmentCount = environments.size();
 		double randomCompare = 0;
 		int solvedCount = 0;
 		// Random testRandom = new Random(System.currentTimeMillis());
-
-		int[][][] behaviour = behaviours != null && behaviours.length > 0 ? new int[nsEnvironments.length][trialCount][nsEnvironments[0].getStepsPerTrial()] : null;
+		
+		int[][][] behaviour = behaviours != null && behaviours.length > 0 ? new int[environments.size()][trialCount][environments.get(0).getStepsPerTrial()] : null;
 
 		int imageScale = 128;
 
@@ -387,7 +420,7 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 					logOutput.put("\n\nBEGIN EVALUATION ON ENVIRONMENT " + env.id + "\n");
 					logOutput.put(env).put("\n");
 				}
-
+				
 				// Reset substrate to initial state to begin learning new environment.
 				substrate.reset();
 
@@ -426,6 +459,7 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 
 					// The network can perform a number of steps equal to the number of states times two.
 					int step = 0;
+					
 					for (step = 0; step < env.getStepsPerTrial(); step++) {
 						// If we're doing multiple trials then count reward for last trial,
 						// or if we're doing a single long trial then only include reward for last half,
@@ -462,9 +496,34 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 						if (logText) {
 							boolean outputChanged = step > 0 && !ArrayUtils.isEquals(output, previousOutput);
 							logOutput.put("    Agent is at " + currentState.id + "\n");
-							logOutput.put("    Input: " + ArrayUtil.toString(input, ", ", nf) + "\n");
-							logOutput.put("    Output: " + ArrayUtil.toString(output, ", ", nf) + (outputChanged ? " [changed]" : "") + "\n");
-							logOutput.put("    Action: " + action + "\n");
+							
+							String inputStr = "    Input: CS=";
+							int inputIdx = 0;
+							for (; inputIdx < stateCount; inputIdx++)
+								inputStr += (int) input[inputIdx];
+							if (includePrevState) {
+								inputStr += "  PS=";
+								int endIdx = inputIdx + stateCount;
+								for (; inputIdx < endIdx; inputIdx++)
+									inputStr += (int) input[inputIdx];
+							}
+							if (includePrevAction) {
+								inputStr += "  PA=";
+								int endIdx = inputIdx + actionCount;
+								for (; inputIdx < endIdx; inputIdx++)
+									inputStr += (int) input[inputIdx];
+							}
+							if (includeExpl) {
+								inputStr += "  Ex=";
+								inputStr += (int) input[inputIdx++];
+							}
+							inputStr += "  R=";
+							inputStr += input[inputIdx++];
+							logOutput.put(inputStr + "  (" + ArrayUtil.toString(input, ", ", nf) + ")\n");
+							
+							//logOutput.put("    Input: " + ArrayUtil.toString(input, ", ", nf) + "\n");
+							
+							logOutput.put("    Output: " + ArrayUtil.toString(output, ", ", nf) + (outputChanged ? " [changed]" : "") + " (Action: " + action + ")\n");
 							logOutput.put("    Current reward: " + nf.format(trialReward) + "\n\n");
 							System.arraycopy(output, 0, previousOutput, 0, output.length);
 						}
@@ -565,30 +624,50 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 				logOutput.close();
 			}
 
-			if (fitnessValues != null && fitnessValues.length > 0) {
-				double fitness = 0;
-				if (getEnvOptimalRewardCalcType().equals(EnvOptimalRewardCalcType.NOT_SUPPORTED)) {
-					// Use comparison to random agent if optimal reward not available for comparison.
-					// Fitness is 10% of ratio of reward received versus reward received by random agent.
-					fitness = randomCompare > 10 ? 1 : randomCompare * 0.1 * 0.99;
-				} else {
-					// Average of final trial from each environment.
-					fitness = avgRewardForEachTrial[trialCount - 1] * 0.1;
-					genotype.setPerformanceValue("2VSOptimal", fitness);
-				}
-				if (fitness == 0)
-					fitness = Double.MIN_VALUE;
+			double fitness = 0;
+			if (getEnvOptimalRewardCalcType().equals(EnvOptimalRewardCalcType.NOT_SUPPORTED)) {
+				// Use comparison to random agent if optimal reward not available for comparison.
+				// Fitness is 10% of ratio of reward received versus reward received by random agent.
+				fitness = randomCompare > 10 ? 1 : randomCompare * 0.1 * 0.99;
+			} else {
+				// Average of final trial from each environment.
+				fitness = avgRewardForEachTrial[trialCount - 1] * 0.1;
+				genotype.setPerformanceValue("1VSOptimal", fitness);
+			}
+			if (fitness == 0)
+				fitness = Double.MIN_VALUE;
+			
+			if (fitnessValues != null && fitnessValues.length > 0)
 				fitnessValues[0] = fitness;
 
-				genotype.setPerformanceValue("0Solved", (double) solvedCount / environmentCount);
-				genotype.setPerformanceValue("1VSRandom", randomCompare > 10 ? 1 : randomCompare * 0.1 * 0.99);
-			}
+			genotype.setPerformanceValue("0VSRandom", randomCompare > 10 ? 1 : randomCompare * 0.1 * 0.99);
+			genotype.setPerformanceValue("2Solved", (double) solvedCount / environmentCount);
+		
 			if (behaviours != null && behaviours.length > 0) {
-				behaviours[0] = new MDPBehaviour(behaviour);
+				behaviours[0] = new MDPBehaviour(this, behaviour);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	@Override
+	public boolean evaluateGeneralisation(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage, double[] fitnessValues) {
+		if (props.getEvolver().getGeneration() > 0) {
+			if (genEnvironments == null) {
+				// Test on twice as many environments as used for fitness evaluations.
+				genEnvironments = new ArrayList<Environment>();
+				for (int i = 0; i < environmentCount*2; i++) {
+					Environment newEnv = new Environment();
+					if (newEnv.setUp(genEnvironments.size(), genEnvironments)) {
+						genEnvironments.add(newEnv);
+					}
+				}
+			}
+			_evaluate(genotype, substrate, baseFileName, logText, logImage, fitnessValues, null, genEnvironments);
+			return true;
+		}
+		return false;
 	}
 
 	private boolean increaseDifficulty() {
@@ -643,15 +722,15 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 
 	@Override
 	public int fitnessObjectivesCount() {
-		// if (trialCount > 1) return 2;
-		return 1;
+		return noveltySearchOnly ? 0 : 1;
 	}
 	
 	@Override 
 	public String[] objectiveLabels() {
-		String[] labels = new String[1 + (noveltySearchEnabled ? 1 : 0)];
-		labels[0] = "Fitness";
-		if (noveltySearchEnabled) labels[1] = "Novelty";
+		String[] labels = new String[fitnessObjectivesCount() + noveltyObjectiveCount()];
+		int i = 0;
+		if (!noveltySearchOnly) labels[i++] = "Fitness";
+		if (noveltySearchEnabled) labels[i++] = "Novelty";
 		return labels;
 	}
 
@@ -686,8 +765,10 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 		return reportedEnvOptimalRewardCalcType;
 	}
 
-	private class Environment {
+	class Environment {
 		static final double MIN_REWARD = 0.0;
+		static final int MAX_SETUP_RETRIES = 100;
+		
 		public int id;
 		private double maxReward, randomReward;
 		private State[] states;
@@ -698,6 +779,7 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 		private int envActionCount;
 		private int envStepsPerTrial;
 		private int envStepsForReward;
+		
 		
 		public int getStateCount() {
 			return envStateCount;
@@ -715,7 +797,7 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 			return envStepsForReward;
 		}
 
-		private void setUp(int id) {
+		private boolean setUp(int id, ArrayList<Environment> otherEnvs) {
 			this.id = id;
 			envStateCount = stateCount;
 			envActionCount = actionCount;
@@ -735,7 +817,7 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 			double primaryNextStateProbVariance = 1 - overallPrimaryNextStateProb;
 
 			boolean atLeastOneNonZeroReward = false;
-
+			int retries = 0;
 			do {
 				if (gridEnvs) {
 					// Create environment where states organised in a grid with transitions only to neighbouring states.
@@ -788,8 +870,6 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 							}
 						}
 					}
-					if (id == 1)
-						System.out.println(toString());
 				} else {
 					// Create completely random environment.
 					// Create states.
@@ -862,8 +942,17 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 				// }
 				// }
 				// }
-			} while (!atLeastOneNonZeroReward || !allStatesReachableFromAnyState());
+				
+				if (retries > MAX_SETUP_RETRIES) {
+					break;
+				}
+				retries++;
+			} while (!atLeastOneNonZeroReward || !allStatesReachableFromAnyState() || equivalentEnvironmentExists(otherEnvs));
 
+			if (retries > MAX_SETUP_RETRIES) {
+				return false;
+			}
+			
 			// } while (!atLeastOneNonZeroReward);
 
 			// TODO: ensure non-zero reward can be received when starting from first state using a TD-learning method.
@@ -885,6 +974,30 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 					maxReward *= envStepsForReward;
 				}
 			//}
+				
+			return true;
+		}
+		
+		private boolean equivalentEnvironmentExists(ArrayList<Environment> otherEnvs) {
+			for (Environment other : otherEnvs) {
+				if (this.isEquivalent(other))
+					return true;
+			}
+			return false;
+		}
+
+		/**
+		 * Returns true iff the given environment is equal to this environment.
+		 */
+		public boolean isEquivalent(Environment e) {
+			if (envStateCount != e.envStateCount || envActionCount != e.envActionCount || envStepsPerTrial != e.envStepsPerTrial)
+				return false;
+			
+			for (int stateID = 0; stateID < envStateCount; stateID++) {
+				if (!states[stateID].isEquivalent(e.states[stateID]))
+					return false;
+			}
+			return true;
 		}
 
 		public State getRewardState() {
@@ -1067,11 +1180,11 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 
 		public String toString() {
 			StringBuilder sb = new StringBuilder();
-			sb.append("Random reward: " + nf.format(randomReward) + "\n\n");
-			sb.append("(Approx) optimal reward: " + nf.format(maxReward) + "\n");
+			//sb.append("Random reward: " + nf.format(randomReward) + "\n\n");
+			//sb.append("(Approx) optimal reward: " + nf.format(maxReward) + "\n");
 			if (optimalStateSequence != null) {
-				sb.append("\tState sequence: " + ArrayUtil.toString(optimalStateSequence, "\t", null) + "\n");
-				sb.append("\tAction sequence:  " + ArrayUtil.toString(optimalActionSequence, "\t  ", null) + "\n");
+				//sb.append("\tState sequence: " + ArrayUtil.toString(optimalStateSequence, "\t", null) + "\n");
+				//sb.append("\tAction sequence:  " + ArrayUtil.toString(optimalActionSequence, "\t  ", null) + "\n");
 			}
 			if (gridEnvs && singleRewardState) {
 				sb.append("Goal state: " + rewardState);
@@ -1095,6 +1208,15 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 			x = id;
 			y = 0;
 			actions = new ArrayList<Action>();
+		}
+
+		public boolean isEquivalent(State s) {
+			if (actions.size() != s.actions.size()) return false;
+			for (int actionID = 0; actionID < actions.size(); actionID++) {
+				if (!actions.get(actionID).isEquivalent(s.actions.get(actionID)))
+					return false;
+			}
+			return true;
 		}
 
 		public State(int id, int x, int y) {
@@ -1131,6 +1253,7 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 			}
 			return sb.toString();
 		}
+		
 	}
 
 	// An action performed in some State.
@@ -1139,11 +1262,32 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 		// Probabilities for transitioning to each available state.
 		final ArrayList<Transition> transitions;
 		final DoubleVector probSum;
+		private boolean transitionsOrdered = false;
 
 		public Action(int id) {
 			this.id = id;
 			transitions = new ArrayList<Transition>();
 			probSum = new DoubleVector();
+		}
+
+		public boolean isEquivalent(Action a) {
+			if (!transitionsOrdered) {
+				orderTransitions();
+			}
+			if (transitions.size() != a.transitions.size()) return false;
+			for (int tranID = 0; tranID < transitions.size(); tranID++) {
+				if (!transitions.get(tranID).isEquivalent(a.transitions.get(tranID)))
+					return false;
+			}
+			return true;
+		}
+
+		private void orderTransitions() {
+			Collections.sort(transitions);
+			probSum.clear();
+			for (Transition t : transitions) {
+				probSum.add(getTotalProbSum() + t.probability);
+			}
 		}
 
 		public void addTransition(Transition t) {
@@ -1177,7 +1321,7 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 		}
 	}
 
-	private class Transition {
+	private class Transition implements Comparable {
 		final double probability;
 		final State nextState;
 		final double reward;
@@ -1188,8 +1332,20 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 			this.reward = reward;
 		}
 
+		public boolean isEquivalent(Transition t) {
+			return probability == t.probability && nextState.id == t.nextState.id && reward == t.reward;
+		}
+
 		public String toString() {
 			return nextState.id + ", " + nf.format(probability) + ", " + nf.format(reward);
+		}
+
+		@Override
+		public int compareTo(Object otherTransition) {
+			State otherNextState = ((Transition) otherTransition).nextState;
+			if (nextState.id > otherNextState.id) return 1;
+			if (nextState.id < otherNextState.id) return -1;
+			return 0;
 		}
 	}
 
@@ -1270,7 +1426,6 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 			}
 		} else {
 			if (layer == 0) { // Input layer.
-				System.err.println(getInputSize());
 				positions = new Point[getInputSize()];
 				int posIndex = 0;
 				// Current state.
@@ -1315,88 +1470,5 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 			}
 		}
 		return positions;
-	}
-
-	/**
-	 * Behaviour for novelty search for MDP environment. The sequence of states visited is recorded and the difference
-	 * (novelty) between two agents is calculated as a factor of the number of the same states visited from the
-	 * beginning of a trial before the two agents diverge. TODO If the environment is non-deterministic then this
-	 * approach doesn't make sense, it would make more sense to compare what action(s) an agent performs in a given
-	 * state.
-	 */
-	class MDPBehaviour extends Behaviour {
-		public int[][][] p;
-		double maxDist;
-
-		public MDPBehaviour(int[][][] p) {
-			this.p = p;
-			maxDist = p.length;
-		}
-
-		@Override
-		public double distanceFrom(Behaviour b) {
-			int[][][] bp = ((MDPBehaviour) b).p;
-			assert p.length == bp.length && p[0].length == bp[0].length && p[0][0].length == bp[0][0].length;
-			double diff = 0;
-			for (int env = 0; env < nsEnvironments.length; env++) {
-				for (int trial = 0; trial < trialCount; trial++) {
-					int step = 0;
-					for (step = 0; step < nsEnvironments[env].getStepsPerTrial(); step++) {
-						if (p[env][trial][step] != bp[env][trial][step])
-							break;
-					}
-					diff += (double) (nsEnvironments[env].getStepsPerTrial() - step) / nsEnvironments[env].getStepsPerTrial();
-				}
-			}
-			diff /= nsEnvironments.length * trialCount;
-			
-			return diff;
-		}
-
-		@Override
-		public String toString() {
-			return Arrays.deepToString(p);
-		}
-
-		@Override
-		public double defaultThreshold() {
-			return 1.0 / p.length * p[0].length * p[0][0].length;
-		}
-
-		@Override
-		public void renderArchive(List<Behaviour> archive, String fileName) {
-			if (archive.isEmpty())
-				return;
-			
-			int height = nsEnvironments.length * trialCount * nsEnvironments[0].getStepsPerTrial() + nsEnvironments.length * trialCount;
-			int imageScale = 1;
-			int size = archive.size();
-			BufferedImage image = new BufferedImage(size * imageScale, (height + (nsEnvironments.length-1) + (trialCount - 1)) * imageScale, BufferedImage.TYPE_3BYTE_BGR);
-			Graphics2D g = image.createGraphics();
-
-			for (int i = 0; i < size; i++) {
-				MDPBehaviour brv = (MDPBehaviour) archive.get(i);
-				int y = 0;
-				for (int env = 0; env < nsEnvironments.length; env++) {
-					for (int trial = 0; trial < trialCount; trial++) {
-						for (int step = 0; step < nsEnvironments[env].getStepsPerTrial(); step++) {
-							float c = (float) brv.p[env][trial][step] / stateCountMax;
-							//g.setColor(Color.getHSBColor(c, 1f, c * 0.7f + 0.3f));
-							g.setColor(Color.getHSBColor(c, 1f, 1f));
-							g.fillRect(i * imageScale, y * imageScale, imageScale, imageScale);
-							y++;
-						}
-						y++;
-					}
-					y++;
-				}
-			}
-			File outputfile = new File(fileName);
-			try {
-				ImageIO.write(image, "png", outputfile);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
 	}
 }

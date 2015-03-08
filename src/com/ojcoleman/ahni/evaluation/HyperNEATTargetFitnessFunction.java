@@ -76,7 +76,7 @@ public class HyperNEATTargetFitnessFunction extends HyperNEATFitnessFunction {
 	
 	@Override
 	public void evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
-		evaluate(genotype, substrate, baseFileName, logText, logImage);
+		_evaluate(genotype, substrate, baseFileName, logText, logImage);
 	}
 	
 	public double _evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {

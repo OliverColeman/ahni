@@ -221,8 +221,9 @@ public class NeatChromosomeUtility {
 				if (result.containsKey(id))
 					throw new IllegalArgumentException("chromosome contains duplicate neuron gene: " + allele.toString());
 
-				if ((type == null) || neuronAllele.isType(type))
+				if ((type == null) || neuronAllele.isType(type)) {
 					result.put(id, neuronAllele);
+				}
 			}
 		}
 		return result;

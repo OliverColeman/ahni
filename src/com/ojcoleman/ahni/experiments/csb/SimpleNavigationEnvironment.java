@@ -111,7 +111,7 @@ public class SimpleNavigationEnvironment extends Environment {
 			 * ci--) { // Goal state is in corner according to id (iterate over all possible corners).
 			 * goalState.setEntry(i, (ci < 0 || corners.charAt(ci) == '0' ? 0 : 0.9) + random.nextDouble() * 0.1); }
 			 */
-		} else { // Environment is for novelty testing.
+		} else { // Dyn4JEnvironment is for novelty testing.
 			int granularity = 3;
 			double stepSize = 1.0 / (granularity - 1);
 			MultidimensionalCounter mc = new MultidimensionalCounter(ArrayUtil.newArray(size, granularity));

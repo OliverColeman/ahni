@@ -114,12 +114,13 @@ public class AnjiNetTranscriber implements Transcriber<AnjiActivator>, Configura
 	 * @throws TranscriberException
 	 */
 	public AnjiNet newAnjiNet(Chromosome genotype) throws TranscriberException {
-		Map<Long, Neuron> allNeurons = new HashMap<Long, Neuron>();
+		if (genotype.getAlleles().isEmpty()) throw new IllegalArgumentException("Genotype has no alleles...");
 
-		// System.out.println("ID: " + genotype.getId());
+		Map<Long, Neuron> allNeurons = new HashMap<Long, Neuron>();
 
 		// input neurons
 		SortedMap<Long, NeuronAllele> inNeuronAlleles = NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.INPUT);
+		if (inNeuronAlleles.isEmpty()) throw new IllegalArgumentException("An AnjiNet must have at least one input neuron.");
 		List<Neuron> inNeurons = new ArrayList<Neuron>();
 		for (NeuronAllele neuronAllele : inNeuronAlleles.values()) {
 			Neuron n = new Neuron(ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType()), neuronAllele.getBias());
@@ -130,6 +131,7 @@ public class AnjiNetTranscriber implements Transcriber<AnjiActivator>, Configura
 
 		// output neurons
 		SortedMap<Long, NeuronAllele> outNeuronAlleles = NeatChromosomeUtility.getNeuronMap(genotype.getAlleles(), NeuronType.OUTPUT);
+		if (outNeuronAlleles.isEmpty()) throw new IllegalArgumentException("An AnjiNet must have at least one output neuron.");
 		List<Neuron> outNeurons = new ArrayList<Neuron>();
 		for (NeuronAllele neuronAllele : outNeuronAlleles.values()) {
 			Neuron n = new Neuron(ActivationFunctionFactory.getInstance().get(neuronAllele.getActivationType()), neuronAllele.getBias());

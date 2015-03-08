@@ -10,19 +10,26 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.log4j.Logger;
+
+import com.ojcoleman.ahni.hyperneat.HyperNEATConfiguration;
+
 /**
  * Utility class for performing parallel iteration over generic Collections or anything that implements the Iterable
  * interface. Code adapted from http://stackoverflow.com/questions/4010185/parallel-for-for-java#4010275
  */
 public class Parallel {
+	private static final Logger logger = Logger.getLogger(Parallel.class);
 	private static HashMap<Integer, ExecutorService> forPoolMap = new HashMap<Integer, ExecutorService>();
 	private static int defaultThreads = Runtime.getRuntime().availableProcessors();
+	private static boolean reportedDefaultThreads = false;
 	
 	/**
 	 * Sets the default number of threads that will be used. Calls to the forEach(...) methods made prior to calling this method will not be affected.
 	 * The default number of threads is initially set to Runtime.getRuntime().availableProcessors().
 	 */
 	public static void setDefaultThreads(int mt) {
+		reportedDefaultThreads = false;
 		defaultThreads = mt;
 	}
 	
@@ -47,6 +54,11 @@ public class Parallel {
 	}
 	
 	private static <T> void submitAndWait(final Iterable<T> elements, final Operation<T> operation, int threads, int size) {
+		if (!reportedDefaultThreads) {
+			logger.info("Parallel: default thread count set to " + defaultThreads);
+			reportedDefaultThreads = true;
+		}
+
 		try {
 			ExecutorService forPool = null;
 			

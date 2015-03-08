@@ -55,7 +55,7 @@ public class Reset {
 	public Reset(String propFilePath) throws IOException {
 		super();
 		props = new Properties();
-		props.loadFromResourceWithoutLogging(propFilePath);
+		props.loadFromFileWithoutLogging(propFilePath);
 	}
 
 	/**

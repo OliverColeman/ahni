@@ -3,12 +3,17 @@ package com.ojcoleman.ahni.util;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Array;
 import java.net.URLDecoder;
@@ -32,6 +37,7 @@ import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -88,8 +94,8 @@ import com.ojcoleman.ahni.hyperneat.Run;
  * </dl>
  * </p>
  */
-public class ParameterTuner {
-	public static final double significanceFactor = 1.01;
+public class ParameterTuner implements Serializable {
+	private static final long serialVersionUID = 1L;
 	private static final DecimalFormat nf = new DecimalFormat("0.00000");
 	private static final DateFormat df = new SimpleDateFormat("HH:mm:ss");
 	
@@ -110,31 +116,42 @@ public class ParameterTuner {
 	private int[] adjustIneffectiveCount;
 	private int[] adjustCountDown;
 	private Result bestResult;
-	private BufferedWriter resultFile;
 	private int iteration;
 	private int property;
+	private int stagnantCount = 0;
+	private boolean suppressLogging;
 	
 	public static void main(String[] args) {
+		File checkPoint = new File("checkpoint");
+		if (checkPoint.exists() && checkPoint.isFile()) {
+			System.out.println("Resume previous session?");
+			if (System.console().readLine().toLowerCase().matches("yes|y")) {
+				try {
+					ObjectInputStream ois = new ObjectInputStream(new FileInputStream(checkPoint));
+					ParameterTuner pt = (ParameterTuner) ois.readObject();
+					ois.close();
+					pt.go(null, true);
+				} catch (Exception e) {
+					System.err.println("Unable to resume from check point.");
+					e.printStackTrace();
+					System.exit(1);
+				}
+				System.exit(0);
+			}
+		}
 		if (args.length == 0) {
 			usage();
 			System.exit(-1);
 		}
 		
 		ParameterTuner pt = new ParameterTuner();
-		pt.go(args);
+		pt.go(args, false);
 	}
 	
 	public ParameterTuner() {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
-            	if (resultFile != null) {
-            		try {
-						resultFile.close();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-            	}
             	System.out.println("\n\nExiting. Cancelling currently running condor jobs (if any).");
             	for (String id : runningCondorClusterIDs) {
             		try {
@@ -148,131 +165,161 @@ public class ParameterTuner {
         });
 	}
 	
-	public void go(String[] args) {
+	public void go(String[] args, boolean resume) {
 		try {
-			props = new Properties(args[0]);
-			
-			Properties toTune = new Properties(props.getOnlySubProperties("parametertuner.tune"));
-			TreeMap<Integer, Param> propsTemp = new TreeMap<Integer, Param>();
-			TreeMap<Integer, Param.Value> initValTemp = new TreeMap<Integer, Param.Value>();
-			for (String key : toTune.stringPropertyNames()) {
-				if (!key.endsWith(".prop"))
-					continue;
+			ExecutorService runExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory(ParameterTuner.class.getName()));
+			BufferedWriter resultFile;
+
+			if (!resume) {
+				props = new Properties(args[0]);
 				
-				int propIndex = Integer.parseInt(key.substring(0, key.length() - 5));
-				String keyPrefix = propIndex + ".";
-				
-				String propName = toTune.getProperty(keyPrefix + "prop");
-				Param.Type propType = Param.Type.valueOf(toTune.getProperty(keyPrefix + "type", "float").toUpperCase());
-				Param.AdjustType adjustType = Param.AdjustType.valueOf(toTune.getProperty(keyPrefix + "adjust.type", "factor").toUpperCase());
-				double adjustAmountOrFactor = toTune.getDoubleProperty(keyPrefix + "adjust.amount", 2);
-				
-				if (propType != Param.Type.DISCRETE && adjustType == Param.AdjustType.ALL) {
-					throw new IllegalArgumentException("ParameterTuner: cannot use \"ALL\" adjust type for non-discrete property type for " + propName + ".");					
+				Properties toTune = new Properties(props.getOnlySubProperties("parametertuner.tune"));
+				TreeMap<Integer, Param> propsTemp = new TreeMap<Integer, Param>();
+				TreeMap<Integer, Param.Value> initValTemp = new TreeMap<Integer, Param.Value>();
+				for (String key : toTune.stringPropertyNames()) {
+					if (!key.endsWith(".prop"))
+						continue;
+					
+					int propIndex = Integer.parseInt(key.substring(0, key.length() - 5));
+					String keyPrefix = propIndex + ".";
+					
+					String propName = toTune.getProperty(keyPrefix + "prop");
+					Param.Type propType = Param.Type.valueOf(toTune.getProperty(keyPrefix + "type", "float").toUpperCase());
+					Param.AdjustType adjustType = Param.AdjustType.valueOf(toTune.getProperty(keyPrefix + "adjust.type", "factor").toUpperCase());
+					double adjustAmountOrFactor = toTune.getDoubleProperty(keyPrefix + "adjust.amount", 2);
+					
+					if (propType != Param.Type.DISCRETE && adjustType == Param.AdjustType.ALL) {
+						throw new IllegalArgumentException("ParameterTuner: cannot use \"ALL\" adjust type for non-discrete property type for " + propName + ".");					
+					}
+					
+					Param param = null;
+					if (propType == Param.Type.DISCRETE) {
+						String[] discreteVals = toTune.getProperty(keyPrefix + "discrete_values").split("\\s*;\\s*");
+						//String prop, String type, int adjustType, double adjustAmountOrFactor, String[] discreteVals
+						param = new Param(propName, propType, adjustType, adjustAmountOrFactor, discreteVals);
+					}
+					else {
+						//String name, String type, int adjustType, double adjustAmountOrFactor, double min, double max
+						double min = toTune.getDoubleProperty(keyPrefix + "min", propType == Param.Type.FLOAT ? 0 : 1);
+						double max = toTune.getDoubleProperty(keyPrefix + "max", propType == Param.Type.FLOAT ? 1 : 1000);
+						param = new Param(propName, propType, adjustType, adjustAmountOrFactor, min, max);
+					}
+					propsTemp.put(propIndex, param);
+					double initVal = toTune.getDoubleProperty(keyPrefix + "initial");
+					initValTemp.put(propIndex, param.getValue(initVal));
+					
+					if (propName.equals("popul.size")) {
+						popSize = (int) Math.round(initVal);
+					}
+				}
+				propCount = propsTemp.size();
+				propsToTune = new Param[propCount];
+				currentBestValues = new Param.Value[propCount];
+				int j = 0;
+				for (Entry<Integer, Param> e : propsTemp.entrySet()) {
+					propsToTune[j] = e.getValue();
+					currentBestValues[j] = initValTemp.get(e.getKey());
+					j++;
 				}
 				
-				Param param = null;
-				if (propType == Param.Type.DISCRETE) {
-					String[] discreteVals = toTune.getProperty(keyPrefix + "discrete_values").split("\\s*;\\s*");
-					//String prop, String type, int adjustType, double adjustAmountOrFactor, String[] discreteVals
-					param = new Param(propName, propType, adjustType, adjustAmountOrFactor, discreteVals);
+				numGens = props.getIntProperty("parametertuner.numgens", 500);
+				popSize = props.getIntProperty("popul.size");
+				
+				// Store the total evaluations that will be performed for a run, so that if we're tuning popul.size
+				// then we can adjust the number of generations accordingly.
+				totalEvaluations = numGens * popSize;
+				
+				maxIterations = props.getIntProperty("parametertuner.maxiterations", 100);
+				numRuns = props.getIntProperty("parametertuner.numruns", 50);
+				solvedPerformance = props.getDoubleProperty("parametertuner.solvedperformance", 1);
+				htCondorTpl = props.getProperty("parametertuner.htcondor", null);
+				if (htCondorTpl != null) {
+					// Clean up generated files from previous aborted runs.
+					Paths paths = new Paths("./", "pt-condor-*");
+					paths.delete();
+	
+					// TODO Allow keeping file output (tricky/painful with Condor 7.0)
+					props.remove("output.dir");
+				}
+				
+				props.setProperty("num.runs", "1"); // We'll calculate our own average so we can report progress as we go.
+				props.setProperty("num.generations", "" + numGens);
+				
+				suppressLogging = props.getBooleanProperty("parametertuner.suppresslog", true); 
+				if (suppressLogging) {
+					props.setProperty("log4j.rootLogger", "OFF"); // Suppress logging.
+					Logger.getRootLogger().setLevel(Level.OFF);
+					props.remove("output.dir");
+				}
+				
+				props.remove("random.seed"); // Make sure the runs are randomised.
+				
+				adjustIneffectiveCount = new int[propCount];
+				adjustCountDown = new int[propCount];
+				
+				resultFile = new BufferedWriter(new FileWriter("results.csv"));
+				resultFile.append("iteration, tuned property, ");
+				for (int p = 0; p < propCount; p++) {
+					resultFile.append(propsToTune[p].name + ", ");
+				}
+				resultFile.append("gens, mean perf\n");
+	
+				System.out.println("Initial values:");
+				for (int p = 0; p < propCount; p++) {
+					String propKey = propsToTune[p].name;
+					props.setProperty(propKey, currentBestValues[p].toString());
+					System.out.println("  " + propsToTune[p] + "=" + props.getProperty(propKey));
+				}
+				System.out.println("  num.generations=" + numGens);
+				
+				if (!props.getBooleanProperty("parametertuner.skipinitial", false)) {
+					System.out.println("Determining fitness for initial values:");
+					bestResult = runExecutor.submit(new DoRuns(props, "initial", "0")).get();
+					System.out.println();
+					if (bestResult.solvedByGeneration() != -1) {
+						numGens = bestResult.solvedByGeneration();
+						totalEvaluations = numGens * popSize;
+						props.setProperty("num.generations", "" + numGens);
+						System.out.println("Set generations to " + numGens);
+					}
+					System.out.println("Initial performance: " + nf.format(bestResult.performance()));
+					addResult(bestResult, resultFile);
 				}
 				else {
-					//String name, String type, int adjustType, double adjustAmountOrFactor, double min, double max
-					double min = toTune.getDoubleProperty(keyPrefix + "min", propType == Param.Type.FLOAT ? 0 : 1);
-					double max = toTune.getDoubleProperty(keyPrefix + "max", propType == Param.Type.FLOAT ? 1 : 1000);
-					param = new Param(propName, propType, adjustType, adjustAmountOrFactor, min, max);
+					System.out.println("Skipping determining performance for initial parameter values."); 
 				}
-				propsTemp.put(propIndex, param);
-				double initVal = toTune.getDoubleProperty(keyPrefix + "initial");
-				initValTemp.put(propIndex, param.getValue(initVal));
 				
-				if (propName.equals("popul.size")) {
-					popSize = (int) Math.round(initVal);
+				iteration = 1;
+			}
+			else { //resume from previous checkpoint
+				System.out.println("Resuming from iteration " + iteration + ", property " + propsToTune[property].name);
+				
+				System.out.println("Cancelling old condor jobs (if any).");
+            	for (String id : runningCondorClusterIDs) {
+            		try {
+            			System.out.println("  condor_rm " + id);
+						Runtime.getRuntime().exec("condor_rm " + id);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+            	}
+            	runningCondorClusterIDs.clear();
+				
+            	System.out.println("  Previous best result was " + bestResult + " using values:");
+				for (int p = 0; p < propCount; p++) {
+					System.out.println("    " + propsToTune[p] + "=" + currentBestValues[p]);
 				}
-			}
-			propCount = propsTemp.size();
-			propsToTune = new Param[propCount];
-			currentBestValues = new Param.Value[propCount];
-			int j = 0;
-			for (Entry<Integer, Param> e : propsTemp.entrySet()) {
-				propsToTune[j] = e.getValue();
-				currentBestValues[j] = initValTemp.get(e.getKey());
-				j++;
-			}
-			
-			numGens = props.getIntProperty("parametertuner.numgens", 500);
-			popSize = props.getIntProperty("popul.size");
-			
-			// Store the total evaluations that will be performed for a run, so that if we're tuning popul.size
-			// then we can adjust the number of generations accordingly.
-			totalEvaluations = numGens * popSize;
-			
-			maxIterations = props.getIntProperty("parametertuner.maxiterations", 100);
-			numRuns = props.getIntProperty("parametertuner.numruns", 50);
-			solvedPerformance = props.getDoubleProperty("parametertuner.solvedperformance", 1);
-			htCondorTpl = props.getProperty("parametertuner.htcondor", null);
-			if (htCondorTpl != null) {
-				// Clean up generated files from previous aborted runs.
-				Paths paths = new Paths("./", "pt-condor-*");
-				paths.delete();
-
-				// TODO Allow keeping file output (tricky/painful with Condor 7.0)
-				props.remove("output.dir");
-			}
-			
-			props.setProperty("num.runs", "1"); // We'll calculate our own average so we can report progress as we go.
-			props.setProperty("num.generations", "" + numGens);
-			
-			boolean suppressLog = props.getBooleanProperty("parametertuner.suppresslog", true); 
-			if (suppressLog) {
-				props.setProperty("log4j.rootLogger", "OFF"); // Suppress logging.
-				Logger.getRootLogger().setLevel(Level.OFF);
-				props.remove("output.dir");
-			}
-			
-			props.remove("random.seed"); // Make sure the runs are randomised.
-			
-			adjustIneffectiveCount = new int[propCount];
-			adjustCountDown = new int[propCount];
-			
-			resultFile = new BufferedWriter(new FileWriter("results.csv"));
-			resultFile.append("iteration, tuned property, ");
-			for (int p = 0; p < propCount; p++) {
-				resultFile.append(propsToTune[p].name + ", ");
-			}
-			resultFile.append("gens, mean perf\n");
-
-			ExecutorService runExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory(ParameterTuner.class.getName()));
-			
-			System.out.println("Initial values:");
-			for (int p = 0; p < propCount; p++) {
-				String propKey = propsToTune[p].name;
-				props.setProperty(propKey, currentBestValues[p].toString());
-				System.out.println("  " + propsToTune[p] + "=" + props.getProperty(propKey));
-			}
-			System.out.println("  num.generations=" + numGens);
-			
-			if (!props.getBooleanProperty("parametertuner.skipinitial", false)) {
-				System.out.println("Determining fitness for initial values:");
-				bestResult = runExecutor.submit(new DoRuns(props, "initial", "0")).get();
-				System.out.println();
-				if (bestResult.solvedByGeneration() != -1) {
-					numGens = bestResult.solvedByGeneration();
-					totalEvaluations = numGens * popSize;
-					props.setProperty("num.generations", "" + numGens);
-					System.out.println("Set generations to " + numGens);
+				System.out.println("    num.generations=" + numGens + "\n");
+				for (int p = 0; p < propCount; p++) {
+					System.out.println("  Value adjust amount for " + propsToTune[p].name + " is " + nf.format(propsToTune[p].adjustAmountOrFactor));
 				}
-				System.out.println("Initial performance: " + nf.format(bestResult.performance()));
-				addResult(bestResult);
-			}
-			else {
-				System.out.println("Skipping determining performance for initial parameter values."); 
+				System.out.println("\n");
+				
+				resultFile = new BufferedWriter(new FileWriter("results.csv", true));
 			}
 			
-			int stagnantCount = 0;
-			
-			for (iteration = 1; iteration <= maxIterations; iteration++) {
+			// Start/resume tuning.
+			for ( ; iteration <= maxIterations; iteration++) {
 				System.out.println("Start iteration " + iteration);
 				
 				boolean adjustedAnyParams = false;
@@ -281,7 +328,18 @@ public class ParameterTuner {
 				boolean triedAtLeastOneParamAdjustment = false;
 
 				// Adjust each property in turn.
-				for (property = 0; property < propCount; property++) {
+				if (!resume) property = 0; // If we're resuming then continue on the property we left off at.
+				for (; property < propCount; property++) {
+					// If we're not resuming create a checkpoint.
+					if (!resume) {
+						ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("checkpoint"));
+						oos.writeObject(this);
+						oos.close();
+					}
+					else {
+						resume = false;
+					}
+					
 					String propKey = propsToTune[property].name;
 					boolean tuningPopSize = propKey.equals("popul.size");
 
@@ -323,7 +381,7 @@ public class ParameterTuner {
 										bestResult = adjustResult;
 										newVal = variations[var];
 									}
-									addResult(adjustResult);
+									addResult(adjustResult, resultFile);
 									done[var] = true;
 									doneCount++;
 								}
@@ -431,7 +489,7 @@ public class ParameterTuner {
 	}
 	
 	
-	private void addResult(Result r) {
+	private void addResult(Result r, BufferedWriter resultFile) {
 		try {
 			if (iteration > 0) {
 				resultFile.append("\"" + iteration + "\",\"" + this.propsToTune[property].name + "\",");
@@ -507,8 +565,10 @@ public class ParameterTuner {
 				// Trim to maximum length of 255 as this is the maximum on most file systems.
 				condorOutDir = condorOutDir.substring(0, 255);
 			}
+			File condorOutDirFile = new File(condorOutDir);
+			FileUtils.deleteQuietly(condorOutDirFile);
 			String condorOutDirSep = condorOutDir + File.separator;
-			(new File(condorOutDir)).mkdir();
+			condorOutDirFile.mkdir();
 			// Save properties file.
 			props.store(new FileOutputStream(condorOutDirSep + "pt.properties"), condorOutDir);
 			
@@ -530,7 +590,7 @@ public class ParameterTuner {
 			condorSubmit.put("universe", "java");
 			condorSubmit.put("executable", mainJAR);
 			condorSubmit.put("jar_files", jarFiles);
-			condorSubmit.put("arguments", "com.ojcoleman.ahni.hyperneat.Run -od ./ -f -op cp$(Process)- -ar result ./pt.properties");
+			condorSubmit.put("arguments", "com.ojcoleman.ahni.hyperneat.Run " + (suppressLogging ? "-ao" : "") + " -od ./ -f -op cp$(Process)- -ar result ./pt.properties");
 			condorSubmit.put("universe", "java");
 			String tif = (condorSubmit.containsKey("transfer_input_files") ? condorSubmit.get("transfer_input_files") + ", " : "") + "pt.properties";
 			condorSubmit.put("transfer_input_files", tif);
@@ -631,7 +691,8 @@ public class ParameterTuner {
 	}
 	
 	
-	private class Result {
+	private class Result implements Serializable {
+		private static final long serialVersionUID = 1L;
 		// Use median as it's better for distributions with outliers, and we're likely to have outliers.
 		private double performance = -1;
 		private int solvedByGeneration = -1;
@@ -697,9 +758,11 @@ public class ParameterTuner {
 	}
 	
 	
-	public static class Param {
-		public static enum Type { FLOAT, INTEGER, BOOLEAN, DISCRETE };
-		public static enum AdjustType { DELTA, FACTOR, ALL };
+	public static class Param implements Serializable {
+		private static final long serialVersionUID = 1L;
+
+		public static enum Type implements Serializable { FLOAT, INTEGER, BOOLEAN, DISCRETE };
+		public static enum AdjustType implements Serializable { DELTA, FACTOR, ALL };
 		
 		Type type;
 		String name;
@@ -751,7 +814,8 @@ public class ParameterTuner {
 			return adjustAmountOrFactor != orig;
 		}
 		
-		public class Value {
+		public class Value implements Serializable {
+			private static final long serialVersionUID = 1L;
 			private double value;
 			
 			public Value(double v) {

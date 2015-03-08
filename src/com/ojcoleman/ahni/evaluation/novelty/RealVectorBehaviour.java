@@ -12,6 +12,7 @@ import java.util.List;
 import javax.imageio.ImageIO;
 
 import org.apache.commons.math3.linear.ArrayRealVector;
+import org.jgapcustomised.BulkFitnessFunction;
 import org.jgapcustomised.Chromosome;
 
 import com.ojcoleman.ahni.hyperneat.HyperNEATConfiguration;
@@ -48,7 +49,7 @@ public class RealVectorBehaviour extends Behaviour {
 	}
 	
 	@Override
-	public void renderArchive(List<Behaviour> archive, String fileName) {
+	public void renderArchive(List<Behaviour> archive, String fileName, BulkFitnessFunction fitnessFunction) {
 		if (archive.isEmpty()) return;
 		
 		int dims = ((RealVectorBehaviour) archive.get(0)).p.getDimension();

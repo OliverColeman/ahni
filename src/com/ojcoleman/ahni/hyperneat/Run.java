@@ -151,7 +151,7 @@ public class Run {
 			resultFileNameBase = null;
 			runLogFile = null;
 			configureLog4J(true);			
-			logEnv();
+			//logEnv();
 		}
 		// If all or aggregate output is allowed.
 		else {
@@ -169,7 +169,7 @@ public class Run {
 			}
 
 			configureLog4J(aggFilesOnly);
-			logEnv();
+			//logEnv();
 
 			resultFileNameBase = outputDir + properties.getProperty(HyperNEATConfiguration.OUTPUT_PREFIX_KEY, "") + resultFileNameBase;
 
@@ -211,17 +211,18 @@ public class Run {
 				// If there is a file logger for each run.
 				if (runLogFile != null) {
 					FileAppender fileAppender = (FileAppender) Logger.getRootLogger().getAppender("RunLog");
-					fileAppender.setFile(runOutputDir + runLogFile);
-					fileAppender.activateOptions();
-
+					if (fileAppender != null) {
+						fileAppender.setFile(runOutputDir + runLogFile);
+						fileAppender.activateOptions();
+					}
 				}
 			}
 			
 			logger.info("\n\n--- START RUN: " + (run + 1) + " of " + numRuns + " (" + ((run * 100) / (numRuns)) + "%) ---------------------------------------\n\n");
 			HyperNEATEvolver evolver = (HyperNEATEvolver) runProps.singletonObjectProperty(HyperNEATEvolver.class);
-
+			
 			evolver.run();
-
+			
 			performance[run] = evolver.getBestPerformance();
 			fitness[run] = evolver.getBestFitness();
 			avgGenerations += evolver.getGeneration();
@@ -244,9 +245,10 @@ public class Run {
 		// If there is a file logger for each run, set log file back to root output dir.
 		if (runLogFile != null) {
 			FileAppender fileAppender = (FileAppender) Logger.getRootLogger().getAppender("RunLog");
-			fileAppender.setFile(outputDir + runLogFile);
-			fileAppender.activateOptions();
-
+			if (fileAppender != null) {
+				fileAppender.setFile(outputDir + runLogFile);
+				fileAppender.activateOptions();
+			}
 		}
 		logger.info(numRuns + " runs completed in " + Misc.formatTimeInterval((end - start) / 1000));
 		
@@ -302,50 +304,11 @@ public class Run {
 	}
 
 	private void configureLog4J(boolean disableFiles) {
-		// If logging is not disabled.
-		if (!properties.getProperty("log4j.rootLogger", "OFF").trim().startsWith("OFF")) {
-			Set<String> propKeys = properties.stringPropertyNames();
-			// Find all logger labels that correspond to file loggers.
-			ArrayList<String> fileLogLabels = new ArrayList<String>();
-			ArrayList<String> fileLogProps = new ArrayList<String>();
-			Pattern p = Pattern.compile("log4j\\.appender\\.(\\w*)\\.file", Pattern.CASE_INSENSITIVE);
-			for (String k : propKeys) {
-				Matcher m = p.matcher(k);
-				if (m.matches()) {
-					fileLogProps.add(m.group());
-					fileLogLabels.add(m.group(1));
-				}
-			}
-			if (!fileLogLabels.isEmpty()) {
-				if (disableFiles) {
-					// Construct a new root logger without the logger labels that corresponding to file loggers.
-					String[] rootLoggerProp = properties.getProperty("log4j.rootLogger").split(",");
-					String newRootLoggerProp = rootLoggerProp[0];
-					for (int i = 1; i < rootLoggerProp.length; i++) {
-						if (!fileLogLabels.contains(rootLoggerProp[i].trim())) {
-							newRootLoggerProp += ", " + rootLoggerProp[i].trim();
-						}
-					}
-					properties.setProperty("log4j.rootLogger", newRootLoggerProp);
-				} else {
-					// Make sure all file loggers are configured to output to the output dir.
-					for (String prop : fileLogProps) {
-						String val = properties.getProperty(prop);
-						if (!val.contains(outputDir)) {
-							val = outputDir + val;
-							properties.setProperty(prop, val);
-						}
-					}
-				}
-			}
-		}
-
+		properties.configureLog4JSettings(outputDir, disableFiles);
 		java.util.Properties log4jProps = new java.util.Properties();
 		log4jProps.putAll(properties);
 		PropertyConfigurator.configure(log4jProps);
-
 		properties.configureLogger();
-
 		logger = Logger.getLogger(Run.class);
 	}
 	

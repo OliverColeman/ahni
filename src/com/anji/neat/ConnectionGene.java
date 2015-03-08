@@ -29,12 +29,6 @@ import org.jgapcustomised.Gene;
  * @author Philip Tucker
  */
 public class ConnectionGene extends Gene {
-
-	/**
-	 * for hibernate
-	 */
-	private Long id;
-
 	private Long srcNeuronId = null;
 
 	private Long destNeuronId = null;
@@ -81,41 +75,5 @@ public class ConnectionGene extends Gene {
 	 */
 	public Long getSrcNeuronId() {
 		return srcNeuronId;
-	}
-
-	/**
-	 * for hibernate
-	 * 
-	 * @param aDestNeuronId
-	 */
-	private void setDestNeuronId(Long aDestNeuronId) {
-		destNeuronId = aDestNeuronId;
-	}
-
-	/**
-	 * for hibernate
-	 * 
-	 * @param aSrcNeuronId
-	 */
-	private void setSrcNeuronId(Long aSrcNeuronId) {
-		srcNeuronId = aSrcNeuronId;
-	}
-
-	/**
-	 * for hibernate
-	 * 
-	 * @return unique id
-	 */
-	private Long getId() {
-		return id;
-	}
-
-	/**
-	 * for hibernate
-	 * 
-	 * @param aId
-	 */
-	private void setId(Long aId) {
-		id = aId;
 	}
 }

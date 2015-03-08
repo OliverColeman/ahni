@@ -19,33 +19,20 @@
  */
 package org.jgapcustomised;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.Set;
 
-import com.anji.neat.ConnectionAllele;
-
 /**
  * Allele contains gene data that can be different for multiple chromosomes with the same gene.
  * 
  * @author Philip Tucker
  */
-public abstract class Allele implements Comparable {
-
-	private Long id;
-
+public abstract class Allele implements Comparable, Serializable {
 	private Gene gene;
-
-	private Chromosome chromosome = null;
-
-	/**
-	 * for hibernate
-	 */
-	protected Allele() {
-		super();
-	}
 
 	/**
 	 * ctor
@@ -102,24 +89,6 @@ public abstract class Allele implements Comparable {
 	}
 
 	/**
-	 * for hibernate
-	 * 
-	 * @return persistence id
-	 */
-	private Long getId() {
-		return id;
-	}
-
-	/**
-	 * for hibernate
-	 * 
-	 * @param aId
-	 */
-	private void setId(Long aId) {
-		id = aId;
-	}
-
-	/**
 	 * @see java.lang.Comparable#compareTo(java.lang.Object)
 	 */
 	public int compareTo(Object o) {
@@ -147,11 +116,9 @@ public abstract class Allele implements Comparable {
 	public String toString() {
 		StringBuffer result = new StringBuffer();
 		result.append(gene.toString());
-		if (id != null)
-			result.append("[").append(id).append("]");
 		return result.toString();
 	}
-
+	
 	/**
 	 * @param alleles <code>Collection</code> contains <code>Allele</code> objects
 	 * @return <code>Set</code> contains <code>Gene</code> objects
@@ -172,24 +139,6 @@ public abstract class Allele implements Comparable {
 	 */
 	public Long getInnovationId() {
 		return gene.getInnovationId();
-	}
-
-	/**
-	 * for hibernate
-	 * 
-	 * @return chromosome containnig this allele - can be null
-	 */
-	private Chromosome getChromosome() {
-		return chromosome;
-	}
-
-	/**
-	 * for hibernate
-	 * 
-	 * @param aChromosome
-	 */
-	void setChromosome(Chromosome aChromosome) {
-		chromosome = aChromosome;
 	}
 
 	/**

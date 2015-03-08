@@ -679,6 +679,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		this.width = width;
 		this.height = height;
 		this.connectionRange = connectionRange;
+		
 	}
 
 	/**
@@ -1203,7 +1204,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 		public double getRangedOutput(int index, double minValue, double maxValue, double valueRange, double threshold) {
 			double output = cppnOutput[index];
 			
-			assert !Double.isNaN(output) : Arrays.toString(cppnOutput) + "\n" + cppnActivator.toString();
+			//assert !Double.isNaN(output) : Arrays.toString(cppnOutput) + "\n" + cppnActivator.toString();
 			
 			if (cppnOutputUnitBounded) {
 				// Scale to range [minValue, maxValue].
@@ -1216,7 +1217,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 				output = Math.min(maxValue, Math.max(minValue, output));
 			}
 			
-			assert !Double.isNaN(output) : cppnOutput + "\n" + cppnActivator.toString();
+			//assert !Double.isNaN(output) : cppnOutput + "\n" + cppnActivator.toString();
 
 			// If thresholding is to be applied.
 			if (threshold > 0) {
@@ -1230,7 +1231,7 @@ public abstract class HyperNEATTranscriber<T extends Activator> extends Transcri
 				}
 			}
 			
-			assert !Double.isNaN(output) : cppnOutput + "\n" + cppnActivator.toString();
+			assert !Double.isNaN(output) : Arrays.toString(cppnOutput) + "\n" + cppnActivator.toString();
 			
 			return output;
 		}

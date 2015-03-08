@@ -104,7 +104,7 @@ public class AnjiActivator implements Activator {
 			net.fullyActivate();
 		}
 		
-		assert !Double.isNaN(ArrayUtil.sum(result)) : "result array contains NaN: " + Arrays.toString(result);
+		//assert !Double.isNaN(ArrayUtil.sum(result)) : "result array contains NaN: " + Arrays.toString(result);
 		
 		return result;
 	}

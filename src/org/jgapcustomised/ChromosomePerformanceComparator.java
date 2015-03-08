@@ -35,11 +35,16 @@ public class ChromosomePerformanceComparator<T> implements Comparator<T> {
 		double perf1 = c1.getPerformanceValue();
 		double perf2 = c2.getPerformanceValue();
 		
-		// If the performance is the same then sort by ID.
+		// If the performance is the same then sort by fitness.
 		if (perf1 == perf2) {
-			return c1.getId().compareTo(c2.getId());
+			perf1 = c1.getFitnessValue();
+			perf2 = c2.getFitnessValue();
+			
+			// If the fitness is the same then sort by ID.
+			if (perf1 == perf2) {
+				return c1.getId().compareTo(c2.getId());
+			}
 		}
 		return (int) (isAscending ? Math.signum(perf1 - perf2) : Math.signum(perf2 - perf1));
 	}
-
 }

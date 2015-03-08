@@ -73,19 +73,24 @@ public class NEATGenotype extends Genotype {
 			}
 		}
 		
+		ChromosomeMaterial sample = a_activeConfiguration.getSampleChromosomeMaterial();
+		
+		// Add the sample chromosome unchanged, in case it's a seed provided by the user rather than randomly generated.
+		chroms.add(new Chromosome(sample.clone(null), a_activeConfiguration.nextChromosomeId(), a_activeConfiguration.getObjectiveCount(), a_activeConfiguration.getNoveltyObjectiveCount()));
+		
 		double avgAddedGenes = 0;
-		for (int i = 0; i < populationSize; i++) {
+		for (int i = 1; i < populationSize; i++) {
 			ChromosomeMaterial material = null;
 			// If the sample network is already fully connected don't add additional structure.
 			if (props.getBooleanProperty(NeatConfiguration.INITIAL_TOPOLOGY_FULLY_CONNECTED_KEY, true)) {
 				material = ChromosomeMaterial.randomInitialChromosomeMaterial(a_activeConfiguration);
 			}
 			else {
-				material = a_activeConfiguration.getSampleChromosomeMaterial().clone(null);
+				material = sample.clone(null);
 				for (MutationOperator operator : a_activeConfiguration.getMutationOperators()) {
 					operator.mutate(a_activeConfiguration, material);
 				}
-				avgAddedGenes += material.size() - a_activeConfiguration.getSampleChromosomeMaterial().size();
+				avgAddedGenes += material.size() - sample.size();
 			}
 			
 			chroms.add(new Chromosome(material, a_activeConfiguration.nextChromosomeId(), a_activeConfiguration.getObjectiveCount(), a_activeConfiguration.getNoveltyObjectiveCount()));

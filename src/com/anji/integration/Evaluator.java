@@ -59,7 +59,7 @@ public class Evaluator {
 
 		// load fitness function from properties
 		Properties props = new Properties();
-		props.loadFromResource(args[0]);
+		props.loadFromFile(args[0]);
 		BulkFitnessFunction fitnessFunc = (BulkFitnessFunction) props.singletonObjectProperty(Evolver.FITNESS_FUNCTION_CLASS_KEY);
 
 		// load chromosomes

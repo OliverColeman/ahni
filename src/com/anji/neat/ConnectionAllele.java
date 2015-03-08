@@ -63,13 +63,6 @@ public class ConnectionAllele extends Allele {
 	}
 
 	/**
-	 * for hibernate
-	 */
-	private ConnectionAllele() {
-		super();
-	}
-
-	/**
 	 * @param aConnectionGene
 	 */
 	public ConnectionAllele(ConnectionGene aConnectionGene) {

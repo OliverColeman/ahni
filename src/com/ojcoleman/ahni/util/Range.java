@@ -4,6 +4,8 @@ package com.ojcoleman.ahni.util;
  * Represents a numeric range.
  */
 public class Range {
+	public final static Range UNIT = new Range(0, 1);
+	
 	double start = 0, end = 1, range = 1;
 
 	/**
