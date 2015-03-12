@@ -420,14 +420,6 @@ public class BainNN extends NNAdaptor {
 	 */
 	@Override
 	public String toString() {
-		if (topology != Topology.FEED_FORWARD_NONLAYERED)
-			try {
-				throw new Exception("bah");
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		
 		int neuronDisabledCount = 0;
 		for (int i = 0; i < neuronCount; i++) {
 			if (!neuronDisabled[i]) neuronDisabledCount++;
