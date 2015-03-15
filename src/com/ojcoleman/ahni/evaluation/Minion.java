@@ -34,24 +34,15 @@ import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.util.ArrayUtil;
 
 /**
- * <p>
- * Creates a "minion" instance of AHNI that operates within a cluster, performing the transcoding and evaluation of
- * Chromosomes on behalf of a controlling (normal) instance of AHNI. The controlling instance must be configured to make
- * use of minions and the fitness function must be based on {@link com.ojcoleman.ahni.evaluation.BulkFitnessFunctionMT}.
- * </p>
- * <p>
- * The controller and minions communicate via sockets, with each minion instance acting as a server which waits for
- * requests from the controlling instance. The controlling instance can optionally automatically launch, via ssh
- * commands, minion instances configured to serve it, restarting minion instances if they die (for example if a machine
- * is reset). Minions may optionally detect the load on their machine and become inactive when the load exceeds a
- * threshold.
- * </p>
+ * Transcription and evaluation may be performed by a cluster of computers using Minions. The fitness function must be
+ * based on {@link com.ojcoleman.ahni.evaluation.BulkFitnessFunctionMT}, which contains the relevant configuration
+ * property key definitions and usage information.
  */
 public class Minion {
-	public static final int DEFAULT_READ_TIMEOUT = 10000; // milliseconds.
+	public static final int DEFAULT_READ_TIMEOUT = 60*60*1000; // 60 minutes.
 	
 	/**
-	 * Properties key indicating that this is a Minion instance.
+	 * Properties key indicating that this is a Minion instance, for internal use.
 	 */
 	public static final String MINION_INSTANCE = "minion.instance";
 
@@ -91,8 +82,8 @@ public class Minion {
 			System.out.println("Starting on port " + port);
 			
 			serverSocket = new ServerSocket(port);
-			//serverSocket.setSoTimeout(30*60*1000);
-			serverSocket.setSoTimeout(30*1000);
+			//serverSocket.setSoTimeout(30*60*1000); // 30 minutes.
+			serverSocket.setSoTimeout(0); // No timeout.
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(0);
@@ -102,6 +93,9 @@ public class Minion {
 			try {
 				if (requestProcessor != null) {
 					requestProcessor.terminate();
+				}
+				if (socket != null) {
+					socket.close();
 				}
 				requestProcessor = new RequestProcessor();
 				requestProcessor.start();
@@ -118,9 +112,9 @@ public class Minion {
 				}
 				System.out.println("Connection from controller with IP: " + socket.getInetAddress().getHostAddress());
 				
+				socket.setSoTimeout(Minion.DEFAULT_READ_TIMEOUT);
 				out = new ObjectOutputStream(socket.getOutputStream());
 				in = new ObjectInputStream(socket.getInputStream());
-				socket.setSoTimeout(Minion.DEFAULT_READ_TIMEOUT);
 				
 				// While the connection is active, process requests from it.
 				System.out.println("Ready.");
@@ -157,6 +151,7 @@ public class Minion {
 						e1.printStackTrace();
 					}
 			}
+			socket = null;
 		}
 	}
 
@@ -213,14 +208,15 @@ public class Minion {
 							PropertyConfigurator.configure(log4jProps);
 							properties.configureLogger();
 		
-							// The transcriber initialisation is sometimes necessary for some setting up some config stuff.
+							// The transcriber initialisation is sometimes necessary for setting up some config stuff.
 							properties.singletonObjectProperty(ActivatorTranscriber.TRANSCRIBER_KEY);
 							fitnessFunc = (BulkFitnessFunctionMT) properties.getFitnessFunction();
 							currentGeneration = -1;
 							
-							System.out.println("  Configured.");
-							
-							out.writeObject(Boolean.TRUE);
+							if (active) {
+								System.out.println("  Configured.");
+								out.writeObject(Boolean.TRUE);
+							}
 							break;
 							
 						case INITIALISE_EVALUATION:
@@ -233,23 +229,34 @@ public class Minion {
 								properties.getEvolver().setGeneration(newGeneration);
 								fitnessFunc.initialiseEvaluationOnAll();
 							}
-							out.writeObject(Boolean.TRUE);
+							if (active) {
+								System.out.println("  Initialised.");
+								out.writeObject(Boolean.TRUE);
+							}
 							break;
 							
 						case EVALUATE:
 							if (properties == null) {
-								System.err.println("Evaluate request sent when minion not configured");
-								out.writeObject(new IllegalStateException("Evaluate request sent when minion not configured"));
+								if (active) {
+									System.err.println("Evaluate request sent when minion not configured");
+									out.writeObject(new IllegalStateException("Evaluate request sent when minion not configured"));
+								}
 							} else {
 								List<Chromosome> chroms = (List<Chromosome>) request.data;
 								fitnessFunc.evaluateFitnessMT(chroms);
-								out.writeObject(chroms);
+								
+								if (active) {
+									System.out.println("  Finished evaluation.");
+									out.writeObject(chroms);
+								}
 							}
 							break;
 							
-						default: 
-							System.err.println("Unknown request type.");
-							out.writeObject(new IllegalStateException("Unknown request type."));
+						default:
+							if (active) {
+								System.err.println("Unknown request type.");
+								out.writeObject(new IllegalStateException("Unknown request type."));
+							}
 							break;
 						}
 					}
@@ -257,7 +264,9 @@ public class Minion {
 				catch (Exception e) {
 					e.printStackTrace();
 					try {
-						out.writeObject(e);
+						if (active) {
+							out.writeObject(e);
+						}
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}

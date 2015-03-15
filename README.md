@@ -58,6 +58,17 @@ Mem | Total memory usage.
 
 By setting the `num.runs` property to a value > 1 it is possible to perform multiple evolutionary runs and have the average fitness / performance results for each generation averaged over all runs. If only one run is performed then most output files will be placed directly in the directory specified by the output.dir property. If multiple runs are performed then the output files specific to a run will be placed in a sub-directory of this directory labelled with the run number.
 
+##Multi-Threading and Computing Clusters
+
+The base fitness function class, `com.ojcoleman.ahni.evaluation.BulkFitnessFunctionMT`, allows evaluating the 
+population members in parallel. Multiple CPU cores may be utilised on a single machine, and multiple machines may be 
+utilised in a cluster.
+
+In the cluster set-up multiple machines are controlled by an initial instance of AHNI. The controller and minions 
+communicate via sockets, with each minion instance acting as a server which waits for requests from the controlling 
+instance. See `properties/bain-test-pass-through-flip.properties` and the javadoc for 
+`com.ojcoleman.ahni.evaluation.BulkFitnessFunctionMT` for more information.
+
 ## Development and Creating New Experiments
 
 To create your own experiments you will most likely want to extend `com.ojcoleman.ahni.evaluation.HyperNEATFitnessFunction` or `com.ojcoleman.ahni.evaluation.HyperNEATTargetFitnessFunction`.

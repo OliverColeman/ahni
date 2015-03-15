@@ -15,6 +15,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -25,6 +27,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.commons.collections.primitives.ArrayDoubleList;
 import org.apache.commons.io.IOUtils;
@@ -59,7 +62,13 @@ import com.ojcoleman.ahni.util.Parallel.Operation;
  * to override {@link #getLayerDimensions(int, int)} or {@link #getNeuronPositions(int, int)} to specify required layer
  * dimensions or neuron positions, for example for input or output layers.
  * </p>
- * 
+ * <p>
+ * Transcription and evaluation may be performed by a cluster of computers using the "minion" system. In a minion set-up
+ * the initial instance of AHNI controls one or more minion instances and doesn't perform any transcriptions or
+ * evaluations itself. The controller and minions communicate via sockets, with each minion instance acting as a server
+ * which waits for requests from the controlling instance The controller automatically load-balances between the minions 
+ * and is robust to minions failing. See {@link #MINION_HOSTS}.
+ * </p>
  * <p>
  * See {@link com.ojcoleman.ahni.evaluation.TargetFitnessFunctionMT} for an example.
  * </p>
@@ -107,13 +116,35 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 	 */
 	public static final String FORCE_PERF_FITNESS = "fitness.function.performance.force.fitness";
 	
+	
 	/**
-	 * properties keys, minion config (see {@link com.ojcoleman.ahni.evaluation.Minion})
+	 * A comma-separated list of host names and ports of minion instances. A user name must be prepended if
+	 * minion.autostart is enabled, in which case the user name is used during the ssh login to the minion machine. A
+	 * range of host names may be specified by including a numeric range of the form [&lt;start&gt;-&lt;end&gt;], for
+	 * example hubert[09-11]:1234 (giving hubert09:1234, hubert10:1234, hubert11:1234) or foo[8-10]bar (giving foo8bar,
+	 * foo9bar, foo10bar), note that left-padding of the numbers will only occur if the &lt;start&gt; number is padded
+	 * in the definition. If no port is specified then minion.default_port will be used. Minions create a log file
+	 * called &lt;output.dir&gt;/minion.&lt;hostname&gt;.log relative to the file system on the machine they're running
+	 * on.
 	 */
 	public static final String MINION_HOSTS = "minion.hosts";
+	
+	/**
+	 * <p>On *nix machines the controlling instance can optionally automatically launch - via ssh commands - minion
+	 * instances configured to serve it, restarting minion instances if they die (for example if a machine is reset). If
+	 * this is enabled then the minion instances will be automatically terminated when the controlling instance
+	 * terminates.<p>
+	 * <p>Alternatively Minions can be manually started with a command like 
+	 * <em>java -cp &lt;jar file(s)&gt; com.ojcoleman.ahni.evaluation.Minion --port 1234 --log logfilename</em></p>
+	 */
 	public static final String MINION_AUTOSTART = "minion.autostart";
+	
+	/**
+	 * The default port for minion instances.
+	 */
 	public static final String MINION_DEFAULT_PORT = "minion.default_port";
 
+	
 	protected Properties props;
 	protected Transcriber<Activator> transcriber;
 	protected int numThreads;
@@ -219,28 +250,57 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		if (minionHosts != null) {
 			int defaultPort = props.getIntProperty(MINION_DEFAULT_PORT, 5000);
 			minions = new ArrayList<MinionHandler>();
+			java.util.regex.Pattern hostNameRangePattern = Pattern.compile("(.*)\\[(\\d+)-(\\d+)\\](.*)");
 			for (String hostDef : minionHosts) {
-				try {
-					MinionHandler inst = new MinionHandler(hostDef, defaultPort, props.getBooleanProperty(MINION_AUTOSTART, false));
-					minions.add(inst);
-				} catch (Exception e) {
-					logger.error("Unable to create Minion instance for host " + hostDef, e);
-					e.printStackTrace();
+				String[] expandedHostDefs;
+				// If the host def specifies a numeric range, expand it out to multiple host defs.
+				java.util.regex.Matcher m = hostNameRangePattern.matcher(hostDef);
+				if (m.matches()) {
+					String startStr = m.group(2);
+					int start = Integer.parseInt(startStr);
+					int end = Integer.parseInt(m.group(3));
+					if (end <= start) {
+						throw new IllegalArgumentException("The end of the numeric host range must not be less than the start in " + hostDef);
+					}
+					expandedHostDefs = new String[end - start + 1];
+					
+					String prefix = m.group(1);
+					String postfix = m.group(4);
+					String format = "%0" + startStr.length() + "d";
+					for (int i = 0, hi = start; hi <= end; i++, hi++) {
+						expandedHostDefs[i] = prefix + String.format(format, hi) + postfix;
+					}
+				}
+				else {
+					expandedHostDefs = new String[]{hostDef};
+				}
+				for (String hostDef2 : expandedHostDefs) {
+					try {
+						MinionHandler inst = new MinionHandler(hostDef2, defaultPort, props.getBooleanProperty(MINION_AUTOSTART, false));
+						minions.add(inst);
+					} catch (Exception e) {
+						logger.error("Unable to create Minion instance for host " + hostDef2, e);
+						e.printStackTrace();
+					}
 				}
 			}
 			logger.info("Using " + minions.size() + " Minions for transcription and evaluation.");
 			
-			Runtime.getRuntime().addShutdownHook(new Thread() {
-	            @Override
-	            public void run() {
-	            	logger.info("Sending terminate signal to all minions.");
-	            	for (MinionHandler minion : minions) {
-	            		if (minion.isConnected()) {
-	            			minion.dispose();
-	            		}
-	            	}
-	            }
-	        });
+			if (props.getBooleanProperty(MINION_AUTOSTART, false)) {
+				Runtime.getRuntime().addShutdownHook(new Thread() {
+		            @Override
+		            public void run() {
+		            	(new File(System.getProperty("user.dir") + "/ahni-start-minion.sh")).delete();
+		            	
+		            	logger.info("Sending terminate signal to all minions.");
+		            	for (MinionHandler minion : minions) {
+		            		if (minion.isConnected()) {
+		            			minion.dispose();
+		            		}
+		            	}
+		            }
+		        });
+			}
 		}
 	
 		int fitnessObjectiveCount = fitnessObjectivesCount();
@@ -548,7 +608,8 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 				double nextChromIndex = chromIndex + relativePerformance[minionIndex] * stillToEvaluate.size();
 				int chromIndexRnd = (int) Math.round(chromIndex);
 				int nextChromIndexRnd = (int) Math.round(nextChromIndex);
-				List<Chromosome> chroms = stillToEvaluate.subList(chromIndexRnd, nextChromIndexRnd);
+				List<Chromosome> chroms = new ArrayList<Chromosome>(stillToEvaluate.subList(chromIndexRnd, nextChromIndexRnd));
+				logger.debug("Gave " + minion + " " + chroms.size() + " Chromosomes to evaluate.");
 				minion.setChromosomesToEvaluate(chroms);
 				chromIndex = nextChromIndex;
 				minionIndex++;
@@ -568,6 +629,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 			int failCount = 0, activeMinionCount = activeMinions.size();
 			for (MinionHandler minion : activeMinions) {
 				if (minion.lastEvalFailed()) {
+					// Add them back to the still-to-evaluate list.
 					stillToEvaluate.addAll(minion.getChromosomesToEvaluate());
 					failCount++;
 				}
@@ -1125,21 +1187,25 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 		 */
 		public synchronized void launch() {
 			try {
-				File launchScript = new File("ahni-start-minion.sh");
+				File launchScript = new File(System.getProperty("user.dir") + "/ahni-start-minion.sh");
 				if (!launchScript.exists()) {
 					String classpath = System.getProperty("java.class.path");
 					boolean assertsEnabled = false;
 					assert assertsEnabled = true;
 					DataOutputStream dos = new DataOutputStream(new FileOutputStream(launchScript));
 					dos.writeBytes("#!/bin/bash\n");
-					dos.writeBytes("ssh $1 \"nohup java " + (assertsEnabled ? "-ea" : "") + " -cp \"" + classpath + "\" com.ojcoleman.ahni.evaluation.Minion --port $2 --log $3 > $4 &\"\n");
+					dos.writeBytes("ssh $1 \"nohup java " + (assertsEnabled ? "-ea" : "") + " -cp \\\"" + classpath + "\\\" com.ojcoleman.ahni.evaluation.Minion --port $2 --log $3 > $4 &\"\n");
 					dos.close();
 					launchScript.setExecutable(true);
 				}
 
 				String minionLog = props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + props.getProperty(HyperNEATConfiguration.OUTPUT_PREFIX_KEY, "") + "minion." + host + ".log";
 				String minionLaunchLog = props.getProperty(HyperNEATConfiguration.OUTPUT_DIR_KEY) + props.getProperty(HyperNEATConfiguration.OUTPUT_PREFIX_KEY, "") + "minion." + host + ".launch.log";
-				Exec exec = new Exec("./ahni-start-minion.sh", (user != null ? user + "@" : "") + host, ""+port, minionLog, minionLaunchLog);
+				
+				String command = System.getProperty("user.dir") + "/ahni-start-minion.sh " + (user != null ? user + "@" : "") + host + " " + port + " " + minionLog +" " + minionLaunchLog;
+				logger.info(command);
+				//Exec exec = new Exec("/bin/bash", command);
+				Exec exec = new Exec(System.getProperty("user.dir") + "/ahni-start-minion.sh", (user != null ? user + "@" : "") + host, ""+port, minionLog, minionLaunchLog);
 				
 				if (exec.getExitStatus() == 0 && !exec.exceptionOccurred()) {
 					failCount = 0; // reset
@@ -1229,7 +1295,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 				out.writeObject(new Minion.Request(Minion.Request.Type.EVALUATE, dummies));
 				
 				// Can take a while for evaluations to complete.
-				// Wait twice as long as the longest average time for this minion.
+				// Wait twice as long as the longest average time for this minion, or 10 minutes if this is first time.
 				int avgTimePerChrom = averageMinionEvalTimePerChrom == 0 ? 10 * 60 * 1000 : averageMinionEvalTimePerChrom;
 				socket.setSoTimeout(avgTimePerChrom * chromsToEval.size() * 2);
 				try {
@@ -1241,7 +1307,7 @@ public abstract class BulkFitnessFunctionMT extends AHNIFitnessFunction implemen
 					Iterator<Chromosome> chromsEvaluated = ((List<Chromosome>) response).iterator();
 					for (Chromosome chrom : chromsToEval) {
 						Chromosome evaluated = chromsEvaluated.next();
-						assert chrom.getId() == evaluated.getId(); 
+						assert ((long) chrom.getId() == (long) evaluated.getId()) : chrom.getId() + "==" + evaluated.getId(); 
 						chrom.setFitnessValue(evaluated.getFitnessValue());
 						chrom.setFitnessValues(evaluated.getFitnessValues());
 						chrom.setPerformanceValue(evaluated.getPerformanceValue());
