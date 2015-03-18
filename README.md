@@ -87,6 +87,10 @@ AHNI supports the Link Expression Output (LEO) extension described in *P. Verban
 
 ## ES-HyperNEAT
 
+NOTE: A lot of time was spent checking every aspect of the ES-HyperNEAT implementation however it was not possible to reproduce the experiments
+in Risi S. and Stanley K.O. (2012) *An Enhanced Hypercube-Based Encoding for Evolving the Placement, Density and Connectivity of Neurons*, Artificial Life, MIT Press,
+thus the implementation should be assumed to be be not working. Feel free to try it out and let me know how you go! :)
+
 AHNI supports the Evolvable Substrate HyperNEAT (ES-HyperNEAT) extension (See http://eplex.cs.ucf.edu/ESHyperNEAT/).
 
 Currently only transcription to a Bain NeuralNetwork is supported, via the `com.ojcoleman.ahni.hyperneat.ESHyperNEATTranscriberBain` class. Currently 2D substrates and pseudo-3D substrates are supported. See the second properties file mentioned below for a description of pseudo-3D. Real 3D substrates will likely be coming soon (or let me know if you want to implement this :wink:).
