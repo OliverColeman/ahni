@@ -10,10 +10,12 @@ import java.io.PrintStream;
 import java.io.Serializable;
 import java.io.StringReader;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -34,12 +36,20 @@ import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.util.ArrayUtil;
 
 /**
- * Transcription and evaluation may be performed by a cluster of computers using Minions. The fitness function must be
- * based on {@link com.ojcoleman.ahni.evaluation.BulkFitnessFunctionMT}, which contains the relevant configuration
- * property key definitions and usage information.
+ * The main class to start a "minion" worker in a cluster. See {@link com.ojcoleman.ahni.evaluation.BulkFitnessFunctionMT}.
  */
 public class Minion {
+	/**
+	 * Amount of time in milliseconds that the Minion will wait to receive a command from a controller.
+	 */
 	public static final int DEFAULT_READ_TIMEOUT = 60*60*1000; // 60 minutes.
+	
+	/**
+	 * Maximum number of times the server will be restarted in the event of an exception occurring. Note that an exception will occur if this
+	 * Minion is put into a PENDING state by HTCondor, so it's a good idea to make this fairly high in case the Minion gets bumped off it's
+	 * current machine a lot (however we don't want the Minion to restart indefinitely in case something else has gone wrong).
+	 */
+	public static final int MAX_RESTARTS = 1000;
 	
 	/**
 	 * Properties key indicating that this is a Minion instance, for internal use.
@@ -70,32 +80,51 @@ public class Minion {
 	}
 
 	public void run() {
-		ServerSocket serverSocket = null;
 		RequestProcessor requestProcessor = null;
+		ServerSocket serverSocket = null;
+		
 		try {
 			if (logFile != null && !logFile.trim().isEmpty()) {
 				PrintStream console = new PrintStream(new FileOutputStream(logFile.trim()));
 				System.setOut(console);
 				System.setErr(console);
 			}
-			
-			System.out.println("Starting on port " + port);
-			
-			serverSocket = new ServerSocket(port);
-			//serverSocket.setSoTimeout(30*60*1000); // 30 minutes.
-			serverSocket.setSoTimeout(0); // No timeout.
 		} catch (Exception e) {
 			e.printStackTrace();
-			System.exit(0);
+			return;
 		}
 		
-		while (true) {
+		for (int startCount = 0; startCount < MAX_RESTARTS; startCount++) {
+			try {
+				if (serverSocket != null) {
+					try {
+						serverSocket.close();
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+				}
+				
+				System.out.println("\n--------------------------------------------\nStart attempt " + startCount + " on port " + port);
+				
+				serverSocket = new ServerSocket(port);
+				//serverSocket.setSoTimeout(30*60*1000); // 30 minutes.
+				serverSocket.setSoTimeout(0); // No timeout.
+			} catch (Exception e) {
+				e.printStackTrace();
+				// If it can't even open the socket there's not much hope for this Minion.
+				return;
+			}
+			
 			try {
 				if (requestProcessor != null) {
 					requestProcessor.terminate();
 				}
 				if (socket != null) {
-					socket.close();
+					try {
+						socket.close();
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
 				}
 				requestProcessor = new RequestProcessor();
 				requestProcessor.start();
@@ -103,12 +132,11 @@ public class Minion {
 				try {
 					// Wait until a connection is made.
 					System.out.println("Opening socket at " + InetAddress.getLocalHost().getHostAddress() + ":" + port);
-					//System.out.flush();
 					socket = serverSocket.accept();
 				} catch(SocketTimeoutException e) {
 					System.out.println("Minion exiting, no connections made in a timely manner.");
 					serverSocket.close();
-					System.exit(0);
+					return;
 				}
 				System.out.println("Connection from controller with IP: " + socket.getInetAddress().getHostAddress());
 				
@@ -119,10 +147,9 @@ public class Minion {
 				// While the connection is active, process requests from it.
 				System.out.println("Ready.");
 				while (!socket.isOutputShutdown() && !socket.isInputShutdown() && !socket.isClosed()) {
-					// TODO check load average.
-					
 					// Wait for a request.
 					Request request = (Request) in.readObject();
+					
 					// Always process terminate requests immediately.
 					System.out.println("Received request " + request.type);
 					if (request.type == Request.Type.TERMINATE) {
@@ -134,12 +161,11 @@ public class Minion {
 						catch (Exception e) {
 							e.printStackTrace();
 						}
-						System.exit(0);
+						return;
 					}
 					else {
 						requestProcessor.process(request);
 					}
-					
 				}
 				socket.close();
 			} catch(Exception e) {
@@ -153,9 +179,13 @@ public class Minion {
 			}
 			socket = null;
 		}
+		
+		System.out.println("\n--------------------------------------------\nMaximum restarts reached, terminating.");
 	}
 
 	public static class Request implements Serializable {
+		private static final long serialVersionUID = 1L;
+
 		public enum Type {CONFIGURE, INITIALISE_EVALUATION, EVALUATE, TERMINATE};
 		
 		final Type type;

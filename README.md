@@ -66,7 +66,8 @@ utilised in a cluster.
 
 In the cluster set-up multiple machines are controlled by an initial instance of AHNI. The controller and minions 
 communicate via sockets, with each minion instance acting as a server which waits for requests from the controlling 
-instance. See `properties/bain-test-pass-through-flip.properties` and the javadoc for 
+instance. Minions may be started manually, or automatically by the controlling machine via ssh. 
+See `properties/bain-test-pass-through-flip.properties` and the javadoc for 
 `com.ojcoleman.ahni.evaluation.BulkFitnessFunctionMT` for more information.
 
 ## Development and Creating New Experiments

@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
 <project default="runjar"
 	name="Create Runnable Jar for Project ahni with libraries in sub-folder">
 	<property name="major-version-number" value="2" />
-	
+
+	<property name="ant.build.javac.source" value="1.6"/>
+	<property name="ant.build.javac.target" value="1.6"/>
+
 	<target name="clean">
 		<delete dir="antbin" />
 		<mkdir dir="antbin" />
@@ -23,19 +27,10 @@
 		<jar destfile="../ahni.jar" filesetmanifest="mergewithoutmain">
 			<manifest>
 				<attribute name="Main-Class" value="com.ojcoleman.ahni.hyperneat.Run" />
-				<attribute name="Class-Path"
-					value=". lib/aparapi.jar lib/bain.jar lib/commons-math3-3.1.1.jar lib/jakarta-regexp-1.3.jar lib/jcommander.jar lib/log4j.jar lib/commons-lang3-3.1.jar" />
 			</manifest>
 			<fileset dir="antbin" />
 			<fileset dir="src" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/aparapi.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/bain.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/commons-math3-3.1.1.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/jakarta-regexp-1.3.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/jcommander.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/log4j.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/commons-lang3-3.1.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/wildcard-1.03.jar" />
+			<zipgroupfileset dir="lib" includes="**/*.jar" />
 		</jar>
 	</target>
 	
@@ -57,19 +52,10 @@
 			filesetmanifest="mergewithoutmain">
 			<manifest>
 				<attribute name="Main-Class" value="com.ojcoleman.ahni.hyperneat.Run" />
-				<attribute name="Class-Path"
-					value=". lib/aparapi.jar lib/bain.jar lib/commons-math3-3.1.1.jar lib/jakarta-regexp-1.3.jar lib/jcommander.jar lib/log4j.jar lib/commons-lang3-3.1.jar" />
 			</manifest>
 			<fileset dir="antbin" />
 			<fileset dir="src" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/aparapi.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/bain.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/commons-math3-3.1.1.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/jakarta-regexp-1.3.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/jcommander.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/log4j.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/commons-lang3-3.1.jar" />
-			<zipfileset excludes="META-INF/*.SF" src="lib/wildcard-1.03.jar" />
+			<zipgroupfileset dir="lib" includes="**/*.jar" />
 		</jar>
 	</target>
 </project>

@@ -1,15 +1,20 @@
 package com.ojcoleman.ahni.util;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Convenience class to execute external commands via a new Thread and retrieve the output if desired.
+ * Convenience class to either execute an external command asynchronously 
+ * via a new Thread and retrieve the output if desired,
+ * or run an external command synchronously (.
  */
 public class Exec extends Thread {
 	String[] command;
@@ -43,31 +48,20 @@ public class Exec extends Thread {
 		started = true;
 		ProcessBuilder pb = new ProcessBuilder(command);
 		pb.redirectErrorStream(true);
-		InputStream inputStream = null;
 		try {
 			process = pb.start();
-			inputStream = process.getInputStream();
-			exitStatus = process.waitFor();
-			Writer writer = new StringWriter();
-			char[] buffer = new char[1024];
-			Reader reader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
-			int n;
-			while ((n = reader.read(buffer)) != -1) {
-				writer.write(buffer, 0, n);
-			}
-			output = writer.toString();
+			BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line = null;
+            while ( (line = br.readLine()) != null ) {
+                output += line;
+            }
+            exitStatus = process.waitFor();
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 			exception = e;
 		} finally {
 			finished = true;
-			if (inputStream != null) {
-				try {
-					inputStream.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
 		}
 	}
 
@@ -110,4 +104,37 @@ public class Exec extends Thread {
 	public synchronized Exception getException() {
 		return exception;
 	}
+	
+	/**
+	 * Executes the given command and returns the output.
+	 * @param command The command to run, the first element is the command and the following elements are the arguments to the command.
+	 * @return The output of the command, including the error stream, with each line as a separate element.
+	 */
+	public static List<String> executeShellCommand(String[] command) {
+		return executeShellCommand(command, null);
+	}
+	
+	/**
+	 * Executes the given command and returns the output.
+	 * @param command The command to run, the first element is the command and the following elements are the arguments to the command.
+	 * @param workingDir The working directory that the command is to be executed in.
+	 * @return The output of the command, including the error stream, with each line as a separate element.
+	 */
+	public static List<String> executeShellCommand(String[] command, File workingDir) {
+		ArrayList<String> output = new ArrayList<String>();
+        try {
+            Process process = new ProcessBuilder(command).redirectErrorStream(true).directory(workingDir).start();
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line = null;
+            while ( (line = br.readLine()) != null ) {
+                output.add(line);
+            }
+
+            process.waitFor();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return output;
+    }
 }
