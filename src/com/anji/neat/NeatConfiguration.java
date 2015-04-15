@@ -346,7 +346,9 @@ public class NeatConfiguration extends Configuration implements Configurable {
 		selector.setElitismMinToSelect(props.getIntProperty(ELITISM_MIN_TO_SELECT_KEY, bulkFitnessFunc.getObjectiveCount()));
 		selector.setElitismMinSpeciesSize(props.getIntProperty(ELITISM_MIN_SPECIE_SIZE_KEY, 5));
 		selector.setSpeciatedFitness(props.getBooleanProperty(SPECIATED_FITNESS_KEY, true));
-		selector.setMaxStagnantGenerations(props.getIntProperty(MAX_STAGNANT_GENERATIONS_KEY, Integer.MAX_VALUE));
+		int maxStagGen = props.getIntProperty(MAX_STAGNANT_GENERATIONS_KEY, Integer.MAX_VALUE);
+		if (maxStagGen <= 0) maxStagGen = Integer.MAX_VALUE;
+		selector.setMaxStagnantGenerations(maxStagGen);
 		selector.setMinAge(props.getIntProperty(MINIMUM_AGE_KEY, 10));
 		setNaturalSelector(selector);
 

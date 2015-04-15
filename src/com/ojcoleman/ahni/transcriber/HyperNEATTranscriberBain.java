@@ -55,8 +55,8 @@ public class HyperNEATTranscriberBain extends HyperNEATTranscriberBainBase {
 	
 
 	private Properties properties;
-	private int[] neuronLayerSize, bainIndexForNeuronLayer, ffSynapseLayerSize, bainIndexForFFSynapseLayer; // ff=feed
-																											// forward
+	// ff = feed-forward
+	private int[] neuronLayerSize, bainIndexForNeuronLayer, ffSynapseLayerSize, bainIndexForFFSynapseLayer;
 	private int neuronCount, synapseCount;
 	
 
