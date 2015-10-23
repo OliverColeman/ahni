@@ -360,7 +360,8 @@ public class Genotype implements Serializable {
 			Collections.sort(m_chromosomes, new ChromosomePerformanceComparator(targetPerformanceType == 0));
 			Chromosome topChrom = m_chromosomes.get(0);
 			if (previousBestPerforming == null || !m_chromosomes.contains(previousBestPerforming) ||
-				topChrom.getPerformanceValue() > previousBestPerforming.getPerformanceValue() || 
+					targetPerformanceType == 1 && topChrom.getPerformanceValue() > previousBestPerforming.getPerformanceValue() ||
+					targetPerformanceType == 0 && topChrom.getPerformanceValue() < previousBestPerforming.getPerformanceValue() ||
 					((int) (topChrom.getPerformanceValue() * 1000) == (int) (previousBestPerforming.getPerformanceValue() * 1000) && topChrom.getFitnessValue() > previousBestPerforming.getFitnessValue())) {
 
 				bestPerforming = topChrom;

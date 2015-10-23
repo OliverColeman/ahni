@@ -28,6 +28,7 @@ import com.ojcoleman.ahni.evaluation.novelty.Behaviour;
 import com.ojcoleman.ahni.evaluation.novelty.RealVectorBehaviour;
 import com.ojcoleman.ahni.event.AHNIEvent;
 import com.ojcoleman.ahni.event.AHNIEventListener;
+import com.ojcoleman.ahni.experiments.TSPSuperimposedWaves.EvalType;
 import com.ojcoleman.ahni.experiments.mr2d.EnvironmentDescription;
 import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.nn.BainNN;
@@ -44,7 +45,12 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 	private static final long serialVersionUID = 1L;
 	private static Logger logger = Logger.getLogger(BulkFitnessFunctionMT.class);
 	private static final NumberFormat nf = new DecimalFormat("0.00");
-
+	
+	/**
+	 * The task, either 'act' or 'predict'. Default is 'act'.
+	 */
+	public static final String EVAL_TYPE = "fitness.function.mdp.task";
+	
 	/**
 	 * The initial number of states in the generated environments.
 	 */
@@ -74,7 +80,7 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 	 */
 	public static final String ACTION_COUNT_MAX = "fitness.function.mdp.actions.maximum";
 	/**
-	 * The performance indicating when the environment size/difficulty should be increased as the current size has been
+	 * The performance indicating when the environment size/difficulty/count should be increased as the current value has been
 	 * sufficiently mastered.
 	 */
 	public static final String DIFFICULTY_INCREASE_PERFORMANCE = "fitness.function.mdp.difficulty.increase.performance";
@@ -103,6 +109,18 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 	 * probabilistically.
 	 */
 	public static final String ENVIRONMENT_CHANGE_RATE = "fitness.function.mdp.environment.replacerate";
+	/**
+	 * Factor to increase the total number of environments by when the current environment(s) have been 
+	 * sufficiently mastered (see {@link #DIFFICULTY_INCREASE_PERFORMANCE}. May be fractional; if the factor is 
+	 * greater than 1 then the number of environments will be increased by at least 1. Default is 1 (no change).
+	 */
+	public static final String ENVIRONMENT_INCREASE_RATE = "fitness.function.mdp.environment.count.increase";
+	/**
+	 * If {@link #DIFFICULTY_INCREASE_PERFORMANCE} is greater than 1, then this is the maximum number of 
+	 * environments to increase to. Default is 128.
+	 */
+	public static final String ENVIRONMENT_COUNT_MAX = "fitness.function.mdp.environment.count.max";
+	
 	/**
 	 * The number of trials per environment. If not set or set to <= 0 then this will be set to the grid size if
 	 * fitness.function.mdp.grid is true and fitness.function.mdp.single_reward_state is true, otherwise to
@@ -173,8 +191,13 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 	 */
 	public static final String SINGLE_REWARD_STATE = "fitness.function.mdp.single_reward_state";
 
+	public enum EvalType { ACT, PREDICT }
+	
+	private EvalType evalType;
 	private int environmentCount;
 	private double environmentReplaceProb;
+	private double environmentIncreaseRate;
+	private int environmentCountMax;
 	int trialCount;
 	private int stateCount;
 	private int actionCount;
@@ -183,15 +206,16 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 	private double transitionRandomness;
 	private double mapRatio;
 	private double transitionRewardRatio;
-	private int stepsForReward;
+	private int stepsForEval;
 	ArrayList<Environment> environments;
 	ArrayList<Environment> nsEnvironments;
 	private ArrayList<Environment> genEnvironments;
 	private int environmentCounter = 0;
-	private int environmentMasteredTrialCount = 3;
+	//private int environmentMasteredTrialCount = 3;
 	private int stepsPerTrial;
 	private boolean noveltySearchEnabled = false;
 	private boolean noveltySearchOnly = false;
+	private int noveltySearchEnvCount;
 	private long envRandomSeed;
 	private Random envRandom;
 	private boolean includePrevAction;
@@ -205,20 +229,56 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 	private int currentStateIndex = 0;
 	private int previousStateIndex = -1;
 	private int previousActionIndex = -1;
+	private int currentActionIndex = -1;
 	private int explIndex = -1;
 	private int rewardIndex = -1;
-
+	
+	// Flag indicating if getNeuronPositions has been called 
+	// (which we use to calculate the above indexes).
+	private boolean getNeuronPositionsCalled = false;
+	
 	@Override
 	public void init(Properties props) {
 		this.props = props;
-
+		
+		evalType = EvalType.valueOf(props.getProperty(EVAL_TYPE, "act").toUpperCase());
+		
+		noveltySearchOnly = props.getBooleanProperty(NOVELTY_SEARCH_ONLY, false);
+		
 		environmentCount = props.getIntProperty(ENVIRONMENT_COUNT);
-		environmentReplaceProb = props.getDoubleProperty(ENVIRONMENT_CHANGE_RATE);
+		environmentReplaceProb = props.getDoubleProperty(ENVIRONMENT_CHANGE_RATE, 0);
+		environmentIncreaseRate = noveltySearchOnly ? 0 : props.getDoubleProperty(ENVIRONMENT_INCREASE_RATE, 1);
+		environmentCountMax = environmentIncreaseRate > 1 ? props.getIntProperty(ENVIRONMENT_COUNT_MAX) : environmentCount;
+		
+		if (environmentReplaceProb > 1 && environmentIncreaseRate > 1) {
+			throw new IllegalArgumentException(ENVIRONMENT_CHANGE_RATE + " and " + ENVIRONMENT_INCREASE_RATE + " are mutually exclusive.");
+		}
+		if (noveltySearchOnly && environmentReplaceProb > 1) {
+			throw new IllegalArgumentException(ENVIRONMENT_CHANGE_RATE + " and " + NOVELTY_SEARCH_ONLY + " are mutually exclusive.");
+		}
+		if (noveltySearchOnly && environmentIncreaseRate > 1) {
+			throw new IllegalArgumentException(ENVIRONMENT_INCREASE_RATE + " and " + NOVELTY_SEARCH_ONLY + " are mutually exclusive.");
+		}
+		
 		actionCount = props.getIntProperty(ACTION_COUNT_INITIAL);
 		stateCount = props.getIntProperty(STATE_COUNT_INITIAL);
 		actionCountMax = props.getIntProperty(ACTION_COUNT_MAX);
 		stateCountMax = props.getIntProperty(STATE_COUNT_MAX);
 		trialCount = props.getIntProperty(TRIAL_COUNT, 0);
+		
+		// Action and State count delta and increasing number of environments are mutually exclusive.
+		if (environmentIncreaseRate > 1) {
+			for (String key : new String[]{ACTION_COUNT_INCREASE_DELTA, STATE_COUNT_INCREASE_DELTA}) {
+				String deltaString = props.getProperty(key, "0").trim().toLowerCase();
+				boolean isFactor = deltaString.endsWith("x");
+				double delta = Double.parseDouble(deltaString.replaceAll("x", ""));
+				if (delta >= 1) {
+					if (!isFactor || delta > 1) {
+						throw new IllegalArgumentException(key + " and " + ENVIRONMENT_INCREASE_RATE + " are mutually exclusive.");
+					}
+				}
+			}
+		}
 
 		singleRewardState = props.getBooleanProperty(SINGLE_REWARD_STATE, false);
 		gridEnvs = props.getBooleanProperty(GRID_ENVIRONMENT, false);
@@ -255,30 +315,32 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 		}
 
 		environments = new ArrayList<Environment>();
-		for (int e = 0; e < environmentCount; e++) {
+		for (int e = 0; e < environmentCountMax; e++) {
 			Environment newEnv = new Environment();
 			if (newEnv.setUp(environmentCounter, environments)) {
 				environments.add(newEnv);
 				environmentCounter++;
 			}
 		}
-		if (environments.size() != environmentCount) {
-			environmentCount = environments.size();
-			logger.warn("Could not generate specified number of MDP environments, number of environments set to " + environmentCount);
+		if (environments.size() != environmentCountMax) {
+			environmentCountMax = environments.size();
+			if (environmentCount > environmentCountMax) {
+				environmentCount = environmentCountMax;
+			}
+			logger.warn("Could not generate specified number of MDP environments, (maximum) number of environments set to " + environmentCountMax);
 		}
 
-		noveltySearchOnly = props.getBooleanProperty(NOVELTY_SEARCH_ONLY, false);
 		noveltySearchEnabled = noveltySearchOnly || props.getBooleanProperty(NOVELTY_SEARCH, false);
 		if (noveltySearchEnabled) {
-			int nsEnvCount = props.getIntProperty(NOVELTY_SEARCH_ENV_COUNT, 0);
-
+			noveltySearchEnvCount = props.getIntProperty(NOVELTY_SEARCH_ENV_COUNT, 0);
+			
 			// If the same environments aren't used throughout evolution.
-			if (environmentReplaceProb > 0 || nsEnvCount > 0) {
-				if (nsEnvCount <= 0)
-					nsEnvCount = environmentCount;
+			if (environmentReplaceProb > 0 || noveltySearchEnvCount > environmentCountMax) {
+				if (noveltySearchEnvCount <= 0)
+					noveltySearchEnvCount = environmentCount;
 				// Create a set of environments that don't change over the course of evolution to test novelty on.
 				nsEnvironments = new ArrayList<Environment>();
-				for (int e = 0; e < nsEnvCount; e++) {
+				for (int e = 0; e < noveltySearchEnvCount; e++) {
 					Environment newEnv = new Environment();
 					// If possible, generate environments of varying difficulty.
 					// for (int i = 1; i < e && nsEnvironments[e].increaseDifficultyPossible(); i++) {
@@ -288,16 +350,16 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 						nsEnvironments.add(newEnv);
 					}
 				}
-				if (nsEnvironments.size() != nsEnvCount) {
-					nsEnvCount = nsEnvironments.size();
-					logger.warn("Could not generate specified number of MDP environments for novelty search, number of environments for novelty search set to " + nsEnvCount);
+				if (nsEnvironments.size() != noveltySearchEnvCount) {
+					noveltySearchEnvCount = nsEnvironments.size();
+					logger.warn("Could not generate specified number of MDP environments for novelty search, number of environments for novelty search set to " + noveltySearchEnvCount);
 				}
-				logger.info("Created " + nsEnvCount + " environments for novelty search.");
+				logger.info("Created " + noveltySearchEnvCount + " environments for novelty search.");
 			}
 			
-			if (nsEnvCount == 0) nsEnvCount = environments.size();
-
-			logger.info("Novelty search behaviours have dimensionality " + (nsEnvCount * trialCount * stepsPerTrial));
+			if (noveltySearchEnvCount == 0) noveltySearchEnvCount = environments.size();
+			
+			logger.info("Novelty search behaviours have dimensionality " + (noveltySearchEnvCount * trialCount * stepsPerTrial));
 		}
 		
 		if (trialCount <= 0) {
@@ -327,7 +389,7 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 			} else if (environmentReplaceProb > 0) {
 				if (trialCount == 1) {
 					// Enough steps to try every action in every state at least once then exploit the info gained.
-					// The last term should be same as stepsForReward below for single trial.
+					// The last term should be same as stepsForEval below for single trial.
 					stepsPerTrial = actionCount * stateCount * stateCount + stateCount * 2;
 				} else {
 					// Enough steps to try every action in every state at least once then exploit the info gained.
@@ -341,8 +403,8 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 		}
 		
 		// If trialCount > 1 then the reward received during the entire last trial will be used.
-		stepsForReward = trialCount == 1 ? stateCount * 2 : stepsPerTrial;
-		logger.info("MDP number of final steps contributing to fitness set to " + stepsForReward);
+		stepsForEval = trialCount == 1 ? stateCount * 2 : stepsPerTrial;
+		logger.info("MDP number of final steps contributing to fitness set to " + stepsForEval);
 	}
 
 	/**
@@ -379,33 +441,45 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 				}
 			}
 		}
+		
+		if (!getNeuronPositionsCalled) {
+			// getNeuronPositions is used to calculate indexes into the input neurons.
+			this.getNeuronPositions(0, 2);
+			this.getNeuronPositions(1, 2);
+		}
 	}
 
 	@Override
 	protected void evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, double[] fitnessValues, Behaviour[] behaviours) {
 		if (nsEnvironments == null) {
 			// Evaluate fitness and behaviour on same environments.
-			_evaluate(genotype, substrate, null, false, false, fitnessValues, behaviours, environments);
+			List envs = environments.subList(0, Math.max(environmentCount, noveltySearchEnvCount));
+			_evaluate(genotype, substrate, null, false, false, fitnessValues, behaviours, envs, environmentCount);
 		} else {
 			// Evaluate fitness on changing environments and behaviour on fixed novelty search environments.
-			_evaluate(genotype, substrate, null, false, false, fitnessValues, null, environments);
-			_evaluate(genotype, substrate, null, false, false, null, behaviours, nsEnvironments);
+			_evaluate(genotype, substrate, null, false, false, fitnessValues, null, environments.subList(0, environmentCount), 0);
+			_evaluate(genotype, substrate, null, false, false, null, behaviours, nsEnvironments, 0);
 		}
 	}
 
 	@Override
 	public void evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
-		_evaluate(genotype, substrate, baseFileName, logText, logImage, null, null, environments);
+		_evaluate(genotype, substrate, baseFileName, logText, logImage, null, null, environments.subList(0, environmentCount), 0);
 	}
 
-	public void _evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage, double[] fitnessValues, Behaviour[] behaviours, ArrayList<Environment> environments) {
+	public void _evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage, double[] fitnessValues, Behaviour[] behaviours, List<Environment> environments, int numEnvsToUseForEval) {
 		super.evaluate(genotype, substrate, baseFileName, logText, logImage);
+		
 		int environmentCount = environments.size();
+		if (numEnvsToUseForEval == 0) {
+			numEnvsToUseForEval = environmentCount;
+		}
+		
 		double randomCompare = 0;
 		int solvedCount = 0;
 		// Random testRandom = new Random(System.currentTimeMillis());
 		
-		int[][][] behaviour = behaviours != null && behaviours.length > 0 ? new int[environments.size()][trialCount][environments.get(0).getStepsPerTrial()] : null;
+		int[][][] behaviour = behaviours != null && behaviours.length > 0 ? new int[noveltySearchEnvCount][trialCount][environments.get(0).getStepsPerTrial()] : null;
 
 		int imageScale = 128;
 
@@ -413,7 +487,8 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 			NiceWriter logOutput = !logText ? null : new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.00");
 
 			double[] input = new double[substrate.getInputDimension()[0]];
-			double[] avgRewardForEachTrial = new double[trialCount];
+			double[] avgRewardOrRMSEForEachTrial = new double[trialCount];
+			int envIndex = 0;
 			for (Environment env : environments) {
 
 				if (logText) {
@@ -424,7 +499,7 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 				// Reset substrate to initial state to begin learning new environment.
 				substrate.reset();
 
-				double trialReward = 0;
+				double trialRewardOrRMSE = 0;
 				int consecutivePerfectTrialCount = 0;
 				for (int trial = 0; trial < trialCount; trial++) {
 					// Create an RNG instance that is the same for a given trial in a given environment so that the
@@ -450,23 +525,22 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 
 					State currentState = env.states[0];
 					Transition transition = null;
-					trialReward = 0;
+					trialRewardOrRMSE = 0;
 					double[] output = null;
 					double[] previousOutput = new double[substrate.getOutputDimension()[0]];
 					int prevAction = -1;
 					State prevState = null;
-					boolean rewardCountsTowardFitness = false;
-
-					// The network can perform a number of steps equal to the number of states times two.
+					boolean stepCountsTowardFitness = false;
+					
 					int step = 0;
 					
 					for (step = 0; step < env.getStepsPerTrial(); step++) {
-						// If we're doing multiple trials then count reward for last trial,
+						// If we're doing multiple trials then only count reward for last trial,
 						// or if we're doing a single long trial then only include reward for last half,
 						// or if there's a single reward state then include reward as we'll exit if the agent found
 						// the reward state.
-						rewardCountsTowardFitness = (trialCount > 1 && trial == trialCount - 1) || (trialCount == 1 && step >= stepsPerTrial - stepsForReward);
-
+						stepCountsTowardFitness = (trialCount > 1 && trial == trialCount - 1) || (trialCount == 1 && step >= stepsPerTrial - stepsForEval);
+						
 						// Set up the inputs to the network.
 						Arrays.fill(input, 0);
 						input[currentStateIndex + currentState.id] = 1;
@@ -477,93 +551,180 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 						if (includePrevAction && prevAction >= 0) {
 							input[previousActionIndex + prevAction] = 1;
 						}
-						if (includeExpl && rewardCountsTowardFitness) {
+						if (includeExpl && stepCountsTowardFitness) {
 							input[explIndex] = 1;
 						}
-						if (transition != null) {
-							// Set reward signal from previous transition.
-							input[rewardIndex] = transition.reward;
-						}
-
-						// Ask the network what it wants to do next, and let it know the reward for the previous state
-						// transition.
-						output = substrate.next(input);
-						// The action to perform is the one corresponding to the output with the highest output value.
-						int action = ArrayUtil.getMaxIndex(output);
-						prevAction = action;
-						// int action = testRandom.nextInt(actionCount);
-
-						if (logText) {
-							boolean outputChanged = step > 0 && !ArrayUtils.isEquals(output, previousOutput);
-							logOutput.put("    Agent is at " + currentState.id + "\n");
-							
-							String inputStr = "    Input: CS=";
-							int inputIdx = 0;
-							for (; inputIdx < stateCount; inputIdx++)
-								inputStr += (int) input[inputIdx];
-							if (includePrevState) {
-								inputStr += "  PS=";
-								int endIdx = inputIdx + stateCount;
-								for (; inputIdx < endIdx; inputIdx++)
-									inputStr += (int) input[inputIdx];
+						
+						int action;
+						
+						// If the agent is to perform actions in the environment (rather than just predict the next state given current state and a given action).
+						if (evalType == EvalType.ACT) {
+							if (transition != null) {
+								// Set reward signal from previous transition.
+								input[rewardIndex] = transition.reward;
 							}
-							if (includePrevAction) {
-								inputStr += "  PA=";
+							
+							// Ask the network what it wants to do next, and let it know the reward for the previous state
+							// transition.
+							output = substrate.next(input);
+							// The action to perform is the one corresponding to the output with the highest output value.
+							action = ArrayUtil.getMaxIndex(output);
+							prevAction = action;
+							// int action = testRandom.nextInt(actionCount);
+	
+							if (logText) {
+								boolean outputChanged = step > 0 && !ArrayUtils.isEquals(output, previousOutput);
+								logOutput.put("    Agent is at " + currentState.id + "\n");
+								
+								String inputStr = "    Input: CS=";
+								int inputIdx = 0;
+								for (; inputIdx < stateCount; inputIdx++)
+									inputStr += (int) input[inputIdx];
+								if (includePrevState) {
+									inputStr += "  PS=";
+									int endIdx = inputIdx + stateCount;
+									for (; inputIdx < endIdx; inputIdx++)
+										inputStr += (int) input[inputIdx];
+								}
+								if (includePrevAction) {
+									inputStr += "  PA=";
+									int endIdx = inputIdx + actionCount;
+									for (; inputIdx < endIdx; inputIdx++)
+										inputStr += (int) input[inputIdx];
+								}
+								if (includeExpl) {
+									inputStr += "  Ex=";
+									inputStr += (int) input[inputIdx++];
+								}
+								inputStr += "  R=";
+								inputStr += input[inputIdx++];
+								logOutput.put(inputStr + "  (" + ArrayUtil.toString(input, ", ", nf) + ")\n");
+								
+								//logOutput.put("    Input: " + ArrayUtil.toString(input, ", ", nf) + "\n");
+								
+								logOutput.put("    Output: " + ArrayUtil.toString(output, ", ", nf) + (outputChanged ? " [changed]" : "") + " (Action: " + action + ")\n");
+								logOutput.put("    Current reward: " + nf.format(trialRewardOrRMSE) + "\n\n");
+								System.arraycopy(output, 0, previousOutput, 0, output.length);
+							}
+							if (logImage && gridEnvs) {
+								float c = ((float) step / env.getStepsPerTrial()) * 0.75f;
+								int size = ((env.getStepsPerTrial() - step) * (imageScale / 2)) / env.getStepsPerTrial() + imageScale / 2 - 2;
+								int offset = (imageScale - size) / 2;
+								g.setColor(new Color(0, c, c));
+								g.fillOval(currentState.x * imageScale + offset, currentState.y * imageScale + offset, size, size);
+							}
+	
+							// If a transition is defined for the current state and specified action.
+							transition = currentState.getNextTransition(action, envTrialRandom);
+							if (transition != null) {
+								currentState = transition.nextState;
+								// Add reward to record if reward counts toward fitness,
+								// or if there's a single reward state then include reward as we'll exit if the agent found
+								// the reward state.
+								if (stepCountsTowardFitness || singleRewardState) {
+									trialRewardOrRMSE += transition.reward;
+								}
+							}
+	
+							if (behaviour != null && envIndex < noveltySearchEnvCount) {
+								behaviour[env.id][trial][step] = currentState.id;
+							}
+	
+							if (singleRewardState && currentState.id == env.rewardState) {
+								break;
+							}
+	
+							// If the maximum reward has been reached, end the trial.
+							// if (trialReward > env.getMaxReward() * 0.99) {
+							// break;
+							// }
+						}
+						// evalType == EvalType.PREDICT
+						else {
+							// The agent is to predict the next state given current state and a given action (rather than perform actions in the environment).
+							
+							// Pick an action at random.
+							action = envTrialRandom.nextInt(actionCount);
+							
+							input[currentActionIndex + action] = 1;
+							
+							// Ask the network what it thinks will happen next, and let it know the current state and next action.
+							output = substrate.next(input);
+							
+							if (logText) {
+								boolean outputChanged = step > 0 && !ArrayUtils.isEquals(output, previousOutput);
+								
+								logOutput.put("    Agent is at " + currentState.id + "\n");
+								logOutput.put("    Next action is " + action + "\n");
+								
+								String inputStr = "    Input: CS=";
+								int inputIdx = 0;
+								for (; inputIdx < stateCount; inputIdx++)
+									inputStr += (int) input[inputIdx];
+								
+								inputStr += "  CA=";
 								int endIdx = inputIdx + actionCount;
 								for (; inputIdx < endIdx; inputIdx++)
 									inputStr += (int) input[inputIdx];
+								
+								if (includePrevState) {
+									inputStr += "  PS=";
+									endIdx = inputIdx + stateCount;
+									for (; inputIdx < endIdx; inputIdx++)
+										inputStr += (int) input[inputIdx];
+								}
+								if (includePrevAction) {
+									inputStr += "  PA=";
+									endIdx = inputIdx + actionCount;
+									for (; inputIdx < endIdx; inputIdx++)
+										inputStr += (int) input[inputIdx];
+								}
+								if (includeExpl) {
+									inputStr += "  Ex=";
+									inputStr += (int) input[inputIdx++];
+								}
+								if (evalType != EvalType.PREDICT) {
+									inputStr += "  R=";
+									inputStr += input[inputIdx++];
+								}
+								
+								logOutput.put(inputStr + "  (" + ArrayUtil.toString(input, ", ", nf) + ")\n");
+								
+								logOutput.put("    Output: " + ArrayUtil.toString(output, ", ", nf) + (outputChanged ? " [changed]" : "") + "\n");
+								System.arraycopy(output, 0, previousOutput, 0, output.length);
 							}
-							if (includeExpl) {
-								inputStr += "  Ex=";
-								inputStr += (int) input[inputIdx++];
-							}
-							inputStr += "  R=";
-							inputStr += input[inputIdx++];
-							logOutput.put(inputStr + "  (" + ArrayUtil.toString(input, ", ", nf) + ")\n");
 							
-							//logOutput.put("    Input: " + ArrayUtil.toString(input, ", ", nf) + "\n");
+							// If a transition is defined for the current state and specified action.
+							transition = currentState.getNextTransition(action, envTrialRandom);
+							if (transition != null) {
+								currentState = transition.nextState;
+							}
 							
-							logOutput.put("    Output: " + ArrayUtil.toString(output, ", ", nf) + (outputChanged ? " [changed]" : "") + " (Action: " + action + ")\n");
-							logOutput.put("    Current reward: " + nf.format(trialReward) + "\n\n");
-							System.arraycopy(output, 0, previousOutput, 0, output.length);
-						}
-						if (logImage && gridEnvs) {
-							float c = ((float) step / env.getStepsPerTrial()) * 0.75f;
-							int size = ((env.getStepsPerTrial() - step) * (imageScale / 2)) / env.getStepsPerTrial() + imageScale / 2 - 2;
-							int offset = (imageScale - size) / 2;
-							g.setColor(new Color(0, c, c));
-							g.fillOval(currentState.x * imageScale + offset, currentState.y * imageScale + offset, size, size);
-						}
-
-						// If a transition is defined for the current state and specified action.
-						transition = currentState.getNextTransition(action, envTrialRandom);
-						if (transition != null) {
-							currentState = transition.nextState;
-							// Add reward to record if reward counts toward fitness,
-							// or if there's a single reward state then include reward as we'll exit if the agent found
-							// the reward state.
-							if (rewardCountsTowardFitness || singleRewardState) {
-								trialReward += transition.reward;
+							// Add error to record if this step counts toward fitness.
+							if (stepCountsTowardFitness) {
+								for (int i = 0; i < stateCountMax; i++) {
+									// Only the output corresponding to current state should be 1.
+									double error = Math.abs((i == currentState.id ? 1 : 0) - output[i]);
+									// It's only an error if it's the wrong side of the halfway mark.
+									if (error >= 0.5) {
+										// Scale to ~ [0.1, 1].
+										error = (error - 0.445) * 1.8;
+										trialRewardOrRMSE += error * error;
+									}
+								}
+							}
+	
+							if (behaviour != null && envIndex < noveltySearchEnvCount) {
+								behaviour[env.id][trial][step] = currentState.id;
 							}
 						}
-
-						if (behaviour != null) {
-							behaviour[env.id][trial][step] = currentState.id;
-						}
-
-						if (singleRewardState && currentState.id == env.rewardState) {
-							break;
-						}
-
-						// If the maximum reward has been reached, end the trial.
-						// if (trialReward > env.getMaxReward() * 0.99) {
-						// break;
-						// }
 					}
 
 					if (logText) {
 						logOutput.put("    Agent is at " + currentState.id + "\n");
-						logOutput.put("    Current reward: " + nf.format(trialReward) + "\n\n");
+						if (evalType == EvalType.ACT) {
+							logOutput.put("    Current reward: " + nf.format(trialRewardOrRMSE) + "\n\n");
+						}
 					}
 
 					if (logImage && gridEnvs) {
@@ -576,14 +737,22 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 						File outputfile = new File(baseFileName + ".env_ " + env.id + ".trial_" + trial + ".png");
 						ImageIO.write(image, "png", outputfile);
 					}
-
-					// If last trial
-					if (trial == trialCount - 1) {
-						// Ratio of reward received versus reward received by random agent.
-						randomCompare += trialReward / env.getRandomReward();
+						
+					// If we're including this environment in the evaluation.
+					if (envIndex < numEnvsToUseForEval) {
+						if (evalType == EvalType.ACT) {
+							// If this is the last trial.
+							if (trial == trialCount - 1) {
+								// Ratio of reward received versus reward received by random agent.
+								randomCompare += trialRewardOrRMSE / env.getRandomReward();
+							}
+							
+							avgRewardOrRMSEForEachTrial[trial] += trialRewardOrRMSE / env.getMaxReward();
+						}
+						else {
+							avgRewardOrRMSEForEachTrial[trial] += Math.sqrt(trialRewardOrRMSE / (stepsForEval * stateCountMax));
+						}
 					}
-
-					avgRewardForEachTrial[trial] += trialReward / env.getMaxReward();
 
 					// If environmentMasteredTrialCount perfect trials have been executed then we can probably assume
 					// this environment has been mastered [this won't work until we use Q-learning or similar to
@@ -608,41 +777,54 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 					// }
 				}
 
-				// If the agent got 99% of the maximum reward last trial
-				if (trialReward / env.getMaxReward() > 0.99) {
+				// For the acting task, if we're including this environment in the 
+				// evaluation and the agent got 99% of the maximum reward last trial.
+				if (evalType == EvalType.ACT && envIndex < numEnvsToUseForEval && trialRewardOrRMSE / env.getMaxReward() > 0.99) {
 					solvedCount++;
 				}
+				
+				envIndex++;
 			}
 
-			randomCompare /= environmentCount;
 			for (int trial = 0; trial < trialCount; trial++) {
-				avgRewardForEachTrial[trial] /= environmentCount;
+				avgRewardOrRMSEForEachTrial[trial] /= numEnvsToUseForEval;
 			}
 			if (logText) {
-				logOutput.put("\n\nReward for each trial averaged over all environments:\n");
-				logOutput.put(Arrays.toString(avgRewardForEachTrial));
+				logOutput.put("\n\n" + (evalType == EvalType.ACT ? "Reward" : "RMSE") + " for each trial averaged over all environments:\n");
+				logOutput.put(Arrays.toString(avgRewardOrRMSEForEachTrial));
 				logOutput.close();
 			}
-
+			
 			double fitness = 0;
-			if (getEnvOptimalRewardCalcType().equals(EnvOptimalRewardCalcType.NOT_SUPPORTED)) {
-				// Use comparison to random agent if optimal reward not available for comparison.
-				// Fitness is 10% of ratio of reward received versus reward received by random agent.
-				fitness = randomCompare > 10 ? 1 : randomCompare * 0.1 * 0.99;
-			} else {
-				// Average of final trial from each environment.
-				fitness = avgRewardForEachTrial[trialCount - 1] * 0.1;
-				genotype.setPerformanceValue("1VSOptimal", fitness);
+			
+			if (evalType == EvalType.ACT) {
+				randomCompare /= numEnvsToUseForEval;
+				
+				if (getEnvOptimalRewardCalcType().equals(EnvOptimalRewardCalcType.NOT_SUPPORTED)) {
+					// Use comparison to random agent if optimal reward not available for comparison.
+					// Fitness is 10% of ratio of reward received versus reward received by random agent.
+					fitness = randomCompare > 10 ? 1 : randomCompare * 0.1 * 0.99;
+				} else {
+					// Average of final trial from each environment.
+					fitness = avgRewardOrRMSEForEachTrial[trialCount - 1] * 0.1;
+					genotype.setPerformanceValue("1VSOptimal", fitness);
+				}
+				
+				genotype.setPerformanceValue("0VSRandom", randomCompare > 10 ? 1 : randomCompare * 0.1 * 0.99);
+				genotype.setPerformanceValue("2Solved", (double) solvedCount / numEnvsToUseForEval);
 			}
+			else {
+				// Inverse average RMSE of final trial from each environment.
+				fitness = 1.0 / (1 + avgRewardOrRMSEForEachTrial[trialCount - 1]);
+				genotype.setPerformanceValue("0RMSE", avgRewardOrRMSEForEachTrial[trialCount - 1]);
+			}
+			
 			if (fitness == 0)
 				fitness = Double.MIN_VALUE;
 			
 			if (fitnessValues != null && fitnessValues.length > 0)
 				fitnessValues[0] = fitness;
 
-			genotype.setPerformanceValue("0VSRandom", randomCompare > 10 ? 1 : randomCompare * 0.1 * 0.99);
-			genotype.setPerformanceValue("2Solved", (double) solvedCount / environmentCount);
-		
 			if (behaviours != null && behaviours.length > 0) {
 				behaviours[0] = new MDPBehaviour(this, behaviour);
 			}
@@ -657,14 +839,14 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 			if (genEnvironments == null) {
 				// Test on twice as many environments as used for fitness evaluations.
 				genEnvironments = new ArrayList<Environment>();
-				for (int i = 0; i < environmentCount*2; i++) {
+				for (int i = 0; i < environmentCountMax*2; i++) {
 					Environment newEnv = new Environment();
 					if (newEnv.setUp(genEnvironments.size(), genEnvironments)) {
 						genEnvironments.add(newEnv);
 					}
 				}
 			}
-			_evaluate(genotype, substrate, baseFileName, logText, logImage, fitnessValues, null, genEnvironments);
+			_evaluate(genotype, substrate, baseFileName, logText, logImage, fitnessValues, null, genEnvironments, 0);
 			return true;
 		}
 		return false;
@@ -802,7 +984,7 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 			envStateCount = stateCount;
 			envActionCount = actionCount;
 			envStepsPerTrial = stepsPerTrial;
-			envStepsForReward = stepsForReward;
+			envStepsForReward = stepsForEval;
 			
 			// Create an RNG instance that is the same given the same seed and environment ID,
 			// so we can reproduce the same environments in different runs.
@@ -962,19 +1144,19 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 			// For now set max reward to theoretical upper bound. Reward values are in range (0, 1).
 			// If we're doing a single long trial then only reward from the last half of it is included.
 
-			// maxReward = stepsForReward;
-
-			//if (getEnvOptimalRewardCalcType().equals(EnvOptimalRewardCalcType.NOT_SUPPORTED)) {
-				// Determine reward received by a random agent, for comparison.
-				randomReward = calcRandomReward(envSetupRandom);
-				randomReward *= envStepsForReward;
-			//} else {
-				maxReward = calcOptimalReward();
-				if (!singleRewardState) {
-					maxReward *= envStepsForReward;
-				}
-			//}
-				
+			// maxReward = stepsForEval;
+			if (evalType == EvalType.ACT) {
+				//if (getEnvOptimalRewardCalcType().equals(EnvOptimalRewardCalcType.NOT_SUPPORTED)) {
+					// Determine reward received by a random agent, for comparison.
+					randomReward = calcRandomReward(envSetupRandom);
+					randomReward *= envStepsForReward;
+				//} else {
+					maxReward = calcOptimalReward();
+					if (!singleRewardState) {
+						maxReward *= envStepsForReward;
+					}
+				//}
+			}
 			return true;
 		}
 		
@@ -1353,33 +1535,55 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 	public void ahniEventOccurred(AHNIEvent event) {
 		if (event.getType() == AHNIEvent.Type.GENERATION_END) {
 			Chromosome bestPerforming = event.getEvolver().getBestPerformingFromLastGen();
-			if (bestPerforming.getPerformanceValue() >= props.getDoubleProperty(DIFFICULTY_INCREASE_PERFORMANCE)) {
-				if (increaseDifficulty())
+			
+			if (targetPerformanceType == 1 && bestPerforming.getPerformanceValue() >= props.getDoubleProperty(DIFFICULTY_INCREASE_PERFORMANCE) 
+					|| targetPerformanceType == 0 && bestPerforming.getPerformanceValue() <= props.getDoubleProperty(DIFFICULTY_INCREASE_PERFORMANCE)) {
+				
+				if (environmentIncreaseRate > 1) {
+					int origEnvCount = environmentCount;
+					environmentCount = Math.max(environmentCount + 1, (int) Math.round(environmentCount * environmentIncreaseRate));
+					if (environmentCount > environmentCountMax) {
+						environmentCount = environmentCountMax;
+					}
+					if (environmentCount != origEnvCount) {
+						logger.info("Increased difficulty. Number of environments to test against is now " + environmentCount + ".");
+					}
+				}
+				else if (increaseDifficulty()) {
 					logger.info("Increased difficulty. State/action counts are now " + stateCount + " / " + actionCount);
+				}
 			}
 		}
 	}
 
 	private int getInputSize() {
-		return stateCountMax + (includePrevState ? stateCountMax : 0) + (includePrevAction ? actionCountMax : 0) + (includeExpl ? 1 : 0) + 1;
+		return stateCountMax + (evalType == EvalType.PREDICT ? stateCountMax : 0) + (includePrevState ? stateCountMax : 0) + 
+				(includePrevAction ? actionCountMax : 0) + (includeExpl ? 1 : 0) + (evalType != EvalType.PREDICT ? 1 : 0);
 	}
 
 	@Override
 	public int[] getLayerDimensions(int layer, int totalLayerCount) {
 		if (layer == 0) { // Input layer.
-			// Current state plus previously performed action plus reinforcement signal.
 			return new int[] { getInputSize(), 1 };
 		} else if (layer == totalLayerCount - 1) { // Output layer.
-			// Action to perform next.
-			return new int[] { actionCountMax, 1 };
+			if (evalType == EvalType.ACT) {
+				// Action to perform next.
+				return new int[] { actionCountMax, 1 };
+			}
+			else {
+				// Predicted next state.
+				return new int[] { stateCountMax, 1 };
+			}
 		}
 		return null;
 	}
 
 	@Override
 	public Point[] getNeuronPositions(int layer, int totalLayerCount) {
+		getNeuronPositionsCalled = true;
+		
 		Point[] positions = null;
-
+	
 		if (gridEnvs) {
 			if (layer == 0) { // Input layer.
 				positions = new Point[getInputSize()];
@@ -1430,42 +1634,66 @@ public class MDP extends BulkFitnessFunctionMT implements AHNIEventListener {
 				int posIndex = 0;
 				// Current state.
 				for (int i = 0; i < stateCountMax; i++) {
-					// Horizontal along bottom.
+					// Horizontal along bottom (y=0)
 					positions[posIndex++] = new Point((double) i / (stateCountMax - 1), 0, 0);
 				}
-				if (includePrevAction || includePrevState) {
-					double horizFactor = includePrevAction && includePrevState ? 1.0 / 3 : 0.5;
-					int horizPos = 1;
-					if (includePrevState) {
-						previousStateIndex = posIndex;
-						for (int i = 0; i < stateCountMax; i++) {
-							positions[posIndex++] = new Point((double) i / (stateCountMax - 1), horizPos * horizFactor, 0);
-						}
-						horizPos++;
+				
+				double rowCount = (evalType == EvalType.PREDICT ? 1 : 0) + (includePrevState ? 1 : 0) + (includePrevAction ? 1 : 0) + 
+							      ((includeExpl || evalType != EvalType.PREDICT) ? 1 : 0); // if include exploitation/exploration signal or include the reward signal. 
+				double rowDelta = rowCount > 0 ? 1.0 / rowCount : 0;
+				int row = 1;
+				
+				// Include current (randomly selected) action for prediction task.
+				if (evalType == EvalType.PREDICT) {
+					currentActionIndex = posIndex;
+					for (int i = 0; i < actionCountMax; i++) {
+						positions[posIndex++] = new Point((double) i / (actionCountMax - 1), row * rowDelta, 0);
 					}
-					if (includePrevAction) {
-						previousActionIndex = posIndex;
-						for (int i = 0; i < actionCountMax; i++) {
-							positions[posIndex++] = new Point((double) i / (actionCountMax - 1), horizPos * horizFactor, 0);
-						}
+					row++;
+				}
+				if (includePrevState) {
+					previousStateIndex = posIndex;
+					for (int i = 0; i < stateCountMax; i++) {
+						positions[posIndex++] = new Point((double) i / (stateCountMax - 1), row * rowDelta, 0);
+					}
+					row++;
+				}
+				if (includePrevAction) {
+					previousActionIndex = posIndex;
+					for (int i = 0; i < actionCountMax; i++) {
+						positions[posIndex++] = new Point((double) i / (actionCountMax - 1), row * rowDelta, 0);
 					}
 				}
-
+			
 				if (includeExpl) {
 					explIndex = posIndex;
 					// Exploration/Exploitation signal, at top-left.
 					positions[posIndex++] = new Point(0, 1, 0);
 				}
-
-				rewardIndex = posIndex;
-				// Reinforcement signal, at top-right.
-				positions[posIndex++] = new Point(1, 1, 0);
+				
+				// Don't include reward signal for predict task.
+				if (evalType != EvalType.PREDICT) {
+					rewardIndex = posIndex;
+					// Reinforcement signal, at top-right.
+					positions[posIndex++] = new Point(1, 1, 0);
+				}
 			} else if (layer == totalLayerCount - 1) { // Output layer.
-				positions = new Point[actionCountMax];
-				// Action to perform next.
-				for (int i = 0; i < actionCountMax; i++) {
-					// Horizontal along middle.
-					positions[i] = new Point((double) i / (actionCountMax - 1), 0.5, 1);
+				if (evalType == EvalType.ACT) {
+					positions = new Point[actionCountMax];
+					// Action to perform next.
+					for (int i = 0; i < actionCountMax; i++) {
+						// Horizontal along middle.
+						positions[i] = new Point((double) i / (actionCountMax - 1), 0.5, 1);
+					}
+				}
+				// Predict task.
+				else {
+					positions = new Point[stateCountMax];
+					// Predicted next state.
+					for (int i = 0; i < stateCountMax; i++) {
+						// Horizontal along middle.
+						positions[i] = new Point((double) i / (stateCountMax - 1), 0.5, 1);
+					}
 				}
 			}
 		}

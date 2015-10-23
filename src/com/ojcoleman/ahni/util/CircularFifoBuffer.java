@@ -13,7 +13,7 @@ public class CircularFifoBuffer<E> implements Serializable {
 	}
 
 	/**
-	 * Adds the given element to the buffer. If the buffer is full, the least recently added element is discarded so
+	 * Adds the given element to the buffer. If the buffer is full, the oldest element is discarded so
 	 * that a new element can be inserted.
 	 */
 	public void add(E e) {
@@ -24,7 +24,7 @@ public class CircularFifoBuffer<E> implements Serializable {
 	}
 
 	/**
-	 * Removes and returns the least recently inserted element from this buffer.
+	 * Removes and returns the oldest element from this buffer.
 	 */
 	public E remove() {
 		return storage.removeFirst();

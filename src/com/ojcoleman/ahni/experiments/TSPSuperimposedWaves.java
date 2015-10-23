@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.math3.linear.ArrayRealVector;
@@ -21,6 +22,7 @@ import com.ojcoleman.ahni.hyperneat.Properties;
 import com.ojcoleman.ahni.nn.BainNN;
 import com.ojcoleman.ahni.nn.NNAdaptor;
 import com.ojcoleman.ahni.util.ArrayUtil;
+import com.ojcoleman.ahni.util.CircularFifoBuffer;
 import com.ojcoleman.ahni.util.NiceWriter;
 import com.ojcoleman.ahni.util.Range;
 
@@ -49,6 +51,17 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 	 */
 	public static final String WAVE_TYPES = "fitness.function.tspsw.wave.types";
 	/**
+	 * The evaluation method to use. Either 'reproduce' (the network must continue to produce the signal during 
+	 * the evaluation phase) or 'predict' (the network must predict the signal value 
+	 * fitness.function.tspsw.evaluation.predict.lookahead steps ahead).  
+	 */
+	public static final String EVAL_TYPE = "fitness.function.tspsw.evaluation.type";
+	/**
+	 * When fitness.function.tspsw.evaluation.type = 'predict', the number of time steps ahead that the network must
+	 * predict the signal value for.  
+	 */
+	public static final String EVAL_PREDICT_LOOKAHEAD = "fitness.function.tspsw.evaluation.predict.lookahead";
+	/**
 	 * The length of the learning phase.
 	 */
 	public static final String PHASE_LEARN_LENGTH = "fitness.function.tspsw.phase.learn.length";
@@ -62,8 +75,8 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 	 */
 	public static final String DIFFICULTY_INCREASE_PERFORMANCE = "fitness.function.tspsw.difficulty.increase.performance";
 	/**
-	 * The number of environments to evaluate candidates against. Increasing this will provide a more accurate
-	 * evaluation but take longer.
+	 * The (initial) number of environments to evaluate candidates against. Increasing this will provide a more 
+	 * accurate evaluation but take longer.
 	 */
 	public static final String ENVIRONMENT_COUNT = "fitness.function.tspsw.environment.count";
 	/**
@@ -71,6 +84,17 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 	 * probabilistically.
 	 */
 	public static final String ENVIRONMENT_CHANGE_RATE = "fitness.function.tspsw.environment.replacerate";
+	/**
+	 * Factor to increase the total number of environments by when the current environment(s) have been 
+	 * sufficiently mastered (see {@link #DIFFICULTY_INCREASE_PERFORMANCE}. May be fractional; if the factor is 
+	 * greater than 1 then the number of environments will be increased by at least 1. Default is 1 (no change).
+	 */
+	public static final String ENVIRONMENT_INCREASE_RATE = "fitness.function.tspsw.environment.count.increase";
+	/**
+	 * If {@link #DIFFICULTY_INCREASE_PERFORMANCE} is greater than 1, then this is the maximum number of 
+	 * environments to increase to. Default is 128.
+	 */
+	public static final String ENVIRONMENT_COUNT_MAX = "fitness.function.tspsw.environment.count.max";
 	
 	/**
 	 * If true enables novelty search for which behaviours are defined by the output of the system for the last  
@@ -93,9 +117,15 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 	 * so that the same environments are used for calculating performance and novelty.
 	 */
 	public static final String NOVELTY_SEARCH_ONLY = "fitness.function.tspsw.noveltysearch.only";
-
+	
+	public enum EvalType { REPRODUCE, PREDICT }
+	
 	private int environmentCount;
 	private double environmentReplaceProb;
+	private double environmentIncreaseRate;
+	private int environmentCountMax;
+	private EvalType evalType;
+	private int evalPredictLookahead;
 	private int phaseLearnLength;
 	private int phaseEvalLength;
 	private int waveCount;
@@ -119,12 +149,42 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 		
 		environmentCount = props.getIntProperty(ENVIRONMENT_COUNT);
 		environmentReplaceProb = noveltySearchOnly ? 0 : props.getDoubleProperty(ENVIRONMENT_CHANGE_RATE);
+		environmentIncreaseRate = noveltySearchOnly ? 0 : props.getDoubleProperty(ENVIRONMENT_INCREASE_RATE);
+		environmentCountMax = environmentIncreaseRate > 1 ? props.getIntProperty(ENVIRONMENT_COUNT_MAX) : environmentCount;
+		
+		if (environmentReplaceProb > 1 && environmentIncreaseRate > 1) {
+			throw new IllegalArgumentException(ENVIRONMENT_CHANGE_RATE + " and " + ENVIRONMENT_INCREASE_RATE + " are mutually exclusive.");
+		}
+		if (noveltySearchOnly && environmentReplaceProb > 1) {
+			throw new IllegalArgumentException(ENVIRONMENT_CHANGE_RATE + " and " + NOVELTY_SEARCH_ONLY + " are mutually exclusive.");
+		}
+		if (noveltySearchOnly && environmentIncreaseRate > 1) {
+			throw new IllegalArgumentException(ENVIRONMENT_INCREASE_RATE + " and " + NOVELTY_SEARCH_ONLY + " are mutually exclusive.");
+		}
+		
+		evalType = EvalType.valueOf(props.getProperty(EVAL_TYPE).toUpperCase());
+		evalPredictLookahead = props.getIntProperty(EVAL_PREDICT_LOOKAHEAD, 8);
+		
 		phaseLearnLength = props.getIntProperty(PHASE_LEARN_LENGTH);
 		phaseEvalLength = props.getIntProperty(PHASE_EVAL_LENGTH);
+		
 		nsRecordLength = props.getIntProperty(NOVELTY_SEARCH_RECORD_LENGTH, 8);
 		nsStartRecordAtStep = phaseLearnLength + phaseEvalLength - nsRecordLength;
 		
 		waveCount = props.getIntProperty(WAVE_COUNT_INITIAL);
+		
+		// Wave count delta and increasing number of environments are mutually exclusive.
+		if (environmentIncreaseRate > 1) {
+			String deltaString = props.getProperty(WAVE_COUNT_DELTA, "0").trim().toLowerCase();
+			boolean isFactor = deltaString.endsWith("x");
+			double delta = Double.parseDouble(deltaString.replaceAll("x", ""));
+			if (delta >= 1) {
+				if (!isFactor || delta > 1) {
+					throw new IllegalArgumentException(WAVE_COUNT_DELTA + " and " + ENVIRONMENT_INCREASE_RATE + " are mutually exclusive.");
+				}
+			}
+		}
+		
 		String[] waveTypeNames = props.getStringArrayProperty(WAVE_TYPES, new String[]{"sine"});
 		waveTypes = new WaveType[waveTypeNames.length];
 		for (int i = 0; i < waveTypeNames.length; i++) {
@@ -133,27 +193,26 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 		
 		envRand = new Random(props.getLongProperty(SEED, System.currentTimeMillis()));
 		
-		environments = new Environment[environmentCount];
+		environments = new Environment[environmentCountMax];
 		for (int e = 0; e < environments.length; e++) {
 			environments[e] = new Environment(environmentCounter++);
 		}
 		
 		if (noveltySearchEnabled) {
-			noveltySearchEnvCount = noveltySearchOnly ? environmentCount : props.getIntProperty(NOVELTY_SEARCH_ENV_COUNT, environmentCount);
+			noveltySearchEnvCount = noveltySearchOnly ? environmentCount : props.getIntProperty(NOVELTY_SEARCH_ENV_COUNT, environmentCountMax);
 			
 			// If the same environments aren't used throughout evolution.
 			if (environmentReplaceProb > 0) {
 				// Create a set of environments (that don't change over the course of evolution) to test novelty on.
 				nsEnvironments = new Environment[noveltySearchEnvCount];
-				totalNSBehaviourSize = 0;
 				for (int e = 0; e < noveltySearchEnvCount; e++) {
 					nsEnvironments[e] = new Environment(-e);
 				}
 				logger.info("Created " + noveltySearchEnvCount + " environments for novelty search.");
 			}
 			else {
-				if (noveltySearchEnvCount > environmentCount) {
-					throw new IllegalArgumentException("The number of environments used for novelty search must be less than the number used for fitness/performance evaluation when " + ENVIRONMENT_CHANGE_RATE + " = 0.");
+				if (noveltySearchEnvCount > environmentCountMax) {
+					throw new IllegalArgumentException("The number of environments used for novelty search must be less than the (maximum) number used for fitness/performance evaluation when " + ENVIRONMENT_CHANGE_RATE + " = 0.");
 				}
 			}
 			totalNSBehaviourSize = noveltySearchEnvCount * nsRecordLength;
@@ -166,7 +225,7 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 	}
 
 	public void initialiseEvaluation() {
-		// Create (some) new environments every generation.
+		// Create (some) new environments every generation (if environmentReplaceProb > 0).
 		for (int e = 0; e < environments.length; e++) {
 			if (environmentReplaceProb > random.nextDouble()) {
 				environments[e] = new Environment(environmentCounter++);
@@ -178,24 +237,29 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 	protected void evaluate(Chromosome genotype, Activator substrate, int evalThreadIndex, double[] fitnessValues, Behaviour[] behaviours) {
 		if (nsEnvironments == null) {
 			// Evaluate fitness and behaviour on same environments.
-			_evaluate(genotype, substrate, null, false, false, fitnessValues, behaviours, environments);
+			List envs = Arrays.asList(environments).subList(0, Math.max(environmentCount, noveltySearchEnvCount));
+			_evaluate(genotype, substrate, null, false, false, fitnessValues, behaviours, envs, environmentCount);
 		} else {
 			// Evaluate fitness on changing environments and behaviour on fixed novelty search environments.
-			_evaluate(genotype, substrate, null, false, false, fitnessValues, null, environments);
-			_evaluate(genotype, substrate, null, false, false, null, behaviours, nsEnvironments);
+			_evaluate(genotype, substrate, null, false, false, fitnessValues, null, Arrays.asList(environments).subList(0, environmentCount), 0);
+			_evaluate(genotype, substrate, null, false, false, null, behaviours, Arrays.asList(nsEnvironments), 0);
 		}
 	}
 	
 	@Override
 	public void evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage) {
-		_evaluate(genotype, substrate, baseFileName, logText, logImage, null, null, environments);
+		_evaluate(genotype, substrate, baseFileName, logText, logImage, null, null, Arrays.asList(environments).subList(0, environmentCount), 0);
 		super.evaluate(genotype, substrate, baseFileName, logText, logImage);
 	}
 	
 				  
-	public void _evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage, double[] fitnessValues, Behaviour[] behaviours, Environment[] envs) {
-		int envCount = envs.length;
-		double performance = 0;
+	public void _evaluate(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage, double[] fitnessValues, Behaviour[] behaviours, List<Environment> envs, int numEnvsToUseForEval) {
+		int envCount = envs.size();
+		if (numEnvsToUseForEval == 0) {
+			numEnvsToUseForEval = envCount;
+		}
+		
+		double rmseAvg = 0;
 		NNAdaptor nn = (NNAdaptor) substrate;
 		Range nnOutputRange = new Range(nn.getMinResponse(), nn.getMaxResponse());
 		boolean scaleOutputForNS = nnOutputRange.getRange() <= 2;
@@ -206,7 +270,7 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 			NiceWriter logOutput = !logText ? null : new NiceWriter(new FileWriter(baseFileName + ".txt"), "0.000");
 			
 			for (int envIndex = 0; envIndex < envCount; envIndex++) {
-				Environment env = envs[envIndex];
+				Environment env = envs.get(envIndex);
 				if (logText) {
 					logOutput.put("\n\nBEGIN EVALUATION ON " + env + "\n");
 				}
@@ -214,12 +278,20 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 				// Reset substrate to initial state to begin learning (new) environment.
 				substrate.reset();
 	
-				double envPerf = 0;
+				double envError = 0;
 				
 				boolean recordBehaviour = envIndex < noveltySearchEnvCount && behaviour != null;
 				
 				double[] agentInput = new double[1];
 				double[] agentOutput = new double[1];
+				
+				CircularFifoBuffer<Double> agentOutputBuffer = null;
+				if (evalType == EvalType.PREDICT) {
+					agentOutputBuffer = new CircularFifoBuffer<Double>(evalPredictLookahead);
+				}
+				// If evalType == REPRODUCE then this is just the current agent output.
+				// If it's PREDICT then it's the output of the agent from evalPredictLookahead steps ago.
+				double agentOutputBuffered = 0;
 				
 				// Learning phase.
 				for (int step = 0; step < phaseLearnLength; step++) {
@@ -233,13 +305,25 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 						System.err.println(nn);
 					}
 					
-					if (logText) logOutput.put("    " + step + "\t" + nf.format(agentInput[0]) + "\t" + nf.format(agentOutput[0]) + "\n");
+					if (evalType == EvalType.REPRODUCE) {
+						agentOutputBuffered = agentOutput[0];
+					}
+					else {
+						if (agentOutputBuffer.isFull()) {
+							agentOutputBuffered = agentOutputBuffer.remove();
+						}
+						agentOutputBuffer.add(agentOutput[0]);
+					}
+					
+					if (logText) logOutput.put("    " + step + "\t" + nf.format(agentInput[0]) + "\t" + nf.format(agentOutputBuffered) + "\n");
 				}
 				
 				if (logText) logOutput.put("    -------------------------\n");
 				
-				// Evaluation/prediction phase.
-				agentInput[0] = -1; // -1 signals prediction phase.
+				// Evaluation phase.
+				if (evalType == EvalType.REPRODUCE) {
+					agentInput[0] = -1; // -1 signals reproduce phase.
+				}
 				for (int step = phaseLearnLength; step < phaseLearnLength + phaseEvalLength; step++) {
 					// Get environment and agent output for current step.
 					double envOutput = env.getOutput(step);
@@ -251,13 +335,26 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 						System.err.println(nn);
 					}
 					
-					// Fitness/performance is based on how close the previous agent output is to the environment output. 
-					double error = Math.abs(envOutput - agentOutput[0]);
+					double error;
+					if (evalType == EvalType.REPRODUCE) {
+						// Fitness/performance is based on how close the previous agent output is to the environment output. 
+						agentOutputBuffered = agentOutput[0];
+						error = Math.abs(envOutput - agentOutputBuffered);
+					}
+					else {
+						// Fitness/performance is based on how close the output of the agent from 
+						// evalPredictLookahead steps ago is to the current environment output.
+						error = 0;
+						if (agentOutputBuffer.isFull()) {
+							agentOutputBuffered = agentOutputBuffer.remove();
+							error = Math.abs(envOutput - agentOutputBuffered);
+						}
+						agentOutputBuffer.add(agentOutput[0]);
+					}
 					
-					double stepPerf = 1.0 / (1 + error);
-					envPerf += stepPerf;
+					envError += error * error;
 					
-					if (logText) logOutput.put("    " + step + "\t" + nf.format(envOutput) + "\t" + nf.format(agentOutput[0]) + "\t" + nf.format(error) + "\n");
+					if (logText) logOutput.put("    " + step + "\t" + nf.format(envOutput) + "\t" + nf.format(agentOutputBuffered) + "\t" + nf.format(error) + "\n");
 					
 					if (recordBehaviour && step >= nsStartRecordAtStep) {
 						int behaviourIndex = (envIndex * nsRecordLength + (step-nsStartRecordAtStep));
@@ -265,15 +362,17 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 						behaviour.setEntry(behaviourIndex, outputForB);
 					}
 				}
-
-				envPerf /= phaseEvalLength;
 				
-				if (logText) logOutput.put("\n  Environment performance: " + nf.format(envPerf) + "\n");
+				if (envIndex < numEnvsToUseForEval) {
+					double rmse = Math.sqrt(envError / phaseEvalLength);
+					
+					if (logText) logOutput.put("\n  Environment RMSE: " + nf.format(rmse) + "\n");
 				
-				performance += envPerf;
+					rmseAvg += rmse;
+				}
 			}
 			
-			performance /= envCount;
+			rmseAvg /= numEnvsToUseForEval;
 			
 			if (logText) logOutput.close();
 			
@@ -282,8 +381,8 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 		}
 		
 		if (fitnessValues != null && fitnessValues.length > 0) {
-			fitnessValues[0] = performance;
-			genotype.setPerformanceValue(performance);
+			fitnessValues[0] = 1.0 / (1 + rmseAvg);
+			genotype.setPerformanceValue("0RMSE", rmseAvg);
 		}
 		
 		if (behaviour != null) {
@@ -295,17 +394,17 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 	public boolean evaluateGeneralisation(Chromosome genotype, Activator substrate, String baseFileName, boolean logText, boolean logImage, double[] fitnessValues) {
 		if (genEnvironments == null) {
 			// Test on twice as many environments as used for fitness evaluations.
-			genEnvironments = new Environment[environmentCount*2];
-			for (int i = 0; i < environmentCount*2; i++) {
+			genEnvironments = new Environment[environmentCountMax*2];
+			for (int i = 0; i < environmentCountMax*2; i++) {
 				genEnvironments[i] = new Environment(environmentCounter++);
 			}
 		}
-		_evaluate(genotype, substrate, baseFileName, logText, logImage, fitnessValues, null, genEnvironments);
+		_evaluate(genotype, substrate, baseFileName, logText, logImage, fitnessValues, null, Arrays.asList(genEnvironments), 0);
 		return true;
 	}
 	
 	private boolean increaseDifficulty() {
-		String deltaString = props.getProperty(WAVE_COUNT_DELTA).trim().toLowerCase();
+		String deltaString = props.getProperty(WAVE_COUNT_DELTA, "0").trim().toLowerCase();
 		boolean isFactor = deltaString.endsWith("x");
 		double delta = Double.parseDouble(deltaString.replaceAll("x", ""));
 		if (delta >= 1) {
@@ -330,7 +429,8 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 			waves = new Wave[waveCount];
 			for (int w = 0; w < waveCount; w++) {
 				WaveType type = waveTypes[envRand.nextInt(waveTypes.length)];
-				int period =  Math.max(16, phaseLearnLength / 8);
+				//int period =  Math.max(16, phaseLearnLength / 8);
+				int period =  envRand.nextInt(Math.max(1, (phaseLearnLength / 8) - 16)) + 16;
 				waves[w] = new Wave(type, period, envRand.nextDouble() * Math.PI * 2, 1.0 / waveCount);
 			}
 			
@@ -412,11 +512,22 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 	public void ahniEventOccurred(AHNIEvent event) {
 		if (event.getType() == AHNIEvent.Type.GENERATION_END) {
 			Chromosome bestPerforming = event.getEvolver().getBestPerformingFromLastGen();
-			if (bestPerforming.getPerformanceValue() >= props.getDoubleProperty(DIFFICULTY_INCREASE_PERFORMANCE)) {
-				if (increaseDifficulty()) {
+			if (targetPerformanceType == 1 && bestPerforming.getPerformanceValue() >= props.getDoubleProperty(DIFFICULTY_INCREASE_PERFORMANCE) 
+					|| targetPerformanceType == 0 && bestPerforming.getPerformanceValue() <= props.getDoubleProperty(DIFFICULTY_INCREASE_PERFORMANCE)) {
+				if (environmentIncreaseRate > 1) {
+					int origEnvCount = environmentCount;
+					environmentCount = Math.max(environmentCount + 1, (int) Math.round(environmentCount * environmentIncreaseRate));
+					if (environmentCount > environmentCountMax) {
+						environmentCount = environmentCountMax;
+					}
+					if (environmentCount != origEnvCount) {
+						logger.info("Increased difficulty. Number of environments to test against is now " + environmentCount + ".");
+					}
+				}
+				else if (increaseDifficulty()) {
 					event.getEvolver().logChamp(bestPerforming, true, "");
 					
-					// Create new environment networks to allow for possibly increased number of connections.
+					// Create new environment networks to allow for possibly increased number of waves.
 					for (int e = 0; e < environments.length; e++) {
 						environments[e] = new Environment(environmentCounter++);
 					}
@@ -449,7 +560,7 @@ public class TSPSuperimposedWaves extends BulkFitnessFunctionMT implements AHNIE
 	public String[] objectiveLabels() {
 		String[] labels = new String[fitnessObjectivesCount() + noveltyObjectiveCount()];
 		int i = 0;
-		if (!noveltySearchOnly) labels[i++] = "InvErr";
+		if (!noveltySearchOnly) labels[i++] = "InvRMSE+1";
 		if (noveltySearchEnabled) labels[i++] = "Novelty";
 		return labels;
 	}
