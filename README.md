@@ -33,15 +33,12 @@ The summary is a tab-separated list of statistics with a heading line printed ev
 **Label** | **Description**
 --- | ---
 Gen | Current generation number.
-
 Fittest | The ID of fittest chromosome.
 OvFtns | (Overall) fitness of the fittest chromosome.
 Perfor | Performance of the fittest chromosome.
-
 BestPrf | The ID of the chromosome with highest performance.
 OvFtns | (Overall) fitness of the chromosome with highest performance.
 Perfor | Performance of the chromosome with highest performance.
-
 ZPC | Zero Performance Count, number of chromosomes with a performance of 0.
 ZFC | Zero Fitness Count, number of chromosomes with a fitness of 0.
 SC | The number of species.
