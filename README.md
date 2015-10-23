@@ -87,7 +87,9 @@ AHNI supports the Link Expression Output (LEO) extension described in *P. Verban
 
 NOTE: A lot of time was spent checking every aspect of the ES-HyperNEAT implementation however it was not possible to reproduce the experiments
 in Risi S. and Stanley K.O. (2012) *An Enhanced Hypercube-Based Encoding for Evolving the Placement, Density and Connectivity of Neurons*, Artificial Life, MIT Press,
-thus the implementation should be assumed to be be not working. Feel free to try it out and let me know how you go! :)
+thus the implementation should be assumed to be be not working [but see update below].
+
+UPDATE: An issue was recently fixed in the Bain NeuralNetwork software that would have prevented the ES-HyperNEAT implementation from working (and matches the observed behaviour). While I haven't yet tested if ES-HyperNEAT is now working, it might be worth a shot if you're interested in a Java implementation of ES-HyperNEAT. :)
 
 AHNI supports the Evolvable Substrate HyperNEAT (ES-HyperNEAT) extension (See http://eplex.cs.ucf.edu/ESHyperNEAT/).
 
