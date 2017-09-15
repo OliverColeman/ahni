@@ -511,9 +511,12 @@ public class Properties extends java.util.Properties {
 			}
 			try {
 				Constructor<T> c = clazz.getConstructor(argTypes);
+				System.out.println(clazz.getCanonicalName());
+				System.out.println(c.getName());
+				System.out.println(java.util.Arrays.toString(argObjects));
 				objs[objectIndex++] = c.newInstance(argObjects);
 			} catch (Exception e) {
-				throw new IllegalArgumentException("Could not create Object from property:\n" + e.toString() + "\n" + java.util.Arrays.toString(e.getStackTrace()));
+				throw new IllegalArgumentException("Could not create Object from property.", e);
 			}
 		}
 		return objs;
