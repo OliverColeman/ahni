@@ -11,7 +11,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
+import java.lang.Math;
 import javax.imageio.ImageIO;
 
 import com.ojcoleman.bain.NeuralNetwork;
@@ -607,7 +607,27 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriberBainBase imp
 			return s;
 		}
 	}
-	
+	public class NdTree {
+		public double[] coord;
+		public double width;
+		public double weight;
+		public double lvl;
+		public ArrayList<ArrayList<Integer>> signs = new ArrayList<ArrayList<Integer>>();
+		public NdTree[] children;
+		public NdTree(double[] c, double width, int lvl) {
+			this.coord = c;
+			this.width = width;
+			this.lvl = lvl;
+			this.children = new NdTree[(int)Math.pow(2.0, (double)c.length)];
+		}
+		
+		public void set_signs(int coord_len) {
+			for(int ix = 0; ix < this.coord.length; ix ++) {
+				
+			}
+		}
+		
+	}
 	public class Connection {
 		public Neuron source, target;
 		double weight;
