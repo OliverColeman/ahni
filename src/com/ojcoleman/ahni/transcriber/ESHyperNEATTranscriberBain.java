@@ -612,18 +612,23 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriberBainBase imp
 		public double width;
 		public double weight;
 		public double lvl;
-		public ArrayList<ArrayList<Integer>> signs = new ArrayList<ArrayList<Integer>>();
+		public String[] signs;
 		public NdTree[] children;
 		public NdTree(double[] c, double width, int lvl) {
 			this.coord = c;
 			this.width = width;
 			this.lvl = lvl;
 			this.children = new NdTree[(int)Math.pow(2.0, (double)c.length)];
+			this.permute_signs(this.coord.length);
+		}
+		public void subdivide_into_children() {
+			
 		}
 		
-		public void set_signs(int coord_len) {
-			for(int ix = 0; ix < this.coord.length; ix ++) {
-				
+		public void permute_signs(int coord_len) {
+			String str_len = "%" + Integer.toString(coord_len) + "s";
+			for(long ix = 0; ix < this.children.length; ix++) {
+				this.signs[(int)ix] = String.format(str_len, Long.toBinaryString(ix)).replace(' ', '0');
 			}
 		}
 		
