@@ -624,10 +624,13 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriberBainBase imp
 		public void subdivide_into_children() {
 			for(int idx = 0; idx < this.children.length; idx++) {
 				String sign_pattern = this.signs[idx];
+				double[]  new_coord = new double[this.coord.length];
 				for(int idx_2 = 0; idx_2 < this.coord.length; idx_2++) {
 					char sign = sign_pattern.charAt(idx_2);
 					if(sign == '1') {
-						
+						new_coord[idx_2] = coord[idx_2] + this.width/2.0;
+					} else {
+						new_coord[idx_2] = coord[idx_2] - this.width/2.0;
 					}
 				}
 			}
