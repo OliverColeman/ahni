@@ -622,7 +622,15 @@ public class ESHyperNEATTranscriberBain extends HyperNEATTranscriberBainBase imp
 			this.permute_signs(this.coord.length);
 		}
 		public void subdivide_into_children() {
-			
+			for(int idx = 0; idx < this.children.length; idx++) {
+				String sign_pattern = this.signs[idx];
+				for(int idx_2 = 0; idx_2 < this.coord.length; idx_2++) {
+					char sign = sign_pattern.charAt(idx_2);
+					if(sign == '1') {
+						
+					}
+				}
+			}
 		}
 		
 		public void permute_signs(int coord_len) {
