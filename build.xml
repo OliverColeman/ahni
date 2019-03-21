@@ -13,6 +13,7 @@
 	</target>
 	
 	<target name="build">
+		<mkdir dir="antbin" />
 		<javac srcdir="src" destdir="antbin" debug="on" includeAntRuntime="false">
 			<classpath>
 				<fileset dir="lib">
