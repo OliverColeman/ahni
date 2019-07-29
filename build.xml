@@ -13,6 +13,7 @@
 	</target>
 	
 	<target name="build">
+		<mkdir dir="antbin" />
 		<javac srcdir="src" destdir="antbin" debug="on" includeAntRuntime="false">
 			<classpath>
 				<fileset dir="lib">
@@ -24,7 +25,7 @@
 
 	<target name="runjar">
 		<antcall target="build" />
-		<jar destfile="../ahni.jar" filesetmanifest="mergewithoutmain">
+		<jar destfile="./ahni.jar" filesetmanifest="mergewithoutmain">
 			<manifest>
 				<attribute name="Main-Class" value="com.ojcoleman.ahni.hyperneat.Run" />
 			</manifest>
@@ -36,7 +37,7 @@
 	
 	<target name="runjarnolib">
 		<antcall target="build" />
-		<jar destfile="../ahni.jar" filesetmanifest="mergewithoutmain">
+		<jar destfile="./ahni.jar" filesetmanifest="mergewithoutmain">
 			<manifest>
 				<attribute name="Main-Class" value="com.ojcoleman.ahni.hyperneat.Run" />
 			</manifest>
@@ -48,7 +49,7 @@
 	<target name="runjarv">
 		<antcall target="build" />
 		<buildnumber />
-		<jar destfile="../ahni-${major-version-number}.${build.number}.jar"
+		<jar destfile="./ahni-${major-version-number}.${build.number}.jar"
 			filesetmanifest="mergewithoutmain">
 			<manifest>
 				<attribute name="Main-Class" value="com.ojcoleman.ahni.hyperneat.Run" />
